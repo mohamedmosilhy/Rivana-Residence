@@ -7,6 +7,16 @@ const serverEnvSchema = z
       .default("development"),
     APP_URL: z.url().default("http://localhost:3000"),
     MEDIA_STORAGE_ROOT: z.string().trim().min(1).optional(),
+    DATABASE_URL: z
+      .string()
+      .trim()
+      .regex(/^postgres(?:ql)?:\/\//, "Must be a PostgreSQL connection URL.")
+      .optional(),
+    DIRECT_DATABASE_URL: z
+      .string()
+      .trim()
+      .regex(/^postgres(?:ql)?:\/\//, "Must be a PostgreSQL connection URL.")
+      .optional(),
   })
   .superRefine((value, context) => {
     if (value.NODE_ENV === "production" && !value.MEDIA_STORAGE_ROOT) {
@@ -14,6 +24,13 @@ const serverEnvSchema = z
         code: "custom",
         message: "MEDIA_STORAGE_ROOT is required in production.",
         path: ["MEDIA_STORAGE_ROOT"],
+      });
+    }
+    if (value.NODE_ENV === "production" && !value.DATABASE_URL) {
+      context.addIssue({
+        code: "custom",
+        message: "DATABASE_URL is required in production.",
+        path: ["DATABASE_URL"],
       });
     }
   });

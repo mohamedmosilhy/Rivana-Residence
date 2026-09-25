@@ -51,6 +51,8 @@ Run against an isolated PostgreSQL database with real migrations and the Prisma 
 
 Test adapters through contracts so a storage/email provider replacement must pass the same behavior suite.
 
+Run with `TEST_DATABASE_URL=postgresql://user@host:5432/rivana_test npm run test:integration`. The global setup drops/recreates that database (the name must end in `_test`) and applies all migrations before the suite runs.
+
 ## E2E tests
 
 Use Playwright for high-value flows:

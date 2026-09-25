@@ -1,0 +1,357 @@
+generator client {
+  provider            = "prisma-client"
+  output              = "../src/generated/prisma"
+  moduleFormat        = "esm"
+  importFileExtension = "ts"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum AdminRole {
+  EDITOR
+  ADMIN
+}
+
+enum PublicationStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+enum PageKey {
+  HOME
+  ABOUT
+  CONTACT
+}
+
+enum PageSectionType {
+  HERO
+  RICH_TEXT
+  IMAGE_TEXT_SPLIT
+  GALLERY
+  FEATURE_GRID
+  ROOM_GRID
+  FACILITY_GRID
+  CONTACT_CTA
+  STATS
+}
+
+enum PageSectionMediaRole {
+  BACKGROUND
+  PRIMARY
+  GALLERY
+  DECORATIVE
+}
+
+enum EntityMediaRole {
+  HERO
+  GALLERY
+}
+
+enum MediaStatus {
+  PENDING
+  READY
+  FAILED
+  DELETED
+}
+
+enum EnquiryStatus {
+  NEW
+  READ
+  ARCHIVED
+  DELIVERY_FAILED
+}
+
+model User {
+  id            String    @id @db.VarChar(32)
+  name          String    @db.VarChar(120)
+  email         String    @unique @db.VarChar(320)
+  emailVerified Boolean   @default(false)
+  image         String?   @db.VarChar(2048)
+  role          AdminRole @default(EDITOR)
+  active        Boolean   @default(true)
+  createdAt     DateTime  @default(now()) @db.Timestamptz(3)
+  updatedAt     DateTime  @updatedAt @db.Timestamptz(3)
+
+  updatedSiteSettings SiteSettings[] @relation("SiteSettingsUpdatedBy")
+  updatedPages        Page[]         @relation("PageUpdatedBy")
+  updatedRooms        Room[]         @relation("RoomUpdatedBy")
+  updatedFacilities   Facility[]     @relation("FacilityUpdatedBy")
+  createdMedia        MediaAsset[]   @relation("MediaCreatedBy")
+  createdPromotions   Promotion[]    @relation("PromotionCreatedBy")
+  updatedPromotions   Promotion[]    @relation("PromotionUpdatedBy")
+}
+
+model SiteSettings {
+  id                    String   @id @db.VarChar(32)
+  timeZone              String   @default("Africa/Cairo") @db.VarChar(100)
+  siteName              String   @db.VarChar(120)
+  tagline               String?  @db.VarChar(240)
+  phone                 String?  @db.VarChar(40)
+  email                 String?  @db.VarChar(320)
+  addressLine1          String?  @db.VarChar(180)
+  addressLine2          String?  @db.VarChar(180)
+  city                  String?  @db.VarChar(100)
+  country               String?  @db.VarChar(100)
+  latitude              Decimal? @db.Decimal(9, 6)
+  longitude             Decimal? @db.Decimal(9, 6)
+  mapEmbedUrl           String?  @db.VarChar(2048)
+  footerText            String?  @db.VarChar(500)
+  defaultSeoTitle       String?  @db.VarChar(70)
+  defaultSeoDescription String?  @db.VarChar(170)
+  logoMediaId           String?  @db.VarChar(32)
+  stickyLogoMediaId     String?  @db.VarChar(32)
+  faviconMediaId        String?  @db.VarChar(32)
+  updatedAt             DateTime @updatedAt @db.Timestamptz(3)
+  updatedById           String?  @db.VarChar(32)
+
+  logoMedia       MediaAsset?  @relation("SiteLogo", fields: [logoMediaId], references: [id], onDelete: Restrict)
+  stickyLogoMedia MediaAsset?  @relation("SiteStickyLogo", fields: [stickyLogoMediaId], references: [id], onDelete: Restrict)
+  faviconMedia    MediaAsset?  @relation("SiteFavicon", fields: [faviconMediaId], references: [id], onDelete: Restrict)
+  updatedBy       User?        @relation("SiteSettingsUpdatedBy", fields: [updatedById], references: [id], onDelete: Restrict)
+  socialLinks     SocialLink[]
+}
+
+model SocialLink {
+  id             String  @id @db.VarChar(32)
+  siteSettingsId String  @db.VarChar(32)
+  platform       String  @db.VarChar(40)
+  label          String  @db.VarChar(80)
+  url            String  @db.VarChar(2048)
+  sortOrder      Int
+  isVisible      Boolean @default(true)
+
+  siteSettings SiteSettings @relation(fields: [siteSettingsId], references: [id], onDelete: Cascade)
+
+  @@unique([siteSettingsId, platform])
+  @@unique([siteSettingsId, sortOrder])
+}
+
+model Page {
+  id             String   @id @db.VarChar(32)
+  key            PageKey  @unique
+  title          String   @db.VarChar(120)
+  seoTitle       String?  @db.VarChar(70)
+  seoDescription String?  @db.VarChar(170)
+  ogMediaId      String?  @db.VarChar(32)
+  canonicalPath  String   @unique @db.VarChar(255)
+  isPublished    Boolean  @default(false)
+  createdAt      DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt      DateTime @updatedAt @db.Timestamptz(3)
+  updatedById    String?  @db.VarChar(32)
+
+  ogMedia   MediaAsset?   @relation("PageOgMedia", fields: [ogMediaId], references: [id], onDelete: Restrict)
+  updatedBy User?         @relation("PageUpdatedBy", fields: [updatedById], references: [id], onDelete: Restrict)
+  sections  PageSection[]
+}
+
+model PageSection {
+  id        String          @id @db.VarChar(32)
+  pageId    String          @db.VarChar(32)
+  type      PageSectionType
+  heading   String?         @db.VarChar(160)
+  eyebrow   String?         @db.VarChar(80)
+  payload   Json
+  sortOrder Int
+  isVisible Boolean         @default(true)
+  createdAt DateTime        @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime        @updatedAt @db.Timestamptz(3)
+
+  page  Page               @relation(fields: [pageId], references: [id], onDelete: Cascade)
+  media PageSectionMedia[]
+
+  @@unique([pageId, sortOrder])
+  @@index([pageId, isVisible, sortOrder])
+}
+
+model PageSectionMedia {
+  sectionId   String               @db.VarChar(32)
+  mediaId     String               @db.VarChar(32)
+  role        PageSectionMediaRole
+  sortOrder   Int
+  altOverride String?              @db.VarChar(300)
+
+  section PageSection @relation(fields: [sectionId], references: [id], onDelete: Cascade)
+  media   MediaAsset  @relation(fields: [mediaId], references: [id], onDelete: Restrict)
+
+  @@id([sectionId, role, sortOrder])
+  @@index([mediaId])
+}
+
+model Room {
+  id               String            @id @db.VarChar(32)
+  name             String            @db.VarChar(120)
+  slug             String            @unique @db.VarChar(120)
+  shortDescription String            @db.VarChar(300)
+  description      Json
+  sizeSqm          Decimal?          @db.Decimal(6, 2)
+  maxAdults        Int
+  maxChildren      Int               @default(0)
+  bedSummary       String?           @db.VarChar(160)
+  viewSummary      String?           @db.VarChar(160)
+  featured         Boolean           @default(false)
+  sortOrder        Int
+  status           PublicationStatus @default(DRAFT)
+  seoTitle         String?           @db.VarChar(70)
+  seoDescription   String?           @db.VarChar(170)
+  ogMediaId        String?           @db.VarChar(32)
+  createdAt        DateTime          @default(now()) @db.Timestamptz(3)
+  updatedAt        DateTime          @updatedAt @db.Timestamptz(3)
+  updatedById      String?           @db.VarChar(32)
+
+  ogMedia   MediaAsset?   @relation("RoomOgMedia", fields: [ogMediaId], references: [id], onDelete: Restrict)
+  updatedBy User?         @relation("RoomUpdatedBy", fields: [updatedById], references: [id], onDelete: Restrict)
+  features  RoomFeature[]
+  media     RoomMedia[]
+
+  @@index([status, sortOrder])
+  @@index([featured, status, sortOrder])
+}
+
+model RoomFeature {
+  id        String  @id @db.VarChar(32)
+  roomId    String  @db.VarChar(32)
+  label     String  @db.VarChar(120)
+  iconKey   String? @db.VarChar(60)
+  sortOrder Int
+
+  room Room @relation(fields: [roomId], references: [id], onDelete: Cascade)
+
+  @@unique([roomId, sortOrder])
+  @@index([roomId])
+}
+
+model RoomMedia {
+  roomId      String          @db.VarChar(32)
+  mediaId     String          @db.VarChar(32)
+  role        EntityMediaRole
+  sortOrder   Int
+  altOverride String?         @db.VarChar(300)
+
+  room  Room       @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  media MediaAsset @relation(fields: [mediaId], references: [id], onDelete: Restrict)
+
+  @@id([roomId, role, sortOrder])
+  @@index([mediaId])
+}
+
+model Facility {
+  id               String            @id @db.VarChar(32)
+  name             String            @db.VarChar(120)
+  slug             String            @unique @db.VarChar(120)
+  shortDescription String            @db.VarChar(300)
+  description      Json
+  openingHoursText String?           @db.VarChar(500)
+  featured         Boolean           @default(false)
+  sortOrder        Int
+  status           PublicationStatus @default(DRAFT)
+  seoTitle         String?           @db.VarChar(70)
+  seoDescription   String?           @db.VarChar(170)
+  ogMediaId        String?           @db.VarChar(32)
+  createdAt        DateTime          @default(now()) @db.Timestamptz(3)
+  updatedAt        DateTime          @updatedAt @db.Timestamptz(3)
+  updatedById      String?           @db.VarChar(32)
+
+  ogMedia   MediaAsset?     @relation("FacilityOgMedia", fields: [ogMediaId], references: [id], onDelete: Restrict)
+  updatedBy User?           @relation("FacilityUpdatedBy", fields: [updatedById], references: [id], onDelete: Restrict)
+  media     FacilityMedia[]
+
+  @@index([status, sortOrder])
+  @@index([featured, status, sortOrder])
+}
+
+model FacilityMedia {
+  facilityId  String          @db.VarChar(32)
+  mediaId     String          @db.VarChar(32)
+  role        EntityMediaRole
+  sortOrder   Int
+  altOverride String?         @db.VarChar(300)
+
+  facility Facility   @relation(fields: [facilityId], references: [id], onDelete: Cascade)
+  media    MediaAsset @relation(fields: [mediaId], references: [id], onDelete: Restrict)
+
+  @@id([facilityId, role, sortOrder])
+  @@index([mediaId])
+}
+
+model MediaAsset {
+  id               String      @id @db.VarChar(32)
+  storageProvider  String      @db.VarChar(40)
+  storageContainer String      @db.VarChar(100)
+  storageKey       String      @db.VarChar(500)
+  publicUrl        String?     @db.VarChar(2048)
+  originalFilename String      @db.VarChar(255)
+  mimeType         String      @db.VarChar(100)
+  bytes            Int
+  width            Int?
+  height           Int?
+  checksum         String?     @unique @db.VarChar(128)
+  altText          String      @db.VarChar(300)
+  caption          String?     @db.VarChar(500)
+  credit           String?     @db.VarChar(300)
+  focalX           Decimal?    @db.Decimal(4, 3)
+  focalY           Decimal?    @db.Decimal(4, 3)
+  status           MediaStatus @default(PENDING)
+  createdAt        DateTime    @default(now()) @db.Timestamptz(3)
+  updatedAt        DateTime    @updatedAt @db.Timestamptz(3)
+  createdById      String?     @db.VarChar(32)
+
+  createdBy        User?              @relation("MediaCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+  siteLogoFor      SiteSettings[]     @relation("SiteLogo")
+  siteStickyFor    SiteSettings[]     @relation("SiteStickyLogo")
+  siteFaviconFor   SiteSettings[]     @relation("SiteFavicon")
+  pageOgFor        Page[]             @relation("PageOgMedia")
+  roomOgFor        Room[]             @relation("RoomOgMedia")
+  facilityOgFor    Facility[]         @relation("FacilityOgMedia")
+  pageSectionUsage PageSectionMedia[]
+  roomUsage        RoomMedia[]
+  facilityUsage    FacilityMedia[]
+
+  @@unique([storageProvider, storageContainer, storageKey])
+  @@index([status, createdAt])
+}
+
+model Promotion {
+  id           String            @id @db.VarChar(32)
+  internalName String            @db.VarChar(120)
+  headline     String            @db.VarChar(160)
+  body         String            @db.VarChar(600)
+  code         String            @db.VarChar(32)
+  terms        String?           @db.VarChar(1200)
+  status       PublicationStatus @default(DRAFT)
+  startsAt     DateTime?         @db.Timestamptz(3)
+  endsAt       DateTime?         @db.Timestamptz(3)
+  priority     Int               @default(0)
+  showAsPopup  Boolean           @default(true)
+  version      Int               @default(1)
+  publishedAt  DateTime?         @db.Timestamptz(3)
+  createdAt    DateTime          @default(now()) @db.Timestamptz(3)
+  updatedAt    DateTime          @updatedAt @db.Timestamptz(3)
+  createdById  String?           @db.VarChar(32)
+  updatedById  String?           @db.VarChar(32)
+
+  createdBy User? @relation("PromotionCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+  updatedBy User? @relation("PromotionUpdatedBy", fields: [updatedById], references: [id], onDelete: Restrict)
+
+  @@index([status, showAsPopup, startsAt, endsAt, priority])
+  @@index([status, updatedAt])
+}
+
+model ContactEnquiry {
+  id                String        @id @db.VarChar(32)
+  name              String        @db.VarChar(120)
+  email             String        @db.VarChar(320)
+  phone             String?       @db.VarChar(40)
+  subject           String?       @db.VarChar(160)
+  message           String        @db.VarChar(4000)
+  status            EnquiryStatus @default(NEW)
+  deliveryMessageId String?       @db.VarChar(255)
+  createdAt         DateTime      @default(now()) @db.Timestamptz(3)
+  readAt            DateTime?     @db.Timestamptz(3)
+  archivedAt        DateTime?     @db.Timestamptz(3)
+
+  @@index([status, createdAt])
+  @@index([createdAt])
+}

@@ -112,7 +112,7 @@ Approved by the client on 2026-09-25 after the local-media, Hosting.com/cPanel d
 
 ## Phase 1 — Project foundation
 
-Status: `Ready for review`
+Status: **Accepted on 2026-09-25**
 
 ### Objective
 
@@ -178,13 +178,13 @@ Create a reproducible, production-oriented Next.js foundation without implementi
 
 ### Reviewer decision
 
-Awaiting client review. Approve the foundation before any schema/domain implementation. Phase 2 has not started.
+Approved by the client on 2026-09-25 with authorization to begin Phase 2.
 
 ---
 
 ## Phase 2 — Domain, database, and persistence
 
-Status: `Not started`
+Status: `Ready for review`
 
 ### Objective
 
@@ -252,7 +252,7 @@ Implement the content domain and PostgreSQL persistence boundary without buildin
 
 ### Reviewer decision
 
-Review schema names, fields, constraints, and domain rules before authentication or UI depends on them.
+Awaiting client review. Review schema names, fields, constraints, and domain rules before authentication or UI depends on them. Evidence: [phase-2-persistence.md](./phase-2-persistence.md). Phase 3 has not started.
 
 ---
 

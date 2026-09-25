@@ -33,6 +33,7 @@ Every Book Now control initially renders as a visually complete, disabled/inert 
 | [hosting-preflight.md](./hosting-preflight.md) | Read-only cPanel capability check, confirmed features, and deployment blockers |
 | [roadmap.md](./roadmap.md) | Phase-by-phase implementation plan and completion gates |
 | [phase-1-foundation.md](./phase-1-foundation.md) | Phase 1 implementation, verification, screenshots, limitations, and acceptance evidence |
+| [phase-2-persistence.md](./phase-2-persistence.md) | Phase 2 schema, migration review, repository contracts, test results, and limitations |
 
 ## Current technical baseline
 
@@ -52,4 +53,4 @@ The retained identity is deep plum (`#652A4C`), warm gold (`#DBAF71`), editorial
 
 ## Status
 
-Phase 0 documentation was approved by the client on 2026-09-25. Phase 1 is implemented and `Ready for review`. Phase 2 has not started.
+Phases 0 and 1 were approved by the client on 2026-09-25. Phase 2 domain, database, and persistence is implemented and `Ready for review`. Phase 3 has not started.

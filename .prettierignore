@@ -3,6 +3,8 @@ coverage
 design
 docs
 node_modules
+src/generated/prisma
+prisma/migrations
 playwright-report
 test-results
 package-lock.json

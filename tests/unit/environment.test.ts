@@ -18,10 +18,20 @@ describe("server environment", () => {
         NODE_ENV: "production",
         APP_URL: "https://rivanaresidence.com",
         MEDIA_STORAGE_ROOT: "/srv/rivana/media",
+        DATABASE_URL: "postgresql://rivana@example.test/rivana",
       }),
     ).toMatchObject({
       NODE_ENV: "production",
       MEDIA_STORAGE_ROOT: "/srv/rivana/media",
+      DATABASE_URL: "postgresql://rivana@example.test/rivana",
     });
+  });
+
+  it("rejects a non-PostgreSQL database URL", () => {
+    expect(() =>
+      parseServerEnv({
+        DATABASE_URL: "mysql://rivana@example.test/rivana",
+      }),
+    ).toThrowError(/Must be a PostgreSQL connection URL/);
   });
 });
