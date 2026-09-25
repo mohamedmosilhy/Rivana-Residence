@@ -4,6 +4,8 @@ import { notFound } from "next/navigation";
 import { pageKeyFromSegment } from "@/application/content/page-commands";
 import { requireStaff } from "@/composition/auth";
 import { pageCommands } from "@/composition/content";
+import { mediaLibrary } from "@/composition/media";
+import { SECTION_MEDIA_SLOTS } from "@/domain/media/media-asset";
 import {
   PAGE_SECTION_LABELS,
   isSectionPinned,
@@ -11,6 +13,7 @@ import {
 import { OrderControls } from "@/presentation/admin/content/order-controls";
 import { PublicationPanel } from "@/presentation/admin/content/publication-panel";
 import { DeniedPage } from "@/presentation/admin/denied-page";
+import { SectionImagesForm } from "@/presentation/admin/media/section-images-form";
 import { PageDetailsForm } from "@/presentation/admin/pages/page-details-form";
 import { SectionEditor } from "@/presentation/admin/pages/section-editor";
 import { Badge } from "@/presentation/admin/ui/badge";
@@ -22,6 +25,7 @@ import {
   publishPageAction,
   savePageDetailsAction,
   saveSectionAction,
+  saveSectionMediaAction,
   unpublishPageAction,
 } from "../actions";
 
@@ -39,8 +43,12 @@ export default async function EditPagePage({
   );
   if (!allowed) return <DeniedPage title="Edit page" />;
 
-  const loaded = await pageCommands().get(staff, key);
+  const [loaded, media] = await Promise.all([
+    pageCommands().get(staff, key),
+    mediaLibrary().then((library) => library.options(staff)),
+  ]);
   if (!loaded.ok) throw new Error("The page is unavailable.");
+  const options = media.ok ? media.value : [];
   if (!loaded.value) notFound();
   const { page, readiness, lockedTypes } = loaded.value;
   const sections = page.sections;
@@ -110,6 +118,29 @@ export default async function EditPagePage({
                       payload={section.payload}
                       action={saveSectionAction.bind(null, key, section.id)}
                     />
+                    {SECTION_MEDIA_SLOTS[section.type] ? (
+                      <SectionImagesForm
+                        sectionId={section.id}
+                        slots={SECTION_MEDIA_SLOTS[section.type]!}
+                        options={options}
+                        initial={Object.fromEntries(
+                          SECTION_MEDIA_SLOTS[section.type]!.map((slot) => [
+                            slot.role,
+                            section.media
+                              .filter((item) => item.role === slot.role)
+                              .map((item) => ({
+                                mediaId: item.id,
+                                altOverride: item.altOverride,
+                              })),
+                          ]),
+                        )}
+                        action={saveSectionMediaAction.bind(
+                          null,
+                          key,
+                          section.id,
+                        )}
+                      />
+                    ) : null}
                   </div>
                 </details>
                 {isSectionPinned(section.type) ? (
@@ -137,6 +168,8 @@ export default async function EditPagePage({
           action={savePageDetailsAction.bind(null, key)}
           seoTitle={page.seoTitle ?? ""}
           seoDescription={page.seoDescription ?? ""}
+          ogMediaId={page.ogMediaId}
+          options={options}
         />
       </Panel>
     </>

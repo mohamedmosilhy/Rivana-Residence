@@ -6,6 +6,7 @@ import type {
   Actor,
   AdminSiteSettingsDto,
   SettingsRepository,
+  SiteImagesInput,
 } from "@/application/ports/repositories";
 import { failure, success, type Result } from "@/application/shared/result";
 import type {
@@ -16,6 +17,7 @@ import type { Prisma } from "@/generated/prisma/client";
 import { getPrisma } from "@/infrastructure/db/prisma/client";
 import { translatePrismaWriteError } from "@/infrastructure/db/prisma/error-translation";
 import { mapSettings } from "@/infrastructure/db/prisma/mappers/content-mappers";
+import { requireReadyImage } from "@/infrastructure/db/prisma/media-assignments";
 import {
   type DatabaseClient,
   withTransaction,
@@ -121,6 +123,34 @@ export class PrismaSettingsRepository implements SettingsRepository {
               sortOrder: index,
             })),
           });
+        }
+        return success((await readAdmin(transaction))!);
+      });
+    } catch (error) {
+      return translatePrismaWriteError(error);
+    }
+  }
+
+  async updateImages(
+    input: SiteImagesInput,
+    actor: Actor,
+  ): Promise<Result<AdminSiteSettingsDto>> {
+    try {
+      return await withTransaction(this.client, async (transaction) => {
+        for (const mediaId of Object.values(input)) {
+          if (!mediaId) continue;
+          const ready = await requireReadyImage(transaction, mediaId);
+          if (!ready.ok) return ready;
+        }
+        const { count } = await transaction.siteSettings.updateMany({
+          where: { id: SINGLETON_ID },
+          data: { ...input, updatedById: actor.id },
+        });
+        if (count === 0) {
+          return failure(
+            "NOT_FOUND",
+            "Site settings have not been initialized.",
+          );
         }
         return success((await readAdmin(transaction))!);
       });

@@ -10,6 +10,12 @@ test.skip(
 );
 
 async function expectNoAxeViolations(page: Page) {
+  // Let entrance animations (e.g. toasts) finish so colours are final.
+  await page.waitForFunction(() =>
+    document
+      .getAnimations()
+      .every((animation) => animation.playState !== "running"),
+  );
   const { violations } = await new AxeBuilder({ page }).analyze();
   expect(violations).toEqual([]);
 }
@@ -23,13 +29,15 @@ async function confirm(page: Page, trigger: string, confirmLabel = trigger) {
 }
 
 async function createReadyImage(id: string) {
+  // A library record with confirmed rights; no file is needed to choose it.
   await sql(
     `INSERT INTO "MediaAsset" (id, "storageProvider", "storageContainer", "storageKey",
-       "originalFilename", "mimeType", bytes, width, height, "altText", status, "updatedAt")
-     VALUES ($1, 'local', 'public', $2, $3, 'image/webp', 2048, 1600, 900,
-       'Bedroom with a view of the river', 'READY', now())
+       "originalFilename", "mimeType", bytes, width, height, "altText", status,
+       "rightsStatus", "updatedAt")
+     VALUES ($1, 'local', 'media', $2, $3, 'image/webp', 2048, 1600, 900,
+       'Bedroom with a view of the river', 'READY', 'CONFIRMED', now())
      ON CONFLICT (id) DO NOTHING`,
-    [id, `rooms/${id}.webp`, `${id}.webp`],
+    [id, `images/2026/09/${id}.webp`, `${id}.webp`],
   );
 }
 
@@ -38,7 +46,8 @@ test("editors take a room from draft to published and back to archived", async (
 }, testInfo) => {
   const project = testInfo.project.name;
   const slug = `nile-suite-${project}`;
-  await createReadyImage(`e2e-hero-${project}`);
+  const heroId = `e2ehero${project.replace(/[^a-z0-9]/g, "")}`;
+  await createReadyImage(heroId);
   await signInAs(page, accountsFor(project).editor, "/admin/rooms/new");
 
   // Validation failure: explained, focused, nothing saved.
@@ -72,7 +81,11 @@ test("editors take a room from draft to published and back to archived", async (
   ).toHaveCount(0);
   await expectNoAxeViolations(page);
 
-  await page.getByLabel("Hero image").selectOption(`e2e-hero-${project}`);
+  await page.getByRole("button", { name: "Choose hero image" }).click();
+  const picker = page.getByRole("dialog", { name: "Choose hero image" });
+  await picker.getByLabel("Search by description or file name").fill(heroId);
+  await picker.getByRole("radio").check();
+  await picker.getByRole("button", { name: "Use image" }).click();
   await page.getByRole("button", { name: "Save images" }).click();
   await expect(page.getByText("This room is ready to publish.")).toBeVisible();
 
@@ -237,7 +250,9 @@ test.describe("page editing", () => {
     const hero = page.locator("details").filter({ hasText: "1. Hero" });
     await hero.locator("summary").click();
     await hero.getByLabel("Title").fill("About Rivana Residence");
-    await hero.getByRole("button", { name: "Save section" }).click();
+    await hero
+      .getByRole("button", { name: "Save section", exact: true })
+      .click();
     await expect(
       page.getByRole("status").filter({ hasText: "Section saved." }),
     ).toBeVisible();
@@ -292,7 +307,9 @@ test.describe("page editing", () => {
     const hero = page.locator("details").filter({ hasText: "1. Hero" });
     await hero.locator("summary").click();
     await hero.getByLabel("Title").fill("");
-    await hero.getByRole("button", { name: "Save section" }).click();
+    await hero
+      .getByRole("button", { name: "Save section", exact: true })
+      .click();
 
     const summary = hero.getByRole("alert");
     await expect(summary).toBeFocused();

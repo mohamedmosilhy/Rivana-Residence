@@ -7,7 +7,9 @@ import type {
   PageDetailsInput,
   PageRepository,
   PageSectionInput,
+  SectionMediaAssignment,
 } from "@/application/ports/repositories";
+import { SECTION_MEDIA_SLOTS } from "@/domain/media/media-asset";
 import {
   failure,
   invalid,
@@ -32,13 +34,18 @@ import { translatePrismaWriteError } from "@/infrastructure/db/prisma/error-tran
 import {
   mapPage,
   pageGraph,
+  sectionMediaInclude,
 } from "@/infrastructure/db/prisma/mappers/content-mappers";
+import { requireReadyImage } from "@/infrastructure/db/prisma/media-assignments";
 import {
   type DatabaseClient,
   withTransaction,
 } from "@/infrastructure/db/prisma/transaction";
 import { isCompleteOrder } from "@/infrastructure/db/prisma/ordering";
-import { publishabilityFailure } from "@/infrastructure/db/prisma/publication-guard";
+import {
+  RollbackWith,
+  publishabilityFailure,
+} from "@/infrastructure/db/prisma/publication-guard";
 
 export class PrismaPageRepository implements PageRepository {
   constructor(private readonly client: DatabaseClient = getPrisma()) {}
@@ -50,6 +57,7 @@ export class PrismaPageRepository implements PageRepository {
         sections: {
           where: { isVisible: true },
           orderBy: { sortOrder: "asc" },
+          include: sectionMediaInclude,
         },
       },
     });
@@ -74,14 +82,7 @@ export class PrismaPageRepository implements PageRepository {
         if (!row) return failure("NOT_FOUND", "Page not found.");
 
         try {
-          assertPagePublishable(
-            key,
-            row.sections.map((section) => ({
-              type: section.type,
-              payload: section.payload,
-              isVisible: section.isVisible,
-            })),
-          );
+          assertPagePublishable(key, mapPage(row).sections);
         } catch (error) {
           if (error instanceof DomainValidationError) {
             return notPublishable(error);
@@ -116,17 +117,100 @@ export class PrismaPageRepository implements PageRepository {
 
   async updateDetails(key: PageKey, input: PageDetailsInput, actor: Actor) {
     try {
-      const row = await this.client.page.update({
-        where: { key },
-        data: {
-          seoTitle: input.seoTitle,
-          seoDescription: input.seoDescription,
-          updatedById: actor.id,
-        },
-        include: pageGraph,
+      return await withTransaction(this.client, async (transaction) => {
+        if (input.ogMediaId) {
+          const ready = await requireReadyImage(transaction, input.ogMediaId);
+          if (!ready.ok) return ready;
+        }
+        const row = await transaction.page.update({
+          where: { key },
+          data: {
+            seoTitle: input.seoTitle,
+            seoDescription: input.seoDescription,
+            ogMediaId: input.ogMediaId,
+            updatedById: actor.id,
+          },
+          include: pageGraph,
+        });
+        return success(mapPage(row));
       });
-      return success(mapPage(row));
     } catch (error) {
+      return translatePrismaWriteError(error);
+    }
+  }
+
+  async replaceSectionMedia(
+    key: PageKey,
+    sectionId: string,
+    media: readonly SectionMediaAssignment[],
+    actor: Actor,
+  ) {
+    try {
+      return await withTransaction(this.client, async (transaction) => {
+        const page = await transaction.page.findUnique({
+          where: { key },
+          include: pageGraph,
+        });
+        if (!page) return failure("NOT_FOUND", "Page not found.");
+        const section = page.sections.find((item) => item.id === sectionId);
+        if (!section) {
+          return failure("NOT_FOUND", "Section not found on this page.");
+        }
+
+        const slots = SECTION_MEDIA_SLOTS[section.type] ?? [];
+        for (const slot of slots) {
+          const count = media.filter((item) => item.role === slot.role).length;
+          if (!slot.multiple && count > 1) {
+            return failure(
+              "VALIDATION",
+              `Choose one ${slot.label.toLowerCase()}.`,
+            );
+          }
+        }
+        if (
+          media.some((item) => !slots.some((slot) => slot.role === item.role))
+        ) {
+          return failure("VALIDATION", "This section cannot hold that image.");
+        }
+        const positions = new Set(
+          media.map((item) => `${item.role}:${item.sortOrder}`),
+        );
+        if (positions.size !== media.length) {
+          return failure("VALIDATION", "Each image position may be used once.");
+        }
+        const ids = [...new Set(media.map((item) => item.mediaId))];
+        const ready = await transaction.mediaAsset.count({
+          where: { id: { in: ids }, status: "READY" },
+        });
+        if (ready !== ids.length) {
+          return failure(
+            "VALIDATION",
+            "Choose images that have finished uploading.",
+          );
+        }
+
+        await transaction.pageSectionMedia.deleteMany({ where: { sectionId } });
+        if (media.length > 0) {
+          await transaction.pageSectionMedia.createMany({
+            data: media.map((item) => ({ sectionId, ...item })),
+          });
+        }
+        const updated = await transaction.page.update({
+          where: { id: page.id },
+          data: { updatedById: actor.id },
+          include: pageGraph,
+        });
+        if (updated.isPublished) {
+          // A published page must stay publishable; roll back if not.
+          const blocked = publishabilityFailure(() =>
+            assertPagePublishable(key, mapPage(updated).sections),
+          );
+          if (blocked) throw new RollbackWith(blocked);
+        }
+        return success(mapPage(updated));
+      });
+    } catch (error) {
+      if (error instanceof RollbackWith) return error.result;
       return translatePrismaWriteError(error);
     }
   }
@@ -165,16 +249,19 @@ export class PrismaPageRepository implements PageRepository {
         }
 
         if (page.isPublished) {
+          const current = mapPage(page).sections;
           const draft = {
             type: section.type,
             payload,
             isVisible: section.isVisible,
+            media:
+              current.find((item) => item.id === existing?.id)?.media ?? [],
           };
           const sections = existing
-            ? page.sections.map((candidate) =>
+            ? current.map((candidate) =>
                 candidate.id === existing.id ? draft : candidate,
               )
-            : [...page.sections, draft];
+            : [...current, draft];
           try {
             assertPagePublishable(key, sections);
           } catch (error) {

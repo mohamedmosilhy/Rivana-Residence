@@ -392,7 +392,7 @@ Approved by the client on 2026-09-25 with authorization to begin Phase 5. The ap
 
 ## Phase 5 — Content-management features
 
-Status: `Ready for review`
+Status: **Accepted on 2026-09-25**
 
 ### Objective
 
@@ -464,13 +464,13 @@ Let staff safely manage structured pages, rooms, facilities, promotions, and pub
 
 ### Reviewer decision
 
-Awaiting client review. Approve content workflows and terminology before media and public page implementation depend on them, including the plain-text formatting rules (bold, italic, and links deferred), the fixed page structure, and the administrator-only permanent delete. Evidence: [phase-5-content-management.md](./phase-5-content-management.md). Phase 6 has not started.
+Approved by the client on 2026-09-25 with authorization to begin Phase 6. The approval accepts the content workflows and terminology, the plain-text formatting rules, the fixed page structure, and the administrator-only permanent delete. Evidence: [phase-5-content-management.md](./phase-5-content-management.md).
 
 ---
 
 ## Phase 6 — Media management
 
-Status: `Not started`
+Status: `Ready for review`
 
 ### Objective
 
@@ -542,7 +542,7 @@ Provide safe, provider-neutral image management and migrate approved source asse
 
 ### Reviewer decision
 
-Approve media behavior and migrated asset set before final public compositions.
+Awaiting client review. Approve the media behavior (upload policy, re-encoding, rights model, replacement, and deletion) and the migrated asset set, including exclusions, duplicates, and rights confirmation for the reference images, before final public compositions. The Hosting.com media root, quota monitoring, and off-server backup remain to be provisioned and verified before launch. Evidence: [phase-6-media.md](./phase-6-media.md). Phase 7 has not started.
 
 ---
 

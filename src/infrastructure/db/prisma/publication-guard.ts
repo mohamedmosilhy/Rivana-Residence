@@ -18,3 +18,10 @@ export function publishabilityFailure(
     throw error;
   }
 }
+
+/** Thrown inside a transaction to roll it back and return `result`. */
+export class RollbackWith extends Error {
+  constructor(readonly result: Result<never>) {
+    super("Transaction rolled back.");
+  }
+}

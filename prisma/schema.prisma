@@ -57,6 +57,14 @@ enum MediaStatus {
   DELETED
 }
 
+// Whether the residence may publish an image. Staff confirm rights when they
+// upload; imported reference assets stay UNCONFIRMED until an administrator
+// confirms them, and content using them cannot be published.
+enum MediaRightsStatus {
+  CONFIRMED
+  UNCONFIRMED
+}
+
 enum EnquiryStatus {
   NEW
   READ
@@ -169,12 +177,14 @@ model SiteSettings {
   logoMediaId           String?  @db.VarChar(32)
   stickyLogoMediaId     String?  @db.VarChar(32)
   faviconMediaId        String?  @db.VarChar(32)
+  defaultOgMediaId      String?  @db.VarChar(32)
   updatedAt             DateTime @updatedAt @db.Timestamptz(3)
   updatedById           String?  @db.VarChar(32)
 
   logoMedia       MediaAsset?  @relation("SiteLogo", fields: [logoMediaId], references: [id], onDelete: Restrict)
   stickyLogoMedia MediaAsset?  @relation("SiteStickyLogo", fields: [stickyLogoMediaId], references: [id], onDelete: Restrict)
   faviconMedia    MediaAsset?  @relation("SiteFavicon", fields: [faviconMediaId], references: [id], onDelete: Restrict)
+  defaultOgMedia  MediaAsset?  @relation("SiteDefaultOg", fields: [defaultOgMediaId], references: [id], onDelete: Restrict)
   updatedBy       User?        @relation("SiteSettingsUpdatedBy", fields: [updatedById], references: [id], onDelete: Restrict)
   socialLinks     SocialLink[]
 }
@@ -342,31 +352,37 @@ model FacilityMedia {
 }
 
 model MediaAsset {
-  id               String      @id @db.VarChar(32)
-  storageProvider  String      @db.VarChar(40)
-  storageContainer String      @db.VarChar(100)
-  storageKey       String      @db.VarChar(500)
-  publicUrl        String?     @db.VarChar(2048)
-  originalFilename String      @db.VarChar(255)
-  mimeType         String      @db.VarChar(100)
+  id               String            @id @db.VarChar(32)
+  storageProvider  String            @db.VarChar(40)
+  storageContainer String            @db.VarChar(100)
+  storageKey       String            @db.VarChar(500)
+  publicUrl        String?           @db.VarChar(2048)
+  originalFilename String            @db.VarChar(255)
+  mimeType         String            @db.VarChar(100)
   bytes            Int
   width            Int?
   height           Int?
-  checksum         String?     @unique @db.VarChar(128)
-  altText          String      @db.VarChar(300)
-  caption          String?     @db.VarChar(500)
-  credit           String?     @db.VarChar(300)
-  focalX           Decimal?    @db.Decimal(4, 3)
-  focalY           Decimal?    @db.Decimal(4, 3)
-  status           MediaStatus @default(PENDING)
-  createdAt        DateTime    @default(now()) @db.Timestamptz(3)
-  updatedAt        DateTime    @updatedAt @db.Timestamptz(3)
-  createdById      String?     @db.VarChar(32)
+  checksum         String?           @unique @db.VarChar(128)
+  altText          String            @db.VarChar(300)
+  caption          String?           @db.VarChar(500)
+  credit           String?           @db.VarChar(300)
+  focalX           Decimal?          @db.Decimal(4, 3)
+  focalY           Decimal?          @db.Decimal(4, 3)
+  status           MediaStatus       @default(PENDING)
+  rightsStatus     MediaRightsStatus @default(UNCONFIRMED)
+  // Provenance for imported assets, e.g. "reference:design/assets/images/pool-main.jpg".
+  sourceReference  String?           @db.VarChar(255)
+  // A safe, staff-readable reason when status is FAILED.
+  failureReason    String?           @db.VarChar(200)
+  createdAt        DateTime          @default(now()) @db.Timestamptz(3)
+  updatedAt        DateTime          @updatedAt @db.Timestamptz(3)
+  createdById      String?           @db.VarChar(32)
 
   createdBy        User?              @relation("MediaCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
   siteLogoFor      SiteSettings[]     @relation("SiteLogo")
   siteStickyFor    SiteSettings[]     @relation("SiteStickyLogo")
   siteFaviconFor   SiteSettings[]     @relation("SiteFavicon")
+  siteDefaultOgFor SiteSettings[]     @relation("SiteDefaultOg")
   pageOgFor        Page[]             @relation("PageOgMedia")
   roomOgFor        Room[]             @relation("RoomOgMedia")
   facilityOgFor    Facility[]         @relation("FacilityOgMedia")
@@ -376,6 +392,7 @@ model MediaAsset {
 
   @@unique([storageProvider, storageContainer, storageKey])
   @@index([status, createdAt])
+  @@index([sourceReference])
 }
 
 model Promotion {

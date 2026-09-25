@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 /**
  * Warns before the browser leaves a page with unsaved edits (reload, tab
@@ -19,9 +19,10 @@ export function useUnsavedChanges() {
     return () => window.removeEventListener("beforeunload", warn);
   }, [dirty]);
 
-  return {
-    dirty,
-    markDirty: () => setDirty(true),
-    markSaved: () => setDirty(false),
-  };
+  // Stable identities: callers list these in effect dependencies, and a new
+  // function each render would re-run those effects (e.g. repeat a toast).
+  const markDirty = useCallback(() => setDirty(true), []);
+  const markSaved = useCallback(() => setDirty(false), []);
+
+  return { dirty, markDirty, markSaved };
 }

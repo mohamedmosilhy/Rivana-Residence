@@ -194,10 +194,19 @@ export const pageSectionMetaSchema = z.object({
   eyebrow: z.string().trim().max(80).nullable(),
 });
 
+export type SectionMediaCandidate = Readonly<{
+  role: string;
+  status: string;
+  altText: string;
+  altOverride?: string | null;
+  rightsConfirmed?: boolean;
+}>;
+
 export type PageSectionDraft = Readonly<{
   type: PageSectionType;
   payload: unknown;
   isVisible: boolean;
+  media?: readonly SectionMediaCandidate[];
 }>;
 
 export function parsePageSectionPayload(
@@ -254,6 +263,34 @@ export function assertPagePublishable(
     path: "sections",
     message: `A visible ${PAGE_SECTION_LABELS[type]} section is required.`,
   }));
+
+  // Images in visible sections follow the same rules as room images;
+  // decorative images need no alternative text.
+  for (const section of visible) {
+    const label = PAGE_SECTION_LABELS[section.type];
+    for (const media of section.media ?? []) {
+      if (media.status !== "READY") {
+        issues.push({
+          path: "sections",
+          message: `The ${label} section uses an image that is not ready.`,
+        });
+      } else if (media.rightsConfirmed === false) {
+        issues.push({
+          path: "sections",
+          message: `The ${label} section uses an image whose usage rights are not confirmed.`,
+        });
+      }
+      if (
+        media.role !== "DECORATIVE" &&
+        !(media.altOverride ?? media.altText).trim()
+      ) {
+        issues.push({
+          path: "sections",
+          message: `An image in the ${label} section needs alternative text.`,
+        });
+      }
+    }
+  }
 
   // The contact page exists to take enquiries.
   if (

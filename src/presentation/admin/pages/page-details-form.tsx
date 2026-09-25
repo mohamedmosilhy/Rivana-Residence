@@ -1,6 +1,9 @@
 "use client";
 
-import { useActionState, useEffect } from "react";
+import { useActionState, useEffect, useState } from "react";
+
+import type { MediaOption } from "@/application/ports/repositories";
+import { SingleImage } from "@/presentation/admin/media/image-choice";
 
 import {
   ErrorSummary,
@@ -20,13 +23,18 @@ export function PageDetailsForm({
   action,
   seoTitle,
   seoDescription,
+  ogMediaId,
+  options,
 }: Readonly<{
   action: FormAction;
   seoTitle: string;
   seoDescription: string;
+  ogMediaId: string | null;
+  options: readonly MediaOption[];
 }>) {
   const [state, formAction] = useActionState(action, idleFormState);
   const toast = useToast();
+  const [sharing, setSharing] = useState(ogMediaId);
 
   useEffect(() => {
     if (state.status === "success") toast(state.message);
@@ -71,6 +79,14 @@ export function PageDetailsForm({
         maxLength={170}
         defaultValue={valueOf("seoDescription", seoDescription)}
         errors={fieldErrorsFor(state, "seoDescription")}
+      />
+      <input type="hidden" name="ogMediaId" value={sharing ?? ""} />
+      <SingleImage
+        label="Sharing image"
+        hint="Optional. Shown when this page is shared on social media; the site's default sharing image is used otherwise."
+        options={options}
+        value={sharing ? { mediaId: sharing, altOverride: null } : null}
+        onChange={(value) => setSharing(value?.mediaId ?? null)}
       />
       <FormActions
         primary={

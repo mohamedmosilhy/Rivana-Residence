@@ -70,6 +70,7 @@ Source: `src/domain/auth/capabilities.ts`. Every cell is asserted in `tests/unit
 | `content:delete` (permanent delete of archived content; added in Phase 5) | – | ✓ |
 | `media:upload` | ✓ | ✓ |
 | `media:delete` | – | ✓ |
+| `media:rights` (confirm or withdraw image usage rights; added in Phase 6) | – | ✓ |
 | `promotions:manage` | ✓ | ✓ |
 | `enquiries:read`, `enquiries:manage` | ✓ | ✓ |
 | `settings:edit` | – | ✓ |

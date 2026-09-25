@@ -56,6 +56,7 @@ export type RoomMediaCandidate = Readonly<{
   status: MediaStatus;
   altText: string;
   altOverride?: string | null;
+  rightsConfirmed?: boolean;
 }>;
 
 export type RoomPublicationCandidate = Readonly<{
@@ -97,6 +98,13 @@ export function assertRoomPublishable(room: RoomPublicationCandidate) {
       issues.push({
         path: `media.${index}`,
         message: "Published rooms may reference only ready media.",
+      });
+    }
+    if (media.rightsConfirmed === false) {
+      issues.push({
+        path: `media.${index}`,
+        message:
+          "Published rooms may use only images whose usage rights are confirmed.",
       });
     }
     if (!(media.altOverride ?? media.altText).trim()) {

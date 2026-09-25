@@ -2,13 +2,14 @@ import type { Metadata, Route } from "next";
 import { notFound } from "next/navigation";
 
 import { readinessIssues } from "@/application/content/catalog-queries";
+import type { MediaReference } from "@/application/ports/repositories";
 import { requireStaff } from "@/composition/auth";
 import { propertyTimeZone, facilityQueries } from "@/composition/content";
 import { roleHasCapability } from "@/domain/auth/capabilities";
 import { assertFacilityPublishable } from "@/domain/facilities/facility";
 import { editorTextFromRichText } from "@/domain/shared/rich-text";
 import { CatalogForm } from "@/presentation/admin/content/catalog-form";
-import { MediaSelectionForm } from "@/presentation/admin/content/media-selection-form";
+import { EntityImagesForm } from "@/presentation/admin/media/entity-images-form";
 import { PublicationPanel } from "@/presentation/admin/content/publication-panel";
 import { DeniedPage } from "@/presentation/admin/denied-page";
 import { formatDateTime } from "@/presentation/admin/format";
@@ -25,6 +26,11 @@ import {
   unpublishFacilityAction,
   updateFacilityAction,
 } from "../actions";
+
+function heroOf(media: readonly MediaReference[]) {
+  const hero = media.find((item) => item.role === "HERO");
+  return hero ? { mediaId: hero.id, altOverride: hero.altOverride } : null;
+}
 
 export const metadata: Metadata = { title: "Edit facility" };
 
@@ -51,7 +57,7 @@ export default async function EditFacilityPage({
   ]);
   if (!loaded.ok) throw new Error("The facility is unavailable.");
   if (!loaded.value) notFound();
-  const { record: facility, media } = loaded.value;
+  const { record: facility, media, gaps } = loaded.value;
 
   return (
     <>
@@ -67,6 +73,7 @@ export default async function EditFacilityPage({
         name={facility.name}
         noun="facility"
         status={facility.status}
+        warnings={gaps}
         readiness={readinessIssues(() => assertFacilityPublishable(facility))}
         publicPath={`/facilities/${facility.slug}`}
         previewHref={`/admin/facilities/${facility.id}/preview` as Route}
@@ -100,16 +107,18 @@ export default async function EditFacilityPage({
         />
       </Panel>
       <Panel title="Images" titleId="facility-images-title" wide>
-        <MediaSelectionForm
+        <EntityImagesForm
           noun="facility"
           action={saveFacilityMediaAction.bind(null, facility.id)}
           options={media}
-          heroId={
-            facility.media.find((item) => item.role === "HERO")?.id ?? null
-          }
-          galleryIds={facility.media
+          hero={heroOf(facility.media)}
+          gallery={facility.media
             .filter((item) => item.role === "GALLERY")
-            .map((item) => item.id)}
+            .map((item) => ({
+              mediaId: item.id,
+              altOverride: item.altOverride,
+            }))}
+          social={facility.ogMediaId}
         />
       </Panel>
     </>

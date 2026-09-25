@@ -2,9 +2,17 @@ import type {
   FacilityInput,
   MediaAssignment,
   RoomInput,
+  SectionMediaAssignment,
 } from "@/application/ports/repositories";
 import { failure, success, type Result } from "@/application/shared/result";
 import { richTextFromEditorText } from "@/domain/shared/rich-text";
+
+const PAGE_SECTION_MEDIA_ROLES = [
+  "BACKGROUND",
+  "PRIMARY",
+  "GALLERY",
+  "DECORATIVE",
+] as const;
 
 import {
   checkbox,
@@ -58,43 +66,119 @@ export function facilityInputFromForm(values: FormValues): FacilityInput {
 
 const MAX_GALLERY = 24;
 
-/** Builds hero + ordered gallery assignments from the media form. */
-export function mediaAssignmentsFromForm(
-  values: FormValues,
-): Result<readonly MediaAssignment[]> {
-  const hero = optionalString(values, "heroMediaId");
-  const gallery = jsonValue(values, "galleryMediaIds");
+type ChosenImage = Readonly<{ mediaId: string; altOverride: string | null }>;
+
+function chosenImage(value: unknown): ChosenImage | null | undefined {
+  if (value === null) return null;
+  if (typeof value !== "object" || Array.isArray(value)) return undefined;
+  const { mediaId, altOverride } = value as Record<string, unknown>;
+  if (typeof mediaId !== "string" || !/^[a-z0-9]{1,32}$/.test(mediaId)) {
+    return undefined;
+  }
   if (
-    !Array.isArray(gallery) ||
-    gallery.length > MAX_GALLERY ||
-    !gallery.every((id) => typeof id === "string" && id.length <= 32)
+    altOverride !== null &&
+    altOverride !== undefined &&
+    typeof altOverride !== "string"
   ) {
-    return failure("VALIDATION", "The gallery selection is invalid.", {
-      gallery: [`Choose up to ${MAX_GALLERY} gallery images.`],
-    });
+    return undefined;
   }
-  const galleryIds = [...new Set(gallery as string[])];
-  if (hero && galleryIds.includes(hero)) {
+  const override = typeof altOverride === "string" ? altOverride.trim() : "";
+  if (override.length > 300) return undefined;
+  return { mediaId, altOverride: override || null };
+}
+
+function chosenList(value: unknown, max: number): ChosenImage[] | undefined {
+  if (!Array.isArray(value) || value.length > max) return undefined;
+  const list = value.map(chosenImage);
+  if (list.some((item) => !item)) return undefined;
+  const unique = new Map(
+    (list as ChosenImage[]).map((item) => [item.mediaId, item]),
+  );
+  return [...unique.values()];
+}
+
+const INVALID_SELECTION = failure(
+  "VALIDATION",
+  "The image selection is invalid.",
+  {
+    media: ["The image selection is invalid. Reload the page and try again."],
+  },
+);
+
+export type EntityMediaSelection = Readonly<{
+  assignments: readonly MediaAssignment[];
+  socialImageId: string | null;
+}>;
+
+/**
+ * Reads the room/facility image editor: a hero, an ordered gallery (each
+ * with an optional contextual alt text), and an optional sharing image.
+ */
+export function entityMediaFromForm(
+  values: FormValues,
+): Result<EntityMediaSelection> {
+  const raw = jsonValue(values, "media");
+  if (typeof raw !== "object" || raw === null || Array.isArray(raw)) {
+    return INVALID_SELECTION;
+  }
+  const { hero, gallery, social } = raw as Record<string, unknown>;
+  const heroImage = chosenImage(hero ?? null);
+  const galleryImages = chosenList(gallery ?? [], MAX_GALLERY);
+  const socialImage = chosenImage(social ?? null);
+  if (heroImage === undefined || !galleryImages || socialImage === undefined) {
+    return INVALID_SELECTION;
+  }
+  if (
+    heroImage &&
+    galleryImages.some((item) => item.mediaId === heroImage.mediaId)
+  ) {
     return failure("VALIDATION", "The hero image is also in the gallery.", {
-      gallery: ["The hero image cannot also be a gallery image."],
+      media: ["The hero image cannot also be a gallery image."],
     });
   }
-  return success([
-    ...(hero
-      ? [
-          {
-            mediaId: hero,
-            role: "HERO" as const,
-            sortOrder: 0,
-            altOverride: null,
-          },
-        ]
-      : []),
-    ...galleryIds.map((mediaId, index) => ({
-      mediaId,
-      role: "GALLERY" as const,
-      sortOrder: index,
-      altOverride: null,
-    })),
-  ]);
+  return success({
+    assignments: [
+      ...(heroImage
+        ? [{ ...heroImage, role: "HERO" as const, sortOrder: 0 }]
+        : []),
+      ...galleryImages.map((item, index) => ({
+        ...item,
+        role: "GALLERY" as const,
+        sortOrder: index,
+      })),
+    ],
+    socialImageId: socialImage?.mediaId ?? null,
+  });
+}
+
+/** Reads a page section's images: `{ [role]: ChosenImage[] }`. */
+export function sectionMediaFromForm(
+  values: FormValues,
+): Result<readonly SectionMediaAssignment[]> {
+  const raw = jsonValue(values, "media");
+  if (typeof raw !== "object" || raw === null || Array.isArray(raw)) {
+    return INVALID_SELECTION;
+  }
+  const assignments: SectionMediaAssignment[] = [];
+  for (const [role, list] of Object.entries(raw)) {
+    if (!(PAGE_SECTION_MEDIA_ROLES as readonly string[]).includes(role)) {
+      return INVALID_SELECTION;
+    }
+    const images = chosenList(list, MAX_GALLERY);
+    if (!images) return INVALID_SELECTION;
+    images.forEach((image, index) =>
+      assignments.push({
+        ...image,
+        role: role as SectionMediaAssignment["role"],
+        sortOrder: index,
+      }),
+    );
+  }
+  return success(assignments);
+}
+
+/** Reads a single optional image id field. */
+export function optionalMediaId(values: FormValues, name: string) {
+  const value = optionalString(values, name);
+  return value && /^[a-z0-9]{1,32}$/.test(value) ? value : null;
 }

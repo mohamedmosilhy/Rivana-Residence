@@ -8,6 +8,7 @@ export const CAPABILITIES = [
   "content:delete",
   "media:upload",
   "media:delete",
+  "media:rights",
   "promotions:manage",
   "enquiries:read",
   "enquiries:manage",

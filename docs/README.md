@@ -37,6 +37,7 @@ Every Book Now control initially renders as a visually complete, disabled/inert 
 | [phase-3-auth.md](./phase-3-auth.md) | Phase 3 auth configuration, capability matrix, operator procedures, security evidence, and limitations |
 | [phase-4-admin-shell.md](./phase-4-admin-shell.md) | Phase 4 admin shell, shared CMS patterns, settings workflow, accessibility notes, test evidence, and limitations |
 | [phase-5-content-management.md](./phase-5-content-management.md) | Phase 5 room, facility, page, and promotion management; final fields; cache-invalidation matrix; test matrix; limitations |
+| [phase-6-media.md](./phase-6-media.md) | Phase 6 media storage, upload verification and threat tests, library/picker, replace/delete, asset migration manifest, limitations |
 
 ## Current technical baseline
 
@@ -56,4 +57,4 @@ The retained identity is deep plum (`#652A4C`), warm gold (`#DBAF71`), editorial
 
 ## Status
 
-Phases 0–4 were approved by the client on 2026-09-25. Phase 5 (content management) is implemented and `Ready for review`. Phase 6 has not started.
+Phases 0–5 were approved by the client on 2026-09-25. Phase 6 (media management) is implemented and `Ready for review`. Phase 7 has not started.

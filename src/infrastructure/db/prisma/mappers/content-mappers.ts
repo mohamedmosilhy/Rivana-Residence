@@ -31,11 +31,43 @@ export const facilityGraph = {
   },
 } satisfies Prisma.FacilityInclude;
 
+export const sectionMediaInclude = {
+  media: {
+    include: { media: true },
+    orderBy: [{ role: "asc" }, { sortOrder: "asc" }],
+  },
+} satisfies Prisma.PageSectionInclude;
+
 export const pageGraph = {
   sections: {
     orderBy: { sortOrder: "asc" },
+    include: sectionMediaInclude,
   },
 } satisfies Prisma.PageInclude;
+
+type MediaRow = Prisma.MediaAssetGetPayload<object>;
+
+/** A usage join row plus its asset, as a provider-neutral reference. */
+function mediaReference<Role extends string>(usage: {
+  role: Role;
+  sortOrder: number;
+  altOverride: string | null;
+  media: Pick<
+    MediaRow,
+    "id" | "status" | "altText" | "storageKey" | "rightsStatus"
+  >;
+}) {
+  return {
+    id: usage.media.id,
+    role: usage.role,
+    sortOrder: usage.sortOrder,
+    status: usage.media.status,
+    altText: usage.media.altText,
+    altOverride: usage.altOverride,
+    storageKey: usage.media.storageKey,
+    rightsConfirmed: usage.media.rightsStatus === "CONFIRMED",
+  };
+}
 
 type RoomRow = Prisma.RoomGetPayload<{ include: typeof roomGraph }>;
 type FacilityRow = Prisma.FacilityGetPayload<{
@@ -62,18 +94,12 @@ export function mapRoom(row: RoomRow): RoomDto {
     features: row.features.map((feature) => ({ label: feature.label })),
     seoTitle: row.seoTitle,
     seoDescription: row.seoDescription,
+    ogMediaId: row.ogMediaId,
     featured: row.featured,
     sortOrder: row.sortOrder,
     status: row.status,
     updatedAt: row.updatedAt,
-    media: row.media.map((usage) => ({
-      id: usage.media.id,
-      role: usage.role,
-      sortOrder: usage.sortOrder,
-      status: usage.media.status,
-      altText: usage.media.altText,
-      altOverride: usage.altOverride,
-    })),
+    media: row.media.map(mediaReference),
   };
 }
 
@@ -87,18 +113,12 @@ export function mapFacility(row: FacilityRow): FacilityDto {
     openingHoursText: row.openingHoursText,
     seoTitle: row.seoTitle,
     seoDescription: row.seoDescription,
+    ogMediaId: row.ogMediaId,
     featured: row.featured,
     sortOrder: row.sortOrder,
     status: row.status,
     updatedAt: row.updatedAt,
-    media: row.media.map((usage) => ({
-      id: usage.media.id,
-      role: usage.role,
-      sortOrder: usage.sortOrder,
-      status: usage.media.status,
-      altText: usage.media.altText,
-      altOverride: usage.altOverride,
-    })),
+    media: row.media.map(mediaReference),
   };
 }
 
@@ -111,6 +131,7 @@ export function mapPage(row: PageRow): PageDto {
     isPublished: row.isPublished,
     seoTitle: row.seoTitle,
     seoDescription: row.seoDescription,
+    ogMediaId: row.ogMediaId,
     updatedAt: row.updatedAt,
     sections: row.sections.map((section) => ({
       id: section.id,
@@ -120,6 +141,7 @@ export function mapPage(row: PageRow): PageDto {
       payload: section.payload,
       sortOrder: section.sortOrder,
       isVisible: section.isVisible,
+      media: section.media.map(mediaReference),
     })),
   };
 }
@@ -153,6 +175,9 @@ export function mapSettings(row: SettingsRow): SiteSettingsDto {
     footerText: row.footerText,
     defaultSeoTitle: row.defaultSeoTitle,
     defaultSeoDescription: row.defaultSeoDescription,
+    logoMediaId: row.logoMediaId,
+    stickyLogoMediaId: row.stickyLogoMediaId,
+    defaultOgMediaId: row.defaultOgMediaId,
     socialLinks: [...row.socialLinks]
       .sort((left, right) => left.sortOrder - right.sortOrder)
       .flatMap((link) =>
@@ -170,19 +195,30 @@ export function mapSettings(row: SettingsRow): SiteSettingsDto {
   };
 }
 
-export function mapMedia(row: {
-  id: string;
-  storageProvider: string;
-  storageContainer: string;
-  storageKey: string;
-  mimeType: string;
-  bytes: number;
-  width: number | null;
-  height: number | null;
-  altText: string;
-  status: MediaAssetDto["status"];
-}): MediaAssetDto {
-  return row;
+export function mapMedia(row: MediaRow): MediaAssetDto {
+  return {
+    id: row.id,
+    storageProvider: row.storageProvider,
+    storageContainer: row.storageContainer,
+    storageKey: row.storageKey,
+    originalFilename: row.originalFilename,
+    mimeType: row.mimeType,
+    bytes: row.bytes,
+    width: row.width,
+    height: row.height,
+    checksum: row.checksum,
+    altText: row.altText,
+    caption: row.caption,
+    credit: row.credit,
+    focalX: row.focalX === null ? null : row.focalX.toNumber(),
+    focalY: row.focalY === null ? null : row.focalY.toNumber(),
+    status: row.status,
+    rightsStatus: row.rightsStatus,
+    sourceReference: row.sourceReference,
+    failureReason: row.failureReason,
+    createdAt: row.createdAt,
+    updatedAt: row.updatedAt,
+  };
 }
 
 export function mapPromotion(row: PromotionDto): PromotionDto {

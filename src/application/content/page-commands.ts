@@ -22,6 +22,7 @@ import { seoFields } from "@/domain/shared/content-fields";
 import { issuesFromZod } from "@/domain/shared/domain-error";
 import { richTextFromEditorText } from "@/domain/shared/rich-text";
 
+import { optionalMediaId, sectionMediaFromForm } from "./catalog-forms";
 import { readinessIssues } from "./catalog-queries";
 import {
   checkbox,
@@ -117,7 +118,10 @@ export function sectionPayloadFromForm(
   }
 }
 
-const detailsSchema = z.object(seoFields);
+const detailsSchema = z.object({
+  ...seoFields,
+  ogMediaId: z.string().nullable(),
+});
 
 export class PageCommands {
   constructor(
@@ -206,6 +210,7 @@ export class PageCommands {
       const parsed = detailsSchema.safeParse({
         seoTitle: optionalString(values, "seoTitle"),
         seoDescription: optionalString(values, "seoDescription"),
+        ogMediaId: optionalMediaId(values, "ogMediaId"),
       });
       if (!parsed.success) {
         return Promise.resolve(
@@ -216,6 +221,19 @@ export class PageCommands {
         );
       }
       return this.pages.updateDetails(key, parsed.data, actor);
+    });
+  }
+
+  async saveSectionMedia(
+    staff: StaffPrincipal | null,
+    key: PageKey,
+    sectionId: string,
+    values: FormValues,
+  ): Promise<Result<PageDto>> {
+    return this.edit(staff, "content:edit", key, async (actor) => {
+      const media = sectionMediaFromForm(values);
+      if (!media.ok) return media;
+      return this.pages.replaceSectionMedia(key, sectionId, media.value, actor);
     });
   }
 

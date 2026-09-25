@@ -18,7 +18,10 @@ import {
   mapRoom,
   roomGraph,
 } from "@/infrastructure/db/prisma/mappers/content-mappers";
-import { resolveMediaAssignments } from "@/infrastructure/db/prisma/media-assignments";
+import {
+  requireReadyImage,
+  resolveMediaAssignments,
+} from "@/infrastructure/db/prisma/media-assignments";
 import { isCompleteOrder } from "@/infrastructure/db/prisma/ordering";
 import { publishabilityFailure } from "@/infrastructure/db/prisma/publication-guard";
 import {
@@ -320,6 +323,25 @@ export class PrismaRoomRepository implements RoomRepository {
         const updated = await transaction.room.update({
           where: { id },
           data: { updatedById: actor.id },
+          include: roomGraph,
+        });
+        return success(mapRoom(updated));
+      });
+    } catch (error) {
+      return translatePrismaWriteError(error);
+    }
+  }
+
+  async setSocialImage(id: string, mediaId: string | null, actor: Actor) {
+    try {
+      return await withTransaction(this.client, async (transaction) => {
+        if (mediaId) {
+          const ready = await requireReadyImage(transaction, mediaId);
+          if (!ready.ok) return ready;
+        }
+        const updated = await transaction.room.update({
+          where: { id },
+          data: { ogMediaId: mediaId, updatedById: actor.id },
           include: roomGraph,
         });
         return success(mapRoom(updated));

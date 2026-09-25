@@ -43,3 +43,7 @@ If any precondition fails, use an S3-compatible adapter without changing domain 
 ## Consequences
 
 Media uses capacity already included in the hosting plan, but it is not literally costless: it consumes the paid plan's disk, inode, transfer, and backup allowances. The server is a storage single point of failure, so off-server backups and restore tests are mandatory. Horizontal multi-server deployment is not supported by the local adapter. Moving hosts requires copying the media directory while preserving keys/checksums, or migrating to object storage.
+
+## Implementation note (Phase 6)
+
+Implemented as `LocalMediaStorage` behind the redesigned `MediaStorage` port, with a quarantine directory inside the media root, atomic no-overwrite object writes, symlink-refusing path handling, and delivery through the application `/media/` route. Uploads are verified and re-encoded with sharp before storage. See [phase-6-media.md](../phase-6-media.md).

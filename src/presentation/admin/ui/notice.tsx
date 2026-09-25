@@ -3,6 +3,8 @@
 const NOTICES = {
   created: "Created as a draft. Nothing is public until you publish it.",
   deleted: "Permanently deleted.",
+  replaced:
+    "Replaced. Every place that used the old image now shows this one. The old image is still in the library until you delete it.",
 } as const;
 
 export type NoticeCode = keyof typeof NOTICES;

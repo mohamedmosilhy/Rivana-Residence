@@ -2,13 +2,14 @@ import type { Metadata, Route } from "next";
 import { notFound } from "next/navigation";
 
 import { readinessIssues } from "@/application/content/catalog-queries";
+import type { MediaReference } from "@/application/ports/repositories";
 import { requireStaff } from "@/composition/auth";
 import { propertyTimeZone, roomQueries } from "@/composition/content";
 import { roleHasCapability } from "@/domain/auth/capabilities";
 import { assertRoomPublishable } from "@/domain/rooms/room";
 import { editorTextFromRichText } from "@/domain/shared/rich-text";
 import { CatalogForm } from "@/presentation/admin/content/catalog-form";
-import { MediaSelectionForm } from "@/presentation/admin/content/media-selection-form";
+import { EntityImagesForm } from "@/presentation/admin/media/entity-images-form";
 import { PublicationPanel } from "@/presentation/admin/content/publication-panel";
 import { DeniedPage } from "@/presentation/admin/denied-page";
 import { formatDateTime } from "@/presentation/admin/format";
@@ -25,6 +26,11 @@ import {
   unpublishRoomAction,
   updateRoomAction,
 } from "../actions";
+
+function heroOf(media: readonly MediaReference[]) {
+  const hero = media.find((item) => item.role === "HERO");
+  return hero ? { mediaId: hero.id, altOverride: hero.altOverride } : null;
+}
 
 export const metadata: Metadata = { title: "Edit room" };
 
@@ -51,7 +57,7 @@ export default async function EditRoomPage({
   ]);
   if (!loaded.ok) throw new Error("The room is unavailable.");
   if (!loaded.value) notFound();
-  const { record: room, media } = loaded.value;
+  const { record: room, media, gaps } = loaded.value;
 
   return (
     <>
@@ -67,6 +73,7 @@ export default async function EditRoomPage({
         name={room.name}
         noun="room"
         status={room.status}
+        warnings={gaps}
         readiness={readinessIssues(() => assertRoomPublishable(room))}
         publicPath={`/rooms/${room.slug}`}
         previewHref={`/admin/rooms/${room.id}/preview` as Route}
@@ -105,14 +112,18 @@ export default async function EditRoomPage({
         />
       </Panel>
       <Panel title="Images" titleId="room-images-title" wide>
-        <MediaSelectionForm
+        <EntityImagesForm
           noun="room"
           action={saveRoomMediaAction.bind(null, room.id)}
           options={media}
-          heroId={room.media.find((item) => item.role === "HERO")?.id ?? null}
-          galleryIds={room.media
+          hero={heroOf(room.media)}
+          gallery={room.media
             .filter((item) => item.role === "GALLERY")
-            .map((item) => item.id)}
+            .map((item) => ({
+              mediaId: item.id,
+              altOverride: item.altOverride,
+            }))}
+          social={room.ogMediaId}
         />
       </Panel>
     </>

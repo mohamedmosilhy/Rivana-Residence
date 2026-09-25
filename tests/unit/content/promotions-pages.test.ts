@@ -200,6 +200,7 @@ describe("page commands", () => {
       isPublished,
       seoTitle: null,
       seoDescription: null,
+      ogMediaId: null,
       updatedAt: now,
       sections: [
         "HERO",
@@ -215,6 +216,7 @@ describe("page commands", () => {
         payload: {},
         sortOrder: index,
         isVisible: true,
+        media: [],
       })),
     };
   }

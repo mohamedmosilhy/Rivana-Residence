@@ -6,6 +6,7 @@ import type {
   AdminSiteSettingsDto,
   SettingsRepository,
 } from "@/application/ports/repositories";
+import { optionalMediaId } from "@/application/content/catalog-forms";
 import { failure, invalid, type Result } from "@/application/shared/result";
 import { issuesFromZod } from "@/domain/shared/domain-error";
 import {
@@ -115,6 +116,31 @@ export class ReplaceSocialLinks {
     const result = await this.settings.replaceSocialLinks(
       parsed.data,
       expectedUpdatedAt,
+      access.value,
+    );
+    if (result.ok) await this.cache.invalidate([CACHE_TAGS.siteSettings]);
+    return result;
+  }
+}
+
+export class UpdateSiteImages {
+  constructor(
+    private readonly settings: SettingsRepository,
+    private readonly cache: CacheInvalidator,
+  ) {}
+
+  async execute(
+    staff: StaffPrincipal | null,
+    values: Readonly<Record<string, unknown>>,
+  ): Promise<Result<AdminSiteSettingsDto>> {
+    const access = authorize(staff, "settings:edit");
+    if (!access.ok) return access;
+    const result = await this.settings.updateImages(
+      {
+        logoMediaId: optionalMediaId(values, "logoMediaId"),
+        stickyLogoMediaId: optionalMediaId(values, "stickyLogoMediaId"),
+        defaultOgMediaId: optionalMediaId(values, "defaultOgMediaId"),
+      },
       access.value,
     );
     if (result.ok) await this.cache.invalidate([CACHE_TAGS.siteSettings]);

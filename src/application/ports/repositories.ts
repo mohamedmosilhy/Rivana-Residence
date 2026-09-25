@@ -9,6 +9,10 @@ import type {
   SocialLinkInput,
 } from "@/domain/settings/site-settings";
 import type {
+  MediaDetailsInput,
+  PageSectionMediaRole,
+} from "@/domain/media/media-asset";
+import type {
   AdminRole,
   EnquiryStatus,
   MediaStatus,
@@ -28,6 +32,18 @@ export type MediaReference = Readonly<{
   sortOrder: number;
   status: MediaStatus;
   altText: string;
+  altOverride: string | null;
+  storageKey: string;
+  rightsConfirmed: boolean;
+}>;
+
+export type SectionMediaReference = Omit<MediaReference, "role"> &
+  Readonly<{ role: PageSectionMediaRole }>;
+
+export type SectionMediaAssignment = Readonly<{
+  mediaId: string;
+  role: PageSectionMediaRole;
+  sortOrder: number;
   altOverride: string | null;
 }>;
 
@@ -69,6 +85,7 @@ export type RoomDto = Readonly<{
   features: readonly Readonly<{ label: string }>[];
   seoTitle: string | null;
   seoDescription: string | null;
+  ogMediaId: string | null;
   featured: boolean;
   sortOrder: number;
   status: PublicationStatus;
@@ -85,6 +102,7 @@ export type FacilityDto = Readonly<{
   openingHoursText: string | null;
   seoTitle: string | null;
   seoDescription: string | null;
+  ogMediaId: string | null;
   featured: boolean;
   sortOrder: number;
   status: PublicationStatus;
@@ -100,6 +118,7 @@ export type PageSectionDto = Readonly<{
   payload: unknown;
   sortOrder: number;
   isVisible: boolean;
+  media: readonly SectionMediaReference[];
 }>;
 
 export type PageDto = Readonly<{
@@ -110,6 +129,7 @@ export type PageDto = Readonly<{
   isPublished: boolean;
   seoTitle: string | null;
   seoDescription: string | null;
+  ogMediaId: string | null;
   updatedAt: Date;
   sections: readonly PageSectionDto[];
 }>;
@@ -117,6 +137,7 @@ export type PageDto = Readonly<{
 export type PageDetailsInput = Readonly<{
   seoTitle: string | null;
   seoDescription: string | null;
+  ogMediaId: string | null;
 }>;
 
 export type SocialLinkDto = SocialLinkInput;
@@ -127,6 +148,9 @@ export type SiteSettingsDto = Readonly<
     timeZone: string;
     /** Ordered for display. Public reads include visible links only. */
     socialLinks: readonly SocialLinkDto[];
+    logoMediaId: string | null;
+    stickyLogoMediaId: string | null;
+    defaultOgMediaId: string | null;
   }
 >;
 
@@ -136,17 +160,113 @@ export type AdminSiteSettingsDto = SiteSettingsDto &
     updatedByName: string | null;
   }>;
 
+export type SiteImagesInput = Readonly<{
+  logoMediaId: string | null;
+  stickyLogoMediaId: string | null;
+  defaultOgMediaId: string | null;
+}>;
+
+export type MediaRightsStatus = "CONFIRMED" | "UNCONFIRMED";
+
 export type MediaAssetDto = Readonly<{
   id: string;
   storageProvider: string;
   storageContainer: string;
   storageKey: string;
+  originalFilename: string;
   mimeType: string;
   bytes: number;
   width: number | null;
   height: number | null;
+  checksum: string | null;
   altText: string;
+  caption: string | null;
+  credit: string | null;
+  focalX: number | null;
+  focalY: number | null;
   status: MediaStatus;
+  rightsStatus: MediaRightsStatus;
+  sourceReference: string | null;
+  failureReason: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+}>;
+
+export type MediaUsageKind =
+  | "ROOM"
+  | "FACILITY"
+  | "PAGE_SECTION"
+  | "PAGE_SHARING"
+  | "ROOM_SHARING"
+  | "FACILITY_SHARING"
+  | "SITE_SETTINGS";
+
+/** One place an image is used, with enough context to link to it. */
+export type MediaUsage = Readonly<{
+  kind: MediaUsageKind;
+  /** Room/facility id, page key, or "default" for settings. */
+  ownerId: string;
+  ownerName: string;
+  /** e.g. "Hero", "Gallery", "Logo". */
+  role: string;
+  /** Whether the owner is public, so a change is visible to visitors. */
+  isPublic: boolean;
+  /** Public slug for rooms/facilities (cache tags). */
+  slug: string | null;
+}>;
+
+export type MediaDetailsDto = MediaAssetDto &
+  Readonly<{
+    createdByName: string | null;
+    usage: readonly MediaUsage[];
+  }>;
+
+export type MediaListItem = MediaAssetDto & Readonly<{ usageCount: number }>;
+
+export type MediaListQuery = PageRequest &
+  Readonly<{
+    search: string | null;
+    status: MediaStatus | null;
+    mimeType: string | null;
+    missingAlt: boolean;
+    usage: "used" | "unused" | null;
+    rights: MediaRightsStatus | null;
+  }>;
+
+export type PendingMediaInput = Readonly<{
+  id: string;
+  storageKey: string;
+  originalFilename: string;
+  mimeType: string;
+  declaredBytes: number;
+  altText: string;
+  rightsStatus: MediaRightsStatus;
+  sourceReference: string | null;
+  createdById: string | null;
+}>;
+
+export type ReadyMediaInput = Readonly<{
+  bytes: number;
+  width: number;
+  height: number;
+  checksum: string;
+}>;
+
+/** What the public media route needs to serve one object. */
+export type ServableMedia = Readonly<{
+  storageKey: string;
+  mimeType: string;
+  bytes: number;
+  checksum: string | null;
+}>;
+
+export type MediaCleanupCandidates = Readonly<{
+  /** PENDING uploads that never finished. */
+  stalePending: readonly Readonly<{ id: string }>[];
+  /** DELETED records whose objects may still exist. */
+  deleted: readonly Readonly<{ id: string; storageKey: string }>[];
+  /** Old FAILED records (no object was ever stored). */
+  failed: readonly Readonly<{ id: string }>[];
 }>;
 
 export type PromotionDto = Readonly<{
@@ -169,10 +289,12 @@ export type PromotionDto = Readonly<{
 /** A ready image that content may reference (Phase 5 selection only). */
 export type MediaOption = Readonly<{
   id: string;
+  storageKey: string;
   altText: string;
   originalFilename: string;
   width: number | null;
   height: number | null;
+  rightsConfirmed: boolean;
 }>;
 
 export type ContactEnquiryDto = Readonly<{
@@ -207,6 +329,12 @@ export interface RoomRepository {
     media: readonly MediaAssignment[],
     actor: Actor,
   ): Promise<Result<RoomDto>>;
+  /** The optional social sharing image; must be a ready image. */
+  setSocialImage(
+    id: string,
+    mediaId: string | null,
+    actor: Actor,
+  ): Promise<Result<RoomDto>>;
 }
 
 export interface FacilityRepository {
@@ -234,6 +362,12 @@ export interface FacilityRepository {
     media: readonly MediaAssignment[],
     actor: Actor,
   ): Promise<Result<FacilityDto>>;
+  /** The optional social sharing image; must be a ready image. */
+  setSocialImage(
+    id: string,
+    mediaId: string | null,
+    actor: Actor,
+  ): Promise<Result<FacilityDto>>;
 }
 
 export interface PageRepository {
@@ -256,6 +390,12 @@ export interface PageRepository {
     orderedIds: readonly string[],
     actor: Actor,
   ): Promise<Result<void>>;
+  replaceSectionMedia(
+    key: PageKey,
+    sectionId: string,
+    media: readonly SectionMediaAssignment[],
+    actor: Actor,
+  ): Promise<Result<PageDto>>;
 }
 
 export interface SettingsRepository {
@@ -276,6 +416,11 @@ export interface SettingsRepository {
     expectedUpdatedAt: Date,
     actor: Actor,
   ): Promise<Result<AdminSiteSettingsDto>>;
+  /** Brand and default sharing images; each must be a ready image. */
+  updateImages(
+    input: SiteImagesInput,
+    actor: Actor,
+  ): Promise<Result<AdminSiteSettingsDto>>;
 }
 
 export interface MediaRepository {
@@ -284,6 +429,41 @@ export interface MediaRepository {
   countUsage(id: string): Promise<number>;
   finalize(id: string, actor: Actor): Promise<Result<MediaAssetDto>>;
   deleteIfUnreferenced(id: string, actor: Actor): Promise<Result<void>>;
+
+  createPending(input: PendingMediaInput): Promise<Result<MediaAssetDto>>;
+  /** PENDING → READY. Idempotent: an already READY asset is returned as is. */
+  markReady(id: string, input: ReadyMediaInput): Promise<Result<MediaAssetDto>>;
+  /** PENDING → FAILED with a staff-readable reason. */
+  markFailed(id: string, reason: string): Promise<void>;
+  findReadyByChecksum(checksum: string): Promise<MediaAssetDto | null>;
+  findBySourceReference(reference: string): Promise<MediaAssetDto | null>;
+  findServable(storageKey: string): Promise<ServableMedia | null>;
+  list(query: MediaListQuery): Promise<PagedResult<MediaListItem>>;
+  getDetails(id: string): Promise<MediaDetailsDto | null>;
+  updateDetails(
+    id: string,
+    input: MediaDetailsInput,
+    actor: Actor,
+  ): Promise<Result<MediaAssetDto>>;
+  setRightsStatus(
+    id: string,
+    status: MediaRightsStatus,
+    actor: Actor,
+  ): Promise<Result<MediaAssetDto>>;
+  /** Points every reference to `fromId` at the ready `toId`, atomically. */
+  replaceReferences(
+    fromId: string,
+    toId: string,
+    actor: Actor,
+  ): Promise<Result<Readonly<{ replaced: number }>>>;
+  /** READY/FAILED → DELETED when unreferenced; REFERENCED otherwise. */
+  markDeleted(id: string, actor: Actor): Promise<Result<MediaAssetDto>>;
+  /** Removes the row of a DELETED or FAILED, unreferenced asset. */
+  purge(id: string): Promise<void>;
+  cleanupCandidates(
+    pendingBefore: Date,
+    failedBefore: Date,
+  ): Promise<MediaCleanupCandidates>;
 }
 
 export interface PromotionRepository {

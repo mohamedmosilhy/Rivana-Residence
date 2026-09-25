@@ -22,7 +22,13 @@ export async function resolveMediaAssignments(
   const ids = [...new Set(assignments.map((a) => a.mediaId))];
   const rows = await client.mediaAsset.findMany({
     where: { id: { in: ids }, status: { in: ["PENDING", "READY"] } },
-    select: { id: true, status: true, altText: true },
+    select: {
+      id: true,
+      status: true,
+      altText: true,
+      storageKey: true,
+      rightsStatus: true,
+    },
   });
   const byId = new Map(rows.map((row) => [row.id, row]));
   if (byId.size !== ids.length) {
@@ -42,7 +48,24 @@ export async function resolveMediaAssignments(
         status: asset.status,
         altText: asset.altText,
         altOverride: assignment.altOverride,
+        storageKey: asset.storageKey,
+        rightsConfirmed: asset.rightsStatus === "CONFIRMED",
       };
     }),
   );
+}
+
+/** Confirms a single referenced image exists and is READY. */
+export async function requireReadyImage(
+  client: DatabaseClient,
+  mediaId: string,
+): Promise<Result<void>> {
+  const count = await client.mediaAsset.count({
+    where: { id: mediaId, status: "READY" },
+  });
+  return count === 1
+    ? success(undefined)
+    : failure("VALIDATION", "Choose an image that has finished uploading.", {
+        image: ["Choose an image that has finished uploading."],
+      });
 }

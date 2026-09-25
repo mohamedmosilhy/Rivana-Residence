@@ -44,6 +44,7 @@ Do not run development migrations or schema push in production. Destructive migr
 
 - managed PostgreSQL daily backups plus point-in-time recovery where available;
 - nightly off-server backup of the media root plus checksums/manifest; cPanel account backups alone are not the only copy;
+- hourly `npm run media -- cleanup` (cron) to fail abandoned uploads, clear stray quarantine files, and finish deletions whose file removal failed; see [phase-6-media.md](./phase-6-media.md#storage-configuration-permissions-and-backup) for the media root layout and permissions;
 - quarterly restore drill into a non-production environment;
 - record recovery point/time objectives with the client before launch (initial target: RPO ≤ 24h, RTO ≤ 4h, improved if provider plans allow);
 - content migration source assets retained separately until acceptance.

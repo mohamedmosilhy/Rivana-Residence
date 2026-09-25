@@ -1,6 +1,6 @@
 # Phase 5 content management handoff
 
-Status: **Ready for review**  
+Status: **Accepted on 2026-09-25**  
 Completed: 2026-09-25  
 Scope: room, facility, page-section, and promotion management with previews and publication. Media upload is Phase 6; the public pages are Phase 7.
 
@@ -181,4 +181,4 @@ A full lifecycle recording was not produced. The room and facility lifecycle E2E
 
 ## Reviewer decision
 
-Awaiting client review. Approve the content workflows and terminology (including the plain-text formatting rules, fixed page structure, and delete policy) before media and public pages build on them. Phase 6 has not started.
+Approved by the client on 2026-09-25, including the plain-text formatting rules, the fixed page structure, and the administrator-only permanent delete. Phase 6 was authorized to begin.

@@ -18,6 +18,7 @@ const MATRIX: Record<Capability, { EDITOR: boolean; ADMIN: boolean }> = {
   "content:delete": { EDITOR: false, ADMIN: true },
   "media:upload": { EDITOR: true, ADMIN: true },
   "media:delete": { EDITOR: false, ADMIN: true },
+  "media:rights": { EDITOR: false, ADMIN: true },
   "promotions:manage": { EDITOR: true, ADMIN: true },
   "enquiries:read": { EDITOR: true, ADMIN: true },
   "enquiries:manage": { EDITOR: true, ADMIN: true },

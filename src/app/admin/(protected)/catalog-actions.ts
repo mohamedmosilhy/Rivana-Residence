@@ -5,7 +5,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
 import type { CatalogCommands } from "@/application/content/catalog-commands";
-import { mediaAssignmentsFromForm } from "@/application/content/catalog-forms";
+import { entityMediaFromForm } from "@/application/content/catalog-forms";
 import { formDataValues } from "@/application/content/form-values";
 import type { FormValues } from "@/application/content/form-values";
 import { getCurrentStaff } from "@/composition/auth";
@@ -58,14 +58,14 @@ export function catalogActions<Dto extends CatalogRecord, Input>(
     },
 
     async media(id: string, formData: FormData): Promise<FormState> {
-      const assignments = mediaAssignmentsFromForm(formDataValues(formData));
-      const result = assignments.ok
-        ? await commands().replaceMedia(
+      const selection = entityMediaFromForm(formDataValues(formData));
+      const result = selection.ok
+        ? await commands().saveImages(
             await getCurrentStaff(),
             id,
-            assignments.value,
+            selection.value,
           )
-        : assignments;
+        : selection;
       return actionResult(result, editPath(id), "Images saved.");
     },
 

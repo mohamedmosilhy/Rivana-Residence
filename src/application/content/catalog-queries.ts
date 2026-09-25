@@ -24,7 +24,34 @@ type Listable = Readonly<{
   slug: string;
   status: PublicationStatus;
   featured: boolean;
+  media: readonly Readonly<{ id: string; role: "HERO" | "GALLERY" }>[];
 }>;
+
+/**
+ * Non-blocking content gaps: each room or facility should have its own
+ * gallery. Shared or missing galleries are shown to staff, not hidden.
+ */
+export function contentGaps<Dto extends Listable>(
+  record: Dto,
+  all: readonly Dto[],
+  noun: string,
+) {
+  const gallery = record.media.filter((item) => item.role === "GALLERY");
+  if (gallery.length === 0) return [`This ${noun} has no gallery images yet.`];
+  const ids = new Set(gallery.map((item) => item.id));
+  return all
+    .filter((other) => other.id !== record.id && other.status !== "ARCHIVED")
+    .flatMap((other) => {
+      const shared = other.media.filter(
+        (item) => item.role === "GALLERY" && ids.has(item.id),
+      ).length;
+      return shared > 0
+        ? [
+            `Shares ${shared} gallery image${shared === 1 ? "" : "s"} with ${other.name}; each ${noun} should have its own photos.`,
+          ]
+        : [];
+    });
+}
 
 export type CatalogListQuery = Readonly<{
   status: PublicationStatus | null;
@@ -117,6 +144,7 @@ export class CatalogQueries<Dto extends Listable, Input> {
   constructor(
     private readonly repository: CatalogRepository<Dto, Input>,
     private readonly media: MediaRepository,
+    private readonly noun = "room",
   ) {}
 
   async list(
@@ -136,13 +164,24 @@ export class CatalogQueries<Dto extends Listable, Input> {
   async get(
     staff: StaffPrincipal | null,
     id: string,
-  ): Promise<Result<{ record: Dto; media: readonly MediaOption[] } | null>> {
+  ): Promise<
+    Result<{
+      record: Dto;
+      media: readonly MediaOption[];
+      gaps: readonly string[];
+    } | null>
+  > {
     const access = authorize(staff, "content:edit");
     if (!access.ok) return access;
-    const [record, media] = await Promise.all([
-      this.repository.findAdminById(id),
+    const [all, media] = await Promise.all([
+      this.repository.listAdmin(),
       this.media.listReady(),
     ]);
-    return success(record ? { record, media } : null);
+    const record = all.find((item) => item.id === id);
+    return success(
+      record
+        ? { record, media, gaps: contentGaps(record, all, this.noun) }
+        : null,
+    );
   }
 }

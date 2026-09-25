@@ -74,6 +74,7 @@ describe("room repository", () => {
       features: [],
       seoTitle: null,
       seoDescription: null,
+      ogMediaId: null,
       featured: false,
       sortOrder: room.sortOrder,
       status: "PUBLISHED",
@@ -86,6 +87,8 @@ describe("room repository", () => {
           status: "READY",
           altText: "Bedroom with river view",
           altOverride: null,
+          storageKey: hero.storageKey,
+          rightsConfirmed: true,
         },
       ],
     });
@@ -452,6 +455,9 @@ describe("settings repository", () => {
       defaultSeoTitle: null,
       defaultSeoDescription: null,
       socialLinks: [],
+      logoMediaId: null,
+      stickyLogoMediaId: null,
+      defaultOgMediaId: null,
     });
   });
 });

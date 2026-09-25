@@ -25,6 +25,9 @@ type ConfirmActionProps = Readonly<{
   pendingLabel: string;
   action: FormAction;
   tone?: "primary" | "secondary" | "danger";
+  /** Hidden values submitted with the confirmation. */
+  fields?: Readonly<Record<string, string>>;
+  disabled?: boolean;
 }>;
 
 // A confirmation for a server action that can fail (for example, a publish
@@ -38,6 +41,8 @@ export function ConfirmAction({
   pendingLabel,
   action,
   tone = "secondary",
+  fields = {},
+  disabled = false,
 }: ConfirmActionProps) {
   const [state, formAction] = useActionState(action, idleFormState);
   const toast = useToast();
@@ -71,6 +76,7 @@ export function ConfirmAction({
         type="button"
         className={triggerClass}
         aria-haspopup="dialog"
+        disabled={disabled}
         onClick={() => {
           dialogRef.current?.showModal();
           cancelRef.current?.focus();
@@ -111,6 +117,9 @@ export function ConfirmAction({
           </div>
         ) : null}
         <form className="admin-dialog__actions" action={formAction}>
+          {Object.entries(fields).map(([name, value]) => (
+            <input key={name} type="hidden" name={name} value={value} />
+          ))}
           <button
             ref={cancelRef}
             type="button"

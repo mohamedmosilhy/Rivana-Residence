@@ -52,6 +52,7 @@ export function facilityQueries() {
   return new CatalogQueries<FacilityDto, FacilityInput>(
     new PrismaFacilityRepository(),
     new PrismaMediaRepository(),
+    "facility",
   );
 }
 

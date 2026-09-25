@@ -2,7 +2,8 @@ import { describe, expect, it } from "vitest";
 
 import {
   facilityInputFromForm,
-  mediaAssignmentsFromForm,
+  entityMediaFromForm,
+  sectionMediaFromForm,
   roomInputFromForm,
 } from "@/application/content/catalog-forms";
 import {
@@ -91,35 +92,86 @@ describe("room and facility forms", () => {
     ).toEqual([]);
   });
 
-  it("builds hero and ordered gallery media assignments", () => {
+  it("builds hero, ordered gallery, alt overrides, and the sharing image", () => {
     expect(
-      mediaAssignmentsFromForm({
-        heroMediaId: "hero",
-        galleryMediaIds: JSON.stringify(["g1", "g2", "g1"]),
+      entityMediaFromForm({
+        media: JSON.stringify({
+          hero: { mediaId: "hero", altOverride: "  Balcony at dusk " },
+          gallery: [
+            { mediaId: "g1", altOverride: "" },
+            { mediaId: "g2", altOverride: null },
+            { mediaId: "g1", altOverride: null },
+          ],
+          social: { mediaId: "og", altOverride: null },
+        }),
       }),
     ).toEqual({
       ok: true,
-      value: [
-        { mediaId: "hero", role: "HERO", sortOrder: 0, altOverride: null },
-        { mediaId: "g1", role: "GALLERY", sortOrder: 0, altOverride: null },
-        { mediaId: "g2", role: "GALLERY", sortOrder: 1, altOverride: null },
-      ],
+      value: {
+        assignments: [
+          {
+            mediaId: "hero",
+            role: "HERO",
+            sortOrder: 0,
+            altOverride: "Balcony at dusk",
+          },
+          { mediaId: "g1", role: "GALLERY", sortOrder: 0, altOverride: null },
+          { mediaId: "g2", role: "GALLERY", sortOrder: 1, altOverride: null },
+        ],
+        socialImageId: "og",
+      },
     });
   });
 
   it.each([
-    [{ galleryMediaIds: "not json" }],
-    [{ galleryMediaIds: JSON.stringify([1, 2]) }],
-    [{ heroMediaId: "a", galleryMediaIds: JSON.stringify(["a"]) }],
+    [{ media: "not json" }],
+    [{ media: JSON.stringify({ gallery: [{ mediaId: 1 }] }) }],
+    [{ media: JSON.stringify({ hero: { mediaId: "../etc" } }) }],
     [
       {
-        galleryMediaIds: JSON.stringify(
-          Array.from({ length: 25 }, (_, i) => `m${i}`),
-        ),
+        media: JSON.stringify({
+          hero: { mediaId: "a", altOverride: "x".repeat(301) },
+        }),
       },
     ],
-  ])("rejects an invalid media selection %#", (values) => {
-    expect(mediaAssignmentsFromForm(values).ok).toBe(false);
+    [
+      {
+        media: JSON.stringify({
+          hero: { mediaId: "a" },
+          gallery: [{ mediaId: "a" }],
+        }),
+      },
+    ],
+    [
+      {
+        media: JSON.stringify({
+          gallery: Array.from({ length: 25 }, (_, i) => ({ mediaId: `m${i}` })),
+        }),
+      },
+    ],
+  ])("rejects an invalid image selection %#", (values) => {
+    expect(entityMediaFromForm(values).ok).toBe(false);
+  });
+
+  it("reads section images per role and rejects unknown roles", () => {
+    expect(
+      sectionMediaFromForm({
+        media: JSON.stringify({
+          GALLERY: [{ mediaId: "a" }, { mediaId: "b", altOverride: "Pool" }],
+        }),
+      }),
+    ).toEqual({
+      ok: true,
+      value: [
+        { mediaId: "a", altOverride: null, role: "GALLERY", sortOrder: 0 },
+        { mediaId: "b", altOverride: "Pool", role: "GALLERY", sortOrder: 1 },
+      ],
+    });
+    expect(
+      sectionMediaFromForm({
+        media: JSON.stringify({ HERO: [{ mediaId: "a" }] }),
+      }).ok,
+    ).toBe(false);
   });
 });
 

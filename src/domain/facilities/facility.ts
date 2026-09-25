@@ -36,6 +36,7 @@ export type FacilityPublicationCandidate = Readonly<{
     status: MediaStatus;
     altText: string;
     altOverride?: string | null;
+    rightsConfirmed?: boolean;
   }>[];
 }>;
 
@@ -65,6 +66,13 @@ export function assertFacilityPublishable(
       issues.push({
         path: `media.${index}`,
         message: "Published facilities may reference only ready media.",
+      });
+    }
+    if (media.rightsConfirmed === false) {
+      issues.push({
+        path: `media.${index}`,
+        message:
+          "Published facilities may use only images whose usage rights are confirmed.",
       });
     }
     if (!(media.altOverride ?? media.altText).trim()) {

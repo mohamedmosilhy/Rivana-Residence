@@ -1,0 +1,219 @@
+{
+  "$comment": "Hand-curated review of design/assets/images. Alt text is a draft for staff to check. 'exclude' records why an asset must not be imported. 'usedByReference' lists the reference pages that showed the image; when two images are near-duplicates, a referenced one is kept. Rights stay UNCONFIRMED until the client confirms ownership or licence.",
+  "assets": {
+    "about-exterior-wide.jpg": {
+      "usage": "About page: exterior",
+      "alt": "Exterior of the Rivana Residence building in the late afternoon light",
+      "usedByReference": ["css/pages.css"]
+    },
+    "about-exterior.jpg": {
+      "usage": "About page: exterior",
+      "alt": "Front facade of the Rivana Residence building against a blue sky",
+      "usedByReference": ["about.html"]
+    },
+    "amenity-fitness.jpg": {
+      "usage": "Home page amenity card",
+      "alt": "Two people running on treadmills in a gym",
+      "usedByReference": ["js/site-data.js"],
+      "exclude": "Appears to be a stock photo, not the residence's own gym; the reference card paired it with placeholder text."
+    },
+    "amenity-pool.jpg": {
+      "usage": "Home page amenity card",
+      "alt": "Woman relaxing on a lounger beside an indoor pool",
+      "usedByReference": ["js/site-data.js"],
+      "exclude": "Appears to be a stock photo, not the residence's own pool; the reference card paired it with placeholder text."
+    },
+    "amenity-spa.jpg": {
+      "usage": "Home page amenity card",
+      "alt": "Spa arrangement of towels, candles, and flowers",
+      "usedByReference": ["js/site-data.js"],
+      "exclude": "Stock-style spa photo; the residence has no confirmed spa and the reference card used placeholder text."
+    },
+    "gym-02.jpg": {
+      "usage": "Facility: fitness room",
+      "alt": "Fitness room with dumbbell racks, a balance ball, and an exercise mat",
+      "usedByReference": []
+    },
+    "gym-03.jpg": {
+      "usage": "Facility: fitness room",
+      "alt": "Multi-station weight machine and punching bag in the fitness room",
+      "usedByReference": []
+    },
+    "gym-gallery-01.jpg": {
+      "usage": "Facility: fitness room gallery",
+      "alt": "Fitness room with dumbbell racks, a balance ball, and an exercise mat",
+      "usedByReference": ["gym.html"]
+    },
+    "gym-gallery-02.jpg": {
+      "usage": "Facility: fitness room gallery",
+      "alt": "Multi-station weight machine and punching bag in the fitness room",
+      "usedByReference": ["gym.html"]
+    },
+    "gym-gallery-03.jpg": {
+      "usage": "Facility: fitness room gallery",
+      "alt": "Weight machine and punching bag seen through the fitness room's glass wall",
+      "usedByReference": ["gym.html"]
+    },
+    "gym-gallery-04.jpg": {
+      "usage": "Facility: fitness room gallery",
+      "alt": "Treadmill and exercise bike in the fitness room",
+      "usedByReference": ["gym.html"]
+    },
+    "gym-main.jpg": {
+      "usage": "Facility: fitness room hero",
+      "alt": "The fitness room with cardio machines, free weights, and warm ceiling lighting",
+      "usedByReference": ["gym.html", "css/pages.css"]
+    },
+    "home-hero.jpg": {
+      "usage": "Home page hero",
+      "alt": "Bright lobby lounge with sofas, potted plants, and glass doors",
+      "usedByReference": ["css/pages.css"]
+    },
+    "pool-02.jpg": {
+      "usage": "Facility: swimming pool",
+      "alt": "Overhead view of the indoor pool's clear blue water",
+      "usedByReference": []
+    },
+    "pool-gallery-01.jpg": {
+      "usage": "Facility: swimming pool gallery",
+      "alt": "Overhead view of the indoor pool's clear blue water",
+      "usedByReference": ["swimming-pool.html"]
+    },
+    "pool-gallery-02.jpg": {
+      "usage": "Facility: swimming pool gallery",
+      "alt": "Indoor pool with loungers under soft evening lighting",
+      "usedByReference": ["swimming-pool.html"]
+    },
+    "pool-gallery-03.jpg": {
+      "usage": "Facility: swimming pool gallery",
+      "alt": "Two people at the edge of a turquoise pool, seen from above",
+      "usedByReference": ["swimming-pool.html"],
+      "exclude": "Appears to be a stock photo of a different pool; confirm it shows the residence before importing."
+    },
+    "pool-gallery-04.jpg": {
+      "usage": "Facility: swimming pool gallery",
+      "alt": "Indoor pool beside a stone wall with warm wall lights",
+      "usedByReference": ["swimming-pool.html"]
+    },
+    "pool-main.jpg": {
+      "usage": "Facility: swimming pool hero",
+      "alt": "Indoor swimming pool lit by warm wall lights",
+      "usedByReference": ["swimming-pool.html", "css/pages.css"]
+    },
+    "rivana-crest.png": {
+      "usage": "Site settings: brand crest",
+      "alt": "Rivana Residence",
+      "usedByReference": ["index.html"]
+    },
+    "rivana-logo-sticky.png": {
+      "usage": "Site settings: compact logo",
+      "alt": "Rivana Residence",
+      "usedByReference": ["js/site-data.js"]
+    },
+    "rivana-logo.png": {
+      "usage": "Site settings: logo for dark backgrounds",
+      "alt": "Rivana Residence",
+      "usedByReference": ["js/site-data.js"]
+    },
+    "room-balcony.jpg": {
+      "usage": "Room: studio with balcony (hero)",
+      "alt": "Twin room with two single beds and a wood-panelled headboard wall",
+      "usedByReference": ["js/site-data.js", "css/pages.css"]
+    },
+    "room-double.jpg": {
+      "usage": "Room: deluxe double (hero)",
+      "alt": "Double bed seen through the open room door",
+      "usedByReference": ["js/site-data.js"]
+    },
+    "room-gallery-01.jpg": {
+      "usage": "Room: studio with balcony gallery",
+      "alt": "Studio bedroom with twin beds and a wood-panelled wall",
+      "usedByReference": ["js/site-data.js"]
+    },
+    "room-gallery-02.jpg": {
+      "usage": "Room: studio with balcony gallery",
+      "alt": "Studio with a desk, television, and sofa by the window",
+      "usedByReference": ["js/site-data.js"]
+    },
+    "room-gallery-03.jpg": {
+      "usage": "Room: studio with balcony gallery",
+      "alt": "Studio kitchenette with wood cabinets and the hallway beyond",
+      "usedByReference": ["js/site-data.js"]
+    },
+    "room-gallery-04.jpg": {
+      "usage": "Room: studio with balcony gallery",
+      "alt": "Studio lounge area with a sofa, round table, and wall art",
+      "usedByReference": ["js/site-data.js"]
+    },
+    "room-gallery-05.jpg": {
+      "usage": "Room: studio with balcony gallery",
+      "alt": "Studio entrance door and hallway",
+      "usedByReference": ["js/site-data.js"]
+    },
+    "room-gallery-06.jpg": {
+      "usage": "Room: studio with balcony gallery",
+      "alt": "Bathroom with a glass shower, black basin, and illuminated mirror",
+      "usedByReference": ["js/site-data.js"]
+    },
+    "room-gallery-07.jpg": {
+      "usage": "Room: studio with balcony gallery",
+      "alt": "Bathroom basin beneath an illuminated mirror",
+      "usedByReference": ["js/site-data.js"]
+    },
+    "room-gallery-08.jpg": {
+      "usage": "Room: studio with balcony gallery",
+      "alt": "Guest on the studio balcony looking out over the neighbourhood",
+      "usedByReference": ["js/site-data.js"]
+    },
+    "room-pool.jpg": {
+      "usage": "Room: studio with pool view (hero)",
+      "alt": "Double room with a wood-panelled wall, desk, and armchair",
+      "usedByReference": ["js/site-data.js"]
+    },
+    "room-superior-0.jpg": {
+      "usage": "Room: unassigned superior set",
+      "alt": "Double room with a wood-panelled wall, desk, and armchair",
+      "usedByReference": []
+    },
+    "room-superior-1.jpg": {
+      "usage": "Room: unassigned superior set",
+      "alt": "Double bed with rolled towels and a wood-panelled headboard",
+      "usedByReference": []
+    },
+    "room-superior-2.jpg": {
+      "usage": "Room: unassigned superior set",
+      "alt": "Double bed seen through the open room door",
+      "usedByReference": []
+    },
+    "room-superior-3.jpg": {
+      "usage": "Room: unassigned superior set",
+      "alt": "Seating corner with a sofa, round table, and colourful wall art",
+      "usedByReference": []
+    },
+    "room-superior-4.jpg": {
+      "usage": "Room: unassigned superior set",
+      "alt": "Sofa and round table beneath abstract wall art",
+      "usedByReference": []
+    },
+    "room-superior-5.jpg": {
+      "usage": "Room: unassigned superior set",
+      "alt": "Desk with a television, mirror, and upholstered stool",
+      "usedByReference": []
+    },
+    "room-superior-6.jpg": {
+      "usage": "Room: unassigned superior set",
+      "alt": "Kitchenette with wood cabinets, a sink, and a microwave",
+      "usedByReference": []
+    },
+    "room-superior-7.jpg": {
+      "usage": "Room: unassigned superior set",
+      "alt": "Bathroom with a black basin and wall-mounted toilet",
+      "usedByReference": []
+    },
+    "room-superior-8.jpg": {
+      "usage": "Room: unassigned superior set",
+      "alt": "Walk-in shower with a rain shower head",
+      "usedByReference": []
+    }
+  }
+}

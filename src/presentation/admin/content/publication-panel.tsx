@@ -23,6 +23,8 @@ type PublicationPanelProps = Readonly<{
   noun: string;
   status: PublicationStatus;
   readiness: readonly string[];
+  /** Non-blocking content gaps worth fixing, e.g. a shared gallery. */
+  warnings?: readonly string[];
   /** The public address; omitted for records without one (promotions). */
   publicPath?: string;
   previewHref?: Route;
@@ -38,6 +40,7 @@ export function PublicationPanel({
   noun,
   status,
   readiness,
+  warnings = [],
   publicPath,
   previewHref,
   actions,
@@ -84,6 +87,18 @@ export function PublicationPanel({
         </p>
       )}
 
+      {warnings.length > 0 && status !== "ARCHIVED" ? (
+        <div className="admin-readiness admin-readiness--gaps">
+          <p>
+            <strong>Content gaps:</strong>
+          </p>
+          <ul>
+            {warnings.map((warning) => (
+              <li key={warning}>{warning}</li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
       {children}
       {publicPath ? (
         <PublicLink path={publicPath} isPublic={status === "PUBLISHED"} />

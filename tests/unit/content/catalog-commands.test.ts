@@ -19,6 +19,7 @@ type Row = {
   slug: string;
   status: PublicationStatus;
   featured: boolean;
+  media: { id: string; role: "HERO" | "GALLERY" }[];
 };
 
 const admin: StaffPrincipal = {
@@ -68,6 +69,7 @@ const draft: Row = {
   slug: "draft-room",
   status: "DRAFT",
   featured: false,
+  media: [],
 };
 const live: Row = {
   id: "p",
@@ -75,6 +77,7 @@ const live: Row = {
   slug: "live-room",
   status: "PUBLISHED",
   featured: true,
+  media: [],
 };
 const old: Row = {
   id: "a",
@@ -82,6 +85,7 @@ const old: Row = {
   slug: "old-room",
   status: "ARCHIVED",
   featured: false,
+  media: [],
 };
 
 describe("catalog cache invalidation", () => {
@@ -269,5 +273,26 @@ describe("catalog list filtering", () => {
       status: null,
       featured: null,
     });
+  });
+});
+
+describe("content gaps", () => {
+  it("flags missing and shared galleries without blocking anything", async () => {
+    const { contentGaps } = await import(
+      "@/application/content/catalog-queries"
+    );
+    const gallery = (...ids: string[]) =>
+      ids.map((id) => ({ id, role: "GALLERY" as const }));
+    const a = { ...draft, id: "a", name: "Studio", media: gallery("m1", "m2") };
+    const b = { ...draft, id: "b", name: "Deluxe", media: gallery("m2") };
+    const c = { ...draft, id: "c", name: "Empty", media: [] };
+    const gone = { ...old, id: "x", media: gallery("m1") };
+
+    expect(contentGaps(a, [a, b, c, gone], "room")).toEqual([
+      "Shares 1 gallery image with Deluxe; each room should have its own photos.",
+    ]);
+    expect(contentGaps(c, [a, b, c], "room")).toEqual([
+      "This room has no gallery images yet.",
+    ]);
   });
 });

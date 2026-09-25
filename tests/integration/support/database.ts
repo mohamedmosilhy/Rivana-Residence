@@ -47,6 +47,7 @@ export async function createMedia(
   overrides: Partial<{
     status: "PENDING" | "READY" | "FAILED" | "DELETED";
     altText: string;
+    rightsStatus: "CONFIRMED" | "UNCONFIRMED";
   }> = {},
 ) {
   const id = next("media");
@@ -63,6 +64,8 @@ export async function createMedia(
       width: status === "READY" ? 1600 : null,
       height: status === "READY" ? 900 : null,
       altText: overrides.altText ?? "Bedroom with river view",
+      // Like a staff upload, which confirms usage rights.
+      rightsStatus: overrides.rightsStatus ?? "CONFIRMED",
       status,
     },
   });

@@ -3,7 +3,12 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
-import { replaceSocialLinks, updateSiteSettings } from "@/composition/admin";
+import { formDataValues } from "@/application/content/form-values";
+import {
+  replaceSocialLinks,
+  updateSiteImages,
+  updateSiteSettings,
+} from "@/composition/admin";
 import { SITE_SETTINGS_FIELDS } from "@/presentation/admin/settings/fields";
 import { errorState, type FormState } from "@/presentation/admin/ui/form-state";
 
@@ -65,4 +70,19 @@ export async function saveSocialLinksAction(
 
   revalidatePath("/admin/settings");
   return { status: "success", message: "Social links saved." };
+}
+
+export async function saveSiteImagesAction(
+  _state: FormState,
+  formData: FormData,
+): Promise<FormState> {
+  const result = await updateSiteImages(formDataValues(formData));
+  if (!result.ok) {
+    if (result.error.code === "UNAUTHENTICATED") {
+      redirect("/admin/login?returnTo=%2Fadmin%2Fsettings");
+    }
+    return errorState(result.error);
+  }
+  revalidatePath("/admin/settings");
+  return { status: "success", message: "Brand images saved." };
 }

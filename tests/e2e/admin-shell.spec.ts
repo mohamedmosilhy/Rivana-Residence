@@ -19,6 +19,12 @@ const CONTENT_DESTINATIONS = [
 ];
 
 async function expectNoAxeViolations(page: Page) {
+  // Let entrance animations (e.g. toasts) finish so colours are final.
+  await page.waitForFunction(() =>
+    document
+      .getAnimations()
+      .every((animation) => animation.playState !== "running"),
+  );
   const { violations } = await new AxeBuilder({ page }).analyze();
   expect(violations).toEqual([]);
 }

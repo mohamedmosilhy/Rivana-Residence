@@ -10,6 +10,7 @@ import {
   GetAdminSiteSettings,
   GetPublicSiteSettings,
   ReplaceSocialLinks,
+  UpdateSiteImages,
   UpdateSiteSettings,
 } from "@/application/settings/site-settings";
 import { getCurrentStaff } from "@/composition/auth";
@@ -58,6 +59,15 @@ export async function replaceSocialLinks(
     new PrismaSettingsRepository(),
     new NextCacheInvalidator(),
   ).execute(await getCurrentStaff(), { links, expectedUpdatedAt });
+}
+
+export async function updateSiteImages(
+  values: Readonly<Record<string, unknown>>,
+) {
+  return new UpdateSiteImages(
+    new PrismaSettingsRepository(),
+    new NextCacheInvalidator(),
+  ).execute(await getCurrentStaff(), values);
 }
 
 /**

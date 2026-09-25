@@ -1,6 +1,7 @@
 // Prepares the disposable E2E database. Run through tsx (ESM) because the
 // generated Prisma client cannot load in Playwright's CommonJS transform.
 import { execFileSync } from "node:child_process";
+import { rm } from "node:fs/promises";
 
 import { PrismaPg } from "@prisma/adapter-pg";
 import { Client } from "pg";
@@ -12,6 +13,10 @@ import { E2E_PASSWORD, E2E_PROJECTS, accountsFor } from "./support/accounts.ts";
 
 const url = process.env.E2E_DATABASE_URL;
 if (!url) throw new Error("E2E_DATABASE_URL is required.");
+
+// Uploaded objects belong to the database being recreated, so start empty.
+// Keep in sync with MEDIA_STORAGE_ROOT in playwright.config.ts.
+await rm("/tmp/rivana-e2e-media", { recursive: true, force: true });
 
 {
   const target = new URL(url);

@@ -14,7 +14,9 @@ export async function signInAs(page: Page, email: string, returnTo = "/admin") {
 }
 
 export async function sql(query: string, values: unknown[] = []) {
-  const client = new Client({ connectionString: process.env.E2E_DATABASE_URL });
+  const client = new Client({
+    connectionString: process.env.E2E_DATABASE_URL ?? process.env.DATABASE_URL,
+  });
   await client.connect();
   try {
     return await client.query(query, values);

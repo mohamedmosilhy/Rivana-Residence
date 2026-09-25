@@ -2,26 +2,35 @@ import type { Metadata } from "next";
 
 import { getAdminSiteSettings, getBookingStatus } from "@/composition/admin";
 import { requireStaff } from "@/composition/auth";
+import { mediaLibrary } from "@/composition/media";
 import { AccessDenied } from "@/presentation/admin/auth/access-denied";
 import { formatDateTime } from "@/presentation/admin/format";
 import {
   SITE_SETTINGS_FIELDS,
   type SiteSettingsValues,
 } from "@/presentation/admin/settings/fields";
+import { SiteImagesForm } from "@/presentation/admin/media/site-images-form";
 import { SiteSettingsForm } from "@/presentation/admin/settings/site-settings-form";
 import { SocialLinksForm } from "@/presentation/admin/settings/social-links-form";
 import { Badge } from "@/presentation/admin/ui/badge";
 import { PageHeader } from "@/presentation/admin/ui/page-header";
 import { EmptyState, Panel } from "@/presentation/admin/ui/states";
 
-import { saveSiteSettingsAction, saveSocialLinksAction } from "./actions";
+import {
+  saveSiteImagesAction,
+  saveSiteSettingsAction,
+  saveSocialLinksAction,
+} from "./actions";
 
 export const metadata: Metadata = {
   title: "Settings",
 };
 
 export default async function SettingsPage() {
-  const { allowed } = await requireStaff("/admin/settings", "settings:edit");
+  const { staff, allowed } = await requireStaff(
+    "/admin/settings",
+    "settings:edit",
+  );
   if (!allowed) {
     return (
       <>
@@ -31,9 +40,10 @@ export default async function SettingsPage() {
     );
   }
 
-  const [settings, booking] = await Promise.all([
+  const [settings, booking, media] = await Promise.all([
     getAdminSiteSettings(),
     getBookingStatus(),
+    mediaLibrary().then((library) => library.options(staff)),
   ]);
   const current = settings.ok ? settings.value : null;
 
@@ -85,6 +95,23 @@ export default async function SettingsPage() {
           action={saveSocialLinksAction}
           links={current.socialLinks}
           version={version}
+        />
+      </Panel>
+
+      <Panel
+        title="Brand images"
+        titleId="brand-images-title"
+        description={<p>Chosen from the media library.</p>}
+        wide
+      >
+        <SiteImagesForm
+          action={saveSiteImagesAction}
+          options={media.ok ? media.value : []}
+          values={{
+            logoMediaId: current.logoMediaId,
+            stickyLogoMediaId: current.stickyLogoMediaId,
+            defaultOgMediaId: current.defaultOgMediaId,
+          }}
         />
       </Panel>
 

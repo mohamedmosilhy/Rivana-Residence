@@ -2,6 +2,7 @@ import { authorize } from "@/application/auth/authorize";
 import type { StaffPrincipal } from "@/application/auth/ports";
 import { CACHE_TAGS } from "@/application/cache/cache-tags";
 import type { CacheInvalidator } from "@/application/ports/providers";
+import type { EntityMediaSelection } from "@/application/content/catalog-forms";
 import type { Actor, MediaAssignment } from "@/application/ports/repositories";
 import { failure, success, type Result } from "@/application/shared/result";
 import type { Capability } from "@/domain/auth/capabilities";
@@ -28,6 +29,11 @@ export interface CatalogRepository<Dto extends CatalogRecord, Input> {
   replaceMedia(
     id: string,
     media: readonly MediaAssignment[],
+    actor: Actor,
+  ): Promise<Result<Dto>>;
+  setSocialImage(
+    id: string,
+    mediaId: string | null,
     actor: Actor,
   ): Promise<Result<Dto>>;
 }
@@ -150,6 +156,31 @@ export class CatalogCommands<Dto extends CatalogRecord, Input> {
       const result = await this.repository.replaceMedia(id, media, actor);
       if (result.ok && before.status === "PUBLISHED") {
         await this.invalidatePublic([before.slug]);
+      }
+      return result;
+    });
+  }
+
+  /** Saves the hero, gallery, and sharing image together. */
+  async saveImages(
+    staff: StaffPrincipal | null,
+    id: string,
+    selection: EntityMediaSelection,
+  ) {
+    return this.mutate(staff, "content:edit", id, async (actor, before) => {
+      const media = await this.repository.replaceMedia(
+        id,
+        selection.assignments,
+        actor,
+      );
+      if (!media.ok) return media;
+      const result = await this.repository.setSocialImage(
+        id,
+        selection.socialImageId,
+        actor,
+      );
+      if (before.status === "PUBLISHED") {
+        await this.invalidatePublic([before.slug], false);
       }
       return result;
     });

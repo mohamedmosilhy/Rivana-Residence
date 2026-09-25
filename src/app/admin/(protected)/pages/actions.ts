@@ -25,6 +25,21 @@ export async function saveSectionAction(
   return actionResult(result, editPath(key), "Section saved.");
 }
 
+export async function saveSectionMediaAction(
+  key: PageKey,
+  sectionId: string,
+  _state: FormState,
+  formData: FormData,
+) {
+  const result = await pageCommands().saveSectionMedia(
+    await getCurrentStaff(),
+    key,
+    sectionId,
+    formDataValues(formData),
+  );
+  return actionResult(result, editPath(key), "Section images saved.");
+}
+
 export async function savePageDetailsAction(
   key: PageKey,
   _state: FormState,
