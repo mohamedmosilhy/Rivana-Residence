@@ -38,7 +38,10 @@ if (!url) throw new Error("E2E_DATABASE_URL is required.");
   });
 
   const client = new PrismaClient({
-    adapter: new PrismaPg({ connectionString: url }),
+    adapter: new PrismaPg({
+      connectionString: url,
+      options: "-c TimeZone=UTC",
+    }),
   });
   try {
     await seedDatabase(client);

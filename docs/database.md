@@ -169,6 +169,7 @@ Promotion (standalone scheduled marketing record)
 
 - IDs are application-generated CUID2 strings (`VARCHAR(32)`), chosen in Phase 2; do not mix strategies. The `SiteSettings` singleton uses the fixed key `default`.
 - Store timestamps as timezone-aware PostgreSQL `timestamptz` in UTC; format in the presentation layer.
+- Every Prisma connection sets `-c TimeZone=UTC`. The pg adapter exchanges instants as zone-less UTC wall time, so a session in any other zone would store them shifted (found and fixed in Phase 5; see `src/infrastructure/db/prisma/client.ts`).
 - Room size is `NUMERIC(6,2)` square metres, mapped to `number` at the repository boundary.
 - Rich text is a sanitized structured JSON document with a strict schema, not raw HTML.
 - Slugs are lower-case ASCII and immutable by default after publication; changing one requires an explicit redirect decision.

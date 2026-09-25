@@ -19,9 +19,34 @@ export const PAGE_SECTION_TYPES = [
 ] as const;
 export type PageSectionType = (typeof PAGE_SECTION_TYPES)[number];
 
+export const PAGE_LABELS: Record<PageKey, string> = {
+  HOME: "Home",
+  ABOUT: "About",
+  CONTACT: "Contact",
+};
+
+export const PAGE_SECTION_LABELS: Record<PageSectionType, string> = {
+  HERO: "Hero",
+  RICH_TEXT: "Text",
+  IMAGE_TEXT_SPLIT: "Image and text",
+  GALLERY: "Gallery",
+  FEATURE_GRID: "Feature list",
+  ROOM_GRID: "Room grid",
+  FACILITY_GRID: "Facility grid",
+  CONTACT_CTA: "Contact block",
+  STATS: "Facts and figures",
+};
+
+export const CTA_INTENTS = [
+  "BOOKING",
+  "CONTACT",
+  "ROOMS",
+  "FACILITIES",
+] as const;
+
 const linkSchema = z.object({
   label: z.string().trim().min(1).max(60),
-  intent: z.enum(["BOOKING", "CONTACT", "ROOMS", "FACILITIES"]),
+  intent: z.enum(CTA_INTENTS),
 });
 
 const schemas = {
@@ -110,6 +135,60 @@ const allowedTypes = {
   CONTACT: new Set<PageSectionType>(["HERO", "RICH_TEXT", "CONTACT_CTA"]),
 } satisfies Record<PageKey, ReadonlySet<PageSectionType>>;
 
+// Sections that make a page work. They can be edited but never hidden, so
+// they cannot be removed by accident (sections are never deleted at all).
+const LOCKED_VISIBLE: Record<PageKey, ReadonlySet<PageSectionType>> = {
+  HOME: new Set(["HERO", "ROOM_GRID", "FACILITY_GRID", "CONTACT_CTA"]),
+  ABOUT: new Set(["HERO", "IMAGE_TEXT_SPLIT", "CONTACT_CTA"]),
+  CONTACT: new Set(["HERO", "CONTACT_CTA"]),
+};
+
+export function isSectionLocked(pageKey: PageKey, type: PageSectionType) {
+  return LOCKED_VISIBLE[pageKey].has(type);
+}
+
+export function assertSectionVisibilityAllowed(
+  pageKey: PageKey,
+  type: PageSectionType,
+  isVisible: boolean,
+) {
+  if (!isVisible && isSectionLocked(pageKey, type)) {
+    const message = `The ${PAGE_SECTION_LABELS[type]} section is required on the ${PAGE_LABELS[pageKey]} page and cannot be hidden.`;
+    throw new DomainValidationError(message, [{ path: "isVisible", message }]);
+  }
+}
+
+// Page policy for ordering: the hero always opens the page and the contact
+// block always closes it. Everything between may move.
+export function isSectionPinned(type: PageSectionType) {
+  return type === "HERO" || type === "CONTACT_CTA";
+}
+
+export function assertSectionOrder(
+  pageKey: PageKey,
+  types: readonly PageSectionType[],
+) {
+  const issues = [];
+  if (types.includes("HERO") && types[0] !== "HERO") {
+    issues.push({
+      path: "sections",
+      message: "The Hero section must stay first.",
+    });
+  }
+  if (types.includes("CONTACT_CTA") && types.at(-1) !== "CONTACT_CTA") {
+    issues.push({
+      path: "sections",
+      message: "The Contact block must stay last.",
+    });
+  }
+  if (issues.length > 0) {
+    throw new DomainValidationError(
+      `This order is not allowed on the ${PAGE_LABELS[pageKey]} page.`,
+      issues,
+    );
+  }
+}
+
 export const pageSectionMetaSchema = z.object({
   heading: z.string().trim().max(160).nullable(),
   eyebrow: z.string().trim().max(80).nullable(),
@@ -158,7 +237,7 @@ export function assertPagePublishable(
   const types = new Set(visible.map((section) => section.type));
   const required: Record<PageKey, readonly PageSectionType[]> = {
     HOME: ["HERO", "ROOM_GRID", "FACILITY_GRID", "CONTACT_CTA"],
-    ABOUT: ["HERO", "CONTACT_CTA"],
+    ABOUT: ["HERO", "IMAGE_TEXT_SPLIT", "CONTACT_CTA"],
     CONTACT: ["HERO", "CONTACT_CTA"],
   };
   const missing = required[pageKey].filter((type) => !types.has(type));
@@ -171,13 +250,31 @@ export function assertPagePublishable(
     missing.push("RICH_TEXT");
   }
 
-  if (missing.length > 0) {
+  const issues = missing.map((type) => ({
+    path: "sections",
+    message: `A visible ${PAGE_SECTION_LABELS[type]} section is required.`,
+  }));
+
+  // The contact page exists to take enquiries.
+  if (
+    pageKey === "CONTACT" &&
+    visible.some(
+      (section) =>
+        section.type === "CONTACT_CTA" &&
+        (section.payload as { formEnabled?: unknown } | null)?.formEnabled !==
+          true,
+    )
+  ) {
+    issues.push({
+      path: "sections",
+      message: "The Contact page's contact block must show the enquiry form.",
+    });
+  }
+
+  if (issues.length > 0) {
     throw new DomainValidationError(
       `${pageKey} is missing required visible sections.`,
-      missing.map((type) => ({
-        path: "sections",
-        message: `A visible ${type} section is required.`,
-      })),
+      issues,
     );
   }
 }

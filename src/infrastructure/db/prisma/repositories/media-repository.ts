@@ -55,6 +55,20 @@ export class PrismaMediaRepository implements MediaRepository {
     return row ? mapMedia(row) : null;
   }
 
+  async listReady() {
+    return this.client.mediaAsset.findMany({
+      where: { status: "READY" },
+      orderBy: [{ createdAt: "desc" }, { id: "asc" }],
+      select: {
+        id: true,
+        altText: true,
+        originalFilename: true,
+        width: true,
+        height: true,
+      },
+    });
+  }
+
   countUsage(id: string) {
     return usageCount(this.client, id);
   }

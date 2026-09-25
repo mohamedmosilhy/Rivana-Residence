@@ -5,6 +5,7 @@ export const CAPABILITIES = [
   "content:edit",
   "content:publish",
   "content:archive",
+  "content:delete",
   "media:upload",
   "media:delete",
   "promotions:manage",
@@ -18,7 +19,8 @@ export const CAPABILITIES = [
 export type Capability = (typeof CAPABILITIES)[number];
 
 // Editors run day-to-day content work. Administrators additionally own
-// destructive media removal, site/integration settings, and staff access.
+// permanent deletion (content and media), site/integration settings, and
+// staff access.
 const EDITOR_CAPABILITIES: readonly Capability[] = [
   "admin:access",
   "content:edit",

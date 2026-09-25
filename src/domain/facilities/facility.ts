@@ -1,21 +1,26 @@
 import { z } from "zod";
 
+import {
+  optionalText,
+  requiredText,
+  seoFields,
+} from "@/domain/shared/content-fields";
 import { DomainValidationError } from "@/domain/shared/domain-error";
 import { richTextDocumentSchema } from "@/domain/shared/rich-text";
+import { slugSchema } from "@/domain/shared/slug";
 import type {
   MediaStatus,
   PublicationStatus,
   RichTextDocument,
 } from "@/domain/shared/types";
 
-const slugPattern = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
-
 export const facilityDraftSchema = z.object({
-  name: z.string().trim().min(1).max(120),
-  slug: z.string().trim().max(120).regex(slugPattern),
-  shortDescription: z.string().trim().min(1).max(300),
+  name: requiredText("the facility name", 120),
+  slug: slugSchema,
+  shortDescription: requiredText("a short description", 300),
   description: richTextDocumentSchema,
-  openingHoursText: z.string().trim().max(500).nullable(),
+  openingHoursText: optionalText(500),
+  ...seoFields,
 });
 
 export type FacilityPublicationCandidate = Readonly<{

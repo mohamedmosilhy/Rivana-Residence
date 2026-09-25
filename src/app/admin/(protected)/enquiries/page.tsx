@@ -54,15 +54,17 @@ export default async function EnquiriesPage({
         action="/admin/enquiries"
         searchLabel="Search name, email, or subject"
         search={query.search}
-        filter={{
-          name: "status",
-          label: "Status",
-          value: query.status,
-          options: ENQUIRY_STATUSES.map((status) => ({
-            value: status,
-            label: ENQUIRY_STATUS_LABELS[status],
-          })),
-        }}
+        filters={[
+          {
+            name: "status",
+            label: "Status",
+            value: query.status,
+            options: ENQUIRY_STATUSES.map((status) => ({
+              value: status,
+              label: ENQUIRY_STATUS_LABELS[status],
+            })),
+          },
+        ]}
       />
       {items.length > 0 ? (
         <EnquiryTable

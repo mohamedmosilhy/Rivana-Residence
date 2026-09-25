@@ -17,6 +17,7 @@ import type { RichTextDocument } from "@/domain/shared/types";
 import { Prisma } from "@/generated/prisma/client";
 
 export const roomGraph = {
+  features: { orderBy: { sortOrder: "asc" } },
   media: {
     include: { media: true },
     orderBy: [{ role: "asc" }, { sortOrder: "asc" }],
@@ -58,9 +59,13 @@ export function mapRoom(row: RoomRow): RoomDto {
     maxChildren: row.maxChildren,
     bedSummary: row.bedSummary,
     viewSummary: row.viewSummary,
+    features: row.features.map((feature) => ({ label: feature.label })),
+    seoTitle: row.seoTitle,
+    seoDescription: row.seoDescription,
     featured: row.featured,
     sortOrder: row.sortOrder,
     status: row.status,
+    updatedAt: row.updatedAt,
     media: row.media.map((usage) => ({
       id: usage.media.id,
       role: usage.role,
@@ -80,9 +85,12 @@ export function mapFacility(row: FacilityRow): FacilityDto {
     shortDescription: row.shortDescription,
     description: richText(row.description),
     openingHoursText: row.openingHoursText,
+    seoTitle: row.seoTitle,
+    seoDescription: row.seoDescription,
     featured: row.featured,
     sortOrder: row.sortOrder,
     status: row.status,
+    updatedAt: row.updatedAt,
     media: row.media.map((usage) => ({
       id: usage.media.id,
       role: usage.role,
@@ -101,6 +109,9 @@ export function mapPage(row: PageRow): PageDto {
     title: row.title,
     canonicalPath: row.canonicalPath,
     isPublished: row.isPublished,
+    seoTitle: row.seoTitle,
+    seoDescription: row.seoDescription,
+    updatedAt: row.updatedAt,
     sections: row.sections.map((section) => ({
       id: section.id,
       type: section.type,
@@ -189,6 +200,7 @@ export function mapPromotion(row: PromotionDto): PromotionDto {
     showAsPopup: row.showAsPopup,
     version: row.version,
     publishedAt: row.publishedAt,
+    updatedAt: row.updatedAt,
   };
 }
 

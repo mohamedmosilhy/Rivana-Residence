@@ -1,34 +1,89 @@
-import type { Metadata } from "next";
+import type { Metadata, Route } from "next";
+import Link from "next/link";
 
-import { getAdminOverview } from "@/composition/admin";
-import { requireStaff } from "@/composition/auth";
+import { getCurrentStaff, requireStaff } from "@/composition/auth";
+import { pageCommands, propertyTimeZone } from "@/composition/content";
 import { DeniedPage } from "@/presentation/admin/denied-page";
-import { DestinationPlaceholder } from "@/presentation/admin/destination-placeholder";
+import { formatDateTime, plural } from "@/presentation/admin/format";
+import { Badge } from "@/presentation/admin/ui/badge";
+import { DataTable } from "@/presentation/admin/ui/data-table";
+import { PageHeader } from "@/presentation/admin/ui/page-header";
 
-export const metadata: Metadata = {
-  title: "Pages",
-};
+export const metadata: Metadata = { title: "Pages" };
 
 export default async function PagesPage() {
   const { allowed } = await requireStaff("/admin/pages", "content:edit");
   if (!allowed) return <DeniedPage title="Pages" />;
-  const overview = await getAdminOverview();
-  if (!overview.ok) throw new Error("Overview is unavailable.");
-  const { pages } = overview.value;
+
+  const [pages, timeZone] = await Promise.all([
+    pageCommands().list(await getCurrentStaff()),
+    propertyTimeZone(),
+  ]);
+  if (!pages.ok) throw new Error("Pages are unavailable.");
 
   return (
-    <DestinationPlaceholder
-      title="Pages"
-      description="The Home, About, and Contact pages and their sections."
-      facts={[
-        { label: "Published", value: String(pages.published) },
-        { label: "Total pages", value: String(pages.total) },
-      ]}
-      upcoming={[
-        "Edit each section of Home, About, and Contact",
-        "Show, hide, and reorder the optional sections",
-        "Preview and publish changes",
-      ]}
-    />
+    <>
+      <PageHeader
+        title="Pages"
+        description={
+          <p>
+            The Home, About, and Contact pages. Each has a fixed set of sections
+            that you can edit, hide when optional, and reorder.
+          </p>
+        }
+      />
+      <DataTable
+        caption="Pages"
+        rows={pages.value}
+        rowKey={(page) => page.key}
+        columns={[
+          {
+            header: "Page",
+            rowHeader: true,
+            cell: (page) => (
+              <>
+                <Link
+                  href={`/admin/pages/${page.key.toLowerCase()}` as Route}
+                  className="admin-table__primary admin-link"
+                >
+                  {page.title}
+                </Link>
+                <span className="admin-table__secondary">
+                  {page.canonicalPath}
+                </span>
+              </>
+            ),
+          },
+          {
+            header: "Status",
+            cell: (page) =>
+              page.isPublished ? (
+                <Badge tone="success">Published</Badge>
+              ) : (
+                <Badge tone="warning">Draft</Badge>
+              ),
+          },
+          {
+            header: "Ready to publish",
+            cell: (page) =>
+              page.readiness.length === 0 ? (
+                "Yes"
+              ) : (
+                <Badge tone="warning">
+                  {plural(page.readiness.length, "issue")}
+                </Badge>
+              ),
+          },
+          {
+            header: "Updated",
+            cell: (page) => (
+              <time dateTime={page.updatedAt.toISOString()}>
+                {formatDateTime(page.updatedAt, timeZone)}
+              </time>
+            ),
+          },
+        ]}
+      />
+    </>
   );
 }

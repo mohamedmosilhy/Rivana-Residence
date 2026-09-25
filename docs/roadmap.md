@@ -325,7 +325,7 @@ Approved by the client on 2026-09-25 with authorization to begin Phase 4. The ap
 
 ## Phase 4 — Admin shell and shared workflows
 
-Status: `Ready for review`
+Status: **Accepted on 2026-09-25**
 
 ### Objective
 
@@ -386,13 +386,13 @@ Build a coherent, accessible CMS foundation before entity-specific CRUD.
 
 ### Reviewer decision
 
-Awaiting client review. Approve the shared CMS patterns before repeating them across entity features, and confirm the settings field list (logo variants and the default social image wait for the Phase 6 media picker) and the Google Maps embed-link restriction. Evidence: [phase-4-admin-shell.md](./phase-4-admin-shell.md). Phase 5 has not started.
+Approved by the client on 2026-09-25 with authorization to begin Phase 5. The approval accepts the shared CMS patterns, the settings field list, and the Google Maps embed-link restriction. Evidence: [phase-4-admin-shell.md](./phase-4-admin-shell.md).
 
 ---
 
 ## Phase 5 — Content-management features
 
-Status: `Not started`
+Status: `Ready for review`
 
 ### Objective
 
@@ -464,7 +464,7 @@ Let staff safely manage structured pages, rooms, facilities, promotions, and pub
 
 ### Reviewer decision
 
-Approve content workflows and terminology before media and public page implementation depend on them.
+Awaiting client review. Approve content workflows and terminology before media and public page implementation depend on them, including the plain-text formatting rules (bold, italic, and links deferred), the fixed page structure, and the administrator-only permanent delete. Evidence: [phase-5-content-management.md](./phase-5-content-management.md). Phase 6 has not started.
 
 ---
 

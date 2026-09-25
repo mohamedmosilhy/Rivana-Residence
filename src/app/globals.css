@@ -977,7 +977,7 @@ a {
   flex: 1 1 14rem;
 }
 
-.admin-filters .admin-field:nth-child(2) {
+.admin-filters .admin-field--filter {
   flex: 0 1 12rem;
 }
 
@@ -1061,6 +1061,7 @@ a {
 
 .admin-field {
   display: grid;
+  min-width: 0;
   align-content: start;
   gap: var(--space-2);
 }
@@ -1079,6 +1080,8 @@ a {
 .admin-field select,
 .admin-field textarea {
   width: 100%;
+  /* Date and time inputs have a wide intrinsic size; let them shrink. */
+  min-width: 0;
   min-height: 2.75rem;
   padding: var(--space-2) var(--space-3);
   border: 1px solid var(--neutral-600);
@@ -1472,6 +1475,360 @@ a {
 
 .admin-login .admin-button {
   justify-self: stretch;
+}
+
+/* Content management (Phase 5) */
+
+.admin-notice {
+  margin: 0 0 var(--space-6);
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--neutral-300);
+  border-left: 4px solid var(--success);
+  border-radius: var(--radius-control);
+  background: var(--surface);
+  color: var(--neutral-800);
+}
+
+.admin-notice--preview {
+  border-left-color: var(--brand-plum-700);
+}
+
+.admin-notice .admin-badge {
+  margin-inline: var(--space-1);
+}
+
+.admin-list-note {
+  margin-top: var(--space-3);
+  font-size: 0.875rem;
+}
+
+.admin-publication {
+  margin-top: 0;
+  margin-bottom: var(--space-6);
+}
+
+.admin-publication__header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.admin-readiness {
+  margin-top: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border-left: 4px solid var(--warning);
+  border-radius: var(--radius-control);
+  background: #fbf5ec;
+}
+
+.admin-card .admin-readiness p {
+  margin: 0;
+  color: var(--neutral-800);
+}
+
+.admin-readiness ul {
+  margin: var(--space-2) 0 0;
+  padding-left: var(--space-5);
+  color: var(--neutral-800);
+}
+
+.admin-publication__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  margin-top: var(--space-5);
+}
+
+.admin-display-note {
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-control);
+  background: var(--admin-canvas);
+}
+
+.admin-card .admin-display-note {
+  color: var(--neutral-800);
+}
+
+.admin-dialog__error {
+  margin-top: var(--space-4);
+}
+
+.admin-dialog__error p {
+  margin: 0;
+  color: var(--danger);
+  font-weight: 500;
+}
+
+.admin-dialog__error ul {
+  color: var(--danger);
+}
+
+.admin-order-controls {
+  display: flex;
+  gap: var(--space-1);
+}
+
+.admin-order-controls .admin-button {
+  min-height: 2.25rem;
+  padding-inline: var(--space-2);
+  font-size: 0.875rem;
+}
+
+.admin-badges {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+}
+
+.admin-checklist {
+  display: grid;
+  gap: var(--space-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.admin-checklist .admin-check {
+  align-items: flex-start;
+  min-height: 2.25rem;
+  overflow-wrap: anywhere;
+}
+
+.admin-fieldset--nested {
+  padding-bottom: 0;
+  border-bottom: 0;
+}
+
+.admin-repeatable__single {
+  display: grid;
+}
+
+.admin-repeatable__item > .admin-repeatable__buttons {
+  margin-top: var(--space-3);
+}
+
+.admin-section__intro {
+  margin-bottom: var(--space-4);
+}
+
+.admin-sections {
+  display: grid;
+  gap: var(--space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.admin-sections__item {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+  gap: var(--space-3);
+}
+
+.admin-sections__pinned {
+  padding-top: var(--space-4);
+  font-size: 0.875rem;
+}
+
+.admin-sections__item .admin-order-controls {
+  padding-top: var(--space-2);
+}
+
+.admin-disclosure {
+  border: 1px solid var(--neutral-300);
+  border-radius: var(--radius-panel);
+  background: var(--surface);
+}
+
+.admin-disclosure > summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  min-height: 3.25rem;
+  padding: var(--space-3) var(--space-4);
+  cursor: pointer;
+  list-style-position: inside;
+}
+
+.admin-disclosure__title {
+  color: var(--neutral-950);
+  font-weight: 500;
+}
+
+.admin-disclosure__badges {
+  display: inline-flex;
+  gap: var(--space-1);
+}
+
+.admin-disclosure__body {
+  padding: 0 var(--space-4) var(--space-4);
+  border-top: 1px solid var(--neutral-300);
+}
+
+.admin-preview {
+  max-width: 46rem;
+  padding: clamp(1.5rem, 4vw, 2.5rem);
+  border: 1px solid var(--neutral-300);
+  border-radius: var(--radius-panel);
+  background: var(--surface);
+  color: var(--neutral-800);
+}
+
+.admin-preview h2,
+.admin-preview h3,
+.admin-preview h4 {
+  color: var(--neutral-950);
+  font-weight: 500;
+}
+
+.admin-preview__title {
+  margin: 0;
+  color: var(--neutral-950);
+  font-size: 1.75rem;
+  font-weight: 500;
+}
+
+.admin-preview__lede {
+  color: var(--neutral-600);
+  font-size: 1.0625rem;
+}
+
+.admin-preview__eyebrow {
+  margin: 0;
+  color: var(--brand-plum-700);
+  font-size: 0.8125rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.admin-preview__media,
+.admin-preview__cta {
+  display: inline-block;
+  margin: var(--space-2) 0;
+  padding: var(--space-2) var(--space-3);
+  border: 1px dashed var(--neutral-300);
+  border-radius: var(--radius-control);
+  color: var(--neutral-600);
+  font-size: 0.875rem;
+}
+
+.admin-preview__facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-5);
+  padding: 0;
+  list-style: none;
+}
+
+.admin-preview__section + .admin-preview__section {
+  margin-top: var(--space-8);
+  padding-top: var(--space-6);
+  border-top: 1px solid var(--neutral-300);
+}
+
+.admin-promotion-editor {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(16rem, 22rem);
+  align-items: start;
+  gap: var(--space-8);
+}
+
+.admin-promotion-editor > .admin-form {
+  margin-top: 0;
+  padding: clamp(1.25rem, 3vw, 2rem);
+  border: 1px solid var(--neutral-300);
+  border-radius: var(--radius-panel);
+  background: var(--surface);
+}
+
+.admin-promotion-preview {
+  position: sticky;
+  top: 5rem;
+}
+
+.admin-promotion-preview__frame {
+  margin-top: var(--space-3);
+  padding: var(--space-4);
+  border-radius: var(--radius-panel);
+  background: rgb(31 27 29 / 0.55);
+}
+
+/* Promotion card: shared with the public pop-up. */
+
+.promotion-card {
+  padding: var(--space-6);
+  border-top: 3px solid var(--brand-gold-400);
+  border-radius: var(--radius-panel);
+  /* White keeps the darker gold labels above 4.5:1 contrast. */
+  background: var(--surface);
+  color: var(--neutral-800);
+  overflow-wrap: anywhere;
+}
+
+.promotion-card__eyebrow,
+.promotion-card__code-label {
+  margin: 0;
+  color: var(--brand-gold-600);
+  font-size: 0.75rem;
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.promotion-card__headline {
+  margin: var(--space-2) 0 0;
+  color: var(--brand-plum-800);
+  font-family: var(--font-rivana-display), Georgia, serif;
+  font-size: 1.5rem;
+  font-weight: 400;
+  line-height: 1.2;
+}
+
+.promotion-card__body {
+  margin: var(--space-3) 0 var(--space-4);
+}
+
+.promotion-card__code {
+  margin: var(--space-1) 0 0;
+  padding: var(--space-2) var(--space-3);
+  border: 1px dashed var(--brand-plum-700);
+  border-radius: var(--radius-control);
+  color: var(--brand-plum-800);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 1.125rem;
+  letter-spacing: 0.08em;
+  user-select: all;
+}
+
+.promotion-card__terms,
+.promotion-card__notice {
+  margin: var(--space-3) 0 0;
+  color: var(--neutral-600);
+  font-size: 0.8125rem;
+}
+
+@media (max-width: 63.99rem) {
+  .admin-promotion-editor {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .admin-promotion-preview {
+    position: static;
+  }
+}
+
+@media (max-width: 29.99rem) {
+  .admin-sections__item {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .admin-sections__pinned,
+  .admin-sections__item .admin-order-controls {
+    padding-top: 0;
+  }
 }
 
 .sr-only {

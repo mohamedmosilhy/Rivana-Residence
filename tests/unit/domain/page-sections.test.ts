@@ -133,10 +133,10 @@ describe("page publish readiness", () => {
       expect(
         (error as DomainValidationError).issues.map((issue) => issue.message),
       ).toEqual([
-        "A visible ROOM_GRID section is required.",
-        "A visible FACILITY_GRID section is required.",
-        "A visible CONTACT_CTA section is required.",
-        "A visible RICH_TEXT section is required.",
+        "A visible Room grid section is required.",
+        "A visible Facility grid section is required.",
+        "A visible Contact block section is required.",
+        "A visible Text section is required.",
       ]);
     }
   });

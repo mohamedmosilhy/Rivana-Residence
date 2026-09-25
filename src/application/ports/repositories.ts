@@ -1,7 +1,9 @@
 import type { PageKey, PageSectionType } from "@/domain/content/page-sections";
-import type { FacilityDraft } from "@/domain/facilities/facility";
+import type { z } from "zod";
+
+import type { facilityDraftSchema } from "@/domain/facilities/facility";
 import type { PromotionDraft } from "@/domain/promotions/promotion";
-import type { RoomDraft } from "@/domain/rooms/room";
+import type { roomDraftSchema } from "@/domain/rooms/room";
 import type {
   SiteSettingsInput,
   SocialLinkInput,
@@ -36,8 +38,12 @@ export type MediaAssignment = Readonly<{
   altOverride: string | null;
 }>;
 
-export type RoomInput = RoomDraft & Readonly<{ featured: boolean }>;
-export type FacilityInput = FacilityDraft & Readonly<{ featured: boolean }>;
+// Inputs use the schema's input type so optional fields with defaults (SEO,
+// features) can be omitted; repositories re-parse every input.
+export type RoomInput = z.input<typeof roomDraftSchema> &
+  Readonly<{ featured: boolean }>;
+export type FacilityInput = z.input<typeof facilityDraftSchema> &
+  Readonly<{ featured: boolean }>;
 export type PromotionInput = PromotionDraft;
 
 export type PageSectionInput = Readonly<{
@@ -60,9 +66,13 @@ export type RoomDto = Readonly<{
   maxChildren: number;
   bedSummary: string | null;
   viewSummary: string | null;
+  features: readonly Readonly<{ label: string }>[];
+  seoTitle: string | null;
+  seoDescription: string | null;
   featured: boolean;
   sortOrder: number;
   status: PublicationStatus;
+  updatedAt: Date;
   media: readonly MediaReference[];
 }>;
 
@@ -73,9 +83,12 @@ export type FacilityDto = Readonly<{
   shortDescription: string;
   description: RichTextDocument;
   openingHoursText: string | null;
+  seoTitle: string | null;
+  seoDescription: string | null;
   featured: boolean;
   sortOrder: number;
   status: PublicationStatus;
+  updatedAt: Date;
   media: readonly MediaReference[];
 }>;
 
@@ -95,7 +108,15 @@ export type PageDto = Readonly<{
   title: string;
   canonicalPath: string;
   isPublished: boolean;
+  seoTitle: string | null;
+  seoDescription: string | null;
+  updatedAt: Date;
   sections: readonly PageSectionDto[];
+}>;
+
+export type PageDetailsInput = Readonly<{
+  seoTitle: string | null;
+  seoDescription: string | null;
 }>;
 
 export type SocialLinkDto = SocialLinkInput;
@@ -142,6 +163,16 @@ export type PromotionDto = Readonly<{
   showAsPopup: boolean;
   version: number;
   publishedAt: Date | null;
+  updatedAt: Date;
+}>;
+
+/** A ready image that content may reference (Phase 5 selection only). */
+export type MediaOption = Readonly<{
+  id: string;
+  altText: string;
+  originalFilename: string;
+  width: number | null;
+  height: number | null;
 }>;
 
 export type ContactEnquiryDto = Readonly<{
@@ -163,7 +194,13 @@ export interface RoomRepository {
   create(input: RoomInput, actor: Actor): Promise<Result<RoomDto>>;
   update(id: string, input: RoomInput, actor: Actor): Promise<Result<RoomDto>>;
   publish(id: string, actor: Actor): Promise<Result<RoomDto>>;
+  /** PUBLISHED → DRAFT. */
+  unpublish(id: string, actor: Actor): Promise<Result<RoomDto>>;
   archive(id: string, actor: Actor): Promise<Result<void>>;
+  /** ARCHIVED → DRAFT, appended to the end of the order. */
+  restore(id: string, actor: Actor): Promise<Result<RoomDto>>;
+  /** Permanently removes an archived record; CONFLICT otherwise. */
+  delete(id: string, actor: Actor): Promise<Result<void>>;
   reorder(orderedIds: readonly string[], actor: Actor): Promise<Result<void>>;
   replaceMedia(
     id: string,
@@ -184,7 +221,13 @@ export interface FacilityRepository {
     actor: Actor,
   ): Promise<Result<FacilityDto>>;
   publish(id: string, actor: Actor): Promise<Result<FacilityDto>>;
+  /** PUBLISHED → DRAFT. */
+  unpublish(id: string, actor: Actor): Promise<Result<FacilityDto>>;
   archive(id: string, actor: Actor): Promise<Result<void>>;
+  /** ARCHIVED → DRAFT, appended to the end of the order. */
+  restore(id: string, actor: Actor): Promise<Result<FacilityDto>>;
+  /** Permanently removes an archived record; CONFLICT otherwise. */
+  delete(id: string, actor: Actor): Promise<Result<void>>;
   reorder(orderedIds: readonly string[], actor: Actor): Promise<Result<void>>;
   replaceMedia(
     id: string,
@@ -197,6 +240,12 @@ export interface PageRepository {
   findPublishedByKey(key: PageKey): Promise<PageDto | null>;
   findAdminByKey(key: PageKey): Promise<PageDto | null>;
   publish(key: PageKey, actor: Actor): Promise<Result<PageDto>>;
+  unpublish(key: PageKey, actor: Actor): Promise<Result<PageDto>>;
+  updateDetails(
+    key: PageKey,
+    input: PageDetailsInput,
+    actor: Actor,
+  ): Promise<Result<PageDto>>;
   saveSection(
     key: PageKey,
     section: PageSectionInput,
@@ -231,6 +280,7 @@ export interface SettingsRepository {
 
 export interface MediaRepository {
   findAdminById(id: string): Promise<MediaAssetDto | null>;
+  listReady(): Promise<readonly MediaOption[]>;
   countUsage(id: string): Promise<number>;
   finalize(id: string, actor: Actor): Promise<Result<MediaAssetDto>>;
   deleteIfUnreferenced(id: string, actor: Actor): Promise<Result<void>>;
@@ -239,6 +289,7 @@ export interface MediaRepository {
 export interface PromotionRepository {
   getCurrent(now: Date): Promise<PromotionDto | null>;
   listAdmin(): Promise<readonly PromotionDto[]>;
+  findAdminById(id: string): Promise<PromotionDto | null>;
   create(input: PromotionInput, actor: Actor): Promise<Result<PromotionDto>>;
   update(
     id: string,
@@ -246,7 +297,11 @@ export interface PromotionRepository {
     actor: Actor,
   ): Promise<Result<PromotionDto>>;
   publish(id: string, actor: Actor, now: Date): Promise<Result<PromotionDto>>;
+  unpublish(id: string, actor: Actor): Promise<Result<PromotionDto>>;
   archive(id: string, actor: Actor): Promise<Result<void>>;
+  restore(id: string, actor: Actor): Promise<Result<PromotionDto>>;
+  /** Permanently removes an archived promotion; CONFLICT otherwise. */
+  delete(id: string, actor: Actor): Promise<Result<void>>;
 }
 
 export type PageRequest = Readonly<{

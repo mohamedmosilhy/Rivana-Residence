@@ -67,6 +67,7 @@ Source: `src/domain/auth/capabilities.ts`. Every cell is asserted in `tests/unit
 | --- | :-: | :-: |
 | `admin:access` | ✓ | ✓ |
 | `content:edit`, `content:publish`, `content:archive` | ✓ | ✓ |
+| `content:delete` (permanent delete of archived content; added in Phase 5) | – | ✓ |
 | `media:upload` | ✓ | ✓ |
 | `media:delete` | – | ✓ |
 | `promotions:manage` | ✓ | ✓ |

@@ -39,6 +39,8 @@ Required composition:
 
 The editor changes copy/media and can hide optional lifestyle content. Core hero and discovery sections cannot be deleted.
 
+Phase 5 enforcement: sections are seeded per page and never added or deleted; required sections (Home: Hero, Room grid, Facility grid, Contact block; About: Hero, story Image and text, Contact block; Contact: Hero, Contact block) cannot be hidden; the Hero stays first and the Contact block last.
+
 ### About
 
 Required hero, story split, and contact CTA. Optional stats, gallery, and room grid. The page should preserve the reference's property exterior and editorial quote rhythm without forcing the old exact grid.
@@ -61,6 +63,8 @@ Use a limited portable document schema:
 - rendering through a controlled node map with semantic HTML.
 
 A plain textarea is sufficient for short descriptions and opening hours. Rich text is used only where longer editorial structure is genuinely helpful.
+
+Implemented in Phase 5 (`src/domain/shared/rich-text.ts`): paragraphs, headings 2–4, bulleted and numbered lists, and line breaks, as a strict node allowlist edited through a plain-text format. Bold, italic, and links are deferred. `src/presentation/design/rich-text-view.tsx` renders the document through a fixed node map.
 
 ## Media references
 

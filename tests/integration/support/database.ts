@@ -6,7 +6,10 @@ import { testDatabaseUrl } from "./test-database";
 
 export function createTestClient() {
   return new PrismaClient({
-    adapter: new PrismaPg({ connectionString: testDatabaseUrl().url }),
+    adapter: new PrismaPg({
+      connectionString: testDatabaseUrl().url,
+      options: "-c TimeZone=UTC",
+    }),
   });
 }
 

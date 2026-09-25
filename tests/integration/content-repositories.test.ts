@@ -71,9 +71,13 @@ describe("room repository", () => {
       maxChildren: 0,
       bedSummary: null,
       viewSummary: null,
+      features: [],
+      seoTitle: null,
+      seoDescription: null,
       featured: false,
       sortOrder: room.sortOrder,
       status: "PUBLISHED",
+      updatedAt: room.updatedAt,
       media: [
         {
           id: hero.id,
@@ -157,7 +161,8 @@ describe("room repository", () => {
 
     const result = await rooms.reorder(pick([a.id, b.id, c.id]), actor);
 
-    expect(result).toMatchObject({ ok: false, error: { code: "VALIDATION" } });
+    // A stale or partial order means the list changed underneath the editor.
+    expect(result).toMatchObject({ ok: false, error: { code: "CONFLICT" } });
     const ordered = await client.room.findMany({
       orderBy: { sortOrder: "asc" },
     });
@@ -384,23 +389,38 @@ describe("page repository", () => {
       error: {
         code: "NOT_PUBLISHABLE",
         fieldErrors: {
-          sections: ["A visible CONTACT_CTA section is required."],
+          sections: ["A visible Contact block section is required."],
         },
       },
     });
     expect((await pages.findAdminByKey("CONTACT"))?.isPublished).toBe(false);
   });
 
-  it("reorders every section atomically", async () => {
+  it("reorders sections atomically within the page policy", async () => {
     const page = await createContactPage([hero, cta]);
 
     expect(
-      (await pages.reorderSections(page.id, ["section-1", "section-0"], actor))
+      (await pages.reorderSections(page.id, ["section-0", "section-1"], actor))
         .ok,
     ).toBe(true);
+    // The Hero must stay first and the Contact block last.
+    expect(
+      await pages.reorderSections(page.id, ["section-1", "section-0"], actor),
+    ).toMatchObject({
+      ok: false,
+      error: {
+        code: "VALIDATION",
+        fieldErrors: {
+          sections: [
+            "The Hero section must stay first.",
+            "The Contact block must stay last.",
+          ],
+        },
+      },
+    });
     expect(
       (await pages.findAdminByKey("CONTACT"))?.sections.map((s) => s.id),
-    ).toEqual(["section-1", "section-0"]);
+    ).toEqual(["section-0", "section-1"]);
 
     expect(
       await pages.reorderSections(page.id, ["section-1"], actor),

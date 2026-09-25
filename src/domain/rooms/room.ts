@@ -1,25 +1,54 @@
 import { z } from "zod";
 
+import {
+  optionalText,
+  requiredText,
+  seoFields,
+} from "@/domain/shared/content-fields";
 import { DomainValidationError } from "@/domain/shared/domain-error";
 import { richTextDocumentSchema } from "@/domain/shared/rich-text";
+import { slugSchema } from "@/domain/shared/slug";
 import type {
   MediaStatus,
   PublicationStatus,
   RichTextDocument,
 } from "@/domain/shared/types";
 
-const slugPattern = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+export const MAX_ROOM_FEATURES = 20;
 
+export const roomFeatureSchema = z
+  .object({ label: requiredText("a feature", 120) })
+  .strict();
+
+// Marketing facts only. There are deliberately no price, rate, or
+// availability fields; those belong to the external reservation system.
 export const roomDraftSchema = z.object({
-  name: z.string().trim().min(1).max(120),
-  slug: z.string().trim().max(120).regex(slugPattern),
-  shortDescription: z.string().trim().min(1).max(300),
+  name: requiredText("the room name", 120),
+  slug: slugSchema,
+  shortDescription: requiredText("a short description", 300),
   description: richTextDocumentSchema,
-  sizeSqm: z.number().positive().max(9999).nullable(),
-  maxAdults: z.number().int().min(1).max(20),
-  maxChildren: z.number().int().min(0).max(20),
-  bedSummary: z.string().trim().max(160).nullable(),
-  viewSummary: z.string().trim().max(160).nullable(),
+  sizeSqm: z
+    .number({ error: "Enter the size as a number." })
+    .positive("Size must be greater than 0.")
+    .max(9999, "Size must be 9999 m² or less.")
+    .nullable(),
+  maxAdults: z
+    .number({ error: "Enter the number of adults." })
+    .int("Use a whole number.")
+    .min(1, "At least 1 adult.")
+    .max(20, "20 adults at most."),
+  maxChildren: z
+    .number({ error: "Enter the number of children." })
+    .int("Use a whole number.")
+    .min(0, "Children cannot be negative.")
+    .max(20, "20 children at most."),
+  bedSummary: optionalText(160),
+  viewSummary: optionalText(160),
+  features: z
+    .array(roomFeatureSchema)
+    .max(MAX_ROOM_FEATURES, `Add at most ${MAX_ROOM_FEATURES} features.`)
+    .default([]),
+  ...seoFields,
 });
 
 export type RoomMediaCandidate = Readonly<{

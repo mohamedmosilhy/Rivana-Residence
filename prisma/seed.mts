@@ -11,7 +11,11 @@ if (!databaseUrl) {
 }
 
 const client = new PrismaClient({
-  adapter: new PrismaPg({ connectionString: databaseUrl }),
+  // Timestamps must round-trip in UTC; see src/infrastructure/db/prisma/client.ts.
+  adapter: new PrismaPg({
+    connectionString: databaseUrl,
+    options: "-c TimeZone=UTC",
+  }),
 });
 
 try {

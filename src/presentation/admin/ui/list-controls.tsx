@@ -3,16 +3,20 @@ import Link from "next/link";
 
 type FilterOption = Readonly<{ value: string; label: string }>;
 
+type Filter = Readonly<{
+  name: string;
+  label: string;
+  value: string | null;
+  options: readonly FilterOption[];
+  /** Label of the empty choice; defaults to "All". */
+  allLabel?: string;
+}>;
+
 type ListFiltersProps = Readonly<{
   action: Route;
   searchLabel: string;
   search: string | null;
-  filter: Readonly<{
-    name: string;
-    label: string;
-    value: string | null;
-    options: readonly FilterOption[];
-  }>;
+  filters: readonly Filter[];
 }>;
 
 // A plain GET form: filters live in the URL, work without JavaScript, and
@@ -21,9 +25,9 @@ export function ListFilters({
   action,
   searchLabel,
   search,
-  filter,
+  filters,
 }: ListFiltersProps) {
-  const active = Boolean(search || filter.value);
+  const active = Boolean(search || filters.some((filter) => filter.value));
   return (
     <form className="admin-filters" action={action} role="search">
       <div className="admin-field">
@@ -36,21 +40,23 @@ export function ListFilters({
           maxLength={100}
         />
       </div>
-      <div className="admin-field">
-        <label htmlFor="list-filter">{filter.label}</label>
-        <select
-          id="list-filter"
-          name={filter.name}
-          defaultValue={filter.value ?? ""}
-        >
-          <option value="">All</option>
-          {filter.options.map((option) => (
-            <option key={option.value} value={option.value}>
-              {option.label}
-            </option>
-          ))}
-        </select>
-      </div>
+      {filters.map((filter) => (
+        <div className="admin-field admin-field--filter" key={filter.name}>
+          <label htmlFor={`list-filter-${filter.name}`}>{filter.label}</label>
+          <select
+            id={`list-filter-${filter.name}`}
+            name={filter.name}
+            defaultValue={filter.value ?? ""}
+          >
+            <option value="">{filter.allLabel ?? "All"}</option>
+            {filter.options.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </select>
+        </div>
+      ))}
       <div className="admin-filters__actions">
         <button type="submit" className="admin-button admin-button--secondary">
           Apply filters

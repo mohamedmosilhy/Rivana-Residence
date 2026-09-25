@@ -208,7 +208,7 @@ describe("page section writes", () => {
     ).toMatchObject({ ok: false, error: { code: "VALIDATION" } });
   });
 
-  it("refuses edits that would break a published page", async () => {
+  it("never lets a required section be hidden", async () => {
     await pages.saveSection("CONTACT", hero, actor);
     const saved = await pages.saveSection("CONTACT", cta, actor);
     expect((await pages.publish("CONTACT", actor)).ok).toBe(true);
@@ -221,7 +221,13 @@ describe("page section writes", () => {
         { ...cta, id: ctaId, isVisible: false },
         actor,
       ),
-    ).toMatchObject({ ok: false, error: { code: "NOT_PUBLISHABLE" } });
+    ).toMatchObject({
+      ok: false,
+      error: {
+        code: "VALIDATION",
+        fieldErrors: { isVisible: [expect.any(String)] },
+      },
+    });
     expect(
       (await pages.findPublishedByKey("CONTACT"))?.sections.map((s) => s.type),
     ).toEqual(["HERO", "CONTACT_CTA"]);

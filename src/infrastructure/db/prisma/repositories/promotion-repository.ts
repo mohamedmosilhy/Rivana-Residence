@@ -46,6 +46,11 @@ export class PrismaPromotionRepository implements PromotionRepository {
     return rows.map(mapPromotion);
   }
 
+  async findAdminById(id: string) {
+    const row = await this.client.promotion.findUnique({ where: { id } });
+    return row ? mapPromotion(row) : null;
+  }
+
   async create(input: PromotionInput, actor: Actor) {
     const parsed = promotionDraftSchema.safeParse(input);
     if (!parsed.success) {
@@ -114,6 +119,12 @@ export class PrismaPromotionRepository implements PromotionRepository {
       return await withTransaction(this.client, async (transaction) => {
         const row = await transaction.promotion.findUnique({ where: { id } });
         if (!row) return failure("NOT_FOUND", "Promotion not found.");
+        if (row.status === "ARCHIVED") {
+          return failure(
+            "CONFLICT",
+            "Restore this promotion before publishing.",
+          );
+        }
         const validation = promotionDraftSchema.safeParse(row);
         if (!validation.success) {
           return failure("NOT_PUBLISHABLE", "Promotion is not publishable.", {
@@ -142,6 +153,56 @@ export class PrismaPromotionRepository implements PromotionRepository {
         data: { status: "ARCHIVED", updatedById: actor.id },
       });
       return success(undefined);
+    } catch (error) {
+      return translatePrismaWriteError(error);
+    }
+  }
+
+  unpublish(id: string, actor: Actor) {
+    return this.transition(id, "PUBLISHED", actor);
+  }
+
+  restore(id: string, actor: Actor) {
+    return this.transition(id, "ARCHIVED", actor);
+  }
+
+  async delete(id: string) {
+    try {
+      const { count } = await this.client.promotion.deleteMany({
+        where: { id, status: "ARCHIVED" },
+      });
+      if (count === 1) return success(undefined);
+      const exists = await this.client.promotion.count({ where: { id } });
+      return exists
+        ? failure("CONFLICT", "Archive this promotion before deleting it.")
+        : failure("NOT_FOUND", "Promotion not found.");
+    } catch (error) {
+      return translatePrismaWriteError(error);
+    }
+  }
+
+  /** Moves a promotion from `from` back to DRAFT. */
+  private async transition(
+    id: string,
+    from: "PUBLISHED" | "ARCHIVED",
+    actor: Actor,
+  ) {
+    try {
+      const { count } = await this.client.promotion.updateMany({
+        where: { id, status: from },
+        data: { status: "DRAFT", updatedById: actor.id },
+      });
+      const row = await this.client.promotion.findUnique({ where: { id } });
+      if (!row) return failure("NOT_FOUND", "Promotion not found.");
+      if (count === 0) {
+        return failure(
+          "CONFLICT",
+          from === "PUBLISHED"
+            ? "This promotion is not published."
+            : "This promotion is not archived.",
+        );
+      }
+      return success(mapPromotion(row));
     } catch (error) {
       return translatePrismaWriteError(error);
     }

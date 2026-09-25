@@ -5,6 +5,8 @@ import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "@/generated/prisma/client";
 import { getServerEnv } from "@/lib/env/server";
 
+export const UTC_SESSION = "-c TimeZone=UTC";
+
 type PrismaGlobal = typeof globalThis & {
   rivanaPrisma?: PrismaClient;
 };
@@ -17,7 +19,13 @@ function createPrismaClient() {
     );
   }
 
-  const adapter = new PrismaPg({ connectionString: DATABASE_URL });
+  // The pg adapter sends and reads timestamps as zone-less UTC wall time, so
+  // the session must run in UTC. Otherwise a server whose default zone is,
+  // say, Africa/Cairo stores every Prisma-written instant hours off.
+  const adapter = new PrismaPg({
+    connectionString: DATABASE_URL,
+    options: UTC_SESSION,
+  });
   return new PrismaClient({ adapter });
 }
 

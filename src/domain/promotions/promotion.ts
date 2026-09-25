@@ -1,22 +1,29 @@
 import { z } from "zod";
 
+import { requiredText } from "@/domain/shared/content-fields";
 import type { PublicationStatus } from "@/domain/shared/types";
 
 export const promotionDraftSchema = z
   .object({
-    internalName: z.string().trim().min(1).max(120),
-    headline: z.string().trim().min(1).max(160),
-    body: z.string().trim().min(1).max(600),
-    code: z
+    internalName: requiredText("an internal name", 120),
+    headline: requiredText("a headline", 160),
+    body: requiredText("the pop-up message", 600),
+    code: requiredText("a code", 32).regex(
+      /^[A-Za-z0-9][A-Za-z0-9_-]*$/,
+      "Use letters, numbers, hyphens, or underscores, starting with a letter or number.",
+    ),
+    terms: z
       .string()
       .trim()
-      .min(1)
-      .max(32)
-      .regex(/^[A-Za-z0-9][A-Za-z0-9_-]*$/),
-    terms: z.string().trim().max(1200).nullable(),
-    startsAt: z.date().nullable(),
-    endsAt: z.date().nullable(),
-    priority: z.number().int().min(-1000).max(1000),
+      .max(1200, "Use 1200 characters or fewer.")
+      .nullable(),
+    startsAt: z.date({ error: "Enter a valid start time." }).nullable(),
+    endsAt: z.date({ error: "Enter a valid end time." }).nullable(),
+    priority: z
+      .number({ error: "Enter the priority as a whole number." })
+      .int("Enter the priority as a whole number.")
+      .min(-1000, "Priority must be between -1000 and 1000.")
+      .max(1000, "Priority must be between -1000 and 1000."),
     showAsPopup: z.boolean(),
   })
   .superRefine((promotion, context) => {

@@ -1,6 +1,6 @@
 # Phase 4 admin shell and shared workflows handoff
 
-Status: **Ready for review**  
+Status: **Accepted on 2026-09-25**  
 Completed: 2026-09-25  
 Scope: the admin shell, shared CMS primitives, the settings workflow, and the dashboard overview. There are no room, facility, page, promotion, or media editors; those arrive in Phases 5 and 6.
 
@@ -165,4 +165,4 @@ Screenshots in `docs/screenshots/`:
 
 ## Reviewer decision
 
-Awaiting client review. Approve the shared CMS patterns (shell, navigation visibility, tables, filters, states, forms, action placement, confirmation, and toasts) before they are repeated across the Phase 5 entity editors. Please also confirm the settings field list and the Google Maps embed restriction. Phase 5 has not started.
+Approved by the client on 2026-09-25, including the shared CMS patterns, the settings field list, and the Google Maps embed restriction. Phase 5 was authorized to begin.
