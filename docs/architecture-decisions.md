@@ -15,6 +15,7 @@ ADRs record decisions that materially shape Rivana. Status is **Accepted for Pha
 | [009](./adr/009-server-components.md) | Server Components by default; narrow client islands |
 | [010](./adr/010-styling-design-system.md) | Tailwind and semantic CSS tokens; selective shadcn/ui |
 | [011](./adr/011-deployment.md) | Hosting.com/cPanel Node deployment with portable adapters |
+| [012](./adr/012-motion-library.md) | Motion (Framer Motion) for public animation; CSS for first paint; View Transitions for page morphs (Phase 9) |
 
 Cross-cutting consequences:
 

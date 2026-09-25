@@ -1,6 +1,6 @@
 # Phase 8 luxury visual system handoff
 
-Status: **Ready for review**
+Status: **Accepted on 2026-09-26**
 Completed: 2026-09-26
 Scope: the Rivana visual system applied to every public template, plus the Phase 7 review fixes, a light-touch staff login refresh, and a demo seed for local review. Phase 9 owns section reveals, gallery/lightbox motion, and submenu behavior.
 

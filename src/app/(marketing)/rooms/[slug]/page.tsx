@@ -49,6 +49,7 @@ export default async function RoomPage({ params }: RoomPageProps) {
         title={room.name}
         lede={room.shortDescription}
         image={room.hero}
+        morphName={`room-${room.slug}`}
       >
         <BookNowButton message={message} />
         <Link href="/contact" className="site-button site-button--ghost">

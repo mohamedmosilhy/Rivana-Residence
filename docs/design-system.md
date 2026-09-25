@@ -172,4 +172,17 @@ The tokens above live in `src/app/globals.css` (`:root`) and every public rule r
 - **Brush edge and sun rays:** both are inline SVG (`src/presentation/site/ornaments.tsx`). The rays repeat the crest's 270° arc at low opacity as a watermark on plum surfaces.
 - **Heroes:** the home hero fills the viewport, and other managed heroes are shorter. Room and facility heroes are full-bleed only when the photo is at least 1400px wide. Otherwise the photo sits beside the title at natural size in a gold offset frame.
 - **Cards:** room cards are open editorial compositions (4:5 image, index number, fact line, “Discover”). Facility tiles are photographic, with persistent labels over a dark scrim.
-- **Motion:** only hover and colour feedback (160–240ms), a 1.03 image scale on hover-capable pointers, and the header surface change. Section reveals and gallery motion remain Phase 9.
+- **Motion:** only hover and colour feedback (160–240ms), a 1.03 image scale on hover-capable pointers, and the header surface change. Phase 9 adds the motion layer described below.
+
+## Phase 9 motion implementation notes
+
+Evidence: [phase-9-motion.md](./phase-9-motion.md). Decision record: [ADR 012](./adr/012-motion-library.md).
+
+- **First paint (CSS):** the home title's letter reveal (a 35ms step, finishing within about 1s), text entrances staggered by 120–140ms, the hero photo settling from a 1.12 zoom over 2.4s, and the crest rays drawing once. Every keyframe ends visible, so nothing waits for JavaScript.
+- **Scroll reveals (Motion):** a 36px rise over 0.8s with `cubic-bezier(.23,1,.32,1)`; groups stagger by 0.08–0.12s. Photos are uncovered by a plum curtain (1.1s) while settling from a 1.14 zoom. Only content below the fold at hydration is ever hidden.
+- **Hero depth:** the photo drifts at 30% of scroll speed, and the text fades to 10% opacity over the first 700px. This is the one approved parallax exception (client request, transform only).
+- **Header:** tucks away (520ms) after 480px while scrolling down; returns on scroll up or focus. A 2px gold rule scales with reading progress.
+- **Menu sheet:** slides down in 640ms with links staggering by 60ms; closes in 420ms.
+- **Photo viewer:** photos slide 72px and crossfade (0.55s in, 0.3s out); square-edged 52px controls; thumbnails at 45% opacity until current.
+- **Page morph:** 700ms view-transition morph with a brief 2px blur midway.
+- **Reduced motion:** no hiding, no parallax, no header tuck; CSS animations finish instantly with no delay; view transitions are instant.

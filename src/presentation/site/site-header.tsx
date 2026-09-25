@@ -15,6 +15,7 @@ export function SiteHeader({
   return (
     <header className="site-header">
       <HeaderState />
+      <span className="site-header__progress" aria-hidden="true" />
       <div className="site-header__inner site-container">
         <Link href="/" className="site-header__brand">
           <BrandLogo tone="inverse" className="site-logo site-logo--inverse" />
