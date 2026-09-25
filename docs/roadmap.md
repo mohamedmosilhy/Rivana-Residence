@@ -542,7 +542,7 @@ Provide safe, provider-neutral image management and migrate approved source asse
 
 ### Reviewer decision
 
-Awaiting client review. Approve the media behavior (upload policy, re-encoding, rights model, replacement, and deletion) and the migrated asset set, including exclusions, duplicates, and rights confirmation for the reference images, before final public compositions. The Hosting.com media root, quota monitoring, and off-server backup remain to be provisioned and verified before launch. Evidence: [phase-6-media.md](./phase-6-media.md). Phase 7 has not started.
+Awaiting client review. Approve the media behavior (upload policy, re-encoding, rights model, replacement, and deletion) and the migrated asset set, including exclusions, duplicates, and rights confirmation for the reference images, before final public compositions. The staging media root is provisioned and verified on Hosting.com; the off-server backup, production root, and a free-space alert (the provider's shared disk is 99% full) remain before launch. Evidence: [phase-6-media.md](./phase-6-media.md). Phase 7 has not started.
 
 ---
 

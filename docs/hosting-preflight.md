@@ -35,3 +35,20 @@ The account is suitable in principle for the Next.js application and local media
 - Public DNS is hosted by Cloudflare, not cPanel. The staging site becomes publicly reachable after adding a proxied or DNS-only `A` record for `staging` pointing to the cPanel origin IP and allowing Cloudflare/AutoSSL to issue or serve HTTPS.
 - Public DNS activation is intentionally deferred until deployment because the client does not currently have access to the Cloudflare account that owns the zone. Do not change nameservers or add the domain to a different Cloudflare account as a workaround.
 - When Phase 1 produces the real application, replace the temporary static reference with a Node 22/Passenger staging app and give it separate database credentials and media root.
+
+## Staging media root (2026-09-25)
+
+Provisioned and checked over SSH for Phase 6. Only Rivana's own staging paths were touched; the account also hosts other, unrelated sites.
+
+- Created `~/rivana-staging/media` (home-relative) with a `quarantine/` subfolder, both mode `750` and owned by the account user. It is outside `public_html`, outside the `staging.rivanaresidence.com` document root, and outside any future release directory, so no URL maps to it. Images are served only through the application's `/media/` route.
+- Checked the operations the storage adapter relies on, then removed the test files:
+  - exclusive create;
+  - a same-filesystem hard link from quarantine into `images/`;
+  - a second link to an existing key is refused, so objects cannot be overwritten;
+  - new files are created with mode `640`.
+- Account capacity: about 4.0 GB used with no fixed megabyte quota, and 70,376 of 600,000 inodes used (88% of inodes free).
+- **Risk:** the shared filesystem behind the account reports **99% used (about 61 GB free)** at the provider level. The account is under its own quota, but disk exhaustion by other tenants would affect uploads. Ask Hosting.com about capacity, and add a free-space alert before launch.
+- **Image processing:** the server is `x86_64` with glibc `2.28` and Node `22.23.2` (`/opt/alt/alt-nodejs22`). sharp 0.35's prebuilt Linux binaries require glibc ≥ 2.28, so the pinned version is compatible, but only just. Check the glibc requirement before upgrading sharp.
+- Staging environment value: `MEDIA_STORAGE_ROOT=<home>/rivana-staging/media` (absolute path in the app's cPanel environment settings).
+
+Still open: an off-server backup of the media root and a restore drill, which remain launch tasks. Production gets its own separate root (e.g. `~/rivana-production/media`) when production is provisioned.

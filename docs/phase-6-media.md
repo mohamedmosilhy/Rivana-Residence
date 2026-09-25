@@ -64,7 +64,13 @@ Cron (hourly)                         npm run media -- cleanup
 - Quarantine writes use exclusive create and stop reading as soon as the 15 MB cap is exceeded.
 - Final objects are written to a private temporary file, then atomically **hard-linked** into place. `link()` fails if the key already exists, so no object is ever overwritten.
 
-**Still open for deployment (Phase 12):** the roadmap's prerequisite asked for the Hosting.com media root, quota, serving method, and off-server backup to be verified over SSH. I did not access the server in this phase. The design follows the read-only preflight in [hosting-preflight.md](./hosting-preflight.md), which found about 4 GB used, 70k of 600k inodes, and rsync and cron available. Provisioning the directory and backup target, and running a restore drill, remain launch tasks.
+**Hosting check (2026-09-25):** the staging media root `~/rivana-staging/media` was created over SSH and checked on the real server: permissions `750`/`640`, same-filesystem hard links, refusal to overwrite, and location outside every web root. The account has about 4 GB used and 88% of its inodes free. The server's glibc 2.28 meets sharp 0.35's minimum. See [hosting-preflight.md](./hosting-preflight.md#staging-media-root-2026-09-25).
+
+**Still open for launch (Phase 12):**
+
+- the off-server backup target and a restore drill;
+- the production media root;
+- a free-space alert, because the provider's shared disk is 99% full.
 
 ## Upload verification and threat-test results
 
@@ -225,7 +231,7 @@ Screenshots in `docs/screenshots/`:
 
 ## Known limitations and follow-ups
 
-- **Production media root, quota monitoring, and off-server backup** are not provisioned or verified yet (see [Storage configuration](#storage-configuration-permissions-and-backup)).
+- **Off-server backup, the production media root, and a free-space alert** are not in place yet. The staging root is provisioned and verified (see [Storage configuration](#storage-configuration-permissions-and-backup)).
 - **No resized variants** are generated. Public pages will use `next/image` (Phase 7/10) for responsive sizes, and objects are stored at their uploaded resolution.
 - **The signed-in cross-site upload case** is unit-tested and was checked with curl, but it is not covered in E2E (see [Upload verification](#upload-verification-and-threat-test-results)).
 - **Animated PNG (APNG)** decodes as its first frame and is stored still; this is not rejected explicitly.
