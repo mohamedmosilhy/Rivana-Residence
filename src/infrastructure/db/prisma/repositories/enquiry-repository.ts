@@ -5,6 +5,7 @@ import { createId } from "@paralleldrive/cuid2";
 import type {
   Actor,
   ContactEnquiryDto,
+  EnquiryListQuery,
   EnquiryRepository,
 } from "@/application/ports/repositories";
 import { invalid, success } from "@/application/shared/result";
@@ -25,6 +26,44 @@ export class PrismaEnquiryRepository implements EnquiryRepository {
       orderBy: [{ createdAt: "desc" }, { id: "asc" }],
     });
     return rows.map(mapEnquiry);
+  }
+
+  async listAdminPage(query: EnquiryListQuery) {
+    // Prisma passes `contains` to ILIKE unescaped, so LIKE metacharacters in
+    // the search text must be escaped to match literally.
+    const contains = query.search
+      ? {
+          contains: query.search.replace(/[\\%_]/g, "\\$&"),
+          mode: "insensitive" as const,
+        }
+      : undefined;
+    const where = {
+      ...(query.status ? { status: query.status } : {}),
+      ...(contains
+        ? {
+            OR: [
+              { name: contains },
+              { email: contains },
+              { subject: contains },
+            ],
+          }
+        : {}),
+    };
+    const [total, rows] = await Promise.all([
+      this.client.contactEnquiry.count({ where }),
+      this.client.contactEnquiry.findMany({
+        where,
+        orderBy: [{ createdAt: "desc" }, { id: "asc" }],
+        skip: (query.page - 1) * query.pageSize,
+        take: query.pageSize,
+      }),
+    ]);
+    return {
+      items: rows.map(mapEnquiry),
+      total,
+      page: query.page,
+      pageSize: query.pageSize,
+    };
   }
 
   async create(input: Omit<ContactEnquiryDto, "id" | "status" | "createdAt">) {

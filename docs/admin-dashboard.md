@@ -106,6 +106,8 @@ Groups:
 - Media storage: read-only provider/root health and free-space warning; filesystem paths are never editable in the browser.
 - Account/security: current user password/session management; user management is administrator-only.
 
+Phase 4 implements identity (name, tagline), contact/location (map links restricted to `https://www.google.com/maps/embed…`), footer text, default SEO title/description, ordered social links, the read-only property time zone, and the booking status. Saves are rejected when the settings changed since the form was opened. Logo variants and the default social image follow with the Phase 6 media picker.
+
 ## Form behavior
 
 - React Hook Form plus Zod resolver for interactive/repeatable forms; the same schemas are re-run on the server.

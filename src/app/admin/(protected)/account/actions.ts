@@ -5,7 +5,7 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 
 import { changeOwnPassword, revokeOwnOtherSessions } from "@/composition/auth";
-import type { FormState } from "@/presentation/admin/auth/form-state";
+import type { FormState } from "@/presentation/admin/ui/form-state";
 
 const passwordInput = z.object({
   currentPassword: z.string().min(1).max(128),

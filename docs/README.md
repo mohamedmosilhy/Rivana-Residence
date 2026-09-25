@@ -35,6 +35,7 @@ Every Book Now control initially renders as a visually complete, disabled/inert 
 | [phase-1-foundation.md](./phase-1-foundation.md) | Phase 1 implementation, verification, screenshots, limitations, and acceptance evidence |
 | [phase-2-persistence.md](./phase-2-persistence.md) | Phase 2 schema, migration review, repository contracts, test results, and limitations |
 | [phase-3-auth.md](./phase-3-auth.md) | Phase 3 auth configuration, capability matrix, operator procedures, security evidence, and limitations |
+| [phase-4-admin-shell.md](./phase-4-admin-shell.md) | Phase 4 admin shell, shared CMS patterns, settings workflow, accessibility notes, test evidence, and limitations |
 
 ## Current technical baseline
 
@@ -54,4 +55,4 @@ The retained identity is deep plum (`#652A4C`), warm gold (`#DBAF71`), editorial
 
 ## Status
 
-Phases 0, 1, and 2 were approved by the client on 2026-09-25. Phase 3 authentication and authorization is implemented and `Ready for review`. Phase 4 has not started.
+Phases 0, 1, 2, and 3 were approved by the client on 2026-09-25. Phase 4 (admin shell and shared workflows) is implemented and `Ready for review`. Phase 5 has not started.

@@ -3,6 +3,10 @@ import type { FacilityDraft } from "@/domain/facilities/facility";
 import type { PromotionDraft } from "@/domain/promotions/promotion";
 import type { RoomDraft } from "@/domain/rooms/room";
 import type {
+  SiteSettingsInput,
+  SocialLinkInput,
+} from "@/domain/settings/site-settings";
+import type {
   AdminRole,
   EnquiryStatus,
   MediaStatus,
@@ -94,14 +98,22 @@ export type PageDto = Readonly<{
   sections: readonly PageSectionDto[];
 }>;
 
-export type SiteSettingsDto = Readonly<{
-  id: "default";
-  siteName: string;
-  timeZone: string;
-  phone: string | null;
-  email: string | null;
-  footerText: string | null;
-}>;
+export type SocialLinkDto = SocialLinkInput;
+
+export type SiteSettingsDto = Readonly<
+  SiteSettingsInput & {
+    id: "default";
+    timeZone: string;
+    /** Ordered for display. Public reads include visible links only. */
+    socialLinks: readonly SocialLinkDto[];
+  }
+>;
+
+export type AdminSiteSettingsDto = SiteSettingsDto &
+  Readonly<{
+    updatedAt: Date;
+    updatedByName: string | null;
+  }>;
 
 export type MediaAssetDto = Readonly<{
   id: string;
@@ -199,7 +211,22 @@ export interface PageRepository {
 
 export interface SettingsRepository {
   getPublic(): Promise<SiteSettingsDto | null>;
-  getAdmin(): Promise<SiteSettingsDto | null>;
+  getAdmin(): Promise<AdminSiteSettingsDto | null>;
+  /**
+   * Writes only when the stored `updatedAt` still equals `expectedUpdatedAt`,
+   * otherwise returns CONFLICT so a stale form cannot overwrite newer edits.
+   */
+  update(
+    input: SiteSettingsInput,
+    expectedUpdatedAt: Date,
+    actor: Actor,
+  ): Promise<Result<AdminSiteSettingsDto>>;
+  /** Replaces every social link; array order becomes display order. */
+  replaceSocialLinks(
+    links: readonly SocialLinkInput[],
+    expectedUpdatedAt: Date,
+    actor: Actor,
+  ): Promise<Result<AdminSiteSettingsDto>>;
 }
 
 export interface MediaRepository {
@@ -222,12 +249,81 @@ export interface PromotionRepository {
   archive(id: string, actor: Actor): Promise<Result<void>>;
 }
 
+export type PageRequest = Readonly<{
+  /** 1-based. */
+  page: number;
+  pageSize: number;
+}>;
+
+export type PagedResult<T> = Readonly<{
+  items: readonly T[];
+  total: number;
+  page: number;
+  pageSize: number;
+}>;
+
+export type EnquiryListQuery = PageRequest &
+  Readonly<{
+    status: EnquiryStatus | null;
+    /** Matches sender name, email, or subject, case-insensitively. */
+    search: string | null;
+  }>;
+
 export interface EnquiryRepository {
   listAdmin(status?: EnquiryStatus): Promise<readonly ContactEnquiryDto[]>;
+  listAdminPage(
+    query: EnquiryListQuery,
+  ): Promise<PagedResult<ContactEnquiryDto>>;
   create(
     input: Omit<ContactEnquiryDto, "id" | "status" | "createdAt">,
   ): Promise<Result<ContactEnquiryDto>>;
   archive(id: string, actor: Actor, now: Date): Promise<Result<void>>;
+}
+
+export type PublicationCounts = Readonly<Record<PublicationStatus, number>>;
+
+export type RecentContentKind =
+  | "PAGE"
+  | "ROOM"
+  | "FACILITY"
+  | "PROMOTION"
+  | "SETTINGS";
+
+export type RecentContentItem = Readonly<{
+  kind: RecentContentKind;
+  id: string;
+  title: string;
+  status: PublicationStatus | null;
+  updatedAt: Date;
+}>;
+
+export type AdminOverviewDto = Readonly<{
+  timeZone: string;
+  pages: Readonly<{ published: number; total: number }>;
+  rooms: PublicationCounts;
+  facilities: PublicationCounts;
+  media: Readonly<{ ready: number; missingAltText: number; failed: number }>;
+  promotions: Readonly<{
+    active: Readonly<{
+      id: string;
+      internalName: string;
+      headline: string;
+      endsAt: Date | null;
+    }> | null;
+    scheduledCount: number;
+    nextScheduled: Readonly<{
+      id: string;
+      internalName: string;
+      startsAt: Date;
+    }> | null;
+  }>;
+  enquiries: Readonly<{ new: number; deliveryFailed: number }>;
+  recent: readonly RecentContentItem[];
+}>;
+
+/** Read-only aggregate queries for the admin overview. */
+export interface AdminOverviewReader {
+  read(now: Date, recentLimit: number): Promise<AdminOverviewDto>;
 }
 
 export type TransactionRepositories = Readonly<{

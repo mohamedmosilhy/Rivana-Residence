@@ -34,6 +34,8 @@ Use React Testing Library with accessible queries for behavior-rich components:
 - Book Now disabled explanation;
 - rich-text renderer sanitization/semantic output.
 
+Component tests run in jsdom. `tests/setup.ts` runs Testing Library cleanup after each test and polyfills only `HTMLDialogElement.showModal`/`close`; native dialog focus trapping, inertness, and Escape are asserted in Playwright.
+
 ## Integration tests
 
 Run against an isolated PostgreSQL database with real migrations and the Prisma adapter:

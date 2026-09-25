@@ -258,7 +258,7 @@ Approved by the client on 2026-09-25 with authorization to begin Phase 3. Eviden
 
 ## Phase 3 — Authentication and authorization
 
-Status: `Ready for review`
+Status: **Accepted on 2026-09-25**
 
 ### Objective
 
@@ -319,13 +319,13 @@ Secure all current and future admin surfaces using closed, revocable staff acces
 
 ### Reviewer decision
 
-Awaiting client review. Approve the security boundary before any content mutation UI is added, and confirm the password-reset deferral (operator recovery via `npm run staff -- set-password`) and 12-hour session lifetime. Evidence: [phase-3-auth.md](./phase-3-auth.md). Phase 4 has not started.
+Approved by the client on 2026-09-25 with authorization to begin Phase 4. The approval accepts the security boundary, the password-reset deferral (operator recovery via `npm run staff -- set-password`), and the 12-hour session lifetime. Evidence: [phase-3-auth.md](./phase-3-auth.md).
 
 ---
 
 ## Phase 4 — Admin shell and shared workflows
 
-Status: `Not started`
+Status: `Ready for review`
 
 ### Objective
 
@@ -386,7 +386,7 @@ Build a coherent, accessible CMS foundation before entity-specific CRUD.
 
 ### Reviewer decision
 
-Approve the shared CMS patterns before repeating them across entity features.
+Awaiting client review. Approve the shared CMS patterns before repeating them across entity features, and confirm the settings field list (logo variants and the default social image wait for the Phase 6 media picker) and the Google Maps embed-link restriction. Evidence: [phase-4-admin-shell.md](./phase-4-admin-shell.md). Phase 5 has not started.
 
 ---
 

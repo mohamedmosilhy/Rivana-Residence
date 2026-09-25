@@ -1,3 +1,6 @@
+import { Badge } from "@/presentation/admin/ui/badge";
+import { ConfirmDialog } from "@/presentation/admin/ui/confirm-dialog";
+
 type SessionSummary = Readonly<{
   id: string;
   createdAt: Date;
@@ -29,7 +32,7 @@ export function SessionList({
             <p className="admin-sessions__device">
               {session.userAgent ?? "Unknown browser"}
               {session.current ? (
-                <span className="admin-badge">This session</span>
+                <Badge tone="brand">This session</Badge>
               ) : null}
             </p>
             <p className="admin-sessions__meta">
@@ -39,15 +42,21 @@ export function SessionList({
           </li>
         ))}
       </ul>
-      <form action={revokeOthersAction}>
-        <button
-          className="admin-button admin-button--secondary"
-          type="submit"
-          disabled={others === 0}
+      <div className="admin-card__actions">
+        <ConfirmDialog
+          triggerLabel={`Sign out other sessions (${others})`}
+          triggerDisabled={others === 0}
+          title={`Sign out ${others === 1 ? "1 other session" : `${others} other sessions`}?`}
+          confirmLabel="Sign out other sessions"
+          pendingLabel="Signing out…"
+          action={revokeOthersAction}
         >
-          Sign out other sessions ({others})
-        </button>
-      </form>
+          <p>
+            Every other browser signed in to your account is signed out
+            immediately. This browser stays signed in.
+          </p>
+        </ConfirmDialog>
+      </div>
     </>
   );
 }

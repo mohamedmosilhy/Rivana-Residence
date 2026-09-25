@@ -1,3 +1,7 @@
+import { ROLE_LABELS } from "@/presentation/admin/format";
+import { Badge } from "@/presentation/admin/ui/badge";
+import { DataTable } from "@/presentation/admin/ui/data-table";
+
 type StaffRow = Readonly<{
   id: string;
   name: string;
@@ -7,36 +11,32 @@ type StaffRow = Readonly<{
   activeSessions: number;
 }>;
 
-const roleLabels = { ADMIN: "Administrator", EDITOR: "Editor" } as const;
-
 export function StaffTable({
   staff,
 }: Readonly<{ staff: readonly StaffRow[] }>) {
   return (
-    <div className="admin-table-wrap">
-      <table className="admin-table">
-        <caption className="sr-only">Staff accounts</caption>
-        <thead>
-          <tr>
-            <th scope="col">Name</th>
-            <th scope="col">Email</th>
-            <th scope="col">Role</th>
-            <th scope="col">Status</th>
-            <th scope="col">Active sessions</th>
-          </tr>
-        </thead>
-        <tbody>
-          {staff.map((member) => (
-            <tr key={member.id}>
-              <th scope="row">{member.name}</th>
-              <td>{member.email}</td>
-              <td>{roleLabels[member.role]}</td>
-              <td>{member.active ? "Active" : "Deactivated"}</td>
-              <td>{member.activeSessions}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
+    <DataTable
+      caption="Staff accounts"
+      rows={staff}
+      rowKey={(member) => member.id}
+      columns={[
+        { header: "Name", rowHeader: true, cell: (member) => member.name },
+        { header: "Email", cell: (member) => member.email },
+        { header: "Role", cell: (member) => ROLE_LABELS[member.role] },
+        {
+          header: "Status",
+          cell: (member) =>
+            member.active ? (
+              <Badge tone="success">Active</Badge>
+            ) : (
+              <Badge>Deactivated</Badge>
+            ),
+        },
+        {
+          header: "Active sessions",
+          cell: (member) => member.activeSessions,
+        },
+      ]}
+    />
   );
 }

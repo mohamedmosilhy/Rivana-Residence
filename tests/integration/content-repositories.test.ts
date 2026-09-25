@@ -418,9 +418,20 @@ describe("settings repository", () => {
       id: "default",
       siteName: "Rivana Residence",
       timeZone: "Africa/Cairo",
+      tagline: null,
       phone: null,
       email: null,
+      addressLine1: null,
+      addressLine2: null,
+      city: null,
+      country: null,
+      latitude: null,
+      longitude: null,
+      mapEmbedUrl: null,
       footerText: null,
+      defaultSeoTitle: null,
+      defaultSeoDescription: null,
+      socialLinks: [],
     });
   });
 });

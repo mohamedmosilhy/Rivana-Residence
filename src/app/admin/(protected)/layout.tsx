@@ -2,8 +2,8 @@ import { redirect } from "next/navigation";
 import type { ReactNode } from "react";
 
 import { getCurrentStaff } from "@/composition/auth";
-import { roleHasCapability } from "@/domain/auth/capabilities";
-import { AdminShell } from "@/presentation/admin/admin-shell";
+import { navigationFor } from "@/presentation/admin/navigation";
+import { AdminShell } from "@/presentation/admin/shell/admin-shell";
 
 import { signOutAction } from "./actions";
 
@@ -18,7 +18,7 @@ export default async function ProtectedAdminLayout({
   return (
     <AdminShell
       staff={staff}
-      canManageStaff={roleHasCapability(staff.role, "users:manage")}
+      navigation={navigationFor(staff.role)}
       signOutAction={signOutAction}
     >
       {children}

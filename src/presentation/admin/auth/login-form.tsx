@@ -5,7 +5,7 @@ import { useActionState, useEffect, useRef } from "react";
 import {
   idleFormState,
   type FormAction,
-} from "@/presentation/admin/auth/form-state";
+} from "@/presentation/admin/ui/form-state";
 
 type LoginFormProps = Readonly<{
   action: FormAction;

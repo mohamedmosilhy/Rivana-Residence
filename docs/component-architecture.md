@@ -22,6 +22,8 @@ Located under `src/presentation/ui`:
 
 Use suitable shadcn/ui source components for admin dialogs, menus, form wiring, and feedback, then style through Rivana tokens. Public editorial components should not inherit the default shadcn visual language blindly.
 
+Phase 4 built the admin dialog, sheet, disclosure menu, and toast on native `<dialog>` and plain React instead, because the platform now supplies the focus trap, inert background, and Escape handling. These live in `src/presentation/admin/ui/` and `src/presentation/admin/shell/`; see [phase-4-admin-shell.md](./phase-4-admin-shell.md#shared-patterns). Add a shadcn primitive only when a pattern needs behaviour the platform lacks, such as a combobox.
+
 ## Design components
 
 Located under `src/presentation/design`:

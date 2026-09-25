@@ -1,8 +1,9 @@
 import type { Metadata } from "next";
 
 import { listStaffAccounts, requireStaff } from "@/composition/auth";
-import { AccessDenied } from "@/presentation/admin/auth/access-denied";
+import { DeniedPage } from "@/presentation/admin/denied-page";
 import { StaffTable } from "@/presentation/admin/staff/staff-table";
+import { PageHeader } from "@/presentation/admin/ui/page-header";
 
 export const metadata: Metadata = {
   title: "Staff",
@@ -10,28 +11,22 @@ export const metadata: Metadata = {
 
 export default async function StaffPage() {
   const { allowed } = await requireStaff("/admin/staff", "users:manage");
-  if (!allowed) return <AccessDenied />;
+  if (!allowed) return <DeniedPage title="Staff" />;
 
   const staff = await listStaffAccounts();
 
   return (
     <>
-      <header className="admin-header">
-        <div>
-          <p className="admin-header__eyebrow">Administration</p>
-          <h1>Staff</h1>
-          <p className="admin-header__meta">
-            Accounts are provisioned and deactivated with the operator CLI (
-            <code>npm run staff</code>).
+      <PageHeader
+        title="Staff"
+        description={
+          <p>
+            Accounts are created, deactivated, and given roles with the operator
+            command line (<code>npm run staff</code>).
           </p>
-        </div>
-      </header>
-      <section
-        className="admin-card admin-card--wide"
-        aria-label="Staff accounts"
-      >
-        <StaffTable staff={staff.ok ? staff.value : []} />
-      </section>
+        }
+      />
+      <StaffTable staff={staff.ok ? staff.value : []} />
     </>
   );
 }

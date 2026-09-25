@@ -1,6 +1,6 @@
 # Phase 3 authentication and authorization handoff
 
-Status: **Ready for review**  
+Status: **Accepted on 2026-09-25**  
 Completed: 2026-09-25  
 Scope: closed staff authentication, sessions, roles, and the protected admin boundary. No content-mutation UI.
 
@@ -151,8 +151,8 @@ Screenshots in `docs/screenshots/`:
 - **Per-client throttling** depends on `AUTH_TRUST_PROXY_HEADERS=true`, which needs confirming on the Hosting.com Passenger setup at deployment. The per-account limit works regardless.
 - **Sliding session refresh** happens only when a Server Action runs. Server Components cannot write cookies, so a user who only browses is signed out after 12 hours.
 - **MFA (TOTP or passkeys)** is not enabled. It remains a Better Auth plugin extension, as ADR 004 describes.
-- **Staff management** is read-only in the UI; creating, deactivating, and changing roles use the CLI until Phase 4.
+- **Staff management** is read-only in the UI; creating, deactivating, and changing roles use the CLI. Phase 4 kept this; no roadmap phase currently schedules a user editor.
 
 ## Reviewer decision
 
-Awaiting client review. Approve the security boundary before any content-mutation UI is added. Please also confirm the password-reset deferral and the session lifetime above.
+Approved by the client on 2026-09-25, including the password-reset deferral and the 12-hour session lifetime above. Phase 4 was authorized to begin.

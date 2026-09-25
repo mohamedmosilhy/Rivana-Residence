@@ -162,6 +162,7 @@ test("signs out and the old session cookie stops working", async ({
   await expect(page).toHaveURL(/\/admin$/);
   const stolen = await context.cookies();
 
+  await page.getByRole("button", { name: /account options/ }).click();
   await page.getByRole("button", { name: "Sign out" }).click();
   await expect(page).toHaveURL(/\/admin\/login$/);
   await page.goto("/admin");

@@ -5,7 +5,7 @@ import { redirect } from "next/navigation";
 
 import { safeReturnPath } from "@/application/auth/return-path";
 import { signInWithPassword } from "@/composition/auth";
-import type { FormState } from "@/presentation/admin/auth/form-state";
+import type { FormState } from "@/presentation/admin/ui/form-state";
 
 export async function signInAction(
   _state: FormState,

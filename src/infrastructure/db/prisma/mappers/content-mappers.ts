@@ -9,6 +9,10 @@ import type {
   RoomDto,
   SiteSettingsDto,
 } from "@/application/ports/repositories";
+import {
+  SOCIAL_PLATFORMS,
+  type SocialPlatform,
+} from "@/domain/settings/site-settings";
 import type { RichTextDocument } from "@/domain/shared/types";
 import { Prisma } from "@/generated/prisma/client";
 
@@ -109,18 +113,50 @@ export function mapPage(row: PageRow): PageDto {
   };
 }
 
-export function mapSettings(row: {
-  id: string;
-  siteName: string;
-  timeZone: string;
-  phone: string | null;
-  email: string | null;
-  footerText: string | null;
-}): SiteSettingsDto {
+type SettingsRow = Prisma.SiteSettingsGetPayload<{
+  include: { socialLinks: true };
+}>;
+
+function isSocialPlatform(value: string): value is SocialPlatform {
+  return (SOCIAL_PLATFORMS as readonly string[]).includes(value);
+}
+
+export function mapSettings(row: SettingsRow): SiteSettingsDto {
   if (row.id !== "default") {
     throw new Error("Site settings singleton key is invalid.");
   }
-  return { ...row, id: "default" };
+  return {
+    id: "default",
+    timeZone: row.timeZone,
+    siteName: row.siteName,
+    tagline: row.tagline,
+    phone: row.phone,
+    email: row.email,
+    addressLine1: row.addressLine1,
+    addressLine2: row.addressLine2,
+    city: row.city,
+    country: row.country,
+    latitude: row.latitude === null ? null : row.latitude.toNumber(),
+    longitude: row.longitude === null ? null : row.longitude.toNumber(),
+    mapEmbedUrl: row.mapEmbedUrl,
+    footerText: row.footerText,
+    defaultSeoTitle: row.defaultSeoTitle,
+    defaultSeoDescription: row.defaultSeoDescription,
+    socialLinks: [...row.socialLinks]
+      .sort((left, right) => left.sortOrder - right.sortOrder)
+      .flatMap((link) =>
+        isSocialPlatform(link.platform)
+          ? [
+              {
+                platform: link.platform,
+                label: link.label,
+                url: link.url,
+                isVisible: link.isVisible,
+              },
+            ]
+          : [],
+      ),
+  };
 }
 
 export function mapMedia(row: {
