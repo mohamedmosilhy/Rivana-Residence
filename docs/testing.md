@@ -16,6 +16,7 @@ Use Vitest for fast domain/application tests:
 - role authorization policies;
 - disabled and future booking launch mapping;
 - contact enquiry validation and delivery-result behavior;
+- promotion publication window, priority selection, and active-query rules;
 - Prisma-to-domain/view-model mappers.
 
 Pure style wrappers do not need unit tests.
@@ -29,6 +30,7 @@ Use React Testing Library with accessible queries for behavior-rich components:
 - contact form errors, pending state, and announcements;
 - admin repeatable fields and destructive dialog;
 - media uploader validation/progress/retry;
+- promotion form validation/preview and public popup close/copy/focus behavior;
 - Book Now disabled explanation;
 - rich-text renderer sanitization/semantic output.
 
@@ -40,6 +42,8 @@ Run against an isolated PostgreSQL database with real migrations and the Prisma 
 - publish/unpublish and cache-invalidation intents;
 - room/facility CRUD including ordering and media relations;
 - media begin/finalize/delete failure paths with a fake storage adapter;
+- local-media adapter traversal/symlink/root-containment, atomic finalize, and delete/open contract behavior;
+- promotion CRUD, scheduling, active selection, and cache invalidation;
 - Better Auth session/role checks and inactive-user handling;
 - contact persistence plus fake delivery adapter;
 - transaction rollback on conflicts;
@@ -60,7 +64,8 @@ Use Playwright for high-value flows:
 7. Public Home, About, Rooms, Room Detail, Facilities, Gym, Pool, and Contact render at desktop/mobile widths.
 8. Contact form validates, submits, and stores/delivers once.
 9. Book Now is inert, has no fake destination/data, and communicates unavailable integration.
-10. Sitemap excludes drafts/admin and includes published entities.
+10. Editor publishes/schedules a promotion; the eligible public visitor can copy/dismiss it and expired/draft campaigns do not appear.
+11. Sitemap excludes drafts/admin and includes published entities.
 
 Use deterministic local adapters and fixtures; do not call production email/storage/booking systems in CI.
 
@@ -90,6 +95,8 @@ Visual snapshots cover major page templates and high-risk interactions, not ever
 - stored-XSS payloads in rich text/contact fields;
 - upload MIME/extension/magic-byte/size/dimension mismatches;
 - media IDOR/reference deletion;
+- local path traversal, encoded separators, symlink escape, executable upload, and direct access to quarantined/non-ready files;
+- promotion stored-XSS, invalid schedule, unauthorized publish, and client-clock bypass attempts;
 - open redirect and unsafe return-path cases;
 - login/contact rate limiting;
 - secrets absent from client bundle and logs.

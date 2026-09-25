@@ -1,6 +1,6 @@
 # Database design
 
-PostgreSQL stores normalized content, relationships, auth/session data, and media metadata. Binary images live in object storage. Prisma is the migration and persistence adapter, not the domain model.
+PostgreSQL stores normalized content, relationships, auth/session data, promotions, and media metadata. Binary images live in the configured media store; the initial production adapter uses a persistent server directory. Prisma is the migration and persistence adapter, not the domain model.
 
 ## Entities
 
@@ -11,6 +11,7 @@ Purpose: one record for global identity and defaults.
 Important fields:
 
 - `id` fixed to `default` or protected by a singleton unique key;
+- `timeZone` as a required IANA identifier (initially `Africa/Cairo`) for promotion scheduling and editorial date display;
 - `siteName`, `tagline`, `phone`, `email`, `addressLine1`, `addressLine2`, `city`, `country`;
 - `latitude`, `longitude`, `mapEmbedUrl` (optional, allowlisted/validated);
 - `footerText`, `defaultSeoTitle`, `defaultSeoDescription`;
@@ -112,13 +113,31 @@ Purpose: metadata and lifecycle for a stored object.
 
 Fields:
 
-- `id`, `storageProvider`, `bucket`, `storageKey`, optional `publicUrl` cache;
+- `id`, `storageProvider`, `storageContainer`, `storageKey`, optional `publicUrl` cache;
 - `originalFilename`, `mimeType`, `bytes`, `width`, `height`, `checksum`;
 - `altText`, `caption?`, `credit?`, `focalX?`, `focalY?`;
 - `status` (`PENDING|READY|FAILED|DELETED`);
 - timestamps, `createdById`.
 
-Constraints/indexes: unique `(storageProvider, bucket, storageKey)`; optional unique checksum for deduplication; indexes `(status, createdAt)` and normalized filename/search support if later needed. `bytes > 0`, dimensions positive for ready images, focal points within 0–1.
+`storageKey` is a relative, server-generated key such as `2026/09/<uuid>.webp`; never store an absolute operating-system path or a user-supplied filename as the key. `storageContainer` is a stable logical name such as `local-media`; it does not expose the absolute root and can later hold an object-storage bucket/container name.
+
+Constraints/indexes: unique `(storageProvider, storageContainer, storageKey)`; optional unique checksum for deduplication; indexes `(status, createdAt)` and normalized filename/search support if later needed. `bytes > 0`, dimensions positive for ready images, focal points within 0–1.
+
+### `Promotion`
+
+Purpose: scheduled public promotion-code campaign managed by staff.
+
+Fields: `id`, `internalName`, `headline`, `body`, `code`, `terms?`, `status` (`DRAFT|PUBLISHED|ARCHIVED`), `startsAt?`, `endsAt?`, `priority Int`, `showAsPopup Boolean`, `version Int`, `publishedAt?`, timestamps, `createdById`, `updatedById`.
+
+Constraints/indexes:
+
+- check `length(trim(code)) > 0`, bounded field lengths, and `endsAt IS NULL OR startsAt IS NULL OR endsAt > startsAt`;
+- index `(status, showAsPopup, startsAt, endsAt, priority)` for the public active-campaign query;
+- index `(status, updatedAt desc)` for the admin list;
+- use server-side time and a deterministic `priority desc, publishedAt desc, id` order when selecting one public popup.
+- start `version` at 1 and increment it when public popup content/code/terms materially change so an updated campaign may display after an earlier version was dismissed.
+
+Do not add discount amount, rate, eligibility, reservation, guest, or redemption tables/fields. Those belong to the external reservation provider.
 
 ### `ContactEnquiry`
 
@@ -143,6 +162,7 @@ Room ──< RoomFeature
 Room ──< RoomMedia >── MediaAsset
 Facility ──< FacilityMedia >── MediaAsset
 ContactEnquiry (standalone operational record)
+Promotion (standalone scheduled marketing record)
 ```
 
 ## IDs, timestamps, and text
@@ -155,7 +175,7 @@ ContactEnquiry (standalone operational record)
 
 ## Transactions
 
-Use transactions for reorder operations, publishing validation plus status update, swapping media references, and destructive reference checks. Object storage cannot participate in a PostgreSQL transaction; use the pending/finalize lifecycle documented in [architecture.md](./architecture.md).
+Use transactions for reorder operations, publishing validation plus status update, promotion publication, swapping media references, and destructive reference checks. Filesystem writes cannot participate in a PostgreSQL transaction; use the pending/finalize lifecycle documented in [architecture.md](./architecture.md).
 
 ## Migration and seed policy
 

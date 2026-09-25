@@ -6,7 +6,7 @@ The source of truth for the visual audit is `../design/`. The legacy WordPress e
 
 ## Product boundary
 
-Rivana is a hospitality marketing site. It owns brand, editorial content, rooms as marketing records, facilities, media, contact details, enquiries, and search visibility. It does **not** own rates, inventory, availability, stays, guests, payments, reservations, or booking management.
+Rivana is a hospitality marketing site. It owns brand, editorial content, rooms as marketing records, facilities, media, contact details, promotion-code advertising, enquiries, and search visibility. It does **not** own rates, inventory, availability, stays, guests, payments, reservations, promotion validation/redemption, or booking management.
 
 Every Book Now control initially renders as a visually complete, disabled/inert control with accessible explanatory text. The future hotel-management provider enters through the boundary in [booking-integration.md](./booking-integration.md).
 
@@ -23,12 +23,14 @@ Every Book Now control initially renders as a visually complete, disabled/inert 
 | [design-system.md](./design-system.md) | Reference audit and production design tokens |
 | [component-architecture.md](./component-architecture.md) | UI primitives, design components, feature components, and page composition |
 | [booking-integration.md](./booking-integration.md) | Explicit external reservation boundary and future extension path |
+| [promotions.md](./promotions.md) | Promotion-code admin, public popup, scheduling, and reservation handoff boundary |
 | [admin-dashboard.md](./admin-dashboard.md) | Admin information architecture and workflows |
 | [security.md](./security.md) | Authentication, authorization, validation, uploads, and operational controls |
 | [seo.md](./seo.md) | Metadata, crawlability, structured data, and editorial SEO |
 | [performance.md](./performance.md) | Image, rendering, caching, JavaScript, and Core Web Vitals strategy |
 | [testing.md](./testing.md) | Unit, integration, E2E, accessibility, and visual testing |
 | [deployment.md](./deployment.md) | Environments, infrastructure, migration, backups, and release process |
+| [hosting-preflight.md](./hosting-preflight.md) | Read-only cPanel capability check, confirmed features, and deployment blockers |
 | [roadmap.md](./roadmap.md) | Phase-by-phase implementation plan and completion gates |
 
 ## Current technical baseline

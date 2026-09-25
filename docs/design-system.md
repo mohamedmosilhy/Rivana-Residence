@@ -119,6 +119,15 @@ Minimum touch target: 44×44px. Every state includes hover (when available), foc
 - Required state is announced programmatically.
 - Destructive confirmation states name the affected record.
 
+## Promotion popup
+
+- Use one restrained dialog/card, not a full-screen takeover: warm-white surface, plum heading/action, thin neutral rule, and a small gold accent.
+- Keep the headline and message short; show the code in a high-contrast, selectable monospace-style row with an adjacent 44px-minimum “Copy code” button.
+- Terms are visible in the dialog or available through a clearly labelled disclosure; they are never hidden only in hover text.
+- Provide a prominent labelled close button, Escape dismissal, focus containment/return, and an `aria-live` copy result.
+- On small screens, use safe-area-aware side/bottom gutters and allow content to scroll without covering the close action.
+- Do not auto-cycle campaigns, play sound, use countdown pressure, or reopen repeatedly after dismissal. Default dismissal lasts for that promotion/version for seven days; an updated campaign version can display again.
+
 ## Motion
 
 - micro transitions: 120–220ms;

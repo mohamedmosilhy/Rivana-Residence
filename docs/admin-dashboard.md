@@ -13,6 +13,7 @@ Primary navigation:
 - Rooms
 - Facilities
 - Media
+- Promotions
 - Enquiries
 - Settings
 
@@ -24,6 +25,7 @@ Show only useful operational information:
 
 - published/draft room and facility counts;
 - media items needing alt text or failed uploads;
+- currently active and upcoming promotion status;
 - new enquiries;
 - recently updated content;
 - shortcuts to edit Home, add a room, upload media, and view the site.
@@ -60,10 +62,24 @@ There are no price or availability fields.
 
 Mirrors room UX with facility-specific fields: name, slug, summary, body, optional opening hours, hero/gallery, featured/order, SEO, and publication.
 
+## Promotions workflow
+
+List columns: internal name, public headline, code, status, active window, priority, and updated time. Filters: status and timing (`active`, `scheduled`, `expired`); search by internal name, headline, or code.
+
+The create/edit form includes:
+
+1. Internal name — for staff only.
+2. Popup content — headline, concise body, code, optional terms.
+3. Schedule — optional start/end in the property's configured timezone, displayed with an explicit timezone label.
+4. Display — popup enabled and numeric priority.
+5. Publication — readiness, preview, draft/publish/unpublish/archive.
+
+Publishing requires a headline, body, code, and valid time window. The preview uses the same `PromotionPopup` component and Rivana tokens as the website. If another promotion would win the public priority rule, the form explains which promotion will display. The CMS manages advertising only; it has no discount amount, reservation lookup, redemption count, or guest fields.
+
 ## Media workflow
 
 - drag/drop or file picker upload;
-- server-issued signed upload and finalization;
+- authenticated upload through the local media route and finalization;
 - progress and retry states;
 - grid/list view with search and filters for status, type, missing alt, and unused;
 - details panel for alt text, focal point, caption/credit, dimensions, size, and usage references;
@@ -87,6 +103,7 @@ Groups:
 - Footer/legal: footer text and approved policy links.
 - Default SEO: title template, description, social image.
 - Booking: read-only “Not configured” status initially; no pretend URL field until provider requirements exist.
+- Media storage: read-only provider/root health and free-space warning; filesystem paths are never editable in the browser.
 - Account/security: current user password/session management; user management is administrator-only.
 
 ## Form behavior
@@ -101,7 +118,7 @@ Groups:
 
 ## Destructive actions
 
-- Archive is preferred to delete for rooms/facilities.
+- Archive is preferred to delete for rooms, facilities, and promotions.
 - Confirmation names the target and states public impact.
 - Media deletion first displays usage count and references.
 - Only administrators can hard-delete content, delete media, manage users, or change integration/security settings.

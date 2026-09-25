@@ -72,6 +72,7 @@ The final choice waits for provider documentation. An iframe requires allowliste
 
 - Do not store prices or availability returned by the provider unless a later requirement and retention policy explicitly justify caching.
 - Do not persist reservation/guest/payment data in Rivana's database.
+- Rivana may advertise and copy a promotion code, but it does not validate, redeem, or price that code. Pass it to the provider only when the provider contract explicitly supports a safe promotion-code parameter.
 - Do not send contact form data into the booking provider.
 - Keep provider secrets server-only; expose only public widget configuration.
 - If provider room codes are needed, add a small mapping field/table in the integration migration after the provider contract is known.

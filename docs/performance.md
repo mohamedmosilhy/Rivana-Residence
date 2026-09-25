@@ -27,7 +27,7 @@ Set per-route budgets during implementation rather than optimizing only a global
 - Lazy-load below-fold media and reserve aspect ratios to prevent layout shift.
 - Use object-position from focal-point metadata.
 - Let the image pipeline negotiate AVIF/WebP with quality tested against hotel photography.
-- Upload originals within limits; generate delivery variants through the hosting/image service, not in PostgreSQL.
+- Upload originals within limits; generate approved delivery variants during finalization or through the application image pipeline and store them in the persistent media root, never in PostgreSQL.
 - Avoid enlarging the reference's 700×466 room images beyond a credible rendered size.
 - Gallery thumbnails and detail images must not download identical oversized sources unnecessarily.
 

@@ -7,7 +7,7 @@ Deliver a fast, accessible, search-friendly marketing website that presents Riva
 ## Actors
 
 - **Visitor:** explores the property, rooms, facilities, images, location, and contact options.
-- **Content editor:** updates copy, images, rooms, facilities, page sections, SEO, and contact details.
+- **Content editor:** updates copy, images, rooms, facilities, page sections, promotions, SEO, and contact details.
 - **Administrator:** has editor abilities plus user/security and destructive-content permissions.
 - **External reservation provider:** future owner of availability, prices, and booking workflow; it is not a user of this CMS in the initial release.
 - **Developer/operator:** deploys, migrates, monitors, and configures integrations.
@@ -37,6 +37,7 @@ Public capabilities:
 - facility listing and detail pages with descriptions, galleries, and optional opening-hours text;
 - configurable contact details, map link/embed configuration, social links, and contact form;
 - optimized responsive media with meaningful alt text;
+- an accessible promotion-code popup for the currently active campaign, with a clear copy-code action, terms, and dismissal;
 - per-page SEO metadata and social share imagery;
 - visually complete Book Now controls that do nothing until an external provider is configured;
 - accessible feedback for unavailable booking, rather than a broken link or fake workflow.
@@ -56,6 +57,9 @@ Routes:
 - `/admin/facilities/new`
 - `/admin/facilities/[id]`
 - `/admin/media`
+- `/admin/promotions`
+- `/admin/promotions/new`
+- `/admin/promotions/[id]`
 - `/admin/enquiries`
 - `/admin/settings`
 
@@ -66,6 +70,7 @@ Admin capabilities:
 - edit a controlled set of page sections without arbitrary layout construction;
 - create, update, order, feature, publish/unpublish, and delete rooms and facilities;
 - upload, replace, search, inspect usage of, and safely delete media;
+- create, schedule, publish/unpublish, prioritize, and archive promotional codes shown on the public website;
 - set alt text, focal point, and optional caption/credit;
 - view and archive contact enquiries;
 - validate input and show field-level feedback;
@@ -83,8 +88,8 @@ Admin capabilities:
 - Responsive support from 320px upward; primary QA widths: 390, 768, 1024, 1280, and 1440px.
 - Keyboard operation, visible focus, semantic controls, and reduced-motion behavior are release requirements.
 - Image-heavy pages must avoid layout shift and excessive transfer size.
-- Production content updates must not require editing source paths or redeployment, except for configuration/secrets.
-- Infrastructure adapters must make database, storage, email, and booking providers replaceable.
+- Production content updates, image uploads, and promotions must not require editing source paths or redeployment, except for configuration/secrets.
+- Infrastructure adapters must make database, media storage, email, and booking providers replaceable. The initial production media adapter is a persistent local filesystem directory on the Hosting.com/cPanel server.
 
 ## Explicit exclusions
 
@@ -92,7 +97,7 @@ The following must not be built or represented as locally authoritative:
 
 - rates or price tables;
 - room inventory or availability calendars;
-- reservations, stays, guests, payments, invoices, discounts, or cancellation workflows;
+- reservations, stays, guests, payments, invoices, discount calculation/redemption, or cancellation workflows;
 - an availability-search API;
 - mock booking success states;
 - synchronizing provider data before the provider contract is known;
@@ -100,6 +105,8 @@ The following must not be built or represented as locally authoritative:
 - multilingual content in the first release (the model must not prevent a later locale strategy).
 
 The dollar prices and four-month calendars in the reference HTML are design-study placeholders. They are not requirements and must not enter the production model or UI.
+
+Rivana may store and display a marketing promotion code, message, terms, and schedule. It does not calculate a discount, validate/redeem a code against a stay, or record redemption. The future reservation provider remains authoritative for whether a code is accepted and what benefit it gives.
 
 ## Content migration requirements
 
@@ -115,6 +122,7 @@ The dollar prices and four-month calendars in the reference HTML are design-stud
 - A visitor can understand the property, compare rooms, inspect facilities, contact the residence, and find the future booking entry point on phone and desktop.
 - Every Book Now control remains inert and honest until a real integration is enabled.
 - An editor can update a room, replace its hero image, and publish the change without developer help.
+- An editor can publish a time-bounded promotion; eligible visitors can dismiss it or copy its code with keyboard and screen-reader feedback.
 - Unauthenticated users cannot access admin data or mutations.
 - Publishing invalidates only relevant public content.
 - A referenced media asset cannot be hard-deleted accidentally.

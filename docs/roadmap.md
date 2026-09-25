@@ -198,7 +198,7 @@ Implement the content domain and PostgreSQL persistence boundary without buildin
 
 ### 2.1 Domain and application contracts
 
-- Implement publication state, roles, media lifecycle, section types, and value rules.
+- Implement publication state, roles, media lifecycle, promotion scheduling/priority, section types, and value rules.
 - Define repository ports and provider-neutral DTOs.
 - Implement use-case inputs/results and typed application errors.
 - Add the disabled `BookingProvider` contract and adapter.
@@ -206,9 +206,9 @@ Implement the content domain and PostgreSQL persistence boundary without buildin
 ### 2.2 Prisma and PostgreSQL schema
 
 - Add Prisma 7 configuration and generated-client output path.
-- Model SiteSettings, SocialLink, Page, PageSection, page media, Room, RoomFeature, room media, Facility, facility media, MediaAsset, ContactEnquiry, and auth-compatible user extension points.
+- Model SiteSettings, SocialLink, Page, PageSection, page media, Room, RoomFeature, room media, Facility, facility media, MediaAsset, Promotion, ContactEnquiry, and auth-compatible user extension points.
 - Add foreign keys, uniqueness, checks, ordering indexes, publication indexes, and timestamps.
-- Keep binaries and booking data out of PostgreSQL.
+- Keep binaries, promotion redemption, and booking data out of PostgreSQL.
 
 ### 2.3 Repository implementations
 
@@ -231,7 +231,7 @@ Implement the content domain and PostgreSQL persistence boundary without buildin
 - Migration test from an empty database.
 - Idempotent seed test.
 - Constraint tests for duplicate slugs/order, invalid occupancy/size, and referenced media.
-- Query tests proving drafts/archived records never appear publicly.
+- Query tests proving drafts/archived content and inactive promotions never appear publicly.
 - Architecture test proving Prisma types/imports do not leak outside infrastructure/composition code.
 
 ### Phase 2 acceptance criteria
@@ -240,7 +240,7 @@ Implement the content domain and PostgreSQL persistence boundary without buildin
 - Domain/application layers compile without Prisma imports.
 - All public repositories filter publication correctly.
 - Reorder/publish/media-swap operations are transactional.
-- Schema contains no reservation, availability, rate, guest, stay, or payment entity/field.
+- Schema contains no reservation, availability, rate, guest, stay, payment, discount-calculation, or redemption entity/field.
 - Disabled booking adapter returns only an unavailable launch descriptor.
 
 ### Required review evidence
@@ -339,7 +339,7 @@ Build a coherent, accessible CMS foundation before entity-specific CRUD.
 ### 4.1 Admin information architecture
 
 - Implement dashboard shell, sidebar/mobile sheet, header, breadcrumb, and account menu.
-- Add Overview, Pages, Rooms, Facilities, Media, Enquiries, and Settings destinations.
+- Add Overview, Pages, Rooms, Facilities, Media, Promotions, Enquiries, and Settings destinations.
 - Add noindex behavior and authenticated data loading.
 
 ### 4.2 Shared admin primitives
@@ -357,7 +357,7 @@ Build a coherent, accessible CMS foundation before entity-specific CRUD.
 
 ### 4.4 Dashboard overview
 
-- Add useful content/status counts and recent activity placeholders backed by real queries.
+- Add useful content/status counts, active/upcoming promotion state, and recent activity placeholders backed by real queries.
 - Add shortcuts to approved destinations.
 - Do not add booking, occupancy, revenue, or vanity charts.
 
@@ -396,7 +396,7 @@ Status: `Not started`
 
 ### Objective
 
-Let staff safely manage structured pages, rooms, facilities, and publication state without media upload yet.
+Let staff safely manage structured pages, rooms, facilities, promotions, and publication state without media upload yet.
 
 ### Prerequisites
 
@@ -430,11 +430,19 @@ Let staff safely manage structured pages, rooms, facilities, and publication sta
 - Add “View public page” links.
 - Invalidate entity/list/sitemap tags only as required.
 
+### 5.5 Promotion management
+
+- Implement promotion list/search/filter and create/edit/preview/publish/unpublish/archive flows.
+- Add internal name, public headline/body, code, optional terms, optional active window, popup flag, and priority.
+- Show explicit property timezone and deterministic active-campaign priority feedback.
+- Invalidate `promotion:active` after every relevant mutation.
+- Exclude discount amount, eligibility, redemption, guest, reservation, and payment fields.
+
 ### Phase 5 testing
 
-- Unit tests for form schemas, section registry, readiness, slug rules, and role permissions.
-- Integration tests for room/facility/page CRUD, ordering conflicts, transactions, publication, and cache invalidation.
-- E2E room CRUD, facility CRUD, page update, publish/unpublish, archive, validation failure, and unauthorized destructive action.
+- Unit tests for form schemas, section registry, readiness, slug rules, promotion windows/priority, and role permissions.
+- Integration tests for room/facility/page/promotion CRUD, ordering conflicts, transactions, publication, and cache invalidation.
+- E2E room CRUD, facility CRUD, promotion schedule/preview/publish, page update, publish/unpublish, archive, validation failure, and unauthorized destructive action.
 - Regression assertion that no form/DTO/database mutation accepts price, rate, availability, or reservation input.
 - Accessibility tests for long forms, repeatable fields, error summary, and confirmations.
 
@@ -471,19 +479,19 @@ Provide safe, provider-neutral image management and migrate approved source asse
 ### Prerequisites
 
 - Phase 5 accepted.
-- Production object-storage provider/account selected.
+- Hosting.com/cPanel media root, quota, serving method, and off-server backup approach verified over the existing SSH access.
 - Upload format, byte, dimension, and rights policy approved.
 
 ### 6.1 Storage adapters
 
 - Implement `MediaStorage` contract.
-- Implement local development adapter and production S3-compatible adapter.
-- Configure environment-specific bucket/prefix/CORS and immutable object naming.
+- Implement the local filesystem adapter for development/test and Hosting.com production roots.
+- Keep the contract ready for a future S3-compatible adapter.
+- Configure environment-specific roots/public prefixes, permissions, quarantine, and immutable object naming outside every release directory.
 
 ### 6.2 Upload lifecycle
 
-- Implement authenticated signed upload intent.
-- Implement direct upload progress and server finalization.
+- Implement authenticated same-origin streaming upload with progress and server finalization.
 - Verify magic bytes, decoded format, size, dimensions, checksum, and allowed type.
 - Implement `PENDING`, `READY`, `FAILED`, cleanup, and idempotent finalization.
 
@@ -509,8 +517,8 @@ Provide safe, provider-neutral image management and migrate approved source asse
 
 ### Phase 6 testing
 
-- Contract tests shared by local and S3-compatible adapters.
-- Upload tests: valid formats; extension/MIME/magic mismatch; oversized bytes/pixels; corrupt image; duplicate; expired/wrong-user signature; retry/idempotency.
+- Local adapter contract tests covering root containment, write/finalize/open/delete, retries, and failure cleanup; reuse the contract for any future S3 adapter.
+- Upload tests: valid formats; extension/MIME/magic mismatch; oversized bytes/pixels; corrupt image; duplicate; traversal/symlink escape; wrong-user/CSRF; retry/idempotency.
 - Integration tests for reference counts, replace transaction, failed finalization, orphan cleanup, and deletion failure recovery.
 - E2E upload, edit alt/focal point, attach, reorder, replace, blocked delete, successful unreferenced delete.
 - Accessibility tests for drag/drop alternative, progress announcements, picker keyboard flow, and crop/focal controls.
@@ -519,6 +527,7 @@ Provide safe, provider-neutral image management and migrate approved source asse
 
 - Editors can manage images without changing source paths.
 - PostgreSQL stores metadata only; no binary content.
+- Database stores a provider-neutral relative key, never an absolute server path.
 - Provider SDK/types do not escape the infrastructure adapter.
 - Invalid/malicious uploads never become public ready assets.
 - Referenced media cannot be deleted.
@@ -526,7 +535,7 @@ Provide safe, provider-neutral image management and migrate approved source asse
 
 ### Required review evidence
 
-- Storage configuration diagram with secrets redacted.
+- Storage configuration/permission/backup diagram with account paths and secrets redacted.
 - Upload threat-test results.
 - Media lifecycle demonstration and failure-path screenshots.
 - Asset migration/rights manifest summary.
@@ -555,6 +564,7 @@ Implement every required public route with server-rendered real CMS content and 
 - Implement semantic root/marketing layouts, skip link, header/navigation, mobile menu, footer, social/contact links, and not-found/error states.
 - Render site settings server-side.
 - Add shared disabled `BookNowButton` placements without destination.
+- Query and render at most one active `PromotionPopup` without blocking primary server-rendered content.
 
 ### 7.2 Home
 
@@ -591,6 +601,7 @@ Implement every required public route with server-rendered real CMS content and 
 - Server-render/public query integration tests for all route templates.
 - E2E navigation across every required route at desktop/mobile widths.
 - E2E contact validation, one successful submission/delivery, and delivery-failure handling.
+- E2E active promotion display, copy success/fallback, dismissal persistence, priority, schedule expiry, and draft exclusion.
 - E2E proof every Book Now control is inert, non-navigating, has no fake data, and announces status.
 - 404/unpublished slug tests.
 - Baseline axe, keyboard, no-JavaScript content, and reduced-motion checks.
@@ -603,6 +614,7 @@ Implement every required public route with server-rendered real CMS content and 
 - No public page queries Prisma directly.
 - No room price, availability, fake search, reservation, or booking destination exists.
 - Header/menu/footer/contact/gallery basics are semantic and keyboard accessible.
+- Promotion popup is dismissible, keyboard/screen-reader usable, non-blocking, and honest about provider validation.
 - Unpublished content is inaccessible and absent from lists.
 
 ### Required review evidence
@@ -796,7 +808,7 @@ Make the site discoverable, fast, stable, and ready for real domain/content laun
 
 ### 10.5 Production content audit
 
-- Verify names, address, phone, email, map, social links, opening hours, room facts, legal/privacy text, alt text, credits, and image rights.
+- Verify names, address, phone, email, map, social links, opening hours, room facts, promotion copy/terms/windows, legal/privacy text, alt text, credits, and image rights.
 - Verify every public record has suitable title, summary, hero, and metadata fallback.
 - Confirm booking messaging accurately states its disabled status.
 
@@ -863,7 +875,7 @@ Close coverage gaps, test hostile/failure conditions, and produce a release cand
 
 ### 11.3 Reliability and failure testing
 
-- Simulate database, email, and storage failures.
+- Simulate database, email, local media filesystem/quota, and storage failures.
 - Test duplicate submits, retries, interrupted uploads, cleanup, cache failure, and transaction rollback.
 - Verify useful safe errors and no false success states.
 - Verify backup/restore tooling in a non-production environment.
@@ -926,7 +938,7 @@ Provision production safely, migrate approved content, launch, and prove recover
 
 ### 12.1 Production infrastructure
 
-- Provision application, managed PostgreSQL, object storage/CDN, transactional email, DNS/TLS, secrets, backups, and monitoring.
+- Preflight and provision the Hosting.com/cPanel Node application/process, PostgreSQL connection, persistent media root/URL, transactional email, DNS/TLS, secrets, backups, and monitoring.
 - Separate production and preview credentials/resources.
 - Configure pooled runtime and direct migration database connections.
 
@@ -935,7 +947,7 @@ Provision production safely, migrate approved content, launch, and prove recover
 - Apply production migrations through controlled job.
 - Run idempotent settings/page/content/media migration.
 - Provision named administrator accounts and revoke bootstrap credentials.
-- Validate record counts, references, object availability, and content checksums.
+- Validate record counts, references, file availability, relative storage keys, and content checksums.
 
 ### 12.3 Domain and policy configuration
 
@@ -970,7 +982,7 @@ Provision production safely, migrate approved content, launch, and prove recover
 ### Phase 12 acceptance criteria
 
 - Production is reachable on the canonical HTTPS domain and redirects correctly.
-- Database/media/email/backups/monitoring operate with production credentials.
+- Database/local media/email/backups/monitoring operate with production credentials and restricted filesystem permissions.
 - Preview cannot access production data/resources.
 - Approved content and media are complete and consistent.
 - Critical smoke tests pass and rollback path is understood.

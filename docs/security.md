@@ -28,7 +28,7 @@ Add TOTP/passkey support only after the core flow is stable or earlier if the cl
 
 - Prefer same-origin Server Actions for CMS mutations and keep framework origin checks enabled.
 - Better Auth owns CSRF/session protections for its endpoints.
-- State-changing Route Handlers require authenticated sessions, expected methods, content types, origin checks, and unguessable signed upload tokens where applicable.
+- State-changing Route Handlers require authenticated sessions, expected methods, content types, origin checks, and request-size enforcement.
 - Never mutate state on GET.
 - Future provider webhooks require signature/timestamp verification and replay protection based on the provider contract.
 
@@ -43,22 +43,32 @@ Add TOTP/passkey support only after the core flow is stable or earlier if the cl
 
 ## Upload security
 
-1. Authenticated editor requests an upload intent with name, declared MIME, and size.
-2. Server validates role, count, extension, size, and supported MIME, then issues a short-lived signed key scoped to one object.
-3. Object uploads directly to private/quarantined storage.
-4. Finalization verifies object size, magic bytes/decoded format, dimensions, checksum, and safe decoder result; declared headers alone are insufficient.
-5. Approved object becomes `READY`; failed/quarantined objects are deleted by cleanup.
+1. Authenticated editor submits an upload with name, declared MIME, and size to the same-origin media route.
+2. The server validates session/role, request size/count, extension, and supported MIME before streaming to a non-public quarantine directory; it never trusts a browser path or filename.
+3. Finalization verifies bytes, magic bytes/decoded format, dimensions, checksum, and safe decoder result; declared headers alone are insufficient.
+4. The server moves the approved file to an immutable, server-generated relative key below the configured media root and marks the asset `READY`.
+5. Failed/quarantined files and abandoned pending records are deleted by cleanup.
 
 Controls:
 
-- random server-generated keys; never use user paths;
+- canonicalize the configured root and verify every resolved target remains below it; reject traversal, separators, dot segments, symlinks, and user paths;
+- random server-generated keys; never use an original filename as a filesystem path;
 - JPEG/PNG/WebP/AVIF only after platform decoder support is confirmed;
 - reject SVG and animated content in CMS uploads initially;
 - configurable byte and megapixel limits (initial proposal: 15 MB and 40 MP before processing);
 - strip risky metadata where the image pipeline supports it;
 - prevent object overwrite; replacement uses a new key;
-- signed operations expire quickly and are tied to the session/user;
-- Content-Type, `nosniff`, cache, and content-disposition headers set intentionally.
+- the media root is not executable, directory listing is disabled, and only database-backed `READY` keys are publicly served;
+- upload operations remain same-origin, authenticated, CSRF/origin checked, and tied to the session/user;
+- Content-Type, `nosniff`, cache, range, and content-disposition headers are set intentionally.
+
+## Promotion safety
+
+- Promotion fields use strict length limits and plain text; no arbitrary HTML, script, URL, or style input.
+- Codes use a conservative printable allowlist and are rendered as text.
+- Active scheduling is evaluated server-side; client clocks never decide whether unpublished content is visible.
+- Copy-to-clipboard is triggered only by a user action, reports success/failure accessibly, and has a selectable-text fallback.
+- Dismissal state stores only promotion ID/version and expiry in the browser; it is not tracking or reservation data.
 
 ## Contact form
 
@@ -87,13 +97,13 @@ The future booking integration gets explicit `script-src`, `frame-src`, `connect
 - Validate server environment at startup with a server-only Zod schema.
 - Store database URLs, auth secret, storage credentials, email keys, and future provider secrets in deployment secret management.
 - Never prefix secrets with `NEXT_PUBLIC_`; only publish explicitly safe config.
-- Maintain separate credentials and buckets/databases per environment.
+- Maintain separate media roots/containers, credentials, and databases per environment.
 - Rotate secrets and revoke old credentials after incidents or staff changes.
 
 ## Database and operations
 
 - Application database role has only required schema privileges; migration credentials are separate when the platform supports it.
-- Encrypted connections to managed PostgreSQL and object storage.
+- Encrypted database connections where supported; local media permissions restrict access to the application account and backup operator.
 - Parameterized Prisma queries; raw SQL only reviewed and parameterized.
 - Backups, restore drills, migration review, dependency/security updates, and audit logs for auth failures/infrastructure errors.
 - Do not log passwords, session tokens, upload signatures, full contact messages, or sensitive provider payloads.
@@ -107,7 +117,7 @@ The future booking integration gets explicit `script-src`, `frame-src`, `connect
 
 ## Security release gate
 
-- threat-model admin auth, uploads, contact form, and booking boundary;
+- threat-model admin auth, uploads/local path handling, promotions, contact form, and booking boundary;
 - dependency audit and supported versions;
 - authorization tests for every command;
 - CSP tested in report-only then enforced;

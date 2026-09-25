@@ -9,7 +9,7 @@ Browser
   ├─ Public App Router pages ──> application queries ──> repository ports
   └─ Protected admin pages/actions ──> application commands ──> repository ports
                                                      ├─ Prisma/PostgreSQL adapters
-                                                     ├─ S3-compatible media adapter
+                                                     ├─ persistent local media adapter
                                                      ├─ email delivery adapter
                                                      └─ disabled booking adapter
 ```
@@ -55,11 +55,13 @@ src/
         rooms/...
         facilities/...
         media/page.tsx
+        promotions/...
         enquiries/page.tsx
         settings/page.tsx
     api/
       auth/[...all]/route.ts
       media/uploads/route.ts
+      media/[...key]/route.ts
     sitemap.ts
     robots.ts
     layout.tsx
@@ -68,6 +70,7 @@ src/
     rooms/
     facilities/
     media/
+    promotions/
     enquiries/
     shared/
   application/
@@ -76,6 +79,7 @@ src/
     rooms/
     facilities/
     media/
+    promotions/
     enquiries/
     booking/
     ports/
@@ -129,7 +133,7 @@ Generated Prisma client code belongs in a generated directory and is imported on
 4. An application use case enforces invariants and invokes a repository transaction.
 5. On success, relevant cache tags/paths are invalidated and a typed result returns to the form.
 
-Use Route Handlers only where HTTP is the real boundary: Better Auth, direct-upload signing/completion, future provider callbacks, and possibly contact spam verification. Do not create internal REST endpoints for Server Components to call.
+Use Route Handlers only where HTTP is the real boundary: Better Auth, authenticated media upload/delivery, future provider callbacks, and possibly contact spam verification. Do not create internal REST endpoints for Server Components to call.
 
 ## Server and Client Components
 
@@ -147,7 +151,7 @@ Client Components only where browser state/events are required:
 - gallery carousel/lightbox and pointer gestures;
 - reduced-motion-aware reveal wrapper if CSS alone is insufficient;
 - React Hook Form admin forms with repeatable fields and unsaved-change feedback;
-- direct upload progress, replacement, and media selection dialogs;
+- upload progress, replacement, and media selection dialogs;
 - destructive confirmation dialogs and toasts.
 
 Client components receive serializable DTOs, not database records or Prisma types.
@@ -155,14 +159,15 @@ Client components receive serializable DTOs, not database records or Prisma type
 ## Data and provider boundaries
 
 - `RoomRepository`, `FacilityRepository`, `PageRepository`, `SettingsRepository`, `MediaRepository`, and `EnquiryRepository` hide Prisma.
-- `MediaStorage` exposes create-upload, finalize, delete-object, and public-URL operations without S3/R2 types.
+- `PromotionRepository` hides persistence and returns only active, published campaigns to public queries.
+- `MediaStorage` exposes write/finalize/delete/open/public-URL operations without local-path or future S3/R2 types. The production implementation initially writes immutable objects below a configured persistent directory outside the application release tree.
 - `ContactDelivery` sends notifications independently of enquiry persistence.
 - `BookingProvider` reports whether booking is enabled and produces a provider-neutral launch descriptor. Initial implementation is `DisabledBookingProvider`.
 - `Clock` and ID generation may be injected in logic that needs deterministic tests; ordinary display formatting need not be abstracted.
 
 ## Caching and publication
 
-- Published public content can use Next.js cache tags such as `site-settings`, `page:home`, `rooms`, `room:{slug}`, `facilities`, and `facility:{slug}`.
+- Published public content can use Next.js cache tags such as `site-settings`, `page:home`, `rooms`, `room:{slug}`, `facilities`, `facility:{slug}`, and `promotion:active`.
 - Admin views are uncached/dynamic.
 - Successful mutations invalidate only their entity/list tags plus sitemap when publication or slug changes.
 - Draft/unpublished records never appear in public queries.
@@ -174,7 +179,7 @@ Client components receive serializable DTOs, not database records or Prisma type
 - Unexpected infrastructure failures are logged server-side with a request correlation ID and show a safe generic message.
 - Public missing content uses `notFound()`.
 - Storage finalization is idempotent; abandoned pending uploads are cleaned by a scheduled job.
-- Database record creation and object upload cannot be one atomic transaction, so the media workflow uses explicit `PENDING`, `READY`, and `FAILED` states.
+- Database record creation and filesystem upload cannot be one atomic transaction, so the media workflow uses explicit `PENDING`, `READY`, and `FAILED` states.
 
 ## Technology baseline
 

@@ -8,12 +8,13 @@ The domain is editorial hospitality content, not hotel operations. A `Room` repr
 
 ### Site settings
 
-The singleton site identity: residence name, legal/footer copy, logos, phone, email, physical address, map configuration, default metadata, and display preferences. Social links are ordered child records.
+The singleton site identity: residence name, legal/footer copy, logos, phone, email, physical address, IANA timezone, map configuration, default metadata, and display preferences. Social links are ordered child records.
 
 Invariants:
 
 - exactly one default settings record;
 - contact email and URLs must be valid;
+- timezone must be a valid configured IANA identifier and server timestamps remain stored in UTC;
 - required brand media must be `READY` media assets;
 - booking content may contain CTA wording but no invented rates or availability.
 
@@ -74,6 +75,20 @@ Invariants:
 - rate limiting and bot controls run before persistence/delivery;
 - retention is finite; archived data is purged according to policy.
 
+### Promotion
+
+A managed marketing campaign that can surface a code in a public popup. It contains an internal name, public headline/body, code, optional terms, publication state, start/end timestamps, priority, and popup visibility. A promotion advertises a code only; the reservation provider owns validation, eligibility, discount calculation, and redemption.
+
+Invariants:
+
+- code is trimmed, bounded, and limited to a conservative printable allowlist; it is displayed exactly as saved;
+- `startsAt` must precede `endsAt` when both exist;
+- only `PUBLISHED` promotions inside their active time window can be returned publicly;
+- when multiple promotions are active, the highest priority wins, followed by the most recently published record as a deterministic tie-breaker;
+- archived/expired promotions never appear publicly;
+- materially changing public popup content increments its version so visitors who dismissed an older version may see the update;
+- public dismissal is browser-local and contains no visitor identity or reservation data.
+
 ### Admin identity
 
 Better Auth owns user, account, session, and verification records. Rivana adds an `ADMIN` or `EDITOR` role. Public registration is disabled; accounts are provisioned by an operator/admin workflow.
@@ -87,6 +102,7 @@ FacilityRepository
 SettingsRepository
 MediaRepository
 EnquiryRepository
+PromotionRepository
 UnitOfWork
 MediaStorage
 ContactDelivery
@@ -105,7 +121,9 @@ Queries:
 - list published rooms/facilities;
 - get published room/facility by slug;
 - list/search admin content and media usage;
-- get admin dashboard counts and recent enquiries.
+- get the current public promotion;
+- list/search admin promotions;
+- get admin dashboard counts, active promotion status, and recent enquiries.
 
 Commands:
 
@@ -113,6 +131,7 @@ Commands:
 - update/reorder/toggle a page section;
 - create/update/publish/unpublish/delete a room or facility;
 - begin/finalize/replace/delete media;
+- create/update/schedule/publish/unpublish/archive a promotion;
 - submit/archive/delete an enquiry;
 - authenticate/sign out/revoke sessions;
 - resolve a booking launch descriptor (disabled initially).
@@ -124,6 +143,7 @@ Commands:
 - Room/facility deletion is soft (`ARCHIVED`) by default. Hard deletion is an explicit administrator maintenance action after reference checks.
 - Media deletion is blocked when usage count is non-zero and is otherwise a two-step database/object deletion operation.
 - Contact enquiries can be archived and later purged; they do not participate in content publication.
+- Promotions use `DRAFT`, `PUBLISHED`, and `ARCHIVED`; the active window controls display without changing the stored publication state.
 
 ## Roles
 
@@ -132,6 +152,7 @@ Commands:
 | Edit/publish content | Yes | Yes |
 | Upload/replace media | Yes | Yes |
 | Archive enquiries | Yes | Yes |
+| Manage/publish promotions | Yes | Yes |
 | Delete unreferenced media | No | Yes |
 | Hard-delete archived content | No | Yes |
 | Manage admin users/sessions | No | Yes |
