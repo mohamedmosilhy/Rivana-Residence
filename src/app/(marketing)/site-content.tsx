@@ -32,10 +32,11 @@ export async function ManagedPageSections({
   startIndex = 0,
 }: Readonly<{ page: PublicPage; startIndex?: number }>) {
   const types = new Set(page.sections.map((section) => section.type));
-  const [rooms, facilities, message] = await Promise.all([
+  const [rooms, facilities, message, settings] = await Promise.all([
     types.has("ROOM_GRID") ? getPublishedRooms() : Promise.resolve([]),
     types.has("FACILITY_GRID") ? getPublishedFacilities() : Promise.resolve([]),
     bookingMessage(),
+    getSiteSettings(),
   ]);
   return (
     <PageSections
@@ -45,6 +46,9 @@ export async function ManagedPageSections({
         rooms,
         facilities,
         bookingMessage: message,
+        heroSize: page.key === "HOME" ? "full" : "page",
+        // The Contact page lists these details in its own "Find us" block.
+        contactDetails: page.key === "CONTACT" ? null : settings,
         contactForm: types.has("CONTACT_CTA") ? (
           <ContactForm
             action={submitEnquiryAction}

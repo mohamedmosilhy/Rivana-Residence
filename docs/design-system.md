@@ -30,17 +30,22 @@ Modernization principles:
 ## Color tokens
 
 ```text
+brand.plum.950   #2A1020  footer, menu panel, darkest field
 brand.plum.900   #3F1930  deep contrast/pressed
 brand.plum.800   #51213D  hover/deep surface
 brand.plum.700   #652A4C  primary reference plum
 brand.plum.100   #F1E8ED  subtle tint
-brand.gold.600   #B9894E  accessible small accents on light
-brand.gold.400   #DBAF71  logo/decorative accent
+brand.gold.600   #8E6230  small accents/eyebrows on light (5.03:1 on canvas)
+brand.gold.400   #DBAF71  logo, accents, actions and focus on plum
+brand.gold.300   #E8C795  gold action hover
+gold.rule        #DBAF71 at 55%  offset image frames
 neutral.950      #1F1B1D  primary ink
 neutral.800      #322E30  headings
 neutral.600      #6E686B  body-muted (preferred over low-contrast #949C9B)
 neutral.300      #D9D4D6  rules
 canvas           #FAF8F6  warm site background
+header.surface   #FAF8F6 at 94%  scrolled header (with backdrop blur)
+control.border   #8A8286  form control borders (3.53:1 on canvas)
 surface          #FFFFFF
 success          #2F6F47
 warning          #9A6417
@@ -61,15 +66,15 @@ Fluid public type scale using `clamp`:
 
 | Token | Mobile → desktop | Use |
 | --- | --- | --- |
-| `display-xl` | 2.5rem → 5rem | home hero |
-| `display-lg` | 2.25rem → 4rem | page/section hero |
-| `display-md` | 1.875rem → 3rem | section title |
+| `display-xl` | 3rem → 6.5rem | home hero |
+| `display-lg` | 2.375rem → 4.5rem | page/detail hero, contact call to action |
+| `display-md` | 1.875rem → 3.25rem | section title, footer statement |
 | `heading-lg` | 1.5rem → 2rem | card/detail title |
 | `heading-md` | 1.25rem → 1.5rem | subsection |
 | `body-lg` | 1.0625rem → 1.1875rem | lead copy |
 | `body` | 1rem | default copy |
 | `small` | 0.875rem | metadata |
-| `eyebrow` | 0.8125rem | uppercase/letter-spaced labels |
+| `eyebrow` | 0.75rem | uppercase, 0.28em tracking, preceded by a 40px gold rule |
 
 Body line height is 1.65; display lines use 0.98–1.12. Long text blocks target 60–72 characters.
 
@@ -85,7 +90,7 @@ Base space tokens: `1=4`, `2=8`, `3=12`, `4=16`, `5=20`, `6=24`, `8=32`, `10=40`
 
 ## Radius, borders, and shadows
 
-- public image/card radius: `0` or `2px` only;
+- public image/card/button/control radius: `0` (`--radius-public`);
 - controls: 6px; dialogs/admin cards: 10px; pills only for genuine pills/statuses;
 - border: 1px neutral rule or translucent white;
 - shadow-sm: low-opacity separation for sticky header;
@@ -158,3 +163,13 @@ Minimum touch target: 44×44px. Every state includes hover (when available), foc
 ## Token implementation
 
 CSS custom properties are the source of truth and are exposed to Tailwind through its theme system. shadcn variables map to the same semantic tokens. Arbitrary values are allowed only for a documented one-off composition and should not reproduce a parallel hidden design system.
+
+## Phase 8 implementation notes
+
+The tokens above live in `src/app/globals.css` (`:root`) and every public rule reads them; Tailwind receives the same values through `@theme inline`. `scripts/contrast-report.mts` recomputes every pairing and is the contrast source of truth. The phase evidence is in [phase-8-visual-system.md](./phase-8-visual-system.md).
+
+- **Header:** transparent over the hero with the inverse logo and a soft top scrim. With JavaScript it is fixed and turns into the warm translucent surface with the light-background logo after 24px of scroll. Without JavaScript it scrolls away, so it is always readable.
+- **Brush edge and sun rays:** both are inline SVG (`src/presentation/site/ornaments.tsx`). The rays repeat the crest's 270° arc at low opacity as a watermark on plum surfaces.
+- **Heroes:** the home hero fills the viewport, and other managed heroes are shorter. Room and facility heroes are full-bleed only when the photo is at least 1400px wide. Otherwise the photo sits beside the title at natural size in a gold offset frame.
+- **Cards:** room cards are open editorial compositions (4:5 image, index number, fact line, “Discover”). Facility tiles are photographic, with persistent labels over a dark scrim.
+- **Motion:** only hover and colour feedback (160–240ms), a 1.03 image scale on hover-capable pointers, and the header surface change. Section reveals and gallery motion remain Phase 9.

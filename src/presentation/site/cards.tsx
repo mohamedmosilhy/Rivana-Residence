@@ -6,6 +6,7 @@ import type {
   PublicRoomCard,
   PublicRoomFacts,
 } from "@/application/public/view-models";
+import { Icon } from "@/presentation/site/icons";
 import { SiteImage } from "@/presentation/site/site-image";
 
 /** Verified marketing facts only; never prices or availability. */
@@ -26,66 +27,58 @@ export function roomFactList(facts: PublicRoomFacts) {
   ].filter((fact): fact is { label: string; value: string } => fact !== null);
 }
 
-function Card({
-  href,
-  title,
-  text,
-  image,
-  meta,
-  headingLevel,
+export function RoomCard({
+  room,
+  headingLevel = 3,
+  index,
 }: Readonly<{
-  href: Route;
-  title: string;
-  text: string;
-  image: PublicRoomCard["hero"];
-  meta: readonly string[];
-  headingLevel: 2 | 3;
+  room: PublicRoomCard;
+  headingLevel?: 2 | 3;
+  /** Position in an editorial list, shown as "01", "02"… */
+  index?: number;
 }>) {
   const Heading = `h${headingLevel}` as const;
+  const facts = roomFactList(room.facts).slice(0, 3);
   return (
     <article className="site-card">
       <div className="site-card__media">
-        {image ? (
+        {room.hero ? (
           <SiteImage
-            image={image}
+            image={room.hero}
             fill
             decorative
-            sizes="(min-width: 64rem) 33vw, (min-width: 40rem) 50vw, 100vw"
+            sizes="(min-width: 64rem) 30vw, (min-width: 40rem) 50vw, 100vw"
           />
         ) : null}
       </div>
       <div className="site-card__body">
+        {index !== undefined ? (
+          <p className="site-card__index" aria-hidden="true">
+            {String(index + 1).padStart(2, "0")}
+          </p>
+        ) : null}
         <Heading className="site-card__title">
-          <Link href={href} className="site-card__link">
-            {title}
+          <Link
+            href={`/rooms/${room.slug}` as Route}
+            className="site-card__link"
+          >
+            {room.name}
           </Link>
         </Heading>
-        <p>{text}</p>
-        {meta.length > 0 ? (
-          <ul className="site-card__meta">
-            {meta.map((item) => (
-              <li key={item}>{item}</li>
+        <p className="site-card__text">{room.shortDescription}</p>
+        {facts.length > 0 ? (
+          <ul className="site-card__meta" aria-label="Room facts">
+            {facts.map((fact) => (
+              <li key={fact.label}>{fact.value}</li>
             ))}
           </ul>
         ) : null}
+        <span className="site-card__more" aria-hidden="true">
+          Discover
+          <Icon name="arrow" />
+        </span>
       </div>
     </article>
-  );
-}
-
-export function RoomCard({
-  room,
-  headingLevel = 3,
-}: Readonly<{ room: PublicRoomCard; headingLevel?: 2 | 3 }>) {
-  return (
-    <Card
-      href={`/rooms/${room.slug}` as Route}
-      title={room.name}
-      text={room.shortDescription}
-      image={room.hero}
-      meta={roomFactList(room.facts).map((fact) => fact.value)}
-      headingLevel={headingLevel}
-    />
   );
 }
 
@@ -93,20 +86,47 @@ export function FacilityCard({
   facility,
   headingLevel = 3,
 }: Readonly<{ facility: PublicFacilityCard; headingLevel?: 2 | 3 }>) {
+  const Heading = `h${headingLevel}` as const;
   return (
-    <Card
-      href={`/facilities/${facility.slug}` as Route}
-      title={facility.name}
-      text={facility.shortDescription}
-      image={facility.hero}
-      meta={facility.openingHoursText ? [facility.openingHoursText] : []}
-      headingLevel={headingLevel}
-    />
+    <article className="site-tile">
+      <div className="site-tile__media">
+        {facility.hero ? (
+          <SiteImage
+            image={facility.hero}
+            fill
+            decorative
+            sizes="(min-width: 64rem) 45vw, 100vw"
+          />
+        ) : null}
+      </div>
+      <div className="site-tile__body">
+        <Heading className="site-tile__title">
+          <Link
+            href={`/facilities/${facility.slug}` as Route}
+            className="site-card__link"
+          >
+            {facility.name}
+          </Link>
+        </Heading>
+        <p className="site-tile__text">{facility.shortDescription}</p>
+        {facility.openingHoursText ? (
+          <p className="site-tile__meta">
+            <Icon name="clock" />
+            {facility.openingHoursText}
+          </p>
+        ) : null}
+      </div>
+    </article>
   );
 }
 
 export function CardGrid({
   children,
-}: Readonly<{ children: React.ReactNode }>) {
-  return <div className="site-card-grid">{children}</div>;
+  variant = "rooms",
+}: Readonly<{ children: React.ReactNode; variant?: "rooms" | "tiles" }>) {
+  return (
+    <div className={variant === "rooms" ? "site-card-grid" : "site-tile-grid"}>
+      {children}
+    </div>
+  );
 }

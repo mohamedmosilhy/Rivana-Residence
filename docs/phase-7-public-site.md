@@ -1,6 +1,6 @@
 # Phase 7 public website handoff
 
-Status: **Ready for review**
+Status: **Accepted on 2026-09-26**
 Completed: 2026-09-25
 Scope: public routes, managed-content rendering, responsive images, contact enquiries, promotion pop-up, accessibility baseline, and the disabled booking boundary. Phase 8 owns visual-system polish.
 
@@ -161,6 +161,19 @@ Playwright rebuilds, migrates, and seeds only a database whose name ends in `_te
 - Rich-text inline marks (bold/italic/links inside paragraphs) remain plain text until the content model adds them.
 - SEO sitemap/robots/structured-data completion and performance budgets remain Phase 10.
 
+## Review findings (2026-09-26)
+
+The Phase 7 review before Phase 8 found these issues. Each is resolved on the Phase 8 branch:
+
+| Finding | Impact | Resolution |
+| --- | --- | --- |
+| The Phase 7 stylesheet rewrite deleted the base `.brand-mark` rules. | The wordmark rendered as unstyled “RivanaResidence” in the public header/footer, admin sidebar, top bar, and staff login. | Rules restored; the public site now uses the approved logo lockup. |
+| The approved logo files in `design/assets/images/` were not used. | The brand was text only. | Header, footer, mobile menu, and staff login use the logo artwork. |
+| Room heroes stretched 700 px photography across the full width. | Visibly soft images on desktop. | Detail heroes choose a split layout for narrow images and full-bleed only for images at least 1400 px wide. |
+| Card and gallery grids were left-aligned with fixed minimum widths. | Large empty areas beside two-card rows; gallery links could force horizontal scrolling on phones. | Editorial grids, tablet spanning, and a width sweep test at 320–1440 px. |
+| `gold-600` (`#9a6c34`) measured 4.34:1 on the canvas. | Small eyebrows fell just below WCAG AA. | Darkened to `#8e6230` (5.03:1); verified by `scripts/contrast-report.mts`. |
+| Fixture copy was placeholder-thin. | Pages looked empty during review. | Fixture now uses the legacy site's brand copy and a third room; contact details remain test values. |
+
 ## Reviewer decision
 
-Awaiting client review. Approve the public information architecture, managed-content behavior, canonical facility paths, contact workflow, promotion behavior, and deliberately disabled booking boundary before Phase 8 visual polish begins.
+Accepted on 2026-09-26: the client asked for this review and for Phase 8 to proceed. Public information architecture, managed-content behavior, canonical facility paths, contact workflow, promotion behavior, and the deliberately disabled booking boundary are approved.

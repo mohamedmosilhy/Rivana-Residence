@@ -169,16 +169,47 @@ test("keyboard users can skip to content and reach the navigation", async ({
   ).toBeFocused();
 });
 
-test("every public template reflows at the 320px minimum width", async ({
+test("every public template reflows at each target width", async ({
   page,
   isMobile,
 }) => {
-  test.skip(isMobile, "The minimum-width pass runs once in its own viewport.");
-  await page.setViewportSize({ width: 320, height: 800 });
-  for (const route of ROUTES) {
-    await page.goto(route.path);
-    await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
-    await expectNoHorizontalScroll(page);
+  test.skip(isMobile, "The width sweep runs once, resizing one viewport.");
+  test.setTimeout(120_000);
+  for (const width of [320, 390, 768, 1024, 1280, 1440]) {
+    await page.setViewportSize({ width, height: 900 });
+    for (const route of ROUTES) {
+      await page.goto(route.path);
+      await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
+      await expectNoHorizontalScroll(page);
+    }
+  }
+});
+
+test("controls meet the touch-target minimum on phones", async ({
+  page,
+  isMobile,
+}) => {
+  test.skip(!isMobile, "Touch targets are measured on the phone viewport.");
+  for (const path of ["/", "/rooms/studio-with-balcony", "/contact"]) {
+    await page.goto(path);
+    const small = await page
+      .locator(
+        ".site-button, .site-link, .site-menu__toggle, .site-field input, .site-field textarea",
+      )
+      .evaluateAll((elements) =>
+        elements
+          .filter((element) => element.getClientRects().length > 0)
+          .map((element) => {
+            const box = element.getBoundingClientRect();
+            return {
+              label: element.textContent?.trim() || element.id,
+              width: Math.round(box.width),
+              height: Math.round(box.height),
+            };
+          })
+          .filter((box) => box.width < 44 || box.height < 44),
+      );
+    expect(small, path).toEqual([]);
   }
 });
 

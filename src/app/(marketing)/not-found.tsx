@@ -1,19 +1,22 @@
 import Link from "next/link";
 
+import { PageHero } from "@/presentation/site/heroes";
+
 export default function MarketingNotFound() {
   return (
-    <section
-      className="site-holding site-container"
-      aria-labelledby="not-found-title"
+    <PageHero
+      size="screen"
+      eyebrow="404"
+      title="This page could not be found"
+      titleId="not-found-title"
+      intro="It may have moved or is not available yet."
     >
-      <p className="site-eyebrow">404</p>
-      <h1 id="not-found-title">This page could not be found</h1>
-      <p>It may have moved or is not available yet.</p>
-      <p>
-        <Link href="/" className="site-button">
-          Go to the home page
-        </Link>
-      </p>
-    </section>
+      <Link href="/" className="site-button">
+        Go to the home page
+      </Link>
+      <Link href="/rooms" className="site-button site-button--ghost">
+        View the rooms
+      </Link>
+    </PageHero>
   );
 }

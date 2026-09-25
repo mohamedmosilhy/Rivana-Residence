@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { getPublishedFacilities, getPublishedRoom } from "@/composition/public";
@@ -10,7 +11,8 @@ import {
   roomFactList,
 } from "@/presentation/site/cards";
 import { Gallery } from "@/presentation/site/gallery";
-import { SiteImage } from "@/presentation/site/site-image";
+import { DetailHero } from "@/presentation/site/heroes";
+import { Icon } from "@/presentation/site/icons";
 
 import { bookingMessage, pageMetadata } from "../../site-content";
 
@@ -42,61 +44,89 @@ export default async function RoomPage({ params }: RoomPageProps) {
 
   return (
     <article className="site-detail">
-      <header className="site-detail__hero">
-        {room.hero ? (
-          <div className="site-detail__media">
-            <SiteImage image={room.hero} fill preload sizes="100vw" />
-          </div>
-        ) : null}
-        <div className="site-detail__intro site-container">
-          <p className="site-eyebrow">Room</p>
-          <h1>{room.name}</h1>
-          <p className="site-detail__lede">{room.shortDescription}</p>
-          <BookNowButton message={message} />
-        </div>
-      </header>
+      <DetailHero
+        parent={{ href: "/rooms", label: "Rooms" }}
+        title={room.name}
+        lede={room.shortDescription}
+        image={room.hero}
+      >
+        <BookNowButton message={message} />
+        <Link href="/contact" className="site-button site-button--ghost">
+          Enquire about this room
+        </Link>
+      </DetailHero>
 
-      <div className="site-container site-detail__body">
-        <dl className="site-facts" aria-label="Room facts">
-          {facts.map((fact) => (
-            <div key={fact.label}>
-              <dt>{fact.label}</dt>
-              <dd>{fact.value}</dd>
-            </div>
-          ))}
-        </dl>
-        <div className="site-prose">
-          <RichTextView document={room.description} />
+      <div className="site-container site-detail__layout">
+        <div className="site-detail__main">
+          <RichTextView
+            document={room.description}
+            className="site-prose site-prose--lead"
+          />
+          {room.features.length > 0 ? (
+            <section aria-labelledby="room-features">
+              <h2 id="room-features">In the room</h2>
+              <ul className="site-feature-list">
+                {room.features.map((feature) => (
+                  <li key={feature}>{feature}</li>
+                ))}
+              </ul>
+            </section>
+          ) : null}
         </div>
-        {room.features.length > 0 ? (
-          <section aria-labelledby="room-features">
-            <h2 id="room-features">In the room</h2>
-            <ul className="site-feature-list">
-              {room.features.map((feature) => (
-                <li key={feature}>{feature}</li>
-              ))}
-            </ul>
-          </section>
-        ) : null}
-        {room.gallery.length > 0 ? (
-          <section aria-labelledby="room-gallery">
-            <h2 id="room-gallery">Photos</h2>
-            <Gallery images={room.gallery} label={`Photos of ${room.name}`} />
-          </section>
-        ) : null}
+        <aside className="site-detail__aside" aria-labelledby="room-facts">
+          <p className="site-eyebrow" id="room-facts">
+            At a glance
+          </p>
+          <dl className="site-facts">
+            {facts.map((fact) => (
+              <div key={fact.label}>
+                <dt>{fact.label}</dt>
+                <dd>{fact.value}</dd>
+              </div>
+            ))}
+          </dl>
+          <BookNowButton message={message} />
+        </aside>
       </div>
 
-      {facilities.length > 0 ? (
+      {room.gallery.length > 0 ? (
         <section
-          className="site-section site-container"
-          aria-labelledby="room-facilities"
+          className="site-section site-container site-section--flush"
+          aria-labelledby="room-gallery"
         >
-          <h2 id="room-facilities">During your stay</h2>
-          <CardGrid>
-            {facilities.slice(0, 3).map((facility) => (
-              <FacilityCard key={facility.slug} facility={facility} />
-            ))}
-          </CardGrid>
+          <header className="site-section__header">
+            <div>
+              <p className="site-eyebrow">Gallery</p>
+              <h2 id="room-gallery">Photos</h2>
+            </div>
+          </header>
+          <Gallery
+            images={room.gallery}
+            label={`Photos of ${room.name}`}
+            layout="EDITORIAL"
+          />
+        </section>
+      ) : null}
+
+      {facilities.length > 0 ? (
+        <section className="site-band" aria-labelledby="room-facilities">
+          <div className="site-section site-container">
+            <header className="site-section__header">
+              <div>
+                <p className="site-eyebrow">Amenities</p>
+                <h2 id="room-facilities">During your stay</h2>
+              </div>
+              <Link href="/facilities" className="site-link">
+                View all amenities
+                <Icon name="arrow" />
+              </Link>
+            </header>
+            <CardGrid variant="tiles">
+              {facilities.slice(0, 3).map((facility) => (
+                <FacilityCard key={facility.slug} facility={facility} />
+              ))}
+            </CardGrid>
+          </div>
         </section>
       ) : null}
     </article>
