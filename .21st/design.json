@@ -1,0 +1,77 @@
+{
+  "version": 1,
+  "project": {
+    "name": "Rivana Residence",
+    "productType": "luxury hospitality marketing site and bounded admin CMS",
+    "stack": ["Next.js", "React", "TypeScript", "Tailwind CSS"]
+  },
+  "sources": {
+    "tokens": ["docs/design-system.md", "design/DESIGN-SYSTEM.md"],
+    "components": ["docs/component-architecture.md"],
+    "assets": ["design/assets"],
+    "instructions": ["docs/requirements.md", "docs/roadmap.md"]
+  },
+  "design": {
+    "colorMode": "light with plum inverse sections",
+    "colors": {
+      "plum": "#652A4C",
+      "plumDark": "#3F1930",
+      "gold": "#DBAF71",
+      "canvas": "#FAF8F6",
+      "ink": "#1F1B1D"
+    },
+    "typography": {
+      "display": "Marcellus",
+      "body": "Jost"
+    },
+    "spacing": {
+      "container": "1200px",
+      "mobileGutter": "20px"
+    },
+    "radius": {
+      "publicImages": "0-2px",
+      "controls": "6px",
+      "adminPanels": "10px"
+    },
+    "shadows": {
+      "default": "restrained"
+    },
+    "motion": {
+      "micro": "120-220ms",
+      "reveal": "500-800ms"
+    },
+    "density": "editorial public, task-oriented admin"
+  },
+  "components": {
+    "installed": [],
+    "preferredPrimitives": [],
+    "patterns": [
+      "server-first shells",
+      "visible focus",
+      "skip links",
+      "noindex admin"
+    ]
+  },
+  "constraints": {
+    "must": [
+      "Preserve plum-and-gold identity",
+      "Use semantic tokens",
+      "Meet WCAG 2.2 AA",
+      "Keep admin quieter than public editorial surfaces"
+    ],
+    "avoid": [
+      "Decorative gradients",
+      "Excessive cards",
+      "Glass effects",
+      "Fake rates or booking data"
+    ]
+  },
+  "decisions": [
+    {
+      "date": "2026-09-25",
+      "decision": "Foundation shells use typography, plum fields, and restrained gold accents without implementing business content."
+    }
+  ],
+  "evidence": ["docs/design-system.md", "design/DESIGN-SPEC.md"],
+  "generatedAt": "2026-09-25T00:00:00.000Z"
+}

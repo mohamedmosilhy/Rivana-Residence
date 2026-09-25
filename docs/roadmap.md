@@ -43,7 +43,7 @@ At the end of every phase, the agent must provide:
 
 ## Phase 0 — Documentation and architecture
 
-Status: **Ready for review**
+Status: **Approved on 2026-09-25**
 
 ### Objective
 
@@ -106,13 +106,13 @@ Agree on the product boundary and technical design before application implementa
 
 ### Reviewer decision
 
-Review all Phase 0 documents. Approve Phase 1, request documentation changes, or revise a decision. The agent must not scaffold the app before approval.
+Approved by the client on 2026-09-25 after the local-media, Hosting.com/cPanel deployment, and promotion-code additions. Phase 1 may begin; its implementation status remains `Not started` until foundation work is actually commenced.
 
 ---
 
 ## Phase 1 — Project foundation
 
-Status: `Not started`
+Status: `Ready for review`
 
 ### Objective
 
@@ -178,7 +178,7 @@ Create a reproducible, production-oriented Next.js foundation without implementi
 
 ### Reviewer decision
 
-Approve the foundation before any schema/domain implementation.
+Awaiting client review. Approve the foundation before any schema/domain implementation. Phase 2 has not started.
 
 ---
 

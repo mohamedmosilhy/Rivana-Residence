@@ -1,6 +1,6 @@
 # Rivana Residence production documentation
 
-This directory is the Phase 0 blueprint for rebuilding Rivana Residence as a production marketing website and content-management system. It deliberately contains no application implementation.
+This directory began as the Phase 0 blueprint for rebuilding Rivana Residence as a production marketing website and content-management system. Phase 0 is approved, and the Phase 1 application foundation is now ready for review.
 
 The source of truth for the visual audit is `../design/`. The legacy WordPress export in the parent workspace was treated only as content and asset provenance. Its plugin/theme architecture will not be migrated.
 
@@ -32,6 +32,7 @@ Every Book Now control initially renders as a visually complete, disabled/inert 
 | [deployment.md](./deployment.md) | Environments, infrastructure, migration, backups, and release process |
 | [hosting-preflight.md](./hosting-preflight.md) | Read-only cPanel capability check, confirmed features, and deployment blockers |
 | [roadmap.md](./roadmap.md) | Phase-by-phase implementation plan and completion gates |
+| [phase-1-foundation.md](./phase-1-foundation.md) | Phase 1 implementation, verification, screenshots, limitations, and acceptance evidence |
 
 ## Current technical baseline
 
@@ -51,4 +52,4 @@ The retained identity is deep plum (`#652A4C`), warm gold (`#DBAF71`), editorial
 
 ## Status
 
-Phase 0 documentation is complete. Application work must not begin until Phase 1 is explicitly approved.
+Phase 0 documentation was approved by the client on 2026-09-25. Phase 1 is implemented and `Ready for review`. Phase 2 has not started.

@@ -16,9 +16,12 @@ The initial read-only SSH preflight is recorded in [hosting-preflight.md](./host
 
 - **Local:** local PostgreSQL, temporary local-media root, captured/fake email, disabled booking.
 - **Preview:** isolated database, separate media root, sandbox email, disabled booking; no production personal data.
+- **Client staging:** `staging.rivanaresidence.com`, deployed as a separate Node 22/Passenger application and protected from indexing. It must use staging-only database credentials and media root. Its Cloudflare DNS record is deferred until deployment/account access is available.
 - **Production:** dedicated database credentials and persistent media root, verified email domain, configured canonical origin.
 
 Never let preview deployments write to the production media root or database.
+
+Docker is not available on the current shared cPanel plan. Build/test container images may still be used in CI or local development, but cPanel deployment uses the standard Next.js Node server under CloudLinux/Passenger. This preserves the same application artifact without requiring a container runtime on the host.
 
 ## Configuration
 
