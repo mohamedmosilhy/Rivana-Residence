@@ -149,7 +149,7 @@ Constraints/indexes: indexes `(status, createdAt desc)` and `createdAt`; field l
 
 ### Better Auth tables
 
-Better Auth owns `User`, `Session`, `Account`, and `Verification` schema generated for its pinned version. Rivana extends `User` with `role`, `active`, and audit timestamps. Important indexes include unique normalized email, unique session token, session expiry, and user foreign keys. Public sign-up is disabled.
+Better Auth owns `User`, `Session`, `Account`, and `Verification` schema for its pinned version (1.7.6, migration `20260925141030_auth`). Rivana extends `User` with `role`, `active`, and audit timestamps. Important indexes include unique normalized email (with a lower-case CHECK), unique session token, session expiry, and user foreign keys (cascade). Sessions store no IP address. `LoginThrottle` holds HMAC-keyed failed sign-in counters. Public sign-up is disabled; staff are provisioned with `npm run staff`.
 
 ## Relationship overview
 

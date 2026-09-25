@@ -55,13 +55,8 @@ describe("migration from an empty database", () => {
 
 describe("seed", () => {
   it("creates singleton settings and unpublished required pages idempotently", async () => {
-    const environment = {
-      SEED_ADMIN_EMAIL: "Owner@Example.test",
-      SEED_ADMIN_NAME: "Owner",
-    };
-
-    await seedDatabase(client, environment);
-    await seedDatabase(client, environment);
+    await seedDatabase(client);
+    await seedDatabase(client);
 
     expect(await client.siteSettings.findMany()).toEqual([
       expect.objectContaining({ id: "default", siteName: "Rivana Residence" }),
@@ -78,21 +73,19 @@ describe("seed", () => {
       { key: "ABOUT", canonicalPath: "/about", isPublished: false },
       { key: "CONTACT", canonicalPath: "/contact", isPublished: false },
     ]);
-    expect(await client.user.findMany()).toEqual([
-      expect.objectContaining({ email: "owner@example.test", role: "ADMIN" }),
-    ]);
+    expect(await client.user.count()).toBe(0);
     expect(await client.room.count()).toBe(0);
     expect(await client.promotion.count()).toBe(0);
   });
 
   it("does not overwrite content edited after the first seed", async () => {
-    await seedDatabase(client, {});
+    await seedDatabase(client);
     await client.siteSettings.update({
       where: { id: "default" },
       data: { siteName: "Edited name" },
     });
 
-    await seedDatabase(client, {});
+    await seedDatabase(client);
 
     expect(
       (

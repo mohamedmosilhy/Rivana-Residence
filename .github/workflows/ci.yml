@@ -56,6 +56,22 @@ jobs:
   e2e:
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_USER: rivana
+          POSTGRES_PASSWORD: rivana
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U rivana"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      E2E_DATABASE_URL: postgresql://rivana:rivana@127.0.0.1:5432/rivana_e2e_test
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4

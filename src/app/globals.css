@@ -264,10 +264,6 @@ a {
   border-radius: var(--radius-control);
 }
 
-.admin-nav a {
-  background: var(--inverse-active);
-}
-
 .admin-nav span {
   color: var(--inverse-text-soft);
 }
@@ -326,6 +322,265 @@ a {
   max-width: 60ch;
   margin: var(--space-3) 0 0;
   color: var(--neutral-600);
+}
+
+.admin-nav a {
+  color: var(--inverse-text-body);
+}
+
+.admin-nav a[aria-current="page"] {
+  background: var(--inverse-active);
+  color: var(--surface);
+  font-weight: 500;
+}
+
+.admin-account {
+  display: grid;
+  gap: var(--space-2);
+  padding-top: var(--space-6);
+  border-top: 1px solid var(--inverse-line-subtle);
+}
+
+.admin-account p {
+  margin: 0;
+}
+
+.admin-account__name {
+  color: var(--inverse-text-strong);
+  font-weight: 500;
+}
+
+.admin-account__role {
+  color: var(--inverse-text-muted);
+  font-size: 0.8125rem;
+}
+
+.admin-header__meta {
+  margin: var(--space-2) 0 0;
+  color: var(--neutral-600);
+}
+
+.admin-form {
+  display: grid;
+  gap: var(--space-5);
+  margin-top: var(--space-6);
+}
+
+.admin-field {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.admin-field label {
+  color: var(--neutral-800);
+  font-weight: 500;
+}
+
+.admin-field input {
+  min-height: 2.75rem;
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--neutral-600);
+  border-radius: var(--radius-control);
+  background: var(--surface);
+  color: var(--neutral-950);
+  font: inherit;
+}
+
+.admin-field input[aria-invalid="true"] {
+  border-color: var(--danger);
+}
+
+.admin-card .admin-field__hint {
+  margin: 0;
+  font-size: 0.875rem;
+}
+
+.admin-field__errors {
+  margin: 0;
+  padding-left: var(--space-5);
+  color: var(--danger);
+  font-size: 0.875rem;
+}
+
+.admin-form__error,
+.admin-form__success {
+  padding: var(--space-3) var(--space-4);
+  border-left: 4px solid var(--danger);
+  border-radius: var(--radius-control);
+  background: #fdf1f0;
+  color: var(--danger);
+}
+
+.admin-form__success {
+  border-left-color: var(--success);
+  background: #eef6f1;
+  color: var(--success);
+}
+
+.admin-button {
+  justify-self: start;
+  min-height: 2.75rem;
+  padding: var(--space-2) var(--space-6);
+  border: 1px solid var(--brand-plum-700);
+  border-radius: var(--radius-control);
+  background: var(--brand-plum-700);
+  color: var(--surface);
+  font: inherit;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background var(--motion-fast);
+}
+
+.admin-button:hover:not(:disabled) {
+  background: var(--brand-plum-800);
+}
+
+.admin-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.admin-button--secondary {
+  margin-top: var(--space-5);
+  background: var(--surface);
+  color: var(--brand-plum-700);
+}
+
+.admin-button--secondary:hover:not(:disabled) {
+  background: var(--brand-plum-100);
+}
+
+.admin-button--inverse {
+  margin-top: var(--space-2);
+  border-color: var(--inverse-line-strong);
+  background: transparent;
+}
+
+.admin-button--inverse:hover:not(:disabled) {
+  background: var(--inverse-active);
+}
+
+.admin-sessions {
+  display: grid;
+  gap: var(--space-3);
+  margin: var(--space-5) 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.admin-sessions li {
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--neutral-300);
+  border-radius: var(--radius-control);
+}
+
+.admin-card .admin-sessions__device {
+  margin: 0;
+  color: var(--neutral-800);
+  overflow-wrap: anywhere;
+}
+
+.admin-card .admin-sessions__meta {
+  margin: var(--space-1) 0 0;
+  font-size: 0.875rem;
+}
+
+.admin-badge {
+  display: inline-block;
+  margin-left: var(--space-2);
+  padding: 0 var(--space-2);
+  border-radius: 999px;
+  background: var(--brand-plum-100);
+  color: var(--brand-plum-800);
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+.admin-login {
+  display: grid;
+  min-height: 100vh;
+  place-items: center;
+  padding: var(--space-6) var(--space-4);
+  background: var(--admin-canvas);
+}
+
+.admin-login__panel {
+  width: min(100%, 26rem);
+  padding: clamp(1.5rem, 5vw, 2.5rem);
+  border: 1px solid var(--neutral-300);
+  border-radius: var(--radius-panel);
+  background: var(--surface);
+  box-shadow: var(--shadow-md);
+  color: var(--neutral-800);
+}
+
+.admin-login__panel h1 {
+  margin: var(--space-8) 0 0;
+  font-family: var(--font-rivana-display), Georgia, serif;
+  font-size: 2rem;
+  font-weight: 400;
+}
+
+.admin-login__lede,
+.admin-login__help {
+  margin: var(--space-3) 0 0;
+  color: var(--neutral-600);
+}
+
+.admin-login__help {
+  margin-top: var(--space-6);
+  font-size: 0.875rem;
+}
+
+/* The light-surface wordmark uses the darker gold to keep 4.5:1 contrast. */
+.admin-login .brand-mark__secondary {
+  color: var(--brand-gold-600);
+}
+
+.admin-login .admin-button {
+  justify-self: stretch;
+}
+
+.admin-card--wide {
+  max-width: 64rem;
+}
+
+.admin-table-wrap {
+  overflow-x: auto;
+}
+
+.admin-table {
+  width: 100%;
+  border-collapse: collapse;
+  color: var(--neutral-800);
+  font-size: 0.9375rem;
+}
+
+.admin-table th,
+.admin-table td {
+  padding: var(--space-3);
+  border-bottom: 1px solid var(--neutral-300);
+  text-align: left;
+  white-space: nowrap;
+}
+
+.admin-table thead th {
+  color: var(--neutral-600);
+  font-size: 0.8125rem;
+  font-weight: 500;
+}
+
+.admin-table tbody th {
+  font-weight: 500;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
 }
 
 @media (max-width: 47.99rem) {

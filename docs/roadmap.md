@@ -184,7 +184,7 @@ Approved by the client on 2026-09-25 with authorization to begin Phase 2.
 
 ## Phase 2 — Domain, database, and persistence
 
-Status: `Ready for review`
+Status: **Accepted on 2026-09-25**
 
 ### Objective
 
@@ -252,13 +252,13 @@ Implement the content domain and PostgreSQL persistence boundary without buildin
 
 ### Reviewer decision
 
-Awaiting client review. Review schema names, fields, constraints, and domain rules before authentication or UI depends on them. Evidence: [phase-2-persistence.md](./phase-2-persistence.md). Phase 3 has not started.
+Approved by the client on 2026-09-25 with authorization to begin Phase 3. Evidence: [phase-2-persistence.md](./phase-2-persistence.md).
 
 ---
 
 ## Phase 3 — Authentication and authorization
 
-Status: `Not started`
+Status: `Ready for review`
 
 ### Objective
 
@@ -319,7 +319,7 @@ Secure all current and future admin surfaces using closed, revocable staff acces
 
 ### Reviewer decision
 
-Approve the security boundary before any content mutation UI is added.
+Awaiting client review. Approve the security boundary before any content mutation UI is added, and confirm the password-reset deferral (operator recovery via `npm run staff -- set-password`) and 12-hour session lifetime. Evidence: [phase-3-auth.md](./phase-3-auth.md). Phase 4 has not started.
 
 ---
 

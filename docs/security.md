@@ -10,7 +10,7 @@ Untrusted inputs include login credentials, all public/admin form data, URL para
 - Email/password enabled for provisioned admin accounts; public sign-up disabled.
 - Better Auth's memory-hard password hashing is acceptable initially; use its supported default scrypt or a reviewed Argon2id customization, never custom home-grown crypto.
 - Enforce minimum 12-character admin passwords, breached/common-password screening where practical, generic login errors, and login rate limits.
-- Password reset tokens are single-use, short-lived, and delivered through the configured email service; successful reset revokes other sessions.
+- Password reset tokens are single-use, short-lived, and delivered through the configured email service; successful reset revokes other sessions. Until an email provider is configured, self-service reset is disabled and administrators use the operator recovery procedure in [phase-3-auth.md](./phase-3-auth.md#operator-procedures), which also revokes every session.
 - Cookies: `HttpOnly`, `Secure` in production, `SameSite=Lax` or stricter where compatible, host-only, minimal path/scope, rotated/revoked on sensitive changes.
 - Seed/bootstrap admin credentials come from secure environment input and must be changed/rotated; never commit defaults.
 

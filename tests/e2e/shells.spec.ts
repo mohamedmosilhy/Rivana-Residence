@@ -13,19 +13,23 @@ test("public foundation shell is semantic and accessible", async ({ page }) => {
   expect(accessibility.violations).toEqual([]);
 });
 
-test("admin foundation is noindex and contains no business controls", async ({
+test("signed-out admin requests land on an accessible, noindex login", async ({
   page,
 }) => {
-  await page.goto("/admin");
+  const response = await page.goto("/admin");
 
+  await expect(page).toHaveURL(/\/admin\/login$/);
+  expect(response?.headers()["x-robots-tag"]).toBe("noindex, nofollow");
   await expect(
-    page.getByRole("heading", { level: 1, name: "Overview" }),
+    page.getByRole("heading", { level: 1, name: "Staff sign in" }),
   ).toBeVisible();
   await expect(page.locator('meta[name="robots"]')).toHaveAttribute(
     "content",
     /noindex/,
   );
-  await expect(page.getByRole("button")).toHaveCount(0);
+  await expect(
+    page.getByRole("link", { name: /sign up|register/i }),
+  ).toHaveCount(0);
 
   const accessibility = await new AxeBuilder({ page }).analyze();
   expect(accessibility.violations).toEqual([]);

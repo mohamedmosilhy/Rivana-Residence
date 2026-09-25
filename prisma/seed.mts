@@ -15,7 +15,7 @@ const client = new PrismaClient({
 });
 
 try {
-  await seedDatabase(client, process.env);
+  await seedDatabase(client);
 } finally {
   await client.$disconnect();
 }

@@ -17,6 +17,14 @@ const serverEnvSchema = z
       .trim()
       .regex(/^postgres(?:ql)?:\/\//, "Must be a PostgreSQL connection URL.")
       .optional(),
+    BETTER_AUTH_SECRET: z
+      .string()
+      .min(32, "Must be at least 32 characters of random data.")
+      .optional(),
+    AUTH_TRUST_PROXY_HEADERS: z
+      .enum(["true", "false"])
+      .default("false")
+      .transform((value) => value === "true"),
   })
   .superRefine((value, context) => {
     if (value.NODE_ENV === "production" && !value.MEDIA_STORAGE_ROOT) {
@@ -33,7 +41,16 @@ const serverEnvSchema = z
         path: ["DATABASE_URL"],
       });
     }
+    if (value.NODE_ENV === "production" && !value.BETTER_AUTH_SECRET) {
+      context.addIssue({
+        code: "custom",
+        message: "BETTER_AUTH_SECRET is required in production.",
+        path: ["BETTER_AUTH_SECRET"],
+      });
+    }
   });
+
+export type ServerEnv = z.infer<typeof serverEnvSchema>;
 
 const publicEnvSchema = z.object({
   NEXT_PUBLIC_SITE_URL: z.url().default("http://localhost:3000"),

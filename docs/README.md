@@ -34,10 +34,11 @@ Every Book Now control initially renders as a visually complete, disabled/inert 
 | [roadmap.md](./roadmap.md) | Phase-by-phase implementation plan and completion gates |
 | [phase-1-foundation.md](./phase-1-foundation.md) | Phase 1 implementation, verification, screenshots, limitations, and acceptance evidence |
 | [phase-2-persistence.md](./phase-2-persistence.md) | Phase 2 schema, migration review, repository contracts, test results, and limitations |
+| [phase-3-auth.md](./phase-3-auth.md) | Phase 3 auth configuration, capability matrix, operator procedures, security evidence, and limitations |
 
 ## Current technical baseline
 
-The Phase 1 target is Next.js 16.3.3 Active LTS with React 19.2, TypeScript 5.9+, Tailwind CSS 4.3, PostgreSQL 18.6 (17.11 is an acceptable managed-provider fallback), Prisma ORM 7.10, Better Auth 1.7.3, Zod, React Hook Form where interactive client forms justify it, and selected shadcn/ui source components. Exact compatible patches will be rechecked and locked when Phase 1 starts. Prisma 8 is still a release candidate as of this plan and is intentionally excluded.
+The Phase 1 target is Next.js 16.3.3 Active LTS with React 19.2, TypeScript 5.9+, Tailwind CSS 4.3, PostgreSQL 18.6 (17.11 is an acceptable managed-provider fallback), Prisma ORM 7.10, Better Auth 1.7 (locked at 1.7.6 in Phase 3), Zod, React Hook Form where interactive client forms justify it, and selected shadcn/ui source components. Exact compatible patches will be rechecked and locked when Phase 1 starts. Prisma 8 is still a release candidate as of this plan and is intentionally excluded.
 
 ## Reference audit summary
 
@@ -53,4 +54,4 @@ The retained identity is deep plum (`#652A4C`), warm gold (`#DBAF71`), editorial
 
 ## Status
 
-Phases 0 and 1 were approved by the client on 2026-09-25. Phase 2 domain, database, and persistence is implemented and `Ready for review`. Phase 3 has not started.
+Phases 0, 1, and 2 were approved by the client on 2026-09-25. Phase 3 authentication and authorization is implemented and `Ready for review`. Phase 4 has not started.

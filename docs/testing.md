@@ -71,6 +71,8 @@ Use Playwright for high-value flows:
 
 Use deterministic local adapters and fixtures; do not call production email/storage/booking systems in CI.
 
+Auth E2E runs when `E2E_DATABASE_URL` points to a disposable `*_test` database: the Playwright global setup recreates it, migrates, seeds, and provisions separate staff accounts per browser project so sessions and throttle counters never collide.
+
 ## Accessibility and visual QA
 
 - axe checks on representative public/admin routes;

@@ -188,7 +188,7 @@ Client components receive serializable DTOs, not database records or Prisma type
 - TypeScript 5.9+: strict project contracts and Prisma 7 compatibility.
 - PostgreSQL 18.6, with 17.11 as a managed-provider fallback: relational integrity and hosting portability.
 - Prisma ORM 7.10: migrations/type-safe adapter, isolated in infrastructure.
-- Better Auth 1.7.3: closed email/password admin accounts and database sessions.
+- Better Auth 1.7.6: closed email/password admin accounts and database sessions.
 - Tailwind CSS 4.3 plus CSS custom-property tokens; shadcn/ui only for suitable admin/accessibility primitives.
 - Zod at every external input/config boundary.
 - React Hook Form for complex/repeatable admin forms, not simple server-native forms.

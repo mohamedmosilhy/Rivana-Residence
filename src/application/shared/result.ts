@@ -5,6 +5,10 @@ import type {
 
 export type ApplicationErrorCode =
   | "CONFLICT"
+  | "FORBIDDEN"
+  | "RATE_LIMITED"
+  | "UNAUTHENTICATED"
+  | "INVALID_CREDENTIALS"
   | "NOT_FOUND"
   | "NOT_PUBLISHABLE"
   | "REFERENCED"

@@ -16,6 +16,7 @@
     "db:migrate": "prisma migrate dev",
     "db:deploy": "prisma migrate deploy",
     "db:seed": "prisma db seed",
+    "staff": "tsx scripts/staff.mts",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
@@ -30,6 +31,7 @@
     "@paralleldrive/cuid2": "3.3.0",
     "@prisma/adapter-pg": "7.10.0",
     "@prisma/client": "7.10.0",
+    "better-auth": "1.7.6",
     "dotenv": "18.0.3",
     "next": "16.3.3",
     "pg": "8.23.0",
@@ -65,6 +67,7 @@
     },
     "prisma": {
       "mysql2": "3.24.4"
-    }
+    },
+    "@sveltejs/vite-plugin-svelte": "6.2.4"
   }
 }

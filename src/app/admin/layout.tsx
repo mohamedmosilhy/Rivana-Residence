@@ -1,10 +1,11 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
 
-import { AdminShell } from "@/presentation/admin/admin-shell";
-
 export const metadata: Metadata = {
-  title: "Admin foundation",
+  title: {
+    default: "Admin",
+    template: "%s · Rivana admin",
+  },
   robots: {
     index: false,
     follow: false,
@@ -16,5 +17,5 @@ type AdminLayoutProps = Readonly<{
 }>;
 
 export default function AdminLayout({ children }: AdminLayoutProps) {
-  return <AdminShell>{children}</AdminShell>;
+  return children;
 }

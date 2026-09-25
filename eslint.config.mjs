@@ -8,6 +8,12 @@ const restrictedInfrastructureImports = {
     "Presentation must call application ports instead of infrastructure directly.",
 };
 
+const restrictedCompositionImports = {
+  group: ["@/composition/**", "**/composition/**"],
+  message:
+    "Only route modules and Server Actions in src/app may use the composition root.",
+};
+
 export default defineConfig([
   ...nextVitals,
   ...nextTypescript,
@@ -30,6 +36,25 @@ export default defineConfig([
     },
   },
   {
+    files: ["src/presentation/**/*.{ts,tsx}"],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          patterns: [
+            restrictedInfrastructureImports,
+            restrictedCompositionImports,
+            {
+              group: ["@/lib/env/server", "**/lib/env/server"],
+              message:
+                "Server environment values cannot enter presentation modules.",
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
     files: ["src/domain/**/*.{ts,tsx}"],
     rules: {
       "no-restricted-imports": [
@@ -39,6 +64,7 @@ export default defineConfig([
             {
               group: [
                 "@/application/**",
+                "@/composition/**",
                 "@/infrastructure/**",
                 "@/presentation/**",
                 "next/**",
@@ -60,7 +86,12 @@ export default defineConfig([
         {
           patterns: [
             {
-              group: ["@/infrastructure/**", "@/presentation/**", "next/**"],
+              group: [
+                "@/composition/**",
+                "@/infrastructure/**",
+                "@/presentation/**",
+                "next/**",
+              ],
               message:
                 "Application code may depend only on domain contracts and ports.",
             },
