@@ -1,3 +1,5 @@
+import type { Route } from "next";
+import Link from "next/link";
 import type { ReactNode } from "react";
 
 import type {
@@ -5,11 +7,14 @@ import type {
   PublicImage,
   PublicRoomCard,
   PublicSection,
+  PublicSettings,
 } from "@/application/public/view-models";
 import { RichTextView } from "@/presentation/design/rich-text-view";
 import { CardGrid, FacilityCard, RoomCard } from "@/presentation/site/cards";
 import { CtaLink } from "@/presentation/site/cta-link";
 import { Gallery } from "@/presentation/site/gallery";
+import { Icon } from "@/presentation/site/icons";
+import { BrushEdge, SunRays } from "@/presentation/site/ornaments";
 import { SiteImage } from "@/presentation/site/site-image";
 
 type Payload = Record<string, unknown>;
@@ -21,18 +26,38 @@ type SectionContext = Readonly<{
   bookingMessage: string;
   /** The contact form, rendered where a Contact block enables it. */
   contactForm: ReactNode;
+  /** Phone and email shown beside a Contact block; null to omit them. */
+  contactDetails: PublicSettings | null;
+  /** The home hero fills the screen; other page heroes are shorter. */
+  heroSize: "full" | "page";
   /** The first hero is the page's LCP image and its only h1. */
   isFirst: boolean;
 }>;
 
-function SectionHeading({ section }: Readonly<{ section: PublicSection }>) {
+function SectionHeading({
+  section,
+  id,
+  link,
+}: Readonly<{
+  section: PublicSection;
+  id?: string | undefined;
+  link?: Readonly<{ href: Route; label: string }>;
+}>) {
   if (!section.heading && !section.eyebrow) return null;
   return (
     <header className="site-section__header">
-      {section.eyebrow ? (
-        <p className="site-eyebrow">{section.eyebrow}</p>
+      <div>
+        {section.eyebrow ? (
+          <p className="site-eyebrow">{section.eyebrow}</p>
+        ) : null}
+        {section.heading ? <h2 id={id}>{section.heading}</h2> : null}
+      </div>
+      {link ? (
+        <Link href={link.href} className="site-link">
+          {link.label}
+          <Icon name="arrow" />
+        </Link>
       ) : null}
-      {section.heading ? <h2>{section.heading}</h2> : null}
     </header>
   );
 }
@@ -57,6 +82,7 @@ export function PageSection({
 }: Readonly<{ section: PublicSection; context: SectionContext }>) {
   const payload = (section.payload ?? {}) as Payload;
   const id = `section-${section.id}`;
+  const labelledBy = section.heading ? id : undefined;
 
   switch (section.type) {
     case "HERO": {
@@ -64,7 +90,7 @@ export function PageSection({
       const Title = context.isFirst ? "h1" : "h2";
       return (
         <section
-          className={`site-hero${background ? " site-hero--image" : ""}`}
+          className={`site-hero site-hero--${context.heroSize}${background ? " site-hero--image" : ""}`}
           aria-labelledby={id}
         >
           {background ? (
@@ -76,7 +102,9 @@ export function PageSection({
                 sizes="100vw"
               />
             </div>
-          ) : null}
+          ) : (
+            <SunRays className="site-page-hero__rays" />
+          )}
           <div className="site-hero__content site-container">
             {section.eyebrow ? (
               <p className="site-eyebrow">{section.eyebrow}</p>
@@ -85,11 +113,19 @@ export function PageSection({
               {text(payload.title)}
             </Title>
             <p className="site-hero__summary">{text(payload.summary)}</p>
-            <CtaLink
-              cta={payload.cta}
-              bookingMessage={context.bookingMessage}
-            />
+            <div className="site-actions">
+              <CtaLink
+                cta={payload.cta}
+                bookingMessage={context.bookingMessage}
+              />
+            </div>
           </div>
+          {context.heroSize === "full" ? (
+            <span className="site-hero__scroll" aria-hidden="true">
+              Scroll
+            </span>
+          ) : null}
+          <BrushEdge className="site-edge" />
         </section>
       );
     }
@@ -97,25 +133,24 @@ export function PageSection({
       const image = first(section.images.PRIMARY);
       return (
         <section
-          className="site-section site-container"
-          aria-labelledby={section.heading ? id : undefined}
+          className="site-section site-intro site-container"
+          aria-labelledby={labelledBy}
         >
-          {section.heading ? (
-            <header className="site-section__header">
-              {section.eyebrow ? (
-                <p className="site-eyebrow">{section.eyebrow}</p>
-              ) : null}
-              <h2 id={id}>{section.heading}</h2>
-            </header>
-          ) : null}
-          <div className="site-prose">
-            <RichTextView document={payload.document} />
+          <SectionHeading section={section} id={labelledBy} />
+          <div className="site-intro__body">
+            <RichTextView
+              document={payload.document}
+              className="site-prose site-prose--lead"
+            />
+            {image ? (
+              <div className="site-intro__image">
+                <SiteImage
+                  image={image}
+                  sizes="(min-width: 64rem) 55vw, 100vw"
+                />
+              </div>
+            ) : null}
           </div>
-          {image ? (
-            <div className="site-section__image">
-              <SiteImage image={image} sizes="(min-width: 64rem) 60vw, 100vw" />
-            </div>
-          ) : null}
         </section>
       );
     }
@@ -123,16 +158,20 @@ export function PageSection({
       const image = first(section.images.PRIMARY);
       return (
         <section
-          className={`site-split site-container${payload.imageSide === "RIGHT" ? " site-split--reverse" : ""}`}
-          aria-labelledby={section.heading ? id : undefined}
+          className={`site-split site-container${payload.imageSide === "RIGHT" ? " site-split--reverse" : ""}${image ? "" : " site-split--text"}`}
+          aria-labelledby={labelledBy}
         >
           {image ? (
-            <div className="site-split__media">
-              <SiteImage
-                image={image}
-                fill
-                sizes="(min-width: 64rem) 50vw, 100vw"
-              />
+            <div
+              className={`site-split__media${image.height > image.width ? " site-split__media--portrait" : ""}`}
+            >
+              <div className="site-split__frame">
+                <SiteImage
+                  image={image}
+                  fill
+                  sizes="(min-width: 64rem) 45vw, 100vw"
+                />
+              </div>
             </div>
           ) : null}
           <div className="site-split__text">
@@ -140,21 +179,24 @@ export function PageSection({
               <p className="site-eyebrow">{section.eyebrow}</p>
             ) : null}
             {section.heading ? <h2 id={id}>{section.heading}</h2> : null}
-            <div className="site-prose">
-              <RichTextView document={payload.body} />
+            <RichTextView document={payload.body} className="site-prose" />
+            <div className="site-actions">
+              <CtaLink
+                cta={payload.cta}
+                bookingMessage={context.bookingMessage}
+              />
             </div>
-            <CtaLink
-              cta={payload.cta}
-              bookingMessage={context.bookingMessage}
-            />
           </div>
         </section>
       );
     }
     case "GALLERY":
       return (
-        <section className="site-section site-container">
-          <SectionHeading section={section} />
+        <section
+          className="site-section site-container"
+          aria-labelledby={labelledBy}
+        >
+          <SectionHeading section={section} id={labelledBy} />
           <Gallery
             images={section.images.GALLERY ?? []}
             label={section.heading ?? "Photo gallery"}
@@ -168,8 +210,11 @@ export function PageSection({
         ? (payload.items as Payload[])
         : [];
       return (
-        <section className="site-section site-container">
-          <SectionHeading section={section} />
+        <section
+          className={`site-section site-container site-${section.type === "STATS" ? "stats" : "features"}-section`}
+          aria-labelledby={labelledBy}
+        >
+          <SectionHeading section={section} id={labelledBy} />
           {section.type === "STATS" ? (
             <dl className="site-stats">
               {items.map((item, index) => (
@@ -183,6 +228,9 @@ export function PageSection({
             <ul className="site-features">
               {items.map((item, index) => (
                 <li key={index}>
+                  <span className="site-features__index" aria-hidden="true">
+                    {String(index + 1).padStart(2, "0")}
+                  </span>
                   <h3>{text(item.title)}</h3>
                   <p>{text(item.body)}</p>
                 </li>
@@ -196,13 +244,21 @@ export function PageSection({
       const rooms = grid(context.rooms, payload);
       if (rooms.length === 0) return null;
       return (
-        <section className="site-section site-container">
-          <SectionHeading section={section} />
+        <section
+          className="site-section site-container"
+          aria-labelledby={labelledBy}
+        >
+          <SectionHeading
+            section={section}
+            id={labelledBy}
+            link={{ href: "/rooms", label: "View all rooms" }}
+          />
           <CardGrid>
-            {rooms.map((room) => (
+            {rooms.map((room, index) => (
               <RoomCard
                 key={room.slug}
                 room={room}
+                index={index}
                 headingLevel={section.heading ? 3 : 2}
               />
             ))}
@@ -214,26 +270,34 @@ export function PageSection({
       const facilities = grid(context.facilities, payload);
       if (facilities.length === 0) return null;
       return (
-        <section className="site-section site-container">
-          <SectionHeading section={section} />
-          <CardGrid>
-            {facilities.map((facility) => (
-              <FacilityCard
-                key={facility.slug}
-                facility={facility}
-                headingLevel={section.heading ? 3 : 2}
-              />
-            ))}
-          </CardGrid>
+        <section className="site-band" aria-labelledby={labelledBy}>
+          <div className="site-section site-container">
+            <SectionHeading
+              section={section}
+              id={labelledBy}
+              link={{ href: "/facilities", label: "View all amenities" }}
+            />
+            <CardGrid variant="tiles">
+              {facilities.map((facility) => (
+                <FacilityCard
+                  key={facility.slug}
+                  facility={facility}
+                  headingLevel={section.heading ? 3 : 2}
+                />
+              ))}
+            </CardGrid>
+          </div>
         </section>
       );
     }
     case "CONTACT_CTA": {
       const background = first(section.images.BACKGROUND);
+      const details = context.contactDetails;
+      const form = payload.formEnabled ? context.contactForm : null;
       return (
         <section
-          className="site-contact-cta"
-          aria-labelledby={section.heading ? id : undefined}
+          className={`site-contact-cta${form ? " site-contact-cta--form" : ""}`}
+          aria-labelledby={labelledBy}
         >
           {background ? (
             <div className="site-contact-cta__media">
@@ -241,12 +305,37 @@ export function PageSection({
             </div>
           ) : null}
           <div className="site-contact-cta__inner site-container">
-            {section.eyebrow ? (
-              <p className="site-eyebrow">{section.eyebrow}</p>
-            ) : null}
-            {section.heading ? <h2 id={id}>{section.heading}</h2> : null}
-            <p>{text(payload.body)}</p>
-            {payload.formEnabled ? context.contactForm : null}
+            <div className="site-contact-cta__intro">
+              {section.eyebrow ? (
+                <p className="site-eyebrow">{section.eyebrow}</p>
+              ) : null}
+              {section.heading ? <h2 id={id}>{section.heading}</h2> : null}
+              <p className="site-contact-cta__body">{text(payload.body)}</p>
+              {details && (details.phone || details.email) ? (
+                <address className="site-contact-cta__details">
+                  {details.phone ? (
+                    <a href={`tel:${details.phone.replace(/[^+0-9]/g, "")}`}>
+                      <Icon name="phone" />
+                      {details.phone}
+                    </a>
+                  ) : null}
+                  {details.email ? (
+                    <a href={`mailto:${details.email}`}>
+                      <Icon name="mail" />
+                      {details.email}
+                    </a>
+                  ) : null}
+                </address>
+              ) : null}
+              {form ? null : (
+                <div className="site-actions">
+                  <Link href="/contact" className="site-button">
+                    Get in touch
+                  </Link>
+                </div>
+              )}
+            </div>
+            {form ? <div className="site-contact-cta__form">{form}</div> : null}
           </div>
         </section>
       );

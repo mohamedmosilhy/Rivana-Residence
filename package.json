@@ -16,6 +16,7 @@
     "db:migrate": "prisma migrate dev",
     "db:deploy": "prisma migrate deploy",
     "db:seed": "prisma db seed",
+    "db:seed:demo": "tsx --conditions=react-server scripts/seed-demo.mts",
     "staff": "tsx scripts/staff.mts",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",

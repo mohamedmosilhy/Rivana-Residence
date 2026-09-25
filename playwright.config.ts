@@ -15,18 +15,26 @@ export default defineConfig({
     trace: "on-first-retry",
   },
   // Admin suites run first; the public-site suites depend on them so they
-  // see a stable, published site; the promotion suite runs last because an
-  // active campaign opens a modal on every public page.
+  // see a stable, published site; visual baselines follow; the promotion
+  // suite runs last because an active campaign opens a modal on every page.
   projects: [
     {
       name: "desktop-chromium",
       use: { ...devices["Desktop Chrome"] },
-      testIgnore: [/public-site\.spec/, /promotion-popup\.spec/],
+      testIgnore: [
+        /public-site\.spec/,
+        /promotion-popup\.spec/,
+        /visual\.spec/,
+      ],
     },
     {
       name: "mobile-chromium",
       use: { ...devices["Pixel 7"] },
-      testIgnore: [/public-site\.spec/, /promotion-popup\.spec/],
+      testIgnore: [
+        /public-site\.spec/,
+        /promotion-popup\.spec/,
+        /visual\.spec/,
+      ],
     },
     {
       name: "public-desktop",
@@ -41,10 +49,25 @@ export default defineConfig({
       dependencies: ["desktop-chromium", "mobile-chromium"],
     },
     {
+      name: "visual-desktop",
+      use: {
+        ...devices["Desktop Chrome"],
+        viewport: { width: 1440, height: 900 },
+      },
+      testMatch: /visual\.spec/,
+      dependencies: ["public-desktop", "public-mobile"],
+    },
+    {
+      name: "visual-mobile",
+      use: { ...devices["Pixel 7"] },
+      testMatch: /visual\.spec/,
+      dependencies: ["public-desktop", "public-mobile"],
+    },
+    {
       name: "promotions",
       use: { ...devices["Desktop Chrome"] },
       testMatch: /promotion-popup\.spec/,
-      dependencies: ["public-desktop", "public-mobile"],
+      dependencies: ["visual-desktop", "visual-mobile"],
     },
   ],
   webServer: {

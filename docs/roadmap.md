@@ -548,7 +548,7 @@ Approved by the client on 2026-09-25 with authorization to begin Phase 7. The ap
 
 ## Phase 7 — Public website functionality
 
-Status: `Ready for review`
+Status: **Accepted on 2026-09-26**
 
 ### Objective
 
@@ -626,13 +626,13 @@ Implement every required public route with server-rendered real CMS content and 
 
 ### Reviewer decision
 
-Awaiting client review. Approve the public information architecture, managed-content behavior, canonical facility paths, contact workflow, promotion behavior, and disabled booking boundary before Phase 8 visual-polish work. Evidence: [phase-7-public-site.md](./phase-7-public-site.md).
+Accepted on 2026-09-26 when the client asked for the Phase 7 review and Phase 8 work. The review's defects (missing wordmark styles, text-only logo) were fixed at the start of Phase 8. Evidence: [phase-7-public-site.md](./phase-7-public-site.md).
 
 ---
 
 ## Phase 8 — Modern luxury visual system
 
-Status: `Not started`
+Status: `Ready for review`
 
 ### Objective
 
@@ -697,7 +697,7 @@ Apply the approved Rivana design system and achieve a polished, coherent hospita
 
 ### Reviewer decision
 
-Obtain explicit visual approval before motion is layered onto the interface.
+Awaiting client review. Obtain explicit visual approval before motion is layered onto the interface. Evidence: [phase-8-visual-system.md](./phase-8-visual-system.md).
 
 ---
 

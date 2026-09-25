@@ -1,6 +1,7 @@
 // Publishes a small, realistic public site into the disposable E2E database
 // using the real repositories and the real image pipeline, so public-route
-// tests exercise the same code as production. Copy is test content.
+// tests exercise the same code as production. Brand copy follows the legacy
+// site; contact details and room facts are test content.
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 
@@ -23,15 +24,25 @@ import { SharpImageProcessor } from "../../../src/infrastructure/media/sharp-ima
 const IMAGES = [
   "home-hero.jpg",
   "about-exterior.jpg",
+  "about-exterior-wide.jpg",
   "pool-main.jpg",
   "pool-gallery-01.jpg",
   "pool-gallery-02.jpg",
+  "pool-gallery-04.jpg",
   "gym-main.jpg",
-  "room-balcony.jpg",
+  "gym-gallery-01.jpg",
+  "gym-gallery-02.jpg",
+  "gym-gallery-04.jpg",
   "room-gallery-01.jpg",
   "room-gallery-02.jpg",
   "room-gallery-06.jpg",
+  "room-gallery-08.jpg",
   "room-double.jpg",
+  "room-pool.jpg",
+  "room-superior-1.jpg",
+  "room-superior-3.jpg",
+  "room-superior-5.jpg",
+  "room-superior-8.jpg",
 ];
 
 function ok<T>(
@@ -83,15 +94,15 @@ export async function seedPublicContent(
   await client.siteSettings.update({
     where: { id: "default" },
     data: {
-      tagline: "Serviced rooms in New Cairo",
+      tagline: "Luxury is a state of mind, and here, it's our reality.",
       phone: "+20 2 1234 5678",
       email: "stay@example.test",
-      addressLine1: "90th Street",
-      city: "New Cairo",
+      addressLine1: "Opposite the American University in Cairo",
+      city: "Fifth Settlement, New Cairo",
       country: "Egypt",
       latitude: 30.0131,
       longitude: 31.4913,
-      footerText: "© Rivana Residence (test site)",
+      footerText: "© Rivana Residence. Test site.",
       defaultSeoDescription: "Rivana Residence test site.",
     },
   });
@@ -134,7 +145,7 @@ export async function seedPublicContent(
       slug: "studio-with-balcony",
       shortDescription: "A bright studio with its own balcony and kitchenette.",
       description: description(
-        "A calm studio for longer stays.\n\n## In the studio\n\n- Kitchenette\n- Work desk\n- Private balcony",
+        "A calm, light-filled studio for longer stays, with twin beds set against a wood-panelled wall and a private balcony over the neighbourhood.\n\nThe kitchenette and work desk make it easy to settle in, whether you are here for business or a family visit.\n\n## In the studio\n\n- Kitchenette\n- Work desk\n- Private balcony",
       ),
       sizeSqm: 38,
       maxAdults: 2,
@@ -148,7 +159,7 @@ export async function seedPublicContent(
       ],
       featured: true,
     },
-    "room-balcony.jpg",
+    "room-gallery-08.jpg",
     ["room-gallery-01.jpg", "room-gallery-02.jpg", "room-gallery-06.jpg"],
     "PUBLISHED",
   );
@@ -159,7 +170,7 @@ export async function seedPublicContent(
       shortDescription:
         "A double room with a wood-panelled wall and seating corner.",
       description: description(
-        "Warm wood, soft lighting, and space to unwind.",
+        "Warm wood, soft lighting, and space to unwind. A generous double bed faces a seating corner, with a desk for quiet mornings.",
       ),
       sizeSqm: 32,
       maxAdults: 2,
@@ -169,7 +180,32 @@ export async function seedPublicContent(
       featured: true,
     },
     "room-double.jpg",
-    [],
+    ["room-superior-1.jpg", "room-superior-3.jpg", "room-superior-5.jpg"],
+    "PUBLISHED",
+  );
+  await room(
+    {
+      name: "Superior Double",
+      slug: "superior-double",
+      shortDescription:
+        "A wood-panelled double with a desk, armchair, and walk-in rain shower.",
+      description: description(
+        "Our most spacious double, finished in warm wood with a separate seating corner and a walk-in rain shower.",
+      ),
+      sizeSqm: 36,
+      maxAdults: 2,
+      maxChildren: 1,
+      bedSummary: "One king bed",
+      viewSummary: null,
+      features: [
+        { label: "Work desk" },
+        { label: "Seating corner" },
+        { label: "Rain shower" },
+      ],
+      featured: true,
+    },
+    "room-pool.jpg",
+    ["room-superior-3.jpg", "room-superior-5.jpg", "room-superior-8.jpg"],
     "PUBLISHED",
   );
   await room(
@@ -241,26 +277,30 @@ export async function seedPublicContent(
     {
       name: "Swimming Pool",
       slug: "swimming-pool",
-      shortDescription: "An indoor pool with warm lighting.",
-      description: description("Swim year-round in the indoor pool."),
+      shortDescription: "Unwind and refresh in a serene poolside escape.",
+      description: description(
+        "Unwind and refresh at Rivana Residence with our indoor swimming pool, the perfect escape for relaxation and leisure.\n\nWarm wall lights and a natural stone wall set a calm mood from the first swim of the morning to the last of the evening.",
+      ),
       openingHoursText: "Daily 8:00–20:00",
       featured: true,
     },
     "pool-main.jpg",
-    ["pool-gallery-01.jpg", "pool-gallery-02.jpg"],
+    ["pool-gallery-02.jpg", "pool-gallery-01.jpg", "pool-gallery-04.jpg"],
     true,
   );
   await facility(
     {
       name: "Fitness Room",
       slug: "fitness-room",
-      shortDescription: "Cardio machines and free weights.",
-      description: description("Keep up your routine while you stay."),
+      shortDescription: "Modern fitness meets the comfort of your stay.",
+      description: description(
+        "Keep up your routine while you stay. The fitness room has treadmills, an exercise bike, free weights, and a multi-station weight machine.",
+      ),
       openingHoursText: null,
       featured: true,
     },
     "gym-main.jpg",
-    [],
+    ["gym-gallery-01.jpg", "gym-gallery-02.jpg", "gym-gallery-04.jpg"],
     true,
   );
   await facility(
@@ -282,7 +322,12 @@ export async function seedPublicContent(
     key: "HOME" | "ABOUT" | "CONTACT",
     edits: Record<
       string,
-      { payload?: unknown; isVisible?: boolean; heading?: string | null }
+      {
+        payload?: unknown;
+        isVisible?: boolean;
+        heading?: string | null;
+        eyebrow?: string | null;
+      }
     >,
     images: Record<
       string,
@@ -301,7 +346,8 @@ export async function seedPublicContent(
               type: section.type,
               heading:
                 edit.heading === undefined ? section.heading : edit.heading,
-              eyebrow: section.eyebrow,
+              eyebrow:
+                edit.eyebrow === undefined ? section.eyebrow : edit.eyebrow,
               payload: edit.payload ?? section.payload,
               isVisible: edit.isVisible ?? section.isVisible,
             },
@@ -332,48 +378,81 @@ export async function seedPublicContent(
     "HOME",
     {
       HERO: {
+        eyebrow: "Luxury hotel in New Cairo",
         payload: {
           schemaVersion: 1,
           title: "Rivana Residence",
-          summary: "Serviced rooms and suites in New Cairo.",
+          summary: "Luxury is a state of mind, and here, it's our reality.",
           cta: { label: "Book your stay", intent: "BOOKING" },
         },
       },
       RICH_TEXT: {
+        heading: "Living your experience",
+        eyebrow: "Welcome",
         payload: {
           schemaVersion: 1,
           document: description(
-            "Welcome to a calm place to stay in New Cairo.",
+            "We at Rivana Residence are pleased to welcome you to our network of distinguished guests. We look forward to your stay at one of the finest hospitality destinations in New Cairo.",
           ),
         },
       },
-      FACILITY_GRID: {
+      ROOM_GRID: {
+        heading: "Our rooms",
+        eyebrow: "Enchanted with elegance",
         payload: { schemaVersion: 1, limit: 3, featuredOnly: false },
       },
-      CONTACT_CTA: {
+      FACILITY_GRID: {
+        heading: "Our amenities",
+        eyebrow: "Life at Rivana",
+        payload: { schemaVersion: 1, limit: 3, featuredOnly: false },
+      },
+      IMAGE_TEXT_SPLIT: {
+        heading: "Rest well. Sleep well.",
+        eyebrow: "Your stay",
+        isVisible: true,
         payload: {
           schemaVersion: 1,
-          body: "Questions about your stay? Write to us.",
+          body: description(
+            "We are confident in delivering a unique experience to you and your valued guests in the Fifth Settlement, New Cairo.\n\nQuiet rooms, warm wood, and attentive service make every stay feel effortless.",
+          ),
+          imageSide: "RIGHT",
+          cta: { label: "Explore the rooms", intent: "ROOMS" },
+        },
+      },
+      CONTACT_CTA: {
+        heading: "Plan your stay",
+        eyebrow: "Contact",
+        payload: {
+          schemaVersion: 1,
+          body: "Questions about your stay? Write to us and our team will reply by email.",
           formEnabled: true,
         },
       },
     },
-    { HERO: { role: "BACKGROUND", files: ["home-hero.jpg"] } },
+    {
+      HERO: { role: "BACKGROUND", files: ["home-hero.jpg"] },
+      IMAGE_TEXT_SPLIT: { role: "PRIMARY", files: ["room-superior-1.jpg"] },
+    },
   );
   await configure(
     "ABOUT",
     {
       HERO: {
+        eyebrow: "Welcome to Rivana Residence",
         payload: {
           schemaVersion: 1,
           title: "About Rivana",
-          summary: "A residence built for longer, easier stays.",
+          summary: "Make your stay memorable.",
         },
       },
       IMAGE_TEXT_SPLIT: {
+        eyebrow: "Our story",
+        heading: "A haven of comfort, style, and hospitality",
         payload: {
           schemaVersion: 1,
-          body: description("Our story, told in a few words."),
+          body: description(
+            "We at Rivana Residence are pleased to welcome you to our network of distinguished guests, at one of the finest hospitality destinations in New Cairo, opposite the American University and El Zohour Club.\n\nRivana Residence combines comfort and a strategic location, making it the ideal choice for business and leisure travellers alike.",
+          ),
           imageSide: "LEFT",
         },
       },
@@ -382,23 +461,51 @@ export async function seedPublicContent(
         payload: {
           schemaVersion: 1,
           items: [
-            { value: "2", label: "Room types" },
+            { value: "28", label: "Rooms" },
+            { value: "30", label: "Team members" },
             { value: "24/7", label: "Reception" },
           ],
         },
       },
+      GALLERY: {
+        isVisible: true,
+        heading: "Around the residence",
+        eyebrow: "Gallery",
+        payload: { schemaVersion: 1, layout: "EDITORIAL" },
+      },
+      ROOM_GRID: {
+        isVisible: true,
+        heading: "Our rooms",
+        eyebrow: "Enchanted with elegance",
+        payload: { schemaVersion: 1, limit: 3, featuredOnly: false },
+      },
       CONTACT_CTA: {
+        heading: "Plan your stay",
+        eyebrow: "Contact",
         payload: {
           schemaVersion: 1,
-          body: "Plan your stay with us.",
+          body: "Tell us when you would like to visit and we will help you choose the right room.",
           formEnabled: false,
         },
       },
     },
-    { IMAGE_TEXT_SPLIT: { role: "PRIMARY", files: ["about-exterior.jpg"] } },
+    {
+      HERO: { role: "BACKGROUND", files: ["about-exterior-wide.jpg"] },
+      IMAGE_TEXT_SPLIT: { role: "PRIMARY", files: ["about-exterior.jpg"] },
+      GALLERY: {
+        role: "GALLERY",
+        files: [
+          "gym-gallery-04.jpg",
+          "room-superior-3.jpg",
+          "room-gallery-06.jpg",
+          "pool-gallery-04.jpg",
+        ],
+      },
+    },
   );
   await configure("CONTACT", {
     HERO: {
+      eyebrow: "We are here to help",
       payload: {
         schemaVersion: 1,
         title: "Contact us",
@@ -406,6 +513,7 @@ export async function seedPublicContent(
       },
     },
     CONTACT_CTA: {
+      eyebrow: "Enquiries",
       payload: {
         schemaVersion: 1,
         body: "Send us a message and we will reply by email.",

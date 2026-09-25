@@ -27,9 +27,11 @@ export function MobileMenu({ children }: Readonly<{ children: ReactNode }>) {
     >
       <summary className="site-menu__toggle">
         <span aria-hidden="true" className="site-menu__icon" />
-        Menu
+        <span className="site-menu__label">Menu</span>
       </summary>
-      <div className="site-menu__panel">{children}</div>
+      <div className="site-menu__panel">
+        <div className="site-menu__content site-container">{children}</div>
+      </div>
     </details>
   );
 }

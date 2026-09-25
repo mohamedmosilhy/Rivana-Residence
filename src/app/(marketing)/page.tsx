@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 
 import { getPublishedPage, getSiteSettings } from "@/composition/public";
+import { PageHero } from "@/presentation/site/heroes";
 
 import { ManagedPageSections, pageMetadata } from "./site-content";
 
@@ -21,16 +22,12 @@ export default async function HomePage() {
     // than draft content.
     const settings = await getSiteSettings();
     return (
-      <section
-        className="site-holding site-container"
-        aria-labelledby="holding-title"
-      >
-        <h1 id="holding-title">{settings?.siteName ?? "Rivana Residence"}</h1>
-        <p>
-          Our new website is being prepared. Please contact us directly in the
-          meantime.
-        </p>
-      </section>
+      <PageHero
+        size="screen"
+        title={settings?.siteName ?? "Rivana Residence"}
+        titleId="holding-title"
+        intro="Our new website is being prepared. Please contact us directly in the meantime."
+      />
     );
   }
   return <ManagedPageSections page={page} />;

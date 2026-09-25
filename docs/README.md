@@ -1,6 +1,6 @@
 # Rivana Residence production documentation
 
-This directory began as the Phase 0 blueprint for rebuilding Rivana Residence as a production marketing website and content-management system. Phases 0–6 are approved, and the Phase 7 public website is ready for review.
+This directory began as the Phase 0 blueprint for rebuilding Rivana Residence as a production marketing website and content-management system. Phases 0–7 are approved, and the Phase 8 luxury visual system is ready for review.
 
 The source of truth for the visual audit is `../design/`. The legacy WordPress export in the parent workspace was treated only as content and asset provenance. Its plugin/theme architecture will not be migrated.
 
@@ -39,6 +39,7 @@ Every Book Now control initially renders as a visually complete, disabled/inert 
 | [phase-5-content-management.md](./phase-5-content-management.md) | Phase 5 room, facility, page, and promotion management; final fields; cache-invalidation matrix; test matrix; limitations |
 | [phase-6-media.md](./phase-6-media.md) | Phase 6 media storage, upload verification and threat tests, library/picker, replace/delete, asset migration manifest, limitations |
 | [phase-7-public-site.md](./phase-7-public-site.md) | Phase 7 public routes, managed-content queries, contact delivery, promotion pop-up, booking boundary, test evidence, and limitations |
+| [phase-8-visual-system.md](./phase-8-visual-system.md) | Phase 8 visual system: tokens, contrast report, page compositions, before/after boards, responsive and visual-regression evidence |
 
 ## Current technical baseline
 

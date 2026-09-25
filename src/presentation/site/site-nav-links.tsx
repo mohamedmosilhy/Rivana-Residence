@@ -5,11 +5,14 @@ import { usePathname } from "next/navigation";
 
 import { SITE_LINKS } from "@/presentation/site/site-links";
 
-export function SiteNavLinks({ className }: Readonly<{ className: string }>) {
+export function SiteNavLinks({
+  className,
+  numbered = false,
+}: Readonly<{ className: string; numbered?: boolean }>) {
   const pathname = usePathname();
   return (
     <ul className={className}>
-      {SITE_LINKS.map((link) => {
+      {SITE_LINKS.map((link, index) => {
         const current =
           link.href === "/"
             ? pathname === "/"
@@ -17,6 +20,11 @@ export function SiteNavLinks({ className }: Readonly<{ className: string }>) {
         return (
           <li key={link.href}>
             <Link href={link.href} aria-current={current ? "page" : undefined}>
+              {numbered ? (
+                <span className="site-menu__index" aria-hidden="true">
+                  {String(index + 1).padStart(2, "0")}
+                </span>
+              ) : null}
               {link.label}
             </Link>
           </li>

@@ -84,9 +84,11 @@ Auth E2E runs when `E2E_DATABASE_URL` points to a disposable `*_test` database: 
 - screen-reader smoke test for navigation, form errors, and booking disabled state;
 - contrast and 200% zoom/reflow checks;
 - reduced-motion tests;
-- screenshot comparisons for selected stable compositions at 390, 768, 1280, and 1440px.
+- screenshot comparisons for every public template's opening screen at desktop (1440px) and phone (Pixel 7) widths (`tests/e2e/visual.spec.ts`);
+- a horizontal-overflow sweep of every template at 320, 390, 768, 1024, 1280, and 1440px and a phone touch-target check (`tests/e2e/public-site.spec.ts`);
+- `npx tsx scripts/contrast-report.mts` fails when any public colour pairing drops below its WCAG minimum.
 
-Visual snapshots cover major page templates and high-risk interactions, not every pixel of dynamic imagery.
+Visual snapshots cover major page templates and high-risk interactions, not every pixel of dynamic imagery. Baselines are platform-specific (`*-darwin.png`); after an approved visual change, refresh them with `npx playwright test --update-snapshots` and review the diff before committing.
 
 ## Performance and SEO tests
 
