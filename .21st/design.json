@@ -70,6 +70,10 @@
     {
       "date": "2026-09-25",
       "decision": "Foundation shells use typography, plum fields, and restrained gold accents without implementing business content."
+    },
+    {
+      "date": "2026-09-26",
+      "decision": "The public enquiry form uses an ivory concierge-letter composition on plum, with restrained gold framing, floating labels, topic shortcuts, required-field progress, and reduced-motion-safe feedback."
     }
   ],
   "evidence": ["docs/design-system.md", "design/DESIGN-SPEC.md"],

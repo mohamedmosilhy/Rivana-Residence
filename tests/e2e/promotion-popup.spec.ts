@@ -104,9 +104,14 @@ test("shows the active campaign after the page loads, copies the code, and remem
 
   await visitor.page.keyboard.press("Escape");
   await expect(dialog).toBeHidden();
-  const stored = await visitor.page.evaluate(() =>
-    JSON.parse(localStorage.getItem("rivana.promotion.dismissed") ?? "null"),
-  );
+  // The dialog hides at once; its close event (which records the
+  // dismissal) is dispatched in a later task.
+  const readDismissal = () =>
+    visitor.page.evaluate(() =>
+      JSON.parse(localStorage.getItem("rivana.promotion.dismissed") ?? "null"),
+    );
+  await expect.poll(readDismissal).not.toBeNull();
+  const stored = await readDismissal();
   expect(stored).toMatchObject({ version: 1 });
   expect(Object.keys(stored).sort()).toEqual([
     "dismissedUntil",

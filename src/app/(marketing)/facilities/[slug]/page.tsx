@@ -42,6 +42,7 @@ export default async function FacilityPage({ params }: FacilityPageProps) {
         title={facility.name}
         lede={facility.shortDescription}
         image={facility.hero}
+        morphName={`facility-${facility.slug}`}
       />
       <div className="site-container site-detail__layout">
         <div className="site-detail__main">

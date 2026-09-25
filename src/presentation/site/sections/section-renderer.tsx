@@ -14,6 +14,17 @@ import { CardGrid, FacilityCard, RoomCard } from "@/presentation/site/cards";
 import { CtaLink } from "@/presentation/site/cta-link";
 import { Gallery } from "@/presentation/site/gallery";
 import { Icon } from "@/presentation/site/icons";
+import { CountUp } from "@/presentation/site/motion/count-up";
+import {
+  ParallaxLayer,
+  ScrollFade,
+} from "@/presentation/site/motion/hero-scroll";
+import {
+  Reveal,
+  RevealImage,
+  RevealItem,
+} from "@/presentation/site/motion/reveal";
+import { SplitTitle } from "@/presentation/site/motion/split-title";
 import { BrushEdge, SunRays } from "@/presentation/site/ornaments";
 import { SiteImage } from "@/presentation/site/site-image";
 
@@ -45,7 +56,7 @@ function SectionHeading({
 }>) {
   if (!section.heading && !section.eyebrow) return null;
   return (
-    <header className="site-section__header">
+    <Reveal as="header" className="site-section__header">
       <div>
         {section.eyebrow ? (
           <p className="site-eyebrow">{section.eyebrow}</p>
@@ -58,7 +69,7 @@ function SectionHeading({
           <Icon name="arrow" />
         </Link>
       ) : null}
-    </header>
+    </Reveal>
   );
 }
 
@@ -88,29 +99,34 @@ export function PageSection({
     case "HERO": {
       const background = first(section.images.BACKGROUND);
       const Title = context.isFirst ? "h1" : "h2";
+      const title = text(payload.title);
+      // The one per-character reveal: the opening of the home page.
+      const signature = context.isFirst && context.heroSize === "full";
       return (
         <section
-          className={`site-hero site-hero--${context.heroSize}${background ? " site-hero--image" : ""}`}
+          className={`site-hero site-hero--${context.heroSize}${background ? " site-hero--image" : ""}${context.isFirst ? " site-hero--opening" : ""}`}
           aria-labelledby={id}
         >
           {background ? (
             <div className="site-hero__media">
-              <SiteImage
-                image={background}
-                fill
-                preload={context.isFirst}
-                sizes="100vw"
-              />
+              <ParallaxLayer className="site-hero__parallax">
+                <SiteImage
+                  image={background}
+                  fill
+                  preload={context.isFirst}
+                  sizes="100vw"
+                />
+              </ParallaxLayer>
             </div>
           ) : (
             <SunRays className="site-page-hero__rays" />
           )}
-          <div className="site-hero__content site-container">
+          <ScrollFade className="site-hero__content site-container">
             {section.eyebrow ? (
               <p className="site-eyebrow">{section.eyebrow}</p>
             ) : null}
             <Title id={id} className="site-hero__title">
-              {text(payload.title)}
+              {signature ? <SplitTitle text={title} /> : title}
             </Title>
             <p className="site-hero__summary">{text(payload.summary)}</p>
             <div className="site-actions">
@@ -119,7 +135,7 @@ export function PageSection({
                 bookingMessage={context.bookingMessage}
               />
             </div>
-          </div>
+          </ScrollFade>
           {context.heroSize === "full" ? (
             <span className="site-hero__scroll" aria-hidden="true">
               Scroll
@@ -138,17 +154,19 @@ export function PageSection({
         >
           <SectionHeading section={section} id={labelledBy} />
           <div className="site-intro__body">
-            <RichTextView
-              document={payload.document}
-              className="site-prose site-prose--lead"
-            />
+            <Reveal delay={0.1}>
+              <RichTextView
+                document={payload.document}
+                className="site-prose site-prose--lead"
+              />
+            </Reveal>
             {image ? (
-              <div className="site-intro__image">
+              <RevealImage className="site-intro__image">
                 <SiteImage
                   image={image}
                   sizes="(min-width: 64rem) 55vw, 100vw"
                 />
-              </div>
+              </RevealImage>
             ) : null}
           </div>
         </section>
@@ -165,28 +183,36 @@ export function PageSection({
             <div
               className={`site-split__media${image.height > image.width ? " site-split__media--portrait" : ""}`}
             >
-              <div className="site-split__frame">
+              <RevealImage className="site-split__frame">
                 <SiteImage
                   image={image}
                   fill
                   sizes="(min-width: 64rem) 45vw, 100vw"
                 />
-              </div>
+              </RevealImage>
             </div>
           ) : null}
-          <div className="site-split__text">
+          <Reveal className="site-split__text" stagger={0.1} delay={0.15}>
             {section.eyebrow ? (
-              <p className="site-eyebrow">{section.eyebrow}</p>
+              <RevealItem>
+                <p className="site-eyebrow">{section.eyebrow}</p>
+              </RevealItem>
             ) : null}
-            {section.heading ? <h2 id={id}>{section.heading}</h2> : null}
-            <RichTextView document={payload.body} className="site-prose" />
-            <div className="site-actions">
+            {section.heading ? (
+              <RevealItem>
+                <h2 id={id}>{section.heading}</h2>
+              </RevealItem>
+            ) : null}
+            <RevealItem>
+              <RichTextView document={payload.body} className="site-prose" />
+            </RevealItem>
+            <RevealItem className="site-actions">
               <CtaLink
                 cta={payload.cta}
                 bookingMessage={context.bookingMessage}
               />
-            </div>
-          </div>
+            </RevealItem>
+          </Reveal>
         </section>
       );
     }
@@ -216,26 +242,28 @@ export function PageSection({
         >
           <SectionHeading section={section} id={labelledBy} />
           {section.type === "STATS" ? (
-            <dl className="site-stats">
+            <Reveal as="dl" className="site-stats" stagger={0.12}>
               {items.map((item, index) => (
-                <div key={index}>
+                <RevealItem key={index}>
                   <dt>{text(item.label)}</dt>
-                  <dd>{text(item.value)}</dd>
-                </div>
+                  <dd>
+                    <CountUp value={text(item.value)} />
+                  </dd>
+                </RevealItem>
               ))}
-            </dl>
+            </Reveal>
           ) : (
-            <ul className="site-features">
+            <Reveal as="ul" className="site-features" stagger={0.1}>
               {items.map((item, index) => (
-                <li key={index}>
+                <RevealItem as="li" key={index}>
                   <span className="site-features__index" aria-hidden="true">
                     {String(index + 1).padStart(2, "0")}
                   </span>
                   <h3>{text(item.title)}</h3>
                   <p>{text(item.body)}</p>
-                </li>
+                </RevealItem>
               ))}
-            </ul>
+            </Reveal>
           )}
         </section>
       );
@@ -305,7 +333,7 @@ export function PageSection({
             </div>
           ) : null}
           <div className="site-contact-cta__inner site-container">
-            <div className="site-contact-cta__intro">
+            <Reveal className="site-contact-cta__intro">
               {section.eyebrow ? (
                 <p className="site-eyebrow">{section.eyebrow}</p>
               ) : null}
@@ -334,8 +362,12 @@ export function PageSection({
                   </Link>
                 </div>
               )}
-            </div>
-            {form ? <div className="site-contact-cta__form">{form}</div> : null}
+            </Reveal>
+            {form ? (
+              <Reveal className="site-contact-cta__form" delay={0.15}>
+                {form}
+              </Reveal>
+            ) : null}
           </div>
         </section>
       );

@@ -3,6 +3,8 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 
 import type { PublicImage } from "@/application/public/view-models";
+import { ParallaxLayer } from "@/presentation/site/motion/hero-scroll";
+import { SharedElement } from "@/presentation/site/motion/shared-element";
 import { BrushEdge, SunRays } from "@/presentation/site/ornaments";
 import { SiteImage } from "@/presentation/site/site-image";
 
@@ -47,12 +49,15 @@ export function DetailHero({
   title,
   lede,
   image,
+  morphName,
   children,
 }: Readonly<{
   parent: Readonly<{ href: Route; label: string }>;
   title: string;
   lede: string;
   image: PublicImage | null;
+  /** Shared with the listing card's photo, so navigating morphs it here. */
+  morphName: string;
   children?: ReactNode;
 }>) {
   const wide = image !== null && image.width >= FULL_BLEED_MIN_WIDTH;
@@ -61,9 +66,13 @@ export function DetailHero({
       className={`site-detail-hero site-detail-hero--${wide ? "wide" : "split"}`}
     >
       {wide ? (
-        <div className="site-detail-hero__backdrop">
-          <SiteImage image={image} fill preload sizes="100vw" />
-        </div>
+        <SharedElement name={morphName}>
+          <div className="site-detail-hero__backdrop">
+            <ParallaxLayer className="site-hero__parallax">
+              <SiteImage image={image} fill preload sizes="100vw" />
+            </ParallaxLayer>
+          </div>
+        </SharedElement>
       ) : (
         <SunRays className="site-page-hero__rays" />
       )}
@@ -84,13 +93,15 @@ export function DetailHero({
           {children ? <div className="site-actions">{children}</div> : null}
         </div>
         {!wide && image ? (
-          <div className="site-detail-hero__media">
-            <SiteImage
-              image={image}
-              preload
-              sizes="(min-width: 64rem) 40rem, 100vw"
-            />
-          </div>
+          <SharedElement name={morphName}>
+            <div className="site-detail-hero__media">
+              <SiteImage
+                image={image}
+                preload
+                sizes="(min-width: 64rem) 40rem, 100vw"
+              />
+            </div>
+          </SharedElement>
         ) : null}
       </div>
       <BrushEdge className="site-edge" />

@@ -5,6 +5,7 @@ import { getActivePromotion, getSiteSettings } from "@/composition/public";
 import { PromotionPopup } from "@/presentation/features/promotions/promotion-popup";
 import { SiteFooter } from "@/presentation/site/site-footer";
 import { SiteHeader } from "@/presentation/site/site-header";
+import { MotionProvider } from "@/presentation/site/motion/motion-provider";
 
 import { bookingMessage } from "./site-content";
 
@@ -23,18 +24,20 @@ export default async function MarketingLayout({
     bookingMessage(),
   ]);
   return (
-    <div className="site-shell">
-      <a className="skip-link" href="#main-content">
-        Skip to content
-      </a>
-      <SiteHeader settings={settings} bookingMessage={message} />
-      <main id="main-content" className="site-main" tabIndex={-1}>
-        {children}
-      </main>
-      <SiteFooter settings={settings} />
-      <Suspense fallback={null}>
-        <ActivePromotion />
-      </Suspense>
-    </div>
+    <MotionProvider>
+      <div className="site-shell">
+        <a className="skip-link" href="#main-content">
+          Skip to content
+        </a>
+        <SiteHeader settings={settings} bookingMessage={message} />
+        <main id="main-content" className="site-main" tabIndex={-1}>
+          {children}
+        </main>
+        <SiteFooter settings={settings} />
+        <Suspense fallback={null}>
+          <ActivePromotion />
+        </Suspense>
+      </div>
+    </MotionProvider>
   );
 }

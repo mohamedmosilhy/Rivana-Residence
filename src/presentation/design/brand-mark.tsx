@@ -1,14 +1,28 @@
+import Image from "next/image";
+
+import logoOnDark from "../../../design/assets/images/rivana-logo.png";
+import logoOnLight from "../../../design/assets/images/rivana-logo-sticky.png";
+
 type BrandMarkProps = Readonly<{
+  /** For plum surfaces (the admin sidebar and menu sheet). */
   inverse?: boolean;
+  /** Empty when a neighbouring label already names the brand. */
+  alt?: string;
 }>;
 
-export function BrandMark({ inverse = false }: BrandMarkProps) {
+/** The approved Rivana logo, used across the admin screens. */
+export function BrandMark({
+  inverse = false,
+  alt = "Rivana Residence",
+}: BrandMarkProps) {
   return (
-    <span className="brand-mark" aria-label="Rivana Residence">
-      <span className="brand-mark__primary">Rivana</span>
-      <span className="brand-mark__secondary" style={inverse ? { color: "inherit" } : undefined}>
-        Residence
-      </span>
-    </span>
+    <Image
+      src={inverse ? logoOnDark : logoOnLight}
+      alt={alt}
+      width={500}
+      height={300}
+      unoptimized
+      className="brand-mark"
+    />
   );
 }

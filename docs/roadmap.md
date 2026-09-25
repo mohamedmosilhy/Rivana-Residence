@@ -632,7 +632,7 @@ Accepted on 2026-09-26 when the client asked for the Phase 7 review and Phase 8 
 
 ## Phase 8 — Modern luxury visual system
 
-Status: `Ready for review`
+Status: **Accepted on 2026-09-26**
 
 ### Objective
 
@@ -697,13 +697,13 @@ Apply the approved Rivana design system and achieve a polished, coherent hospita
 
 ### Reviewer decision
 
-Awaiting client review. Obtain explicit visual approval before motion is layered onto the interface. Evidence: [phase-8-visual-system.md](./phase-8-visual-system.md).
+Accepted on 2026-09-26 when the client asked for Phase 8 to be committed, merged, and pushed and for Phase 9 to begin. Evidence: [phase-8-visual-system.md](./phase-8-visual-system.md).
 
 ---
 
 ## Phase 9 — Interaction and motion
 
-Status: `Not started`
+Status: `Ready for review`
 
 ### Objective
 
@@ -762,7 +762,7 @@ Add refined interaction feedback and motion without reducing accessibility or pe
 
 ### Reviewer decision
 
-Approve interaction behavior before SEO/performance final tuning changes loading/caching.
+Awaiting client review. Approve interaction behavior before SEO/performance final tuning changes loading/caching. Please confirm the client-requested hero parallax exception. Evidence: [phase-9-motion.md](./phase-9-motion.md).
 
 ---
 

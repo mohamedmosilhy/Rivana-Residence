@@ -30,7 +30,7 @@ export function AdminShell({
         </a>
         <aside className="admin-sidebar">
           <Link href="/admin" className="admin-sidebar__brand">
-            <BrandMark />
+            <BrandMark inverse />
             <span className="sr-only">admin overview</span>
           </Link>
           <AdminNav items={navigation} label="Admin" />

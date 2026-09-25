@@ -42,7 +42,7 @@ export function MobileNav({ items }: Readonly<{ items: readonly NavItem[] }>) {
       >
         <div className="admin-sheet__panel">
           <div className="admin-sheet__header">
-            <BrandMark />
+            <BrandMark inverse />
             <button
               type="button"
               className="admin-sheet__close"

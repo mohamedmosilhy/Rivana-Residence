@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import type { CSSProperties } from "react";
 import { usePathname } from "next/navigation";
 
 import { SITE_LINKS } from "@/presentation/site/site-links";
@@ -18,7 +19,10 @@ export function SiteNavLinks({
             ? pathname === "/"
             : pathname === link.href || pathname.startsWith(`${link.href}/`);
         return (
-          <li key={link.href}>
+          <li
+            key={link.href}
+            style={numbered ? ({ "--i": index } as CSSProperties) : undefined}
+          >
             <Link href={link.href} aria-current={current ? "page" : undefined}>
               {numbered ? (
                 <span className="site-menu__index" aria-hidden="true">

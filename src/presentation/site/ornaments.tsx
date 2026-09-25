@@ -1,3 +1,5 @@
+import type { CSSProperties } from "react";
+
 // Decorative brand shapes drawn as lightweight inline SVG. They carry no
 // meaning, so they are hidden from assistive technology.
 
@@ -35,6 +37,7 @@ export function SunRays({ className }: Readonly<{ className?: string }>) {
         <line
           key={index}
           {...ray}
+          style={{ "--i": index } as CSSProperties}
           stroke="currentColor"
           strokeWidth="3"
           strokeLinecap="round"

@@ -85,6 +85,7 @@ Auth E2E runs when `E2E_DATABASE_URL` points to a disposable `*_test` database: 
 - contrast and 200% zoom/reflow checks;
 - reduced-motion tests;
 - screenshot comparisons for every public template's opening screen at desktop (1440px) and phone (Pixel 7) widths (`tests/e2e/visual.spec.ts`);
+- interaction and motion checks (`tests/e2e/public-site.spec.ts`, "interaction and motion"): photo-viewer keyboard/focus/swipe, mobile menu inertness and focus containment, scroll reveals, header tuck/return, and reduced motion; unit coverage in `tests/unit/public/motion.test.tsx`;
 - a horizontal-overflow sweep of every template at 320, 390, 768, 1024, 1280, and 1440px and a phone touch-target check (`tests/e2e/public-site.spec.ts`);
 - `npx tsx scripts/contrast-report.mts` fails when any public colour pairing drops below its WCAG minimum.
 

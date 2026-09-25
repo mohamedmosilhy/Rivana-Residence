@@ -353,6 +353,176 @@ test("the hero image is the preloaded LCP candidate with meaningful alt text", a
   ).toBeGreaterThan(0);
 });
 
+test.describe("interaction and motion", () => {
+  test("the photo viewer works by keyboard and returns focus", async ({
+    page,
+    isMobile,
+  }) => {
+    test.skip(isMobile, "Keyboard flow is exercised on desktop.");
+    await page.goto("/rooms/studio-with-balcony");
+    const gallery = page.getByRole("list", {
+      name: "Photos of Studio with Balcony",
+    });
+    const opener = gallery.getByRole("link").first();
+    await opener.focus();
+    await page.keyboard.press("Enter");
+    const viewer = page.getByRole("dialog", {
+      name: "Photos of Studio with Balcony",
+    });
+    await expect(viewer).toBeVisible();
+    await expect(page).toHaveURL(/\/rooms\/studio-with-balcony$/);
+    const status = viewer.getByRole("status");
+    await expect(status).toContainText("Photo 1 of 3");
+    await expect(
+      viewer.getByRole("button", { name: "Previous photo" }),
+    ).toBeDisabled();
+
+    await page.keyboard.press("ArrowRight");
+    await expect(status).toContainText("Photo 2 of 3");
+    await page.keyboard.press("End");
+    await expect(status).toContainText("Photo 3 of 3");
+    await expect(
+      viewer.getByRole("button", { name: "Next photo" }),
+    ).toBeDisabled();
+
+    // Focus stays inside the modal viewer.
+    for (let step = 0; step < 8; step += 1) {
+      await page.keyboard.press("Tab");
+      expect(
+        await page.evaluate(
+          () => document.activeElement?.closest("dialog") !== null,
+        ),
+      ).toBe(true);
+    }
+
+    await page.keyboard.press("Escape");
+    await expect(viewer).toBeHidden();
+    await expect(opener).toBeFocused();
+  });
+
+  test("the photo viewer responds to swipes", async ({ page, isMobile }) => {
+    test.skip(!isMobile, "Swipe is exercised on the phone viewport.");
+    await page.goto("/rooms/studio-with-balcony");
+    await page
+      .getByRole("list", { name: "Photos of Studio with Balcony" })
+      .getByRole("link")
+      .first()
+      .click();
+    const stage = page.locator(".site-lightbox__stage");
+    const box = (await stage.boundingBox())!;
+    const y = box.y + box.height / 2;
+    await stage.dispatchEvent("pointerdown", {
+      clientX: box.x + box.width * 0.8,
+      clientY: y,
+    });
+    await stage.dispatchEvent("pointerup", {
+      clientX: box.x + box.width * 0.2,
+      clientY: y,
+    });
+    await expect(page.locator(".site-lightbox [role=status]")).toContainText(
+      "Photo 2 of 3",
+    );
+    await page.getByRole("button", { name: "Close photo viewer" }).click();
+    await expect(page.getByRole("dialog")).toBeHidden();
+  });
+
+  test("the mobile menu is a modal sheet", async ({ page, isMobile }) => {
+    test.skip(!isMobile, "The menu sheet is the phone navigation.");
+    await page.goto("/");
+    const toggle = page.locator("summary.site-menu__toggle");
+    await toggle.click();
+    const menu = page.getByRole("navigation", { name: "Main (menu)" });
+    await expect(menu.getByRole("link", { name: "Rooms" })).toBeVisible();
+    await expect(toggle).toHaveText("Close");
+    expect(
+      await page.evaluate(() => document.querySelector("main")!.inert),
+    ).toBe(true);
+
+    // Tab cycles within the sheet.
+    for (let step = 0; step < 10; step += 1) {
+      await page.keyboard.press("Tab");
+      expect(
+        await page.evaluate(
+          () => document.activeElement?.closest(".site-menu") !== null,
+        ),
+      ).toBe(true);
+    }
+
+    await page.keyboard.press("Escape");
+    await expect(menu).toBeHidden();
+    await expect(toggle).toBeFocused();
+    expect(
+      await page.evaluate(() => document.querySelector("main")!.inert),
+    ).toBe(false);
+
+    // A tap on the empty backdrop closes it too, once the sheet is down.
+    await toggle.click();
+    await expect(menu).toBeVisible();
+    await page.waitForFunction(() =>
+      document
+        .getAnimations()
+        .every((animation) => animation.playState !== "running"),
+    );
+    const links = (await menu.boundingBox())!;
+    await page.mouse.click(
+      links.x + links.width / 2,
+      links.y + links.height + 24,
+    );
+    await expect(menu).toBeHidden();
+  });
+
+  test("content below the fold is revealed on scroll", async ({ page }) => {
+    await page.goto("/");
+    const cards = page.locator(".site-card");
+    await expect(cards.first()).toBeAttached();
+    await cards.first().scrollIntoViewIfNeeded();
+    await expect(cards.first()).toHaveCSS("opacity", "1");
+    await expect(cards.first()).toBeVisible();
+  });
+
+  test("the header tucks away reading down and returns reading up", async ({
+    page,
+    isMobile,
+  }) => {
+    test.skip(isMobile, "Scroll direction is exercised on desktop.");
+    await page.goto("/");
+    const header = page.locator(".site-header");
+    await page.mouse.wheel(0, 1400);
+    await expect(header).toHaveAttribute("data-tucked", "true");
+    await page.mouse.wheel(0, -300);
+    await expect(header).toHaveAttribute("data-tucked", "false");
+    // Keyboard focus always brings it back.
+    await page.mouse.wheel(0, 900);
+    await expect(header).toHaveAttribute("data-tucked", "true");
+    await page
+      .getByRole("navigation", { name: "Main" })
+      .getByRole("link", { name: "Rooms" })
+      .focus();
+    await expect(header).toHaveCSS("transform", "none");
+  });
+
+  test("reduced motion shows everything immediately and holds still", async ({
+    page,
+    isMobile,
+  }) => {
+    test.skip(isMobile, "The reduced-motion pass runs once on desktop.");
+    await page.emulateMedia({ reducedMotion: "reduce" });
+    await page.goto("/");
+    await page.waitForLoadState("networkidle");
+    await expect(page.locator('[data-reveal-state="hidden"]')).toHaveCount(0);
+    await page.mouse.wheel(0, 1400);
+    await expect(page.locator(".site-hero__parallax")).toHaveCSS(
+      "transform",
+      "none",
+    );
+    await expect(page.locator(".site-header")).toHaveCSS("transform", "none");
+    await expect(page.locator(".site-split-title__char").first()).toHaveCSS(
+      "opacity",
+      "1",
+    );
+  });
+});
+
 test.describe("contact form", () => {
   test.describe.configure({ mode: "serial" });
   test.skip(({ isMobile }) => isMobile, "Submissions run once, on desktop.");

@@ -7,6 +7,8 @@ import type {
   PublicRoomFacts,
 } from "@/application/public/view-models";
 import { Icon } from "@/presentation/site/icons";
+import { Reveal, RevealItem } from "@/presentation/site/motion/reveal";
+import { SharedElement } from "@/presentation/site/motion/shared-element";
 import { SiteImage } from "@/presentation/site/site-image";
 
 /** Verified marketing facts only; never prices or availability. */
@@ -40,17 +42,19 @@ export function RoomCard({
   const Heading = `h${headingLevel}` as const;
   const facts = roomFactList(room.facts).slice(0, 3);
   return (
-    <article className="site-card">
-      <div className="site-card__media">
-        {room.hero ? (
-          <SiteImage
-            image={room.hero}
-            fill
-            decorative
-            sizes="(min-width: 64rem) 30vw, (min-width: 40rem) 50vw, 100vw"
-          />
-        ) : null}
-      </div>
+    <RevealItem as="article" className="site-card">
+      <SharedElement name={`room-${room.slug}`}>
+        <div className="site-card__media">
+          {room.hero ? (
+            <SiteImage
+              image={room.hero}
+              fill
+              decorative
+              sizes="(min-width: 64rem) 30vw, (min-width: 40rem) 50vw, 100vw"
+            />
+          ) : null}
+        </div>
+      </SharedElement>
       <div className="site-card__body">
         {index !== undefined ? (
           <p className="site-card__index" aria-hidden="true">
@@ -78,7 +82,7 @@ export function RoomCard({
           <Icon name="arrow" />
         </span>
       </div>
-    </article>
+    </RevealItem>
   );
 }
 
@@ -88,17 +92,19 @@ export function FacilityCard({
 }: Readonly<{ facility: PublicFacilityCard; headingLevel?: 2 | 3 }>) {
   const Heading = `h${headingLevel}` as const;
   return (
-    <article className="site-tile">
-      <div className="site-tile__media">
-        {facility.hero ? (
-          <SiteImage
-            image={facility.hero}
-            fill
-            decorative
-            sizes="(min-width: 64rem) 45vw, 100vw"
-          />
-        ) : null}
-      </div>
+    <RevealItem as="article" className="site-tile">
+      <SharedElement name={`facility-${facility.slug}`}>
+        <div className="site-tile__media">
+          {facility.hero ? (
+            <SiteImage
+              image={facility.hero}
+              fill
+              decorative
+              sizes="(min-width: 64rem) 45vw, 100vw"
+            />
+          ) : null}
+        </div>
+      </SharedElement>
       <div className="site-tile__body">
         <Heading className="site-tile__title">
           <Link
@@ -116,7 +122,7 @@ export function FacilityCard({
           </p>
         ) : null}
       </div>
-    </article>
+    </RevealItem>
   );
 }
 
@@ -125,8 +131,11 @@ export function CardGrid({
   variant = "rooms",
 }: Readonly<{ children: React.ReactNode; variant?: "rooms" | "tiles" }>) {
   return (
-    <div className={variant === "rooms" ? "site-card-grid" : "site-tile-grid"}>
+    <Reveal
+      stagger={0.12}
+      className={variant === "rooms" ? "site-card-grid" : "site-tile-grid"}
+    >
       {children}
-    </div>
+    </Reveal>
   );
 }

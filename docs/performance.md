@@ -69,6 +69,7 @@ Set per-route budgets during implementation rather than optimizing only a global
 - Animate transform/opacity only; avoid layout-triggering scroll animations.
 - Intersection observers disconnect after reveal.
 - Reduced-motion users get immediate content.
+- Phase 9: `motion` (ADR 012) adds about 43 KB gzipped to public pages, and its animation features load asynchronously. Measured per-page client JS: 185 KB (Phase 8) → 242 KB (Phase 9); tune against the budget in Phase 10.
 - No autoplay video/carousel in the initial release.
 
 ## Monitoring and budgets
