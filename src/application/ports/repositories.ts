@@ -35,6 +35,11 @@ export type MediaReference = Readonly<{
   altOverride: string | null;
   storageKey: string;
   rightsConfirmed: boolean;
+  width: number | null;
+  height: number | null;
+  /** 0–1 from the left/top, or null for the centre. */
+  focalX: number | null;
+  focalY: number | null;
 }>;
 
 export type SectionMediaReference = Omit<MediaReference, "role"> &
@@ -468,6 +473,8 @@ export interface MediaRepository {
 
 export interface PromotionRepository {
   getCurrent(now: Date): Promise<PromotionDto | null>;
+  /** Published pop-up promotions that have not ended by `now`. */
+  listPublishedPopups(now: Date): Promise<readonly PromotionDto[]>;
   listAdmin(): Promise<readonly PromotionDto[]>;
   findAdminById(id: string): Promise<PromotionDto | null>;
   create(input: PromotionInput, actor: Actor): Promise<Result<PromotionDto>>;
@@ -513,6 +520,9 @@ export interface EnquiryRepository {
     input: Omit<ContactEnquiryDto, "id" | "status" | "createdAt">,
   ): Promise<Result<ContactEnquiryDto>>;
   archive(id: string, actor: Actor, now: Date): Promise<Result<void>>;
+  /** Records successful delivery; the enquiry stays NEW for staff. */
+  markDelivered(id: string, messageId: string): Promise<void>;
+  markDeliveryFailed(id: string): Promise<void>;
 }
 
 export type PublicationCounts = Readonly<Record<PublicationStatus, number>>;

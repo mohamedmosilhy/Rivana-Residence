@@ -54,7 +54,15 @@ function mediaReference<Role extends string>(usage: {
   altOverride: string | null;
   media: Pick<
     MediaRow,
-    "id" | "status" | "altText" | "storageKey" | "rightsStatus"
+    | "id"
+    | "status"
+    | "altText"
+    | "storageKey"
+    | "rightsStatus"
+    | "width"
+    | "height"
+    | "focalX"
+    | "focalY"
   >;
 }) {
   return {
@@ -66,6 +74,10 @@ function mediaReference<Role extends string>(usage: {
     altOverride: usage.altOverride,
     storageKey: usage.media.storageKey,
     rightsConfirmed: usage.media.rightsStatus === "CONFIRMED",
+    width: usage.media.width,
+    height: usage.media.height,
+    focalX: usage.media.focalX === null ? null : usage.media.focalX.toNumber(),
+    focalY: usage.media.focalY === null ? null : usage.media.focalY.toNumber(),
   };
 }
 

@@ -28,6 +28,10 @@ export async function resolveMediaAssignments(
       altText: true,
       storageKey: true,
       rightsStatus: true,
+      width: true,
+      height: true,
+      focalX: true,
+      focalY: true,
     },
   });
   const byId = new Map(rows.map((row) => [row.id, row]));
@@ -50,6 +54,10 @@ export async function resolveMediaAssignments(
         altOverride: assignment.altOverride,
         storageKey: asset.storageKey,
         rightsConfirmed: asset.rightsStatus === "CONFIRMED",
+        width: asset.width,
+        height: asset.height,
+        focalX: asset.focalX === null ? null : asset.focalX.toNumber(),
+        focalY: asset.focalY === null ? null : asset.focalY.toNumber(),
       };
     }),
   );

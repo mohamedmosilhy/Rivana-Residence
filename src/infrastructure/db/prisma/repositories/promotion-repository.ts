@@ -39,6 +39,18 @@ export class PrismaPromotionRepository implements PromotionRepository {
     return row ? mapPromotion(row) : null;
   }
 
+  async listPublishedPopups(now: Date) {
+    const rows = await this.client.promotion.findMany({
+      where: {
+        status: "PUBLISHED",
+        showAsPopup: true,
+        OR: [{ endsAt: null }, { endsAt: { gt: now } }],
+      },
+      orderBy: [{ priority: "desc" }, { publishedAt: "desc" }, { id: "asc" }],
+    });
+    return rows.map(mapPromotion);
+  }
+
   async listAdmin() {
     const rows = await this.client.promotion.findMany({
       orderBy: [{ updatedAt: "desc" }, { id: "asc" }],

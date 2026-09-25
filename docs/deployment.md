@@ -5,7 +5,7 @@
 - **Application:** Next.js 16 production Node process on Hosting.com/cPanel, deployed over the existing SSH access after account preflight.
 - **Database:** PostgreSQL 18.6 where supported (17.11 fallback), either on the Hosting.com account or an external managed service, with backups and separate runtime/migration credentials where available.
 - **Media:** persistent local directory on the Hosting.com account behind `MediaStorage`, outside the application checkout/release tree and exposed at a controlled `/media/` URL.
-- **Email:** transactional provider behind `ContactDelivery` and auth reset callbacks.
+- **Email:** SMTP behind `ContactDelivery` for contact enquiries; auth reset delivery remains disabled until its provider flow is implemented.
 - **DNS/TLS:** production domain with managed TLS.
 
 The app remains deployable as a standard Node process/container because domain/application code does not depend on cPanel APIs. Host-specific process, cache, image, and filesystem integration stays in infrastructure/configuration.
@@ -25,7 +25,7 @@ Docker is not available on the current shared cPanel plan. Build/test container 
 
 ## Configuration
 
-Expected server secrets/config include database runtime/migration URLs, auth secret/base URL, absolute `MEDIA_STORAGE_ROOT`, public media URL prefix, upload limits, email API key/from/to addresses, canonical site URL, and optional observability DSN. Public environment variables are limited to genuinely public configuration. The database stores relative media keys, not `MEDIA_STORAGE_ROOT`.
+Expected server secrets/config include database runtime/migration URLs, auth secret/base URL, absolute `MEDIA_STORAGE_ROOT`, contact delivery mode and SMTP host/port/user/password/from/to addresses, canonical site URL, and optional observability DSN. Public environment variables are limited to genuinely public configuration. The database stores relative media keys, not `MEDIA_STORAGE_ROOT`. See `.env.example` and [phase-7-public-site.md](./phase-7-public-site.md#contact-delivery-evidence) for the exact contact variables and pre-deployment smoke check.
 
 All configuration is validated at startup. Missing critical production configuration fails the build/start clearly rather than silently disabling security.
 
@@ -38,6 +38,8 @@ All configuration is validated at startup. Missing critical production configura
 5. Smoke checks verify public routes, admin login page, database health, media delivery, and contact delivery in a controlled mode.
 6. Restart/reload the managed Node process and retain the previous release for rollback. The shared media root is never copied over or removed by deployment cleanup.
 
+Public content reads are cached on disk in `.next/cache/fetch-cache` and invalidated by CMS actions. After any out-of-band database change (backup restore, seed, SQL fix, CLI import), delete that directory and restart the app so visitors do not see stale content. See [phase-7-public-site.md](./phase-7-public-site.md#public-cache).
+
 Do not run development migrations or schema push in production. Destructive migrations use expand/migrate/contract steps across releases.
 
 ## Backups and recovery
@@ -45,6 +47,7 @@ Do not run development migrations or schema push in production. Destructive migr
 - managed PostgreSQL daily backups plus point-in-time recovery where available;
 - nightly off-server backup of the media root plus checksums/manifest; cPanel account backups alone are not the only copy;
 - hourly `npm run media -- cleanup` (cron) to fail abandoned uploads, clear stray quarantine files, and finish deletions whose file removal failed; see [phase-6-media.md](./phase-6-media.md#storage-configuration-permissions-and-backup) for the media root layout and permissions;
+- after any database restore, clear `.next/cache/fetch-cache` and restart the app;
 - quarterly restore drill into a non-production environment;
 - record recovery point/time objectives with the client before launch (initial target: RPO ≤ 24h, RTO ≤ 4h, improved if provider plans allow);
 - content migration source assets retained separately until acceptance.

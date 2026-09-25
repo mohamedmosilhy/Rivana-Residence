@@ -1,6 +1,6 @@
 # Rivana Residence production documentation
 
-This directory began as the Phase 0 blueprint for rebuilding Rivana Residence as a production marketing website and content-management system. Phase 0 is approved, and the Phase 1 application foundation is now ready for review.
+This directory began as the Phase 0 blueprint for rebuilding Rivana Residence as a production marketing website and content-management system. Phases 0–6 are approved, and the Phase 7 public website is ready for review.
 
 The source of truth for the visual audit is `../design/`. The legacy WordPress export in the parent workspace was treated only as content and asset provenance. Its plugin/theme architecture will not be migrated.
 
@@ -38,6 +38,7 @@ Every Book Now control initially renders as a visually complete, disabled/inert 
 | [phase-4-admin-shell.md](./phase-4-admin-shell.md) | Phase 4 admin shell, shared CMS patterns, settings workflow, accessibility notes, test evidence, and limitations |
 | [phase-5-content-management.md](./phase-5-content-management.md) | Phase 5 room, facility, page, and promotion management; final fields; cache-invalidation matrix; test matrix; limitations |
 | [phase-6-media.md](./phase-6-media.md) | Phase 6 media storage, upload verification and threat tests, library/picker, replace/delete, asset migration manifest, limitations |
+| [phase-7-public-site.md](./phase-7-public-site.md) | Phase 7 public routes, managed-content queries, contact delivery, promotion pop-up, booking boundary, test evidence, and limitations |
 
 ## Current technical baseline
 
@@ -57,4 +58,4 @@ The retained identity is deep plum (`#652A4C`), warm gold (`#DBAF71`), editorial
 
 ## Status
 
-Phases 0–5 were approved by the client on 2026-09-25. Phase 6 (media management) is implemented and `Ready for review`. Phase 7 has not started.
+Phases 0–6 were approved by the client on 2026-09-25. Phase 7 (public website functionality) is implemented and `Ready for review`; its information architecture and content behavior must be approved before Phase 8 visual polish.

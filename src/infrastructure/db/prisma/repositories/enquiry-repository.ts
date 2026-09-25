@@ -95,4 +95,18 @@ export class PrismaEnquiryRepository implements EnquiryRepository {
       return translatePrismaWriteError(error);
     }
   }
+
+  async markDelivered(id: string, messageId: string) {
+    await this.client.contactEnquiry.update({
+      where: { id },
+      data: { deliveryMessageId: messageId.slice(0, 255) },
+    });
+  }
+
+  async markDeliveryFailed(id: string) {
+    await this.client.contactEnquiry.updateMany({
+      where: { id, status: "NEW" },
+      data: { status: "DELIVERY_FAILED" },
+    });
+  }
 }

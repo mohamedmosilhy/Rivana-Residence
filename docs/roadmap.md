@@ -470,7 +470,7 @@ Approved by the client on 2026-09-25 with authorization to begin Phase 6. The ap
 
 ## Phase 6 — Media management
 
-Status: `Ready for review`
+Status: **Accepted on 2026-09-25**
 
 ### Objective
 
@@ -542,13 +542,13 @@ Provide safe, provider-neutral image management and migrate approved source asse
 
 ### Reviewer decision
 
-Awaiting client review. Approve the media behavior (upload policy, re-encoding, rights model, replacement, and deletion) and the migrated asset set, including exclusions, duplicates, and rights confirmation for the reference images, before final public compositions. The staging media root is provisioned and verified on Hosting.com; the off-server backup, production root, and a free-space alert (the provider's shared disk is 99% full) remain before launch. Evidence: [phase-6-media.md](./phase-6-media.md). Phase 7 has not started.
+Approved by the client on 2026-09-25 with authorization to begin Phase 7. The approval accepts the media behavior and the migrated asset manifest; reference-image usage rights still need confirmation per image before content using them is published. The off-server backup, production media root, and free-space alert remain launch tasks. Evidence: [phase-6-media.md](./phase-6-media.md).
 
 ---
 
 ## Phase 7 — Public website functionality
 
-Status: `Not started`
+Status: `Ready for review`
 
 ### Objective
 
@@ -626,7 +626,7 @@ Implement every required public route with server-rendered real CMS content and 
 
 ### Reviewer decision
 
-Approve information architecture and content behavior before visual-polish work.
+Awaiting client review. Approve the public information architecture, managed-content behavior, canonical facility paths, contact workflow, promotion behavior, and disabled booking boundary before Phase 8 visual-polish work. Evidence: [phase-7-public-site.md](./phase-7-public-site.md).
 
 ---
 

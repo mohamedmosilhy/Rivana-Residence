@@ -10,6 +10,7 @@ import { PrismaClient } from "../../src/generated/prisma/client.ts";
 import { seedDatabase } from "../../prisma/seed-data.ts";
 import { createStaff, setStaffActive } from "../../scripts/staff-admin.ts";
 import { E2E_PASSWORD, E2E_PROJECTS, accountsFor } from "./support/accounts.ts";
+import { seedPublicContent } from "./fixtures/public-content.mts";
 
 const url = process.env.E2E_DATABASE_URL;
 if (!url) throw new Error("E2E_DATABASE_URL is required.");
@@ -17,6 +18,7 @@ if (!url) throw new Error("E2E_DATABASE_URL is required.");
 // Uploaded objects belong to the database being recreated, so start empty.
 // Keep in sync with MEDIA_STORAGE_ROOT in playwright.config.ts.
 await rm("/tmp/rivana-e2e-media", { recursive: true, force: true });
+await rm("/tmp/rivana-e2e-outbox", { recursive: true, force: true });
 
 {
   const target = new URL(url);
@@ -68,6 +70,13 @@ await rm("/tmp/rivana-e2e-media", { recursive: true, force: true });
       }
       await setStaffActive(client, accounts.inactive, false);
     }
+    const author = await client.user.findFirstOrThrow({
+      where: { role: "ADMIN" },
+    });
+    await seedPublicContent(client, "/tmp/rivana-e2e-media", {
+      id: author.id,
+      role: "ADMIN",
+    });
   } finally {
     await client.$disconnect();
   }

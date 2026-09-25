@@ -161,6 +161,11 @@ export function checkDecodedImage(
   return null;
 }
 
+/** The public URL path of a stored object. */
+export function publicMediaPath(storageKey: string) {
+  return `/media/${storageKey}`;
+}
+
 /** A safe original filename for display only; never used as a path. */
 export function displayFilename(value: string) {
   const base = value.split(/[\\/]/).pop() ?? "";

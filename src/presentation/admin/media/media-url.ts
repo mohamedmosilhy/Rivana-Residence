@@ -1,7 +1,7 @@
+import { publicMediaPath } from "@/domain/media/media-asset";
+
 /** The public URL of a ready image's object. */
-export function mediaUrl(storageKey: string) {
-  return `/media/${storageKey}`;
-}
+export const mediaUrl = publicMediaPath;
 
 export function formatBytes(bytes: number) {
   if (bytes < 1024) return `${bytes} B`;

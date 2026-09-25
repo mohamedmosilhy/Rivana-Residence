@@ -93,7 +93,9 @@ test("editors take a room from draft to published and back to archived", async (
   await expect(
     page.getByText("This room is live on the website."),
   ).toBeVisible();
-  await expect(page.getByText(`/rooms/${slug}`, { exact: true })).toBeVisible();
+  await expect(
+    page.getByRole("link", { name: "View public page" }),
+  ).toHaveAttribute("href", `/rooms/${slug}`);
 
   await page.getByRole("link", { name: "Preview" }).click();
   await expect(
@@ -277,23 +279,28 @@ test.describe("page editing", () => {
       "Facts and figures",
     );
 
-    await confirm(page, "Publish");
+    // The fixture site starts with About published: take it down, preview
+    // it, and put it back, so later public-site tests see it live.
+    await confirm(page, "Unpublish");
     await expect(
-      page.getByText("This page is live on the website."),
+      page.getByText("This page is ready to publish."),
     ).toBeVisible();
-    const { rows } = await sql(
-      `SELECT "isPublished" FROM "Page" WHERE key = 'ABOUT'`,
-    );
-    expect(rows[0]).toEqual({ isPublished: true });
 
     await page.getByRole("link", { name: "Preview" }).click();
     await expect(page.getByText("About Rivana Residence")).toBeVisible();
     await page.goBack();
 
-    await confirm(page, "Unpublish");
+    await confirm(page, "Publish");
     await expect(
-      page.getByText("This page is ready to publish."),
+      page.getByText("This page is live on the website."),
     ).toBeVisible();
+    await expect(
+      page.getByRole("link", { name: "View public page" }),
+    ).toHaveAttribute("href", "/about");
+    const { rows } = await sql(
+      `SELECT "isPublished" FROM "Page" WHERE key = 'ABOUT'`,
+    );
+    expect(rows[0]).toEqual({ isPublished: true });
   });
 
   test("an invalid section edit is explained and not saved", async ({

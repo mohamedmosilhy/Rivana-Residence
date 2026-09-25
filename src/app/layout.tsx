@@ -10,7 +10,7 @@ export const metadata: Metadata = {
     default: "Rivana Residence",
     template: "%s | Rivana Residence",
   },
-  description: "Rivana Residence website foundation.",
+  description: "Rivana Residence: serviced rooms and suites in New Cairo.",
 };
 
 type RootLayoutProps = Readonly<{

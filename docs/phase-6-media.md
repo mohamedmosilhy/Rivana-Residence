@@ -1,6 +1,6 @@
 # Phase 6 media management handoff
 
-Status: **Ready for review**  
+Status: **Accepted on 2026-09-25**
 Completed: 2026-09-25  
 Scope: image storage, upload verification, the media library and picker, replacement and deletion, and the reference-asset migration. Public image rendering (responsive sizes, `next/image`) is Phase 7/10.
 
@@ -240,4 +240,4 @@ Screenshots in `docs/screenshots/`:
 
 ## Reviewer decision
 
-Awaiting client review. Approve the media behaviour (upload policy, re-encoding, rights model, replacement, and deletion) and the migrated asset set, including the exclusions and duplicates above and confirmation of the reference images' rights, before the public compositions are built. Phase 7 has not started.
+Approved by the client on 2026-09-25, including the upload policy, re-encoding, rights model, and the migrated asset manifest. Rights for each reference image still need confirmation before use on published content. Phase 7 was authorized to begin.

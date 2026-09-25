@@ -1,5 +1,11 @@
 export const E2E_PASSWORD = "Nile-evening-lantern-42";
-export const E2E_PROJECTS = ["desktop-chromium", "mobile-chromium"] as const;
+export const E2E_PROJECTS = [
+  "desktop-chromium",
+  "mobile-chromium",
+  "public-desktop",
+  "public-mobile",
+  "promotions",
+] as const;
 
 // Each Playwright project gets its own accounts so parallel runs never share
 // sessions or throttle counters.

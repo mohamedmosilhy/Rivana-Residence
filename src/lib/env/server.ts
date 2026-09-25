@@ -15,6 +15,15 @@ export function getServerEnv() {
     DIRECT_DATABASE_URL: process.env.DIRECT_DATABASE_URL,
     BETTER_AUTH_SECRET: process.env.BETTER_AUTH_SECRET,
     AUTH_TRUST_PROXY_HEADERS: process.env.AUTH_TRUST_PROXY_HEADERS,
+    CONTACT_DELIVERY: process.env.CONTACT_DELIVERY,
+    CONTACT_OUTBOX_DIR: process.env.CONTACT_OUTBOX_DIR,
+    CONTACT_TO: process.env.CONTACT_TO,
+    CONTACT_FROM: process.env.CONTACT_FROM,
+    SMTP_HOST: process.env.SMTP_HOST,
+    SMTP_PORT: process.env.SMTP_PORT,
+    SMTP_SECURE: process.env.SMTP_SECURE,
+    SMTP_USER: process.env.SMTP_USER,
+    SMTP_PASSWORD: process.env.SMTP_PASSWORD,
   });
   return cached;
 }

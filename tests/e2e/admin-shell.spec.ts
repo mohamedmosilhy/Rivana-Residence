@@ -285,7 +285,8 @@ test.describe("settings", () => {
       hasText: "Some settings need attention.",
     });
     await expect(summary).toBeFocused();
-    await expect(summary.getByRole("link")).toHaveCount(4);
+    // Name, email, and latitude (the fixture site already has a longitude).
+    await expect(summary.getByRole("link")).toHaveCount(3);
     await expect(page.getByLabel("Email")).toHaveAttribute(
       "aria-invalid",
       "true",

@@ -89,6 +89,10 @@ describe("room repository", () => {
           altOverride: null,
           storageKey: hero.storageKey,
           rightsConfirmed: true,
+          width: 1600,
+          height: 900,
+          focalX: null,
+          focalY: null,
         },
       ],
     });
