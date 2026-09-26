@@ -572,17 +572,3 @@ export type AdminOverviewDto = Readonly<{
 export interface AdminOverviewReader {
   read(now: Date, recentLimit: number): Promise<AdminOverviewDto>;
 }
-
-export type TransactionRepositories = Readonly<{
-  rooms: RoomRepository;
-  facilities: FacilityRepository;
-  pages: PageRepository;
-  media: MediaRepository;
-  promotions: PromotionRepository;
-}>;
-
-export interface UnitOfWork {
-  run<T>(
-    operation: (repositories: TransactionRepositories) => Promise<T>,
-  ): Promise<T>;
-}

@@ -241,6 +241,7 @@ export function Gallery({
                     image={image}
                     sizes="(min-width: 64rem) 80vw, 100vw"
                     className="site-lightbox__image"
+                    fit="contain"
                   />
                   {image.alt ? <figcaption>{image.alt}</figcaption> : null}
                 </m.figure>

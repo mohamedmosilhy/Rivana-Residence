@@ -1,9 +1,12 @@
 import Link from "next/link";
+import { connection } from "next/server";
 
 import { BrandLogo } from "@/presentation/site/brand-logo";
 
-// Unmatched URLs outside any route group land here.
-export default function NotFound() {
+// Unmatched URLs outside any route group land here. Rendered per request so
+// its scripts carry the CSP nonce.
+export default async function NotFound() {
+  await connection();
   return (
     <main id="main-content" className="site-holding site-holding--bare">
       <div className="site-holding__content site-container">

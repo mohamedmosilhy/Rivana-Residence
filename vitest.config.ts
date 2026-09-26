@@ -17,7 +17,11 @@ export default defineConfig({
     include: ["tests/unit/**/*.test.{ts,tsx}"],
     setupFiles: ["./tests/setup.ts"],
     coverage: {
-      reporter: ["text", "html"],
+      provider: "v8",
+      include: ["src/**/*.{ts,tsx}"],
+      exclude: ["src/generated/**"],
+      reporter: ["text-summary", "html"],
+      reportsDirectory: "coverage/unit",
     },
   },
 });

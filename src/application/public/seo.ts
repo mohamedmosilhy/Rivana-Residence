@@ -99,7 +99,11 @@ export function roomJsonLd(
           },
         }
       : {}),
-    maximumAttendeeCapacity: maximumOccupancy,
+    occupancy: {
+      "@type": "QuantitativeValue",
+      maxValue: maximumOccupancy,
+      unitText: "guests",
+    },
     ...(settings
       ? {
           containedInPlace: {

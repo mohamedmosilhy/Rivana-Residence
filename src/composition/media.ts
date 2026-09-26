@@ -3,7 +3,6 @@ import "server-only";
 import os from "node:os";
 import path from "node:path";
 
-import { CleanupMedia } from "@/application/media/cleanup-media";
 import type { IngestDependencies } from "@/application/media/ingest-image";
 import { MediaLibrary } from "@/application/media/media-library";
 import type { ByteRange } from "@/application/ports/providers";
@@ -62,10 +61,6 @@ async function dependencies(): Promise<IngestDependencies> {
 
 export async function mediaLibrary() {
   return new MediaLibrary(await dependencies(), new NextCacheInvalidator());
-}
-
-export async function cleanupMedia() {
-  return new CleanupMedia(await dependencies(), clock);
 }
 
 /**

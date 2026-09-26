@@ -51,6 +51,12 @@ async function expectNoAxeViolations(page: Page) {
   expect(violations).toEqual([]);
 }
 
+// Safari moves focus to links and buttons with Option-Tab (plain Tab reaches
+// them only when "Press Tab to highlight each item" is enabled), and
+// Playwright's WebKit follows the macOS default.
+const tabKey = (browserName: string) =>
+  browserName === "webkit" ? "Alt+Tab" : "Tab";
+
 async function expectNoHorizontalScroll(page: Page) {
   const overflow = await page.evaluate(
     () => document.documentElement.scrollWidth - window.innerWidth,
@@ -255,18 +261,20 @@ test("visitors can navigate every route from the header", async ({
 test("keyboard users can skip to content and reach the navigation", async ({
   page,
   isMobile,
+  browserName,
 }) => {
   test.skip(isMobile, "Keyboard flow is exercised on desktop.");
+  const tab = tabKey(browserName);
   await page.goto("/");
-  await page.keyboard.press("Tab");
+  await page.keyboard.press(tab);
   await expect(
     page.getByRole("link", { name: "Skip to content" }),
   ).toBeFocused();
   await page.keyboard.press("Enter");
   await expect(page.locator("#main-content")).toBeFocused();
   await page.goto("/");
-  await page.keyboard.press("Tab");
-  await page.keyboard.press("Tab");
+  await page.keyboard.press(tab);
+  await page.keyboard.press(tab);
   await expect(
     page.getByRole("link", { name: /Rivana Residence home/ }),
   ).toBeFocused();
@@ -314,6 +322,37 @@ test("controls meet the touch-target minimum on phones", async ({
       );
     expect(small, path).toEqual([]);
   }
+});
+
+test("forced colours keep text, controls, and edges legible", async ({
+  page,
+  isMobile,
+  browserName,
+}) => {
+  test.skip(isMobile, "The high-contrast pass runs once on desktop.");
+  test.skip(browserName !== "chromium", "Forced colours emulate in Chromium.");
+  await page.emulateMedia({ forcedColors: "active" });
+  await page.goto("/rooms/studio-with-balcony");
+  const result = await page.evaluate(() => {
+    const colour = (selector: string, property: "color" | "borderTopColor") =>
+      getComputedStyle(document.querySelector(selector)!)[property];
+    return {
+      canvas: getComputedStyle(document.body).backgroundColor,
+      prose: colour(".site-prose p", "color"),
+      button: colour(
+        ".book-now button, .book-now [role=button], .site-button",
+        "borderTopColor",
+      ),
+      edges: [...document.querySelectorAll(".site-edge")].map(
+        (edge) => getComputedStyle(edge).display,
+      ),
+    };
+  });
+  // System colours replace the brand palette, so text and control borders
+  // differ from the canvas, and the decorative section edge is removed.
+  expect(result.prose).not.toBe(result.canvas);
+  expect(result.button).not.toBe(result.canvas);
+  expect(new Set(result.edges)).toEqual(new Set(["none"]));
 });
 
 test("reduced-motion preference removes non-essential motion", async ({
@@ -457,9 +496,75 @@ test("the hero image is the preloaded LCP candidate with meaningful alt text", a
 });
 
 test.describe("interaction and motion", () => {
+  test("the photo viewer fits the screen and shows the whole photo", async ({
+    page,
+  }) => {
+    await page.goto("/rooms/studio-with-balcony");
+    // Portrait (the project's own viewport) and a phone turned sideways.
+    for (const viewport of [
+      page.viewportSize()!,
+      { width: 844, height: 390 },
+    ]) {
+      await page.setViewportSize(viewport);
+      await page
+        .getByRole("list", { name: "Photos of Studio with Balcony" })
+        .getByRole("link")
+        .first()
+        .click();
+      const viewer = page.getByRole("dialog", {
+        name: "Photos of Studio with Balcony",
+      });
+      await expect(viewer).toBeVisible();
+      await page.waitForFunction(() =>
+        document
+          .getAnimations()
+          .every((animation) => animation.playState !== "running"),
+      );
+      const layout = await viewer.evaluate((dialog) => {
+        const offscreen = [
+          ...dialog.querySelectorAll("img, button, h2, figcaption"),
+        ]
+          .map((element) => ({
+            element,
+            box: element.getBoundingClientRect(),
+          }))
+          .filter(
+            ({ box }) =>
+              box.width > 0 &&
+              (box.left < -1 ||
+                box.right > innerWidth + 1 ||
+                box.bottom > innerHeight + 1),
+          )
+          .map(({ element }) => element.className || element.tagName);
+        const image = dialog.querySelector("img")!;
+        const box = image.getBoundingClientRect();
+        const scale = Math.min(
+          box.width / image.naturalWidth,
+          box.height / image.naturalHeight,
+        );
+        return {
+          offscreen,
+          fit: getComputedStyle(image).objectFit,
+          // Share of the available width the photo actually uses.
+          widthUsed: (image.naturalWidth * scale) / innerWidth,
+        };
+      });
+      expect(layout.offscreen, `${viewport.width}px`).toEqual([]);
+      expect(layout.fit).toBe("contain");
+      if (viewport.width > viewport.height) {
+        expect(layout.widthUsed).toBeGreaterThan(0.4);
+      } else {
+        expect(layout.widthUsed).toBeGreaterThan(0.6);
+      }
+      await page.keyboard.press("Escape");
+      await expect(viewer).toBeHidden();
+    }
+  });
+
   test("the photo viewer works by keyboard and returns focus", async ({
     page,
     isMobile,
+    browserName,
   }) => {
     test.skip(isMobile, "Keyboard flow is exercised on desktop.");
     await page.goto("/rooms/studio-with-balcony");
@@ -490,7 +595,7 @@ test.describe("interaction and motion", () => {
 
     // Focus stays inside the modal viewer.
     for (let step = 0; step < 8; step += 1) {
-      await page.keyboard.press("Tab");
+      await page.keyboard.press(tabKey(browserName));
       expect(
         await page.evaluate(
           () => document.activeElement?.closest("dialog") !== null,
@@ -590,6 +695,9 @@ test.describe("interaction and motion", () => {
     test.skip(isMobile, "Scroll direction is exercised on desktop.");
     await page.goto("/");
     const header = page.locator(".site-header");
+    // Scroll only once the enhancement is listening; a scroll that lands
+    // before hydration is (correctly) treated as the starting position.
+    await expect(header).toHaveAttribute("data-enhanced", "true");
     await page.mouse.wheel(0, 1400);
     await expect(header).toHaveAttribute("data-tucked", "true");
     await page.mouse.wheel(0, -300);

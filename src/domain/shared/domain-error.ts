@@ -13,16 +13,6 @@ export class DomainValidationError extends Error {
   }
 }
 
-export function invariant(
-  condition: unknown,
-  path: string,
-  message: string,
-): asserts condition {
-  if (!condition) {
-    throw new DomainValidationError(message, [{ path, message }]);
-  }
-}
-
 export function issuesFromZod(
   issues: readonly Readonly<{
     path: readonly PropertyKey[];

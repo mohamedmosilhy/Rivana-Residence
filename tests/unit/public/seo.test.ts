@@ -113,7 +113,11 @@ describe("public SEO data", () => {
     const data = roomJsonLd(room, settings, "https://rivana.example");
     expect(data).toMatchObject({
       "@type": "HotelRoom",
-      maximumAttendeeCapacity: 3,
+      occupancy: {
+        "@type": "QuantitativeValue",
+        maxValue: 3,
+        unitText: "guests",
+      },
       floorSize: { value: 38, unitCode: "MTK" },
       containedInPlace: { name: "Rivana Residence" },
     });

@@ -3242,33 +3242,6 @@ html:has(.site-menu[open]) {
   }
 }
 
-.admin-facts {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
-  gap: var(--space-3);
-  margin: 0;
-}
-
-.admin-facts div {
-  padding: var(--space-4);
-  border: 1px solid var(--neutral-300);
-  border-radius: var(--radius-panel);
-  background: var(--surface);
-}
-
-.admin-facts dt {
-  color: var(--neutral-600);
-  font-size: 0.875rem;
-}
-
-.admin-facts dd {
-  margin: var(--space-1) 0 0;
-  color: var(--neutral-950);
-  font-size: 1.375rem;
-  font-weight: 500;
-  overflow-wrap: anywhere;
-}
-
 /* Overview */
 
 .admin-attention {
@@ -5151,6 +5124,9 @@ html:has(.site-lightbox[open]) {
 .site-lightbox__inner {
   display: grid;
   height: 100%;
+  /* One column capped at the viewport: without minmax(0, …) the column
+     grows to the photo's natural width and pushes controls off screen. */
+  grid-template-columns: minmax(0, 1fr);
   grid-template-rows: auto minmax(0, 1fr) auto;
   gap: var(--space-4);
   padding: var(--space-4) var(--gutter) var(--space-5);
@@ -5213,33 +5189,37 @@ html:has(.site-lightbox[open]) {
 .site-lightbox__stage {
   position: relative;
   display: grid;
+  min-width: 0;
   min-height: 0;
-  place-items: center;
+  place-items: stretch;
   touch-action: pan-y;
   user-select: none;
 }
 
 .site-lightbox__figure {
   display: grid;
-  max-width: 100%;
+  min-width: 0;
   min-height: 0;
   grid-area: 1 / 1;
+  grid-template-rows: minmax(0, 1fr) auto;
   justify-items: center;
   gap: var(--space-3);
   margin: 0;
 }
 
+/* The photo box fills the stage; SiteImage fit="contain" scales the photo
+   inside it without cropping. */
 .site-lightbox__image {
   display: block;
-  width: auto;
-  max-width: 100%;
-  height: auto;
-  max-height: calc(100svh - 15rem);
+  width: 100%;
+  height: 100%;
+  min-height: 0;
   -webkit-user-drag: none;
 }
 
 .site-lightbox__figure figcaption {
   max-width: 60ch;
+  overflow-wrap: anywhere;
   color: var(--inverse-text-strong);
   font-size: 0.875rem;
   text-align: center;
@@ -5272,6 +5252,13 @@ html:has(.site-lightbox[open]) {
 
 .site-lightbox__nav--next {
   right: 0;
+}
+
+/* From tablet width the arrows get their own gutters beside the photo. */
+@media (min-width: 48rem) {
+  .site-lightbox__figure {
+    padding-inline: calc(3.25rem + var(--space-4));
+  }
 }
 
 .site-lightbox__nav:hover:not(:disabled) {
@@ -5334,6 +5321,14 @@ html:has(.site-lightbox[open]) {
   border-color: var(--brand-gold-400);
 }
 
+/* Phones in landscape: give the height to the photo; arrows, keys, and
+   swipes still move between photos. */
+@media (max-height: 28rem) {
+  .site-lightbox__thumbs {
+    display: none;
+  }
+}
+
 /* Page navigation: room and facility photos morph from card to hero while
  * the header stays put. Browsers without view transitions just navigate. */
 
@@ -5385,5 +5380,13 @@ html:has(.site-lightbox[open]) {
   ::view-transition-new(*) {
     animation-duration: 0s !important;
     animation-delay: 0s !important;
+  }
+}
+
+/* Forced colours (Windows high contrast): every surface becomes the system
+   Canvas, so the decorative section edge would draw a stray band. */
+@media (forced-colors: active) {
+  .site-edge {
+    display: none;
   }
 }

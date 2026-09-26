@@ -768,7 +768,7 @@ Accepted on 2026-09-26 when the client directed Phase 10 to proceed. The transfo
 
 ## Phase 10 — SEO, performance, and production content readiness
 
-Status: `Ready for review`
+Status: `Accepted on 2026-09-26`
 
 ### Objective
 
@@ -841,13 +841,13 @@ Make the site discoverable, fast, stable, and ready for real domain/content laun
 
 ### Reviewer decision
 
-Implementation is complete and ready for client review. Production launch remains explicitly blocked by the final HTTPS host, official contact data, default social/search settings, approved privacy/media-rights wording, SMTP delivery verification, and one unresolved legacy room redirect. Evidence: [phase-10-seo-performance.md](./phase-10-seo-performance.md).
+Accepted on 2026-09-26 when Phase 11 was commissioned. The Phase 11 review found no Phase 10 defect that blocks acceptance; it corrected the room JSON-LD capacity property (`occupancy` instead of `maximumAttendeeCapacity`) and documented running Lighthouse with Playwright's Chromium. Production launch remains explicitly blocked by the final HTTPS host, official contact data, default social/search settings, approved privacy/media-rights wording, SMTP delivery verification, and one unresolved legacy room redirect. Evidence: [phase-10-seo-performance.md](./phase-10-seo-performance.md).
 
 ---
 
 ## Phase 11 — Test completion and security hardening
 
-Status: `Not started`
+Status: `Ready for review`
 
 ### Objective
 
@@ -920,6 +920,8 @@ This phase is itself the full test execution. The release report must include:
 ### Reviewer decision
 
 Approve or reject the release candidate. Deployment preparation must not hide unresolved blockers.
+
+Ready for review on 2026-09-26. Evidence, residual risks, and the items that still need a person (Firefox run, real-Safari/Edge and screen-reader passes) are in [phase-11-release-candidate.md](./phase-11-release-candidate.md).
 
 ---
 
