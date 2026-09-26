@@ -27,7 +27,7 @@ export function LoginScreen({ children }: Readonly<{ children: ReactNode }>) {
         className="my-6 w-[min(100%-2rem,26rem)] place-self-center rounded-panel border border-neutral-300 bg-surface p-[clamp(1.5rem,5vw,2.5rem)] text-neutral-800 shadow-[var(--shadow-md)]"
         aria-labelledby="login-title"
       >
-        <BrandMark size="login" />
+        <BrandMark size="login" eager />
         <h1
           id="login-title"
           className="mt-8 [font-family:var(--font-rivana-display),Georgia,serif] text-[2rem] font-normal"

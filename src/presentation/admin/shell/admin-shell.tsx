@@ -31,7 +31,7 @@ export function AdminShell({
         </a>
         <aside className="sticky top-0 flex h-screen flex-col gap-10 overflow-y-auto bg-plum-900 px-5 py-8 text-surface max-lg:hidden">
           <Link href="/admin" className="px-3">
-            <BrandMark inverse />
+            <BrandMark inverse eager />
             <span className="visually-hidden">admin overview</span>
           </Link>
           <AdminNav items={navigation} label="Admin" />
@@ -47,7 +47,7 @@ export function AdminShell({
             <div className="flex items-center gap-3">
               <MobileNav items={navigation} />
               <Link href="/admin" className="hidden max-lg:inline-block">
-                <BrandMark size="topbar" />
+                <BrandMark size="topbar" eager />
                 <span className="visually-hidden">admin overview</span>
               </Link>
             </div>

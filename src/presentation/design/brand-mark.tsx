@@ -15,6 +15,8 @@ type BrandMarkProps = Readonly<{
   /** Empty when a neighbouring label already names the brand. */
   alt?: string;
   size?: keyof typeof SIZES;
+  /** Above-the-fold marks should load immediately. */
+  eager?: boolean;
 }>;
 
 /** The approved Rivana logo, used across the admin screens. */
@@ -22,6 +24,7 @@ export function BrandMark({
   inverse = false,
   alt = "Rivana Residence",
   size = "default",
+  eager = false,
 }: BrandMarkProps) {
   return (
     <Image
@@ -30,6 +33,7 @@ export function BrandMark({
       width={500}
       height={300}
       unoptimized
+      loading={eager ? "eager" : "lazy"}
       className={SIZES[size]}
     />
   );
