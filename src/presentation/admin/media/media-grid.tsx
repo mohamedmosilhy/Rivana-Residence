@@ -8,10 +8,11 @@ import {
   formatBytes,
   mediaUrl,
 } from "@/presentation/admin/media/media-url";
+import { badgeGroup } from "@/presentation/admin/ui/classes";
 
 function StatusBadges({ item }: Readonly<{ item: MediaListItem }>) {
   return (
-    <span className="admin-badges">
+    <span className={badgeGroup}>
       {item.status === "FAILED" ? <Badge tone="danger">Failed</Badge> : null}
       {item.status === "PENDING" ? (
         <Badge tone="warning">Uploading</Badge>
@@ -37,30 +38,39 @@ export function MediaGrid({
   items,
 }: Readonly<{ items: readonly MediaListItem[] }>) {
   return (
-    <ul className="admin-media-grid">
+    <ul className="grid grid-cols-[repeat(auto-fill,minmax(min(100%,11rem),1fr))] gap-4">
       {items.map((item) => (
-        <li key={item.id} className="admin-media-card">
+        <li
+          key={item.id}
+          data-media-card=""
+          className="grid content-start gap-2 rounded-panel border border-neutral-300 bg-surface p-2"
+        >
           <Link
             href={`/admin/media/${item.id}` as Route}
-            className="admin-media-card__link"
+            className="group/media grid gap-1 rounded-control"
           >
-            <span className="admin-media-card__frame">
+            <span className="grid aspect-[4/3] place-items-center overflow-hidden rounded-control bg-admin-canvas">
               {item.status === "READY" ? (
                 // eslint-disable-next-line @next/next/no-img-element -- admin thumbnails are served as stored
-                <img src={mediaUrl(item.storageKey)} alt="" loading="lazy" />
+                <img
+                  src={mediaUrl(item.storageKey)}
+                  alt=""
+                  loading="lazy"
+                  className="size-full object-cover"
+                />
               ) : (
                 <span
-                  className="admin-media-card__placeholder"
+                  className="text-[1.5rem] text-neutral-600"
                   aria-hidden="true"
                 >
                   {item.status === "FAILED" ? "!" : "…"}
                 </span>
               )}
             </span>
-            <span className="admin-media-card__title">
+            <span className="text-[0.875rem] font-medium text-neutral-950 [overflow-wrap:anywhere] group-hover/media:underline">
               {item.altText.trim() || item.originalFilename}
             </span>
-            <span className="admin-media-card__meta">
+            <span className="text-[0.75rem] text-neutral-600">
               {item.status === "FAILED"
                 ? (item.failureReason ?? "The upload failed.")
                 : [

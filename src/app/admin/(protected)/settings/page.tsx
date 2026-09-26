@@ -124,7 +124,7 @@ export default async function SettingsPage() {
       </Panel>
 
       <Panel title="Online booking" titleId="booking-title" wide>
-        <p className="admin-inline-status">
+        <p className="mb-0">
           <Badge tone="neutral">
             {booking.available ? "Configured" : "Not configured"}
           </Badge>

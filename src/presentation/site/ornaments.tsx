@@ -3,8 +3,24 @@ import type { CSSProperties } from "react";
 // Decorative brand shapes drawn as lightweight inline SVG. They carry no
 // meaning, so they are hidden from assistive technology.
 
+// "draw" traces the arc and each ray once; "seal" draws only the rays
+// (around the contact form's sent seal).
+const RAY = {
+  static: "",
+  draw: "[stroke-dasharray:40] animate-[site-draw-ray_1.2s_var(--ease-out-soft)_calc(0.2s+var(--i,0)*28ms)_both]",
+  seal: "[stroke-dasharray:40] animate-[site-draw-ray_1.2s_var(--ease-out-soft)_calc(0.2s+var(--i,0)*28ms)_both]",
+} as const;
+const ARC = {
+  static: "",
+  draw: "[stroke-dasharray:240] animate-[site-draw-arc_1.6s_var(--ease-out-soft)_both]",
+  seal: "hidden",
+} as const;
+
 /** The sun-ray arc from the Rivana crest, open at the bottom. */
-export function SunRays({ className }: Readonly<{ className?: string }>) {
+export function SunRays({
+  className,
+  motion = "static",
+}: Readonly<{ className?: string; motion?: keyof typeof RAY }>) {
   const rays = Array.from({ length: 23 }, (_, index) => {
     // 23 rays spread across the 270° arc above the opening.
     const angle = ((-225 + index * (270 / 22)) * Math.PI) / 180;
@@ -32,12 +48,14 @@ export function SunRays({ className }: Readonly<{ className?: string }>) {
         stroke="currentColor"
         strokeWidth="3"
         strokeLinecap="round"
+        className={ARC[motion] || undefined}
       />
       {rays.map((ray, index) => (
         <line
           key={index}
           {...ray}
           style={{ "--i": index } as CSSProperties}
+          className={RAY[motion] || undefined}
           stroke="currentColor"
           strokeWidth="3"
           strokeLinecap="round"

@@ -56,7 +56,7 @@ async function upload(page: Page, files: string[]) {
   await page.getByLabel("Choose images", { exact: true }).setInputFiles(files);
   for (const file of files) {
     await expect(
-      page.locator(".admin-upload").filter({ hasText: path.basename(file) }),
+      page.locator("[data-upload]").filter({ hasText: path.basename(file) }),
     ).toContainText("Uploaded");
   }
 }
@@ -94,7 +94,7 @@ test("editors upload, describe, place, reorder, and replace images", async ({
   await upload(page, [heroFile!, galleryA!, galleryB!]);
   await page.reload();
   await expect(
-    page.locator(".admin-media-card").filter({ hasText: names[0]! }),
+    page.locator("[data-media-card]").filter({ hasText: names[0]! }),
   ).toContainText("Missing alt text");
   await expectNoAxeViolations(page);
 
@@ -110,9 +110,9 @@ test("editors upload, describe, place, reorder, and replace images", async ({
   await expect(
     page.getByRole("status").filter({ hasText: "Image details saved." }),
   ).toBeVisible();
-  await expect(page.locator(".admin-focal__marker")).toHaveAttribute(
+  await expect(page.locator("[data-focal-marker]")).toHaveAttribute(
     "style",
-    /left: 30%; top: 70%/,
+    /--x: 30%; --y: 70%/,
   );
   await expectNoAxeViolations(page);
   for (const name of [names[1]!, names[2]!]) {
@@ -219,7 +219,7 @@ test("rejected uploads explain why and never become public", async ({
     .check();
   await page.getByLabel("Choose images", { exact: true }).setInputFiles(fake);
   const row = page
-    .locator(".admin-upload")
+    .locator("[data-upload]")
     .filter({ hasText: path.basename(fake) });
   await expect(row).toContainText("The file is not a readable image.");
   await expect(row.getByRole("button", { name: /Try again/ })).toBeVisible();

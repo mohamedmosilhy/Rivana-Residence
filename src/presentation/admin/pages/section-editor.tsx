@@ -20,6 +20,15 @@ import {
 } from "@/presentation/admin/ui/form-state";
 import { useToast } from "@/presentation/admin/ui/toast";
 import { useUnsavedChanges } from "@/presentation/admin/ui/use-unsaved-changes";
+import {
+  checkInField,
+  checkInputInField,
+  field,
+  fieldErrors,
+  fieldHint,
+  form,
+  formGrid,
+} from "@/presentation/admin/ui/classes";
 
 type SectionEditorProps = Readonly<{
   sectionId: string;
@@ -93,12 +102,7 @@ export function SectionEditor({
       : [];
 
   return (
-    <form
-      className="admin-form"
-      action={formAction}
-      onInput={markDirty}
-      noValidate
-    >
+    <form className={form} action={formAction} onInput={markDirty} noValidate>
       {state.status === "error" ? (
         <ErrorSummary
           title={state.message}
@@ -107,7 +111,7 @@ export function SectionEditor({
         />
       ) : null}
       <input type="hidden" name="payload" value={JSON.stringify(editor)} />
-      <div className="admin-form-grid">
+      <div className={formGrid}>
         <TextField
           id={id("eyebrow")}
           name="eyebrow"
@@ -142,10 +146,11 @@ export function SectionEditor({
         }}
         errors={errors}
       />
-      <div className="admin-field">
-        <label className="admin-check">
+      <div className={field}>
+        <label className={checkInField}>
           <input
             type="checkbox"
+            className={checkInputInField}
             id={id("isVisible")}
             name="isVisible"
             checked={locked || meta.isVisible}
@@ -161,13 +166,13 @@ export function SectionEditor({
           <>
             {/* A disabled checkbox is not submitted, so send the value. */}
             <input type="hidden" name="isVisible" value="on" />
-            <p className="admin-field__hint" id={id("locked")}>
+            <p className={fieldHint} id={id("locked")}>
               Required on this page, so it is always shown.
             </p>
           </>
         ) : null}
         {errors("isVisible").length > 0 ? (
-          <ul className="admin-field__errors">
+          <ul className={fieldErrors}>
             {errors("isVisible").map((message) => (
               <li key={message}>{message}</li>
             ))}

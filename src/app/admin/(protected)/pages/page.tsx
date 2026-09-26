@@ -8,6 +8,11 @@ import { formatDateTime, plural } from "@/presentation/admin/format";
 import { Badge } from "@/presentation/admin/ui/badge";
 import { DataTable } from "@/presentation/admin/ui/data-table";
 import { PageHeader } from "@/presentation/admin/ui/page-header";
+import {
+  link,
+  tablePrimary,
+  tableSecondary,
+} from "@/presentation/admin/ui/classes";
 
 export const metadata: Metadata = { title: "Pages" };
 
@@ -44,13 +49,11 @@ export default async function PagesPage() {
               <>
                 <Link
                   href={`/admin/pages/${page.key.toLowerCase()}` as Route}
-                  className="admin-table__primary admin-link"
+                  className={`${tablePrimary} ${link}`}
                 >
                   {page.title}
                 </Link>
-                <span className="admin-table__secondary">
-                  {page.canonicalPath}
-                </span>
+                <span className={tableSecondary}>{page.canonicalPath}</span>
               </>
             ),
           },

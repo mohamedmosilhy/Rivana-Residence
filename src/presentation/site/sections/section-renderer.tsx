@@ -27,8 +27,37 @@ import {
 import { SplitTitle } from "@/presentation/site/motion/split-title";
 import { BrushEdge, SunRays } from "@/presentation/site/ornaments";
 import { SiteImage } from "@/presentation/site/site-image";
+import {
+  actionFill,
+  actions,
+  brushEdge,
+  button,
+  container,
+  eyebrow,
+  eyebrowDark,
+  goldFrame,
+  heroRays,
+  lightSection,
+  link as linkClass,
+  linkIcon,
+  linkInverse,
+  proseInSection,
+  proseLead,
+  sectionHeader,
+  sectionHeaderFlush,
+  sectionHeading,
+  sectionHeadingOnPlum,
+} from "@/presentation/site/classes";
 
 type Payload = Record<string, unknown>;
+
+// A soft scrim keeps text legible over the hero photograph.
+const HERO_SCRIM =
+  "after:absolute after:inset-0 after:-z-1 after:bg-[linear-gradient(to_bottom,rgb(26_11_20/0.35)_0%,rgb(26_11_20/0.05)_30%,rgb(26_11_20/0.3)_58%,rgb(26_11_20/0.86)_100%),linear-gradient(to_right,rgb(26_11_20/0.5),transparent_65%)] after:content-['']";
+const RISE = "animate-[site-rise_900ms_var(--ease-out-soft)_both]";
+const CONTACT_LINK =
+  "inline-flex min-h-11 min-w-0 items-center gap-4 text-[1.0625rem] text-surface [overflow-wrap:anywhere] hover:underline hover:underline-offset-[0.3em]";
+const CONTACT_ICON = "size-5 flex-none text-gold-400";
 const text = (value: unknown) => (typeof value === "string" ? value : "");
 
 type SectionContext = Readonly<{
@@ -49,24 +78,37 @@ function SectionHeading({
   section,
   id,
   link,
+  onPlum = false,
+  flush = false,
 }: Readonly<{
   section: PublicSection;
   id?: string | undefined;
   link?: Readonly<{ href: Route; label: string }>;
+  /** On the plum band: white heading, gold eyebrow, white link. */
+  onPlum?: boolean;
+  /** Beside an introduction: no space below. */
+  flush?: boolean;
 }>) {
   if (!section.heading && !section.eyebrow) return null;
   return (
-    <Reveal as="header" className="site-section__header">
+    <Reveal as="header" className={flush ? sectionHeaderFlush : sectionHeader}>
       <div>
         {section.eyebrow ? (
-          <p className="site-eyebrow">{section.eyebrow}</p>
+          <p className={onPlum ? eyebrowDark : eyebrow}>{section.eyebrow}</p>
         ) : null}
-        {section.heading ? <h2 id={id}>{section.heading}</h2> : null}
+        {section.heading ? (
+          <h2
+            id={id}
+            className={onPlum ? sectionHeadingOnPlum : sectionHeading}
+          >
+            {section.heading}
+          </h2>
+        ) : null}
       </div>
       {link ? (
-        <Link href={link.href} className="site-link">
+        <Link href={link.href} className={onPlum ? linkInverse : linkClass}>
           {link.label}
-          <Icon name="arrow" />
+          <Icon name="arrow" className={linkIcon} />
         </Link>
       ) : null}
     </Reveal>
@@ -102,46 +144,87 @@ export function PageSection({
       const title = text(payload.title);
       // The one per-character reveal: the opening of the home page.
       const signature = context.isFirst && context.heroSize === "full";
+      const opening = context.isFirst;
       return (
         <section
-          className={`site-hero site-hero--${context.heroSize}${background ? " site-hero--image" : ""}${context.isFirst ? " site-hero--opening" : ""}`}
+          data-dark-surface=""
+          className={`relative isolate grid items-end overflow-hidden bg-plum-900 bg-[radial-gradient(ellipse_at_80%_15%,rgb(101_42_76/0.9),transparent_60%)] text-surface ${
+            context.heroSize === "full"
+              ? "min-h-[clamp(38rem,100svh,62rem)]"
+              : "min-h-[clamp(30rem,72svh,46rem)]"
+          } ${background ? HERO_SCRIM : ""}`}
           aria-labelledby={id}
         >
           {background ? (
-            <div className="site-hero__media">
-              <ParallaxLayer className="site-hero__parallax">
+            <div className="absolute inset-0 -z-2">
+              <ParallaxLayer className="absolute inset-0">
                 <SiteImage
                   image={background}
                   fill
                   preload={context.isFirst}
                   sizes="100vw"
+                  {...(context.isFirst
+                    ? {
+                        className:
+                          "animate-[site-settle_2.4s_var(--ease-out-soft)_both]",
+                      }
+                    : {})}
                 />
               </ParallaxLayer>
             </div>
           ) : (
-            <SunRays className="site-page-hero__rays" />
+            <SunRays className={heroRays} motion="draw" />
           )}
-          <ScrollFade className="site-hero__content site-container">
+          <ScrollFade
+            className={`${container} grid justify-items-start pt-[calc(var(--header-height)+3rem)] pb-[clamp(5rem,11vw,9rem)]`}
+          >
             {section.eyebrow ? (
-              <p className="site-eyebrow">{section.eyebrow}</p>
+              <p className={`${eyebrowDark} ${opening ? RISE : ""}`}>
+                {section.eyebrow}
+              </p>
             ) : null}
-            <Title id={id} className="site-hero__title">
+            <Title
+              id={id}
+              className={`m-0 max-w-[14ch] font-display font-normal text-balance ${
+                context.heroSize === "full"
+                  ? "text-display-xl leading-[0.98] tracking-[-0.015em]"
+                  : "text-display-lg leading-[1.02] tracking-[-0.015em]"
+              } ${opening && !signature ? `${RISE} [animation-delay:120ms]` : ""}`}
+            >
               {signature ? <SplitTitle text={title} /> : title}
             </Title>
-            <p className="site-hero__summary">{text(payload.summary)}</p>
-            <div className="site-actions">
+            <p
+              className={`mt-6 mb-0 max-w-[34rem] text-body-lg leading-[1.6] text-inverse-strong empty:hidden ${
+                opening
+                  ? `${RISE} ${signature ? "[animation-delay:900ms]" : "[animation-delay:260ms]"}`
+                  : ""
+              }`}
+            >
+              {text(payload.summary)}
+            </p>
+            <div
+              className={`${actions} ${
+                opening
+                  ? `${RISE} ${signature ? "[animation-delay:1050ms]" : "[animation-delay:400ms]"}`
+                  : ""
+              }`}
+            >
               <CtaLink
                 cta={payload.cta}
                 bookingMessage={context.bookingMessage}
+                dark
               />
             </div>
           </ScrollFade>
           {context.heroSize === "full" ? (
-            <span className="site-hero__scroll" aria-hidden="true">
+            <span
+              className="absolute right-(--gutter) bottom-[clamp(4.5rem,9vw,7rem)] z-1 hidden items-center gap-4 text-[0.6875rem] tracking-[0.32em] text-inverse-strong uppercase [writing-mode:vertical-rl] after:h-18 after:w-px after:bg-[linear-gradient(var(--color-gold-400),transparent)] after:content-[''] lg:flex"
+              aria-hidden="true"
+            >
               Scroll
             </span>
           ) : null}
-          <BrushEdge className="site-edge" />
+          <BrushEdge className={brushEdge} />
         </section>
       );
     }
@@ -149,22 +232,21 @@ export function PageSection({
       const image = first(section.images.PRIMARY);
       return (
         <section
-          className="site-section site-intro site-container"
+          data-light-section=""
+          className={`${lightSection} ${container} grid grid-cols-[minmax(0,5fr)_minmax(0,7fr)] items-start gap-x-[clamp(2rem,7vw,7rem)] gap-y-8 max-lg:grid-cols-[minmax(0,1fr)]`}
           aria-labelledby={labelledBy}
         >
-          <SectionHeading section={section} id={labelledBy} />
-          <div className="site-intro__body">
+          <SectionHeading section={section} id={labelledBy} flush />
+          <div className="grid gap-10 only:col-[1/-1]">
             <Reveal delay={0.1}>
-              <RichTextView
-                document={payload.document}
-                className="site-prose site-prose--lead"
-              />
+              <RichTextView document={payload.document} className={proseLead} />
             </Reveal>
             {image ? (
-              <RevealImage className="site-intro__image">
+              <RevealImage className="">
                 <SiteImage
                   image={image}
                   sizes="(min-width: 64rem) 55vw, 100vw"
+                  className="block h-auto w-full"
                 />
               </RevealImage>
             ) : null}
@@ -176,14 +258,21 @@ export function PageSection({
       const image = first(section.images.PRIMARY);
       return (
         <section
-          className={`site-split site-container${payload.imageSide === "RIGHT" ? " site-split--reverse" : ""}${image ? "" : " site-split--text"}`}
+          data-light-section=""
+          className={`${container} grid items-center gap-[clamp(3rem,8vw,8rem)] py-(--space-section) [[data-light-section]+&]:pt-[calc(var(--space-section)*0.35)] ${
+            image
+              ? "grid-cols-[repeat(2,minmax(0,1fr))] max-md:grid-cols-[minmax(0,1fr)]"
+              : "grid-cols-[minmax(0,1fr)]"
+          }`}
           aria-labelledby={labelledBy}
         >
           {image ? (
             <div
-              className={`site-split__media${image.height > image.width ? " site-split__media--portrait" : ""}`}
+              className={`${goldFrame} ${payload.imageSide === "RIGHT" ? "order-2 max-md:order-0" : ""}`}
             >
-              <RevealImage className="site-split__frame">
+              <RevealImage
+                className={`relative overflow-hidden bg-plum-100 ${image.height > image.width ? "aspect-[4/5]" : "aspect-[5/4]"}`}
+              >
                 <SiteImage
                   image={image}
                   fill
@@ -192,21 +281,30 @@ export function PageSection({
               </RevealImage>
             </div>
           ) : null}
-          <Reveal className="site-split__text" stagger={0.1} delay={0.15}>
+          <Reveal
+            className="grid justify-items-start"
+            stagger={0.1}
+            delay={0.15}
+          >
             {section.eyebrow ? (
               <RevealItem>
-                <p className="site-eyebrow">{section.eyebrow}</p>
+                <p className={eyebrow}>{section.eyebrow}</p>
               </RevealItem>
             ) : null}
             {section.heading ? (
               <RevealItem>
-                <h2 id={id}>{section.heading}</h2>
+                <h2 id={id} className={sectionHeading}>
+                  {section.heading}
+                </h2>
               </RevealItem>
             ) : null}
             <RevealItem>
-              <RichTextView document={payload.body} className="site-prose" />
+              <RichTextView
+                document={payload.body}
+                className={`${proseInSection} mt-6`}
+              />
             </RevealItem>
-            <RevealItem className="site-actions">
+            <RevealItem className={actions}>
               <CtaLink
                 cta={payload.cta}
                 bookingMessage={context.bookingMessage}
@@ -219,7 +317,8 @@ export function PageSection({
     case "GALLERY":
       return (
         <section
-          className="site-section site-container"
+          data-light-section=""
+          className={`${lightSection} ${container}`}
           aria-labelledby={labelledBy}
         >
           <SectionHeading section={section} id={labelledBy} />
@@ -237,30 +336,57 @@ export function PageSection({
         : [];
       return (
         <section
-          className={`site-section site-container site-${section.type === "STATS" ? "stats" : "features"}-section`}
+          data-light-section=""
+          className={`${container} ${
+            section.type === "STATS"
+              ? "pt-0 pb-(--space-section) [[data-light-section]+&]:pt-[calc(var(--space-section)*0.35)]"
+              : lightSection
+          }`}
           aria-labelledby={labelledBy}
         >
           <SectionHeading section={section} id={labelledBy} />
           {section.type === "STATS" ? (
-            <Reveal as="dl" className="site-stats" stagger={0.12}>
+            <Reveal
+              as="dl"
+              className="m-0 grid grid-cols-[repeat(auto-fit,minmax(min(100%,12rem),1fr))] border-y border-neutral-300"
+              stagger={0.12}
+            >
               {items.map((item, index) => (
-                <RevealItem key={index}>
-                  <dt>{text(item.label)}</dt>
-                  <dd>
+                <RevealItem
+                  key={index}
+                  className="flex flex-col items-center gap-3 px-6 py-[clamp(2rem,5vw,3.5rem)] text-center not-first:border-l not-first:border-neutral-300 max-md:not-first:border-t max-md:not-first:border-l-0"
+                >
+                  <dt className="text-[0.8125rem] font-medium tracking-[0.22em] text-neutral-600 uppercase">
+                    {text(item.label)}
+                  </dt>
+                  <dd className="-order-1 m-0 font-display text-[clamp(3rem,2rem+4vw,5.5rem)] leading-none text-plum-700">
                     <CountUp value={text(item.value)} />
                   </dd>
                 </RevealItem>
               ))}
             </Reveal>
           ) : (
-            <Reveal as="ul" className="site-features" stagger={0.1}>
+            <Reveal
+              as="ul"
+              className="m-0 grid grid-cols-[repeat(auto-fit,minmax(min(100%,16rem),1fr))] gap-x-[clamp(1.5rem,4vw,3rem)] gap-y-10 p-0"
+              stagger={0.1}
+            >
               {items.map((item, index) => (
-                <RevealItem as="li" key={index}>
-                  <span className="site-features__index" aria-hidden="true">
+                <RevealItem
+                  as="li"
+                  key={index}
+                  className="grid content-start gap-3 border-t border-neutral-300 pt-6"
+                >
+                  <span
+                    className="font-display tracking-[0.1em] text-gold-600"
+                    aria-hidden="true"
+                  >
                     {String(index + 1).padStart(2, "0")}
                   </span>
-                  <h3>{text(item.title)}</h3>
-                  <p>{text(item.body)}</p>
+                  <h3 className="m-0 font-display text-heading-md font-normal text-plum-800">
+                    {text(item.title)}
+                  </h3>
+                  <p className="m-0 text-neutral-600">{text(item.body)}</p>
                 </RevealItem>
               ))}
             </Reveal>
@@ -273,7 +399,8 @@ export function PageSection({
       if (rooms.length === 0) return null;
       return (
         <section
-          className="site-section site-container"
+          data-light-section=""
+          className={`${lightSection} ${container}`}
           aria-labelledby={labelledBy}
         >
           <SectionHeading
@@ -298,12 +425,17 @@ export function PageSection({
       const facilities = grid(context.facilities, payload);
       if (facilities.length === 0) return null;
       return (
-        <section className="site-band" aria-labelledby={labelledBy}>
-          <div className="site-section site-container">
+        <section
+          data-dark-surface=""
+          className="bg-plum-900 text-surface"
+          aria-labelledby={labelledBy}
+        >
+          <div className={`py-(--space-section) ${container}`}>
             <SectionHeading
               section={section}
               id={labelledBy}
               link={{ href: "/facilities", label: "View all amenities" }}
+              onPlum
             />
             <CardGrid variant="tiles">
               {facilities.map((facility) => (
@@ -324,50 +456,73 @@ export function PageSection({
       const form = payload.formEnabled ? context.contactForm : null;
       return (
         <section
-          className={`site-contact-cta${form ? " site-contact-cta--form" : ""}`}
+          className="relative isolate overflow-hidden [background:radial-gradient(ellipse_at_10%_0%,rgb(101_42_76/0.75),transparent_55%),var(--color-plum-900)] py-(--space-section) text-surface"
           aria-labelledby={labelledBy}
         >
           {background ? (
-            <div className="site-contact-cta__media">
+            <div className="absolute inset-0 -z-1 opacity-18">
               <SiteImage image={background} fill decorative sizes="100vw" />
             </div>
           ) : null}
-          <div className="site-contact-cta__inner site-container">
-            <Reveal className="site-contact-cta__intro">
+          <div
+            className={`${container} grid ${
+              form
+                ? "grid-cols-[minmax(0,5fr)_minmax(0,7fr)] items-start justify-items-stretch gap-[clamp(2.5rem,7vw,7rem)] text-start max-lg:grid-cols-[minmax(0,1fr)]"
+                : "justify-items-center text-center"
+            }`}
+          >
+            <Reveal
+              data-dark-surface=""
+              className={`grid *:max-w-full ${form ? "justify-items-start" : "justify-items-center"}`}
+            >
               {section.eyebrow ? (
-                <p className="site-eyebrow">{section.eyebrow}</p>
+                <p className={eyebrowDark}>{section.eyebrow}</p>
               ) : null}
-              {section.heading ? <h2 id={id}>{section.heading}</h2> : null}
-              <p className="site-contact-cta__body">{text(payload.body)}</p>
+              {section.heading ? (
+                <h2
+                  id={id}
+                  className="m-0 max-w-[20ch]! font-display text-display-lg leading-[1.08] font-normal tracking-[-0.005em] text-balance text-surface"
+                >
+                  {section.heading}
+                </h2>
+              ) : null}
+              <p className="mt-6 mb-0 max-w-[32rem] text-body-lg text-inverse-strong">
+                {text(payload.body)}
+              </p>
               {details && (details.phone || details.email) ? (
-                <address className="site-contact-cta__details">
+                <address className="mt-10 grid gap-2 border-t border-inverse-line-subtle pt-6 not-italic">
                   {details.phone ? (
-                    <a href={`tel:${details.phone.replace(/[^+0-9]/g, "")}`}>
-                      <Icon name="phone" />
+                    <a
+                      href={`tel:${details.phone.replace(/[^+0-9]/g, "")}`}
+                      className={CONTACT_LINK}
+                    >
+                      <Icon name="phone" className={CONTACT_ICON} />
                       {details.phone}
                     </a>
                   ) : null}
                   {details.email ? (
-                    <a href={`mailto:${details.email}`}>
-                      <Icon name="mail" />
+                    <a
+                      href={`mailto:${details.email}`}
+                      className={CONTACT_LINK}
+                    >
+                      <Icon name="mail" className={CONTACT_ICON} />
                       {details.email}
                     </a>
                   ) : null}
                 </address>
               ) : null}
               {form ? null : (
-                <div className="site-actions">
-                  <Link href="/contact" className="site-button">
+                <div className={actions}>
+                  <Link
+                    href="/contact"
+                    className={button("primary-dark", actionFill)}
+                  >
                     Get in touch
                   </Link>
                 </div>
               )}
             </Reveal>
-            {form ? (
-              <Reveal className="site-contact-cta__form" delay={0.15}>
-                {form}
-              </Reveal>
-            ) : null}
+            {form ? <Reveal delay={0.15}>{form}</Reveal> : null}
           </div>
         </section>
       );

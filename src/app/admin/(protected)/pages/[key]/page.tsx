@@ -28,6 +28,10 @@ import {
   saveSectionMediaAction,
   unpublishPageAction,
 } from "../actions";
+import {
+  section as sectionClass,
+  sectionTitle,
+} from "@/presentation/admin/ui/classes";
 
 export const metadata: Metadata = { title: "Edit page" };
 
@@ -80,15 +84,15 @@ export default async function EditPagePage({
         }}
       />
 
-      <section className="admin-section" aria-labelledby="sections-title">
-        <h2 id="sections-title" className="admin-section__title">
+      <section className={sectionClass} aria-labelledby="sections-title">
+        <h2 id="sections-title" className={sectionTitle}>
           Sections
         </h2>
-        <p className="admin-muted admin-section__intro">
+        <p className="mt-0 mb-4 text-neutral-600">
           Sections appear on the page in this order. The Hero always comes first
           and the Contact block last; the sections between can move.
         </p>
-        <ol className="admin-sections">
+        <ol className="grid gap-3">
           {sections.map((section, index) => {
             const label = PAGE_SECTION_LABELS[section.type];
             const name = section.heading
@@ -96,18 +100,21 @@ export default async function EditPagePage({
               : label;
             const locked = lockedTypes.includes(section.type);
             return (
-              <li key={section.id} className="admin-sections__item">
-                <details className="admin-disclosure">
-                  <summary>
-                    <span className="admin-disclosure__title">
+              <li
+                key={section.id}
+                className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-3 max-[30rem]:grid-cols-[minmax(0,1fr)]"
+              >
+                <details className="rounded-panel border border-neutral-300 bg-surface">
+                  <summary className="flex min-h-13 cursor-pointer flex-wrap items-center justify-between gap-2 px-4 py-3 [list-style-position:inside]">
+                    <span className="font-medium text-neutral-950">
                       {index + 1}. {name}
                     </span>
-                    <span className="admin-disclosure__badges">
+                    <span className="inline-flex gap-1">
                       {locked ? <Badge tone="brand">Required</Badge> : null}
                       {section.isVisible ? null : <Badge>Hidden</Badge>}
                     </span>
                   </summary>
-                  <div className="admin-disclosure__body">
+                  <div className="border-t border-neutral-300 px-4 pb-4">
                     <SectionEditor
                       sectionId={section.id}
                       type={section.type}
@@ -144,7 +151,7 @@ export default async function EditPagePage({
                   </div>
                 </details>
                 {isSectionPinned(section.type) ? (
-                  <span className="admin-muted admin-sections__pinned">
+                  <span className="m-0 pt-4 text-[0.875rem] text-neutral-600 max-[30rem]:pt-0">
                     Fixed position
                   </span>
                 ) : (
@@ -155,6 +162,7 @@ export default async function EditPagePage({
                     isLast={index >= lastMovable}
                     moveUp={moveSectionAction.bind(null, key, section.id, -1)}
                     moveDown={moveSectionAction.bind(null, key, section.id, 1)}
+                    className="pt-2 max-[30rem]:pt-0"
                   />
                 )}
               </li>

@@ -305,11 +305,17 @@ test("controls meet the touch-target minimum on phones", async ({
     await page.goto(path);
     const small = await page
       .locator(
-        ".site-button, .site-link, .site-menu__toggle, .site-field input, .site-field textarea",
+        // Buttons, the gold-underlined text links, the menu toggle, and
+        // form fields (the same set the old class selectors covered).
+        'header button, header summary, main button, [class~="group/link"], main input:not([type=hidden]), main textarea',
       )
       .evaluateAll((elements) =>
         elements
-          .filter((element) => element.getClientRects().length > 0)
+          .filter(
+            (element) =>
+              element.getClientRects().length > 0 &&
+              !element.closest("[data-form-trap]"),
+          )
           .map((element) => {
             const box = element.getBoundingClientRect();
             return {
@@ -338,12 +344,9 @@ test("forced colours keep text, controls, and edges legible", async ({
       getComputedStyle(document.querySelector(selector)!)[property];
     return {
       canvas: getComputedStyle(document.body).backgroundColor,
-      prose: colour(".site-prose p", "color"),
-      button: colour(
-        ".book-now button, .book-now [role=button], .site-button",
-        "borderTopColor",
-      ),
-      edges: [...document.querySelectorAll(".site-edge")].map(
+      prose: colour("main p", "color"),
+      button: colour("[data-book-now] button", "borderTopColor"),
+      edges: [...document.querySelectorAll('svg[viewBox="0 0 1440 64"]')].map(
         (edge) => getComputedStyle(edge).display,
       ),
     };
@@ -363,7 +366,7 @@ test("reduced-motion preference removes non-essential motion", async ({
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.goto("/");
   const motion = await page
-    .locator(".site-button")
+    .locator("[data-book-now] button")
     .first()
     .evaluate((node) => {
       const style = getComputedStyle(node);
@@ -487,7 +490,7 @@ test("the hero image is the preloaded LCP candidate with meaningful alt text", a
   page,
 }) => {
   await page.goto("/");
-  const hero = page.locator(".site-hero__media img");
+  const hero = page.locator("main img").first();
   await expect(hero).toHaveAttribute("alt", /lobby/i);
   expect(await hero.getAttribute("loading")).not.toBe("lazy");
   expect(
@@ -616,7 +619,7 @@ test.describe("interaction and motion", () => {
       .getByRole("link")
       .first()
       .click();
-    const stage = page.locator(".site-lightbox__stage");
+    const stage = page.locator("[data-lightbox-stage]");
     const box = (await stage.boundingBox())!;
     const y = box.y + box.height / 2;
     await stage.dispatchEvent("pointerdown", {
@@ -627,7 +630,7 @@ test.describe("interaction and motion", () => {
       clientX: box.x + box.width * 0.2,
       clientY: y,
     });
-    await expect(page.locator(".site-lightbox [role=status]")).toContainText(
+    await expect(page.locator("[data-lightbox] [role=status]")).toContainText(
       "Photo 2 of 3",
     );
     await page.getByRole("button", { name: "Close photo viewer" }).click();
@@ -637,7 +640,7 @@ test.describe("interaction and motion", () => {
   test("the mobile menu is a modal sheet", async ({ page, isMobile }) => {
     test.skip(!isMobile, "The menu sheet is the phone navigation.");
     await page.goto("/");
-    const toggle = page.locator("summary.site-menu__toggle");
+    const toggle = page.locator("[data-site-menu] > summary");
     await toggle.click();
     const menu = page.getByRole("navigation", { name: "Main (menu)" });
     await expect(menu.getByRole("link", { name: "Rooms" })).toBeVisible();
@@ -651,7 +654,7 @@ test.describe("interaction and motion", () => {
       await page.keyboard.press("Tab");
       expect(
         await page.evaluate(
-          () => document.activeElement?.closest(".site-menu") !== null,
+          () => document.activeElement?.closest("[data-site-menu]") !== null,
         ),
       ).toBe(true);
     }
@@ -681,7 +684,7 @@ test.describe("interaction and motion", () => {
 
   test("content below the fold is revealed on scroll", async ({ page }) => {
     await page.goto("/");
-    const cards = page.locator(".site-card");
+    const cards = page.locator("main article");
     await expect(cards.first()).toBeAttached();
     await cards.first().scrollIntoViewIfNeeded();
     await expect(cards.first()).toHaveCSS("opacity", "1");
@@ -694,7 +697,7 @@ test.describe("interaction and motion", () => {
   }) => {
     test.skip(isMobile, "Scroll direction is exercised on desktop.");
     await page.goto("/");
-    const header = page.locator(".site-header");
+    const header = page.locator("[data-site-header]");
     // Scroll only once the enhancement is listening; a scroll that lands
     // before hydration is (correctly) treated as the starting position.
     await expect(header).toHaveAttribute("data-enhanced", "true");
@@ -722,12 +725,15 @@ test.describe("interaction and motion", () => {
     await page.waitForLoadState("networkidle");
     await expect(page.locator('[data-reveal-state="hidden"]')).toHaveCount(0);
     await page.mouse.wheel(0, 1400);
-    await expect(page.locator(".site-hero__parallax")).toHaveCSS(
+    await expect(page.locator("[data-hero-parallax]")).toHaveCSS(
       "transform",
       "none",
     );
-    await expect(page.locator(".site-header")).toHaveCSS("transform", "none");
-    await expect(page.locator(".site-split-title__char").first()).toHaveCSS(
+    await expect(page.locator("[data-site-header]")).toHaveCSS(
+      "transform",
+      "none",
+    );
+    await expect(page.locator("[data-split-char]").first()).toHaveCSS(
       "opacity",
       "1",
     );
@@ -756,7 +762,7 @@ test.describe("contact form", () => {
     await fill(page, { email: "not-an-email", message: "Hi <b>there</b>" });
     await page.getByRole("button", { name: "Send message" }).click();
 
-    await expect(page.locator(".site-form__error")).toBeFocused();
+    await expect(page.locator("[data-form-error]")).toBeFocused();
     await expect(page.getByLabel("Email")).toHaveAttribute(
       "aria-invalid",
       "true",

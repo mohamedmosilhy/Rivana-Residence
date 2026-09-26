@@ -20,8 +20,9 @@ export function ReplaceImage({
 }>) {
   const [newId, setNewId] = useState<string | null>(null);
   return (
-    <div className="admin-replace">
+    <div className="mt-4 grid gap-4">
       <Uploader
+        embedded
         multiple={false}
         label="Upload the replacement"
         onUploaded={setNewId}

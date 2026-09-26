@@ -9,6 +9,11 @@ import type {
 import { formatDateTime, plural } from "@/presentation/admin/format";
 import { Badge, PublicationBadge } from "@/presentation/admin/ui/badge";
 import { EmptyState } from "@/presentation/admin/ui/states";
+import {
+  muted,
+  section as sectionClass,
+  sectionTitle,
+} from "@/presentation/admin/ui/classes";
 
 const KIND: Record<RecentContentKind, { label: string; href: Route }> = {
   PAGE: { label: "Page", href: "/admin/pages" },
@@ -31,11 +36,16 @@ function StatCard({
   detail,
 }: Readonly<{ href: Route; title: string; value: string; detail: string }>) {
   return (
-    <li className="admin-stat">
-      <Link href={href} className="admin-stat__link">
-        <span className="admin-stat__title">{title}</span>
-        <span className="admin-stat__value">{value}</span>
-        <span className="admin-stat__detail">{detail}</span>
+    <li>
+      <Link
+        href={href}
+        className="grid h-full content-start gap-1 rounded-panel border border-neutral-300 bg-surface p-5 [transition:border-color_var(--motion-fast)] hover:border-plum-700"
+      >
+        <span className="font-medium text-plum-700">{title}</span>
+        <span className="text-[1.5rem] leading-[1.3] font-medium text-neutral-950">
+          {value}
+        </span>
+        <span className="text-[0.875rem] text-neutral-600">{detail}</span>
       </Link>
     </li>
   );
@@ -83,28 +93,33 @@ export function OverviewDashboard({
 
   return (
     <>
-      <section className="admin-section" aria-labelledby="attention-title">
-        <h2 id="attention-title" className="admin-section__title">
+      <section className={sectionClass} aria-labelledby="attention-title">
+        <h2 id="attention-title" className={sectionTitle}>
           Needs attention
         </h2>
         {attention.length > 0 ? (
-          <ul className="admin-attention">
+          <ul className="grid gap-2">
             {attention.map((item) => (
               <li key={item.text}>
-                <Link href={item.href}>{item.text}</Link>
+                <Link
+                  href={item.href}
+                  className="block rounded-control border border-l-4 border-neutral-300 border-l-warning bg-surface px-4 py-3 text-neutral-800 underline decoration-neutral-300 underline-offset-[0.2em]"
+                >
+                  {item.text}
+                </Link>
               </li>
             ))}
           </ul>
         ) : (
-          <p className="admin-muted">Nothing needs attention right now.</p>
+          <p className={muted}>Nothing needs attention right now.</p>
         )}
       </section>
 
-      <section className="admin-section" aria-labelledby="content-title">
-        <h2 id="content-title" className="admin-section__title">
+      <section className={sectionClass} aria-labelledby="content-title">
+        <h2 id="content-title" className={sectionTitle}>
           Content
         </h2>
-        <ul className="admin-stats">
+        <ul className="grid grid-cols-[repeat(auto-fill,minmax(min(100%,15rem),1fr))] gap-3">
           <StatCard
             href="/admin/pages"
             title="Pages"
@@ -148,8 +163,8 @@ export function OverviewDashboard({
         </ul>
       </section>
 
-      <section className="admin-section" aria-labelledby="recent-title">
-        <h2 id="recent-title" className="admin-section__title">
+      <section className={sectionClass} aria-labelledby="recent-title">
+        <h2 id="recent-title" className={sectionTitle}>
           Recently updated
         </h2>
         {overview.recent.length === 0 ? (
@@ -159,21 +174,31 @@ export function OverviewDashboard({
             </p>
           </EmptyState>
         ) : (
-          <ul className="admin-recent">
+          <ul className="rounded-panel border border-neutral-300 bg-surface">
             {overview.recent.map((item) => {
               const kind = KIND[item.kind];
               const linked = item.kind !== "SETTINGS" || canEditSettings;
               return (
-                <li key={`${item.kind}:${item.id}`}>
-                  <div className="admin-recent__main">
+                <li
+                  key={`${item.kind}:${item.id}`}
+                  className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 px-4 py-3 not-first:border-t not-first:border-neutral-300"
+                >
+                  <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
                     {linked ? (
-                      <Link href={kind.href}>{item.title}</Link>
+                      <Link
+                        href={kind.href}
+                        className="font-medium text-neutral-950 underline decoration-neutral-300 underline-offset-[0.2em]"
+                      >
+                        {item.title}
+                      </Link>
                     ) : (
                       <span>{item.title}</span>
                     )}
-                    <span className="admin-recent__kind">{kind.label}</span>
+                    <span className="text-[0.875rem] text-neutral-600">
+                      {kind.label}
+                    </span>
                   </div>
-                  <div className="admin-recent__meta">
+                  <div className="flex items-center gap-3 text-[0.875rem] text-neutral-600">
                     {item.status ? (
                       <PublicationBadge status={item.status} />
                     ) : (

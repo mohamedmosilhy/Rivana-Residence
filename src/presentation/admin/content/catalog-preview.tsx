@@ -4,6 +4,14 @@ import type {
 } from "@/domain/shared/types";
 import { PublicationBadge } from "@/presentation/admin/ui/badge";
 import { RichTextView } from "@/presentation/design/rich-text-view";
+import {
+  noticePreview,
+  preview,
+  previewFacts,
+  previewLede,
+  previewPlaceholder,
+  previewTitle,
+} from "@/presentation/admin/ui/classes";
 
 type CatalogPreviewProps = Readonly<{
   status: PublicationStatus;
@@ -30,26 +38,27 @@ export function CatalogPreview({
 }: CatalogPreviewProps) {
   return (
     <>
-      <p className="admin-notice admin-notice--preview" role="note">
-        Private preview. <PublicationBadge status={status} /> Visitors cannot
-        see this page, and the finished website design is applied later.
+      <p className={noticePreview} role="note">
+        Private preview. <PublicationBadge status={status} className="mx-1" />{" "}
+        Visitors cannot see this page, and the finished website design is
+        applied later.
       </p>
-      <article className="admin-preview" aria-label={`Preview of ${name}`}>
-        <p className="admin-preview__media">
+      <article className={preview} aria-label={`Preview of ${name}`}>
+        <p className={previewPlaceholder}>
           {heroChosen
             ? `Hero image chosen${galleryCount ? ` · ${galleryCount} gallery image${galleryCount === 1 ? "" : "s"}` : ""}`
             : "No hero image yet"}
         </p>
-        <h2 className="admin-preview__title">{name}</h2>
-        <p className="admin-preview__lede">{shortDescription}</p>
+        <h2 className={previewTitle}>{name}</h2>
+        <p className={previewLede}>{shortDescription}</p>
         {facts.length > 0 ? (
-          <ul className="admin-preview__facts">
+          <ul className={previewFacts}>
             {facts.map((fact) => (
               <li key={fact}>{fact}</li>
             ))}
           </ul>
         ) : null}
-        <RichTextView document={description} className="admin-preview__body" />
+        <RichTextView document={description} />
         {features.length > 0 ? (
           <>
             <h3>Features</h3>

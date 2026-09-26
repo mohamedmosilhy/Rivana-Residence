@@ -8,6 +8,20 @@ import {
   type TextareaHTMLAttributes,
 } from "react";
 import { useFormStatus } from "react-dom";
+import {
+  button,
+  control,
+  errorSummary,
+  errorSummaryLink,
+  errorSummaryList,
+  errorSummaryTitle,
+  field,
+  fieldErrors,
+  fieldHint,
+  fieldLabel,
+  fieldOptional,
+  textarea as textareaClass,
+} from "@/presentation/admin/ui/classes";
 
 export type SummaryError = Readonly<{ fieldId: string; message: string }>;
 
@@ -31,18 +45,21 @@ export function ErrorSummary({
   return (
     <div
       ref={ref}
-      className="admin-error-summary"
+      className={errorSummary}
       role="alert"
       tabIndex={-1}
       aria-labelledby="error-summary-title"
     >
-      <h2 id="error-summary-title">{title}</h2>
+      <h2 id="error-summary-title" className={errorSummaryTitle}>
+        {title}
+      </h2>
       {errors.length > 0 ? (
-        <ul>
+        <ul className={errorSummaryList}>
           {errors.map((error) => (
             <li key={`${error.fieldId}:${error.message}`}>
               <a
                 href={`#${error.fieldId}`}
+                className={errorSummaryLink}
                 onClick={(event) => {
                   const field = document.getElementById(error.fieldId);
                   if (!field) return;
@@ -81,20 +98,18 @@ export function FieldShell({
   const errorId = errors.length > 0 ? `${id}-errors` : undefined;
   const describedBy = [hintId, errorId].filter(Boolean).join(" ") || undefined;
   return (
-    <div className="admin-field">
-      <label htmlFor={id}>
+    <div className={field}>
+      <label htmlFor={id} className={fieldLabel}>
         {label}
-        {optional ? (
-          <span className="admin-field__optional"> (optional)</span>
-        ) : null}
+        {optional ? <span className={fieldOptional}> (optional)</span> : null}
       </label>
       {hint ? (
-        <p className="admin-field__hint" id={hintId}>
+        <p className={fieldHint} id={hintId}>
           {hint}
         </p>
       ) : null}
       {errorId ? (
-        <ul className="admin-field__errors" id={errorId}>
+        <ul className={fieldErrors} id={errorId}>
           {errors.map((error) => (
             <li key={error}>{error}</li>
           ))}
@@ -125,6 +140,7 @@ export function TextField({
         <input
           id={id}
           type="text"
+          className={control}
           {...input}
           aria-invalid={invalid || undefined}
           aria-describedby={describedBy}
@@ -154,6 +170,7 @@ export function TextAreaField({
         <textarea
           id={id}
           rows={3}
+          className={textareaClass}
           {...textarea}
           aria-invalid={invalid || undefined}
           aria-describedby={describedBy}
@@ -183,7 +200,7 @@ export function SubmitButton({
   return (
     <button
       type="submit"
-      className={`admin-button admin-button--${variant}`}
+      className={button(variant)}
       disabled={pending}
       aria-disabled={pending || undefined}
     >
@@ -207,11 +224,13 @@ export function FormActions({
   meta?: ReactNode;
 }>) {
   return (
-    <div className="admin-form-actions">
-      {meta ? <div className="admin-form-actions__meta">{meta}</div> : null}
-      <div className="admin-form-actions__buttons">
+    <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-3 pt-2">
+      {meta ? (
+        <div className="text-[0.875rem] text-neutral-600">{meta}</div>
+      ) : null}
+      <div className="ml-auto flex flex-wrap gap-3">
         {secondary ? (
-          <div className="admin-form-actions__secondary">{secondary}</div>
+          <div className="mr-auto flex gap-3">{secondary}</div>
         ) : null}
         {primary}
       </div>

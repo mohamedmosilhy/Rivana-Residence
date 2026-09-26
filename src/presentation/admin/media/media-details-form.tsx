@@ -1,6 +1,12 @@
 "use client";
 
-import { useActionState, useEffect, useState, type MouseEvent } from "react";
+import {
+  useActionState,
+  useEffect,
+  useState,
+  type CSSProperties,
+  type MouseEvent,
+} from "react";
 
 import {
   ErrorSummary,
@@ -16,6 +22,14 @@ import {
 } from "@/presentation/admin/ui/form-state";
 import { useToast } from "@/presentation/admin/ui/toast";
 import { useUnsavedChanges } from "@/presentation/admin/ui/use-unsaved-changes";
+import {
+  fieldsetFlat,
+  fieldsetHint,
+  form,
+  formGrid,
+  legend,
+  muted,
+} from "@/presentation/admin/ui/classes";
 
 type MediaDetailsFormProps = Readonly<{
   action: FormAction;
@@ -87,11 +101,11 @@ export function MediaDetailsForm(props: MediaDetailsFormProps) {
     !Number.isNaN(markerY);
 
   return (
-    <div className="admin-media-details">
-      <div className="admin-media-details__preview">
+    <div className="mt-4 grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)] items-start gap-8 max-md:grid-cols-[minmax(0,1fr)]">
+      <div>
         <button
           type="button"
-          className="admin-focal"
+          className="relative block w-full cursor-crosshair overflow-hidden rounded-control border border-neutral-300 bg-admin-canvas p-0"
           onClick={pick}
           tabIndex={-1}
           aria-hidden="true"
@@ -102,21 +116,25 @@ export function MediaDetailsForm(props: MediaDetailsFormProps) {
             alt=""
             width={props.width}
             height={props.height}
+            className="block h-auto w-full"
           />
           {hasMarker ? (
             <span
-              className="admin-focal__marker"
-              style={{ left: `${markerX}%`, top: `${markerY}%` }}
+              data-focal-marker=""
+              className="pointer-events-none absolute top-(--y) left-(--x) size-6 rounded-[50%] border-3 border-surface shadow-[0_0_0_2px_var(--color-plum-800)] [transform:translate(-50%,-50%)]"
+              style={
+                { "--x": `${markerX}%`, "--y": `${markerY}%` } as CSSProperties
+              }
             />
           ) : null}
         </button>
-        <p className="admin-muted">
+        <p className={muted}>
           Click the image to set the point that must stay visible when it is
           cropped, or enter it below.
         </p>
       </div>
       <form
-        className="admin-form"
+        className={form.replace("mt-6", "mt-0")}
         action={formAction}
         onInput={markDirty}
         noValidate
@@ -164,13 +182,13 @@ export function MediaDetailsForm(props: MediaDetailsFormProps) {
           defaultValue={valueOf("credit", props.credit)}
           errors={fieldErrorsFor(state, "credit")}
         />
-        <fieldset className="admin-fieldset admin-fieldset--nested">
-          <legend>Focal point</legend>
-          <p className="admin-fieldset__hint">
+        <fieldset className={fieldsetFlat}>
+          <legend className={legend}>Focal point</legend>
+          <p className={fieldsetHint}>
             Percent from the left and from the top. Leave both empty to use the
             centre.
           </p>
-          <div className="admin-form-grid">
+          <div className={formGrid}>
             <TextField
               id="media-focalX"
               name="focalX"

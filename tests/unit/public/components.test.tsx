@@ -26,7 +26,7 @@ describe("BookNowButton", () => {
     );
     expect(button.closest("a, form")).toBeNull();
     fireEvent.click(button);
-    expect(screen.getByRole("status")).toHaveClass("book-now__status");
+    expect(screen.getByRole("status")).not.toHaveClass("visually-hidden");
   });
 });
 
@@ -98,7 +98,7 @@ describe("ContactForm", () => {
     for (const label of ["Your name", "Email", /Phone/, /Subject/, "Message"]) {
       expect(screen.getByLabelText(label)).toBeInTheDocument();
     }
-    const trap = container.querySelector(".site-form__trap");
+    const trap = container.querySelector("[data-form-trap]");
     expect(trap).toHaveAttribute("aria-hidden", "true");
     expect(container.querySelector('input[name="website"]')).toHaveAttribute(
       "tabindex",

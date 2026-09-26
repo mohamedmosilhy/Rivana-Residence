@@ -17,7 +17,11 @@ export function ParallaxLayer({
   const { scrollY } = useScroll();
   const y = useTransform(scrollY, (value) => Math.min(value, 1200) * speed);
   return (
-    <m.div className={className} style={reduce ? {} : { y }}>
+    <m.div
+      data-hero-parallax=""
+      className={className}
+      style={reduce ? {} : { y }}
+    >
       {children}
     </m.div>
   );

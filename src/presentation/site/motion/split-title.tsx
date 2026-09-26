@@ -17,16 +17,17 @@ export function SplitTitle({ text }: Readonly<{ text: string }>) {
   let index = 0;
   return (
     <>
-      <span className="sr-only">{text}</span>
-      <span className="site-split-title" aria-hidden="true">
+      <span className="visually-hidden">{text}</span>
+      <span aria-hidden="true">
         {words.map((word, wordIndex) => (
           <span key={wordIndex}>
             {wordIndex > 0 ? " " : null}
-            <span className="site-split-title__word">
+            <span className="inline-block overflow-hidden [margin-block:-0.1em_-0.16em] [padding-block:0.1em_0.16em] align-top">
               {[...word].map((letter, letterIndex) => (
                 <span
                   key={letterIndex}
-                  className="site-split-title__char"
+                  className="inline-block animate-[site-char_1s_var(--ease-out-soft)_calc(0.2s+var(--char-delay,0s))_both]"
+                  data-split-char=""
                   style={
                     {
                       "--char-delay": `${(index++ * step).toFixed(3)}s`,

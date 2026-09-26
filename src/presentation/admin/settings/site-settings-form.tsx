@@ -19,6 +19,13 @@ import {
   type FormAction,
 } from "@/presentation/admin/ui/form-state";
 import { useToast } from "@/presentation/admin/ui/toast";
+import {
+  fieldset,
+  fieldsetHint,
+  form,
+  formGrid,
+  legend,
+} from "@/presentation/admin/ui/classes";
 
 const LABELS: Record<SiteSettingsField, string> = {
   siteName: "Residence name",
@@ -106,7 +113,7 @@ export function SiteSettingsForm({
       : [];
 
   return (
-    <form className="admin-form" action={formAction} noValidate>
+    <form className={form} action={formAction} noValidate>
       {state.status === "error" ? (
         <ErrorSummary
           title={state.message}
@@ -116,8 +123,8 @@ export function SiteSettingsForm({
       ) : null}
       <input type="hidden" name="expectedUpdatedAt" value={version} />
 
-      <fieldset className="admin-fieldset">
-        <legend>Identity</legend>
+      <fieldset className={fieldset}>
+        <legend className={legend}>Identity</legend>
         {field("siteName", { optional: false, maxLength: 120 })}
         {field("tagline", {
           hint: "A short line that can appear beside the name.",
@@ -125,9 +132,9 @@ export function SiteSettingsForm({
         })}
       </fieldset>
 
-      <fieldset className="admin-fieldset">
-        <legend>Contact and location</legend>
-        <div className="admin-form-grid">
+      <fieldset className={fieldset}>
+        <legend className={legend}>Contact and location</legend>
+        <div className={formGrid}>
           {field("phone", {
             type: "tel",
             inputMode: "tel",
@@ -137,11 +144,11 @@ export function SiteSettingsForm({
         </div>
         {field("addressLine1", { maxLength: 180 })}
         {field("addressLine2", { maxLength: 180 })}
-        <div className="admin-form-grid">
+        <div className={formGrid}>
           {field("city", { maxLength: 100 })}
           {field("country", { maxLength: 100 })}
         </div>
-        <div className="admin-form-grid">
+        <div className={formGrid}>
           {field("latitude", {
             inputMode: "decimal",
             hint: "Between -90 and 90, for example 30.0131.",
@@ -158,8 +165,8 @@ export function SiteSettingsForm({
         })}
       </fieldset>
 
-      <fieldset className="admin-fieldset">
-        <legend>Footer</legend>
+      <fieldset className={fieldset}>
+        <legend className={legend}>Footer</legend>
         <TextAreaField
           id={fieldId("footerText")}
           name="footerText"
@@ -172,9 +179,9 @@ export function SiteSettingsForm({
         />
       </fieldset>
 
-      <fieldset className="admin-fieldset">
-        <legend>Default search appearance</legend>
-        <p className="admin-fieldset__hint">
+      <fieldset className={fieldset}>
+        <legend className={legend}>Default search appearance</legend>
+        <p className={fieldsetHint}>
           Used for any page that does not set its own title or description.
         </p>
         {field("defaultSeoTitle", {

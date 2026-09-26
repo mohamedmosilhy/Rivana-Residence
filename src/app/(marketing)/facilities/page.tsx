@@ -7,6 +7,7 @@ import { PageHero } from "@/presentation/site/heroes";
 import { StructuredData } from "@/presentation/site/structured-data";
 
 import { pageMetadata } from "../site-content";
+import { container, empty, lightSection } from "@/presentation/site/classes";
 
 export async function generateMetadata(): Promise<Metadata> {
   return pageMetadata({
@@ -34,7 +35,8 @@ export default async function FacilitiesPage() {
         intro="Places to relax and keep active during your stay."
       />
       <section
-        className="site-section site-container"
+        data-light-section=""
+        className={`${lightSection} ${container}`}
         aria-labelledby="facilities-title"
       >
         {facilities.length > 0 ? (
@@ -48,7 +50,7 @@ export default async function FacilitiesPage() {
             ))}
           </CardGrid>
         ) : (
-          <p className="site-empty">
+          <p className={empty}>
             Facility details are coming soon. Please contact us for information.
           </p>
         )}

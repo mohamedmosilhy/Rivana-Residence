@@ -39,7 +39,7 @@ describe("SplitTitle", () => {
     expect(
       screen.getByRole("heading", { name: "Rivana Residence" }),
     ).toBeInTheDocument();
-    const letters = document.querySelectorAll(".site-split-title__char");
+    const letters = document.querySelectorAll("[data-split-char]");
     expect(letters).toHaveLength(15);
     expect(letters[0]?.closest("[aria-hidden='true']")).not.toBeNull();
   });
@@ -48,14 +48,16 @@ describe("SplitTitle", () => {
 describe("CountUp", () => {
   it("renders the final value for servers, no-JS, and screen readers", () => {
     const { container } = render(<CountUp value="1,500+" />);
-    expect(container.querySelector(".sr-only")).toHaveTextContent("1,500+");
-    expect(container.querySelector(".site-count")).toHaveTextContent("1,500+");
+    expect(container.querySelector(".visually-hidden")).toHaveTextContent(
+      "1,500+",
+    );
+    expect(container.querySelector("[data-count]")).toHaveTextContent("1,500+");
   });
 
   it("leaves values with more than one number as written", () => {
     const { container } = render(<CountUp value="24/7" />);
     expect(container).toHaveTextContent("24/7");
-    expect(container.querySelector(".site-count")).toBeNull();
+    expect(container.querySelector("[data-count]")).toBeNull();
   });
 });
 

@@ -20,6 +20,17 @@ import {
   type FormAction,
 } from "@/presentation/admin/ui/form-state";
 import { useToast } from "@/presentation/admin/ui/toast";
+import {
+  button,
+  check,
+  checkInput,
+  control,
+  fieldsetFlat,
+  form,
+  formGrid,
+  legend,
+  muted,
+} from "@/presentation/admin/ui/classes";
 
 export type SocialLinkRow = Readonly<{
   platform: SocialPlatform | "";
@@ -149,7 +160,7 @@ export function SocialLinksForm({
   );
 
   return (
-    <form className="admin-form" action={formAction} noValidate>
+    <form className={form} action={formAction} noValidate>
       {state.status === "error" ? (
         <ErrorSummary
           title={state.message}
@@ -159,29 +170,32 @@ export function SocialLinksForm({
       ) : null}
       <input type="hidden" name="expectedUpdatedAt" value={version} />
       <input type="hidden" name="links" value={serialized} />
-      <p className="sr-only" role="status" aria-live="polite">
+      <p className="visually-hidden" role="status" aria-live="polite">
         {announcement}
       </p>
 
       {rows.length === 0 ? (
-        <p className="admin-muted">
+        <p className={muted}>
           No social links yet. Links you add appear in the website footer in
           this order.
         </p>
       ) : (
-        <ol className="admin-repeatable">
+        <ol className="grid gap-4">
           {rows.map((row, index) => {
             const id = (column: string) => `social-${index}-${column}`;
             const errors = (column: string) =>
               fieldErrorsFor(state, `${index}.${column}`);
             const name = nameOf(row, index);
             return (
-              <li key={row.key} className="admin-repeatable__item">
-                <fieldset className="admin-fieldset admin-fieldset--row">
-                  <legend>
+              <li
+                key={row.key}
+                className="rounded-panel border border-neutral-300 bg-admin-canvas p-5"
+              >
+                <fieldset className={fieldsetFlat}>
+                  <legend className={legend}>
                     {index + 1}. {name}
                   </legend>
-                  <div className="admin-form-grid">
+                  <div className={formGrid}>
                     <FieldShell
                       id={id("platform")}
                       label="Platform"
@@ -190,6 +204,7 @@ export function SocialLinksForm({
                       {(describedBy, invalid) => (
                         <select
                           id={id("platform")}
+                          className={control}
                           value={row.platform}
                           aria-invalid={invalid || undefined}
                           aria-describedby={describedBy}
@@ -227,6 +242,7 @@ export function SocialLinksForm({
                       {(describedBy, invalid) => (
                         <input
                           id={id("label")}
+                          className={control}
                           value={row.label}
                           maxLength={80}
                           aria-invalid={invalid || undefined}
@@ -246,6 +262,7 @@ export function SocialLinksForm({
                     {(describedBy, invalid) => (
                       <input
                         id={id("url")}
+                        className={control}
                         type="url"
                         inputMode="url"
                         spellCheck={false}
@@ -260,10 +277,11 @@ export function SocialLinksForm({
                       />
                     )}
                   </FieldShell>
-                  <div className="admin-repeatable__controls">
-                    <label className="admin-check">
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <label className={check}>
                       <input
                         type="checkbox"
+                        className={checkInput}
                         id={id("visible")}
                         checked={row.isVisible}
                         onChange={(event) =>
@@ -272,12 +290,12 @@ export function SocialLinksForm({
                       />
                       Show on website
                     </label>
-                    <div className="admin-repeatable__buttons">
+                    <div className="flex flex-wrap gap-2">
                       <button
                         type="button"
                         id={id("up")}
                         aria-label={`Move up: ${name}`}
-                        className="admin-button admin-button--quiet"
+                        className={button("quiet")}
                         disabled={index === 0}
                         onClick={() => move(index, -1)}
                       >
@@ -287,7 +305,7 @@ export function SocialLinksForm({
                         type="button"
                         id={id("down")}
                         aria-label={`Move down: ${name}`}
-                        className="admin-button admin-button--quiet"
+                        className={button("quiet")}
                         disabled={index === rows.length - 1}
                         onClick={() => move(index, 1)}
                       >
@@ -295,7 +313,7 @@ export function SocialLinksForm({
                       </button>
                       <button
                         type="button"
-                        className="admin-button admin-button--danger-quiet"
+                        className={button("danger-quiet")}
                         aria-label={`Remove: ${name}`}
                         onClick={() => remove(index)}
                       >
@@ -313,7 +331,7 @@ export function SocialLinksForm({
       <button
         type="button"
         id="social-add"
-        className="admin-button admin-button--secondary"
+        className={button("secondary")}
         onClick={add}
         disabled={rows.length >= MAX_SOCIAL_LINKS}
       >

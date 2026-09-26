@@ -13,6 +13,7 @@ import { PageHeader } from "@/presentation/admin/ui/page-header";
 import { EmptyState } from "@/presentation/admin/ui/states";
 
 import { moveFacilityAction } from "./actions";
+import { button, listNote } from "@/presentation/admin/ui/classes";
 
 export const metadata: Metadata = { title: "Facilities" };
 
@@ -60,7 +61,7 @@ export default async function FacilitiesPage({
           </p>
         }
         actions={
-          <Link href="/admin/facilities/new" className="admin-button">
+          <Link href="/admin/facilities/new" className={button()}>
             Add facility
           </Link>
         }
@@ -90,7 +91,7 @@ export default async function FacilitiesPage({
               : {})}
           />
           {!reorderable ? (
-            <p className="admin-muted admin-list-note">
+            <p className={listNote}>
               Clear the filters to change the display order.
             </p>
           ) : null}
@@ -103,7 +104,7 @@ export default async function FacilitiesPage({
         <EmptyState
           title="No facilities yet"
           action={
-            <Link href="/admin/facilities/new" className="admin-button">
+            <Link href="/admin/facilities/new" className={button()}>
               Add facility
             </Link>
           }

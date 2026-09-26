@@ -5,6 +5,23 @@ import { useId, useState } from "react";
 import type { MediaOption } from "@/application/ports/repositories";
 import { MediaPicker } from "@/presentation/admin/media/media-picker";
 import { mediaUrl } from "@/presentation/admin/media/media-url";
+import {
+  button,
+  control,
+  field,
+  fieldHint,
+  fieldLabel,
+  fieldOptional,
+  fieldsetFlat,
+  fieldsetHint,
+  imageChoiceActions,
+  legend,
+  muted,
+} from "@/presentation/admin/ui/classes";
+
+const THUMB =
+  "grid h-[3.375rem] w-[4.5rem] flex-none place-items-center rounded-control bg-admin-canvas object-cover";
+const CHOICE = "flex items-center gap-3 [overflow-wrap:anywhere]";
 
 export type ChosenImage = Readonly<{
   mediaId: string;
@@ -13,10 +30,12 @@ export type ChosenImage = Readonly<{
 
 function Thumb({ option }: Readonly<{ option: MediaOption | undefined }>) {
   if (!option)
-    return <span className="admin-thumb admin-thumb--missing">Missing</span>;
+    return (
+      <span className={`${THUMB} text-[0.75rem] text-danger`}>Missing</span>
+    );
   return (
     // eslint-disable-next-line @next/next/no-img-element -- admin thumbnails are served as stored
-    <img className="admin-thumb" src={mediaUrl(option.storageKey)} alt="" />
+    <img className={THUMB} src={mediaUrl(option.storageKey)} alt="" />
   );
 }
 
@@ -36,16 +55,17 @@ function AltOverride({
   onChange: (value: string | null) => void;
 }>) {
   return (
-    <div className="admin-field">
-      <label htmlFor={id}>
-        Alt text here <span className="admin-field__optional">(optional)</span>
+    <div className={field}>
+      <label htmlFor={id} className={fieldLabel}>
+        Alt text here <span className={fieldOptional}>(optional)</span>
       </label>
-      <p className="admin-field__hint" id={`${id}-hint`}>
+      <p className={fieldHint} id={`${id}-hint`}>
         Only if this image means something different in this place. Otherwise
         the library’s alt text is used.
       </p>
       <input
         id={id}
+        className={control}
         maxLength={300}
         value={value ?? ""}
         aria-describedby={`${id}-hint`}
@@ -77,24 +97,24 @@ export function SingleImage({
   const option = options.find((item) => item.id === value?.mediaId);
   return (
     <fieldset
-      className="admin-fieldset admin-fieldset--nested"
+      className={fieldsetFlat}
       aria-describedby={hint ? `${id}-hint` : undefined}
     >
-      <legend>{label}</legend>
+      <legend className={legend}>{label}</legend>
       {hint ? (
-        <p className="admin-fieldset__hint" id={`${id}-hint`}>
+        <p className={fieldsetHint} id={`${id}-hint`}>
           {hint}
         </p>
       ) : null}
       {value ? (
-        <div className="admin-image-choice">
+        <div data-image-choice="" className={CHOICE}>
           <Thumb option={option} />
           <span>{describe(option)}</span>
         </div>
       ) : (
-        <p className="admin-muted">No image chosen.</p>
+        <p className={muted}>No image chosen.</p>
       )}
-      <div className="admin-image-choice__actions">
+      <div className={imageChoiceActions}>
         <MediaPicker
           options={options}
           multiple={false}
@@ -112,7 +132,7 @@ export function SingleImage({
         {value ? (
           <button
             type="button"
-            className="admin-button admin-button--danger-quiet"
+            className={button("danger-quiet")}
             aria-label={`Remove ${label.toLowerCase()}`}
             onClick={() => onChange(null)}
           >
@@ -172,34 +192,37 @@ export function ImageList({
   }
 
   return (
-    <fieldset className="admin-fieldset admin-fieldset--nested">
-      <legend>{label}</legend>
-      {hint ? <p className="admin-fieldset__hint">{hint}</p> : null}
-      <p className="sr-only" role="status" aria-live="polite">
+    <fieldset className={fieldsetFlat}>
+      <legend className={legend}>{label}</legend>
+      {hint ? <p className={fieldsetHint}>{hint}</p> : null}
+      <p className="visually-hidden" role="status" aria-live="polite">
         {announcement}
       </p>
       {value.length === 0 ? (
-        <p className="admin-muted">No images chosen.</p>
+        <p className={muted}>No images chosen.</p>
       ) : (
-        <ol className="admin-image-list">
+        <ol className="grid gap-3">
           {value.map((item, index) => {
             const option = options.find(
               (candidate) => candidate.id === item.mediaId,
             );
             const name = describe(option);
             return (
-              <li key={item.mediaId} className="admin-image-list__item">
-                <div className="admin-image-choice">
+              <li
+                key={item.mediaId}
+                className="grid gap-3 rounded-panel border border-neutral-300 bg-admin-canvas p-4"
+              >
+                <div data-image-choice="" className={CHOICE}>
                   <Thumb option={option} />
                   <span>
                     {index + 1}. {name}
                   </span>
                 </div>
-                <div className="admin-repeatable__buttons">
+                <div className="flex flex-wrap gap-2">
                   <button
                     type="button"
                     id={`${id}-${index}-up`}
-                    className="admin-button admin-button--quiet"
+                    className={button("quiet")}
                     aria-label={`Move up: ${name}`}
                     disabled={index === 0}
                     onClick={() => move(index, -1)}
@@ -209,7 +232,7 @@ export function ImageList({
                   <button
                     type="button"
                     id={`${id}-${index}-down`}
-                    className="admin-button admin-button--quiet"
+                    className={button("quiet")}
                     aria-label={`Move down: ${name}`}
                     disabled={index === value.length - 1}
                     onClick={() => move(index, 1)}
@@ -219,7 +242,7 @@ export function ImageList({
                   <button
                     type="button"
                     id={`${id}-${index}-remove`}
-                    className="admin-button admin-button--danger-quiet"
+                    className={button("danger-quiet")}
                     aria-label={`Remove: ${name}`}
                     onClick={() => {
                       onChange(

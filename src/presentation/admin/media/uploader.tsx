@@ -4,6 +4,15 @@ import Link from "next/link";
 import type { Route } from "next";
 import { useRouter } from "next/navigation";
 import { useId, useRef, useState, type DragEvent } from "react";
+import {
+  button,
+  checkInField,
+  checkInputInField,
+  field,
+  fieldErrors,
+  link,
+  muted,
+} from "@/presentation/admin/ui/classes";
 
 const ACCEPT =
   "image/jpeg,image/png,image/webp,image/avif,.jpg,.jpeg,.png,.webp,.avif";
@@ -24,6 +33,8 @@ type UploaderProps = Readonly<{
   /** Called with the new asset id after each successful upload. */
   onUploaded?: (assetId: string) => void;
   label?: string;
+  /** Inside another panel (the replace flow): no box of its own. */
+  embedded?: boolean;
 }>;
 
 function send(
@@ -70,6 +81,7 @@ export function Uploader({
   multiple = true,
   onUploaded,
   label = "Upload images",
+  embedded = false,
 }: UploaderProps) {
   const router = useRouter();
   const inputRef = useRef<HTMLInputElement>(null);
@@ -145,18 +157,29 @@ export function Uploader({
   }
 
   return (
-    <section className="admin-uploader" aria-labelledby={headingId}>
-      <h2 id={headingId} className="admin-section__title">
+    <section
+      className={
+        embedded
+          ? "grid gap-3 rounded-panel bg-surface"
+          : "mb-8 grid gap-3 rounded-panel border border-neutral-300 bg-surface p-[clamp(1.25rem,3vw,2rem)]"
+      }
+      aria-labelledby={headingId}
+    >
+      <h2
+        id={headingId}
+        className="m-0 text-[1.125rem] font-medium text-neutral-950"
+      >
         {label}
       </h2>
-      <p className="admin-muted">
+      <p className={muted}>
         JPEG, PNG, WebP, or AVIF, up to 15 MB and 40 megapixels. Location and
         camera details are removed automatically.
       </p>
-      <div className="admin-field">
-        <label className="admin-check">
+      <div className={field}>
+        <label className={checkInField}>
           <input
             type="checkbox"
+            className={checkInputInField}
             id={rightsId}
             checked={rights}
             aria-invalid={rightsError || undefined}
@@ -169,13 +192,13 @@ export function Uploader({
           I confirm Rivana Residence may use these images on its website
         </label>
         {rightsError ? (
-          <p className="admin-field__errors" id={`${rightsId}-error`}>
+          <p className={fieldErrors} id={`${rightsId}-error`}>
             Confirm the usage rights before uploading.
           </p>
         ) : null}
       </div>
       <div
-        className={`admin-dropzone${dragging ? " admin-dropzone--active" : ""}`}
+        className={`flex flex-wrap items-center justify-center gap-3 rounded-panel border-2 border-dashed px-4 py-8 text-center text-neutral-600 [&_p]:!m-0 ${dragging ? "border-plum-700 bg-plum-100" : "border-neutral-300 bg-admin-canvas"}`}
         onDragOver={(event) => {
           event.preventDefault();
           setDragging(true);
@@ -186,7 +209,7 @@ export function Uploader({
         <p>Drag images here, or</p>
         <button
           type="button"
-          className="admin-button"
+          className={button()}
           onClick={() => inputRef.current?.click()}
         >
           {multiple ? "Choose images" : "Choose an image"}
@@ -196,7 +219,7 @@ export function Uploader({
           type="file"
           accept={ACCEPT}
           multiple={multiple}
-          className="sr-only"
+          className="visually-hidden"
           tabIndex={-1}
           aria-label={multiple ? "Choose images" : "Choose an image"}
           onChange={(event) => {
@@ -205,25 +228,31 @@ export function Uploader({
           }}
         />
       </div>
-      <p className="sr-only" role="status" aria-live="polite">
+      <p className="visually-hidden" role="status" aria-live="polite">
         {announcement}
       </p>
       {items.length > 0 ? (
-        <ul className="admin-upload-list">
+        <ul className="grid gap-2">
           {items.map((item) => (
             <li
               key={item.key}
-              className={`admin-upload admin-upload--${item.status}`}
+              data-upload=""
+              className={`flex flex-wrap items-center gap-x-4 gap-y-2 rounded-control border border-l-4 border-neutral-300 px-4 py-3 ${item.status === "done" ? "border-l-success" : item.status === "failed" ? "border-l-danger" : ""}`}
             >
-              <span className="admin-upload__name">{item.file.name}</span>
+              <span className="font-medium [overflow-wrap:anywhere]">
+                {item.file.name}
+              </span>
               {item.status === "uploading" || item.status === "waiting" ? (
                 <progress
+                  className="w-[min(12rem,100%)] accent-plum-700"
                   max={1}
                   value={item.progress}
                   aria-label={`Upload progress for ${item.file.name}`}
                 />
               ) : null}
-              <span className="admin-upload__status">
+              <span
+                className={`text-[0.875rem] ${item.status === "failed" ? "text-danger" : "text-neutral-600"}`}
+              >
                 {item.status === "waiting" && "Waiting"}
                 {item.status === "uploading" &&
                   `Uploading ${Math.round(item.progress * 100)}%`}
@@ -232,7 +261,7 @@ export function Uploader({
               </span>
               {item.status === "done" && item.assetId && multiple ? (
                 <Link
-                  className="admin-link"
+                  className={link}
                   href={`/admin/media/${item.assetId}` as Route}
                   aria-label={`Add details for ${item.file.name}`}
                 >
@@ -241,7 +270,7 @@ export function Uploader({
               ) : null}
               {item.status === "failed" && item.duplicateOf ? (
                 <Link
-                  className="admin-link"
+                  className={link}
                   href={`/admin/media/${item.duplicateOf}` as Route}
                 >
                   Open the existing image
@@ -250,7 +279,7 @@ export function Uploader({
               {item.status === "failed" && !item.duplicateOf ? (
                 <button
                   type="button"
-                  className="admin-button admin-button--quiet"
+                  className={button("quiet")}
                   aria-label={`Try again: ${item.file.name}`}
                   onClick={() =>
                     void upload(item).then((ok) => ok && router.refresh())

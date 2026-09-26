@@ -17,6 +17,16 @@ import {
 } from "@/presentation/admin/ui/form-state";
 import { useToast } from "@/presentation/admin/ui/toast";
 import { useUnsavedChanges } from "@/presentation/admin/ui/use-unsaved-changes";
+import {
+  check,
+  checkInput,
+  fieldset,
+  fieldsetHint,
+  formGrid,
+  legend,
+  muted,
+  sectionTitle,
+} from "@/presentation/admin/ui/classes";
 
 export type PromotionFormValues = Readonly<{
   internalName: string;
@@ -130,9 +140,9 @@ export function PromotionForm({
   };
 
   return (
-    <div className="admin-promotion-editor">
+    <div className="grid grid-cols-[minmax(0,1fr)_minmax(16rem,22rem)] items-start gap-8 max-lg:grid-cols-[minmax(0,1fr)]">
       <form
-        className="admin-form"
+        className="mt-0 grid gap-5 rounded-panel border border-neutral-300 bg-surface p-[clamp(1.25rem,3vw,2rem)]"
         action={formAction}
         onInput={markDirty}
         noValidate
@@ -145,8 +155,8 @@ export function PromotionForm({
           />
         ) : null}
 
-        <fieldset className="admin-fieldset">
-          <legend>For staff</legend>
+        <fieldset className={fieldset}>
+          <legend className={legend}>For staff</legend>
           <TextField
             id="promotion-internalName"
             name="internalName"
@@ -159,8 +169,8 @@ export function PromotionForm({
           />
         </fieldset>
 
-        <fieldset className="admin-fieldset">
-          <legend>Pop-up content</legend>
+        <fieldset className={fieldset}>
+          <legend className={legend}>Pop-up content</legend>
           {copyField("headline", "Headline", { maxLength: 160 })}
           {copyField("body", "Message", {
             multiline: true,
@@ -179,13 +189,13 @@ export function PromotionForm({
           })}
         </fieldset>
 
-        <fieldset className="admin-fieldset">
-          <legend>Schedule</legend>
-          <p className="admin-fieldset__hint">
+        <fieldset className={fieldset}>
+          <legend className={legend}>Schedule</legend>
+          <p className={fieldsetHint}>
             Times are in the property’s time zone ({timeZone}). Leave blank to
             start immediately or to run with no end date.
           </p>
-          <div className="admin-form-grid">
+          <div className={formGrid}>
             <TextField
               id="promotion-startsAt"
               name="startsAt"
@@ -207,11 +217,12 @@ export function PromotionForm({
           </div>
         </fieldset>
 
-        <fieldset className="admin-fieldset">
-          <legend>Display</legend>
-          <label className="admin-check">
+        <fieldset className={fieldset}>
+          <legend className={legend}>Display</legend>
+          <label className={check}>
             <input
               type="checkbox"
+              className={checkInput}
               name="showAsPopup"
               defaultChecked={
                 state.status === "error" && state.values
@@ -241,16 +252,14 @@ export function PromotionForm({
       </form>
 
       <aside
-        className="admin-promotion-preview"
+        className="sticky top-20 max-lg:static"
         aria-labelledby="promotion-preview-title"
       >
-        <h2 id="promotion-preview-title" className="admin-section__title">
+        <h2 id="promotion-preview-title" className={sectionTitle}>
           Preview
         </h2>
-        <p className="admin-muted">
-          Updates as you type. This is what visitors see.
-        </p>
-        <div className="admin-promotion-preview__frame">
+        <p className={muted}>Updates as you type. This is what visitors see.</p>
+        <div className="mt-3 rounded-panel bg-[rgb(31_27_29/0.55)] p-4">
           <PromotionCard
             headline={copy.headline}
             body={copy.body}

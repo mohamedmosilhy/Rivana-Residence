@@ -1,6 +1,16 @@
 "use client";
 
 import Link from "next/link";
+import {
+  button,
+  heroTitle,
+  holding,
+  holdingActions,
+  holdingContent,
+  holdingEyebrow,
+  holdingMuted,
+  holdingText,
+} from "@/presentation/site/classes";
 
 export default function MarketingError({
   error,
@@ -8,25 +18,34 @@ export default function MarketingError({
 }: Readonly<{ error: Error & { digest?: string }; reset: () => void }>) {
   return (
     <section
-      className="site-holding"
+      data-dark-surface=""
+      className={holding}
       aria-labelledby="error-title"
       role="alert"
     >
-      <div className="site-holding__content site-container">
-        <p className="site-eyebrow">Error</p>
-        <h1 id="error-title">Something went wrong</h1>
-        <p>
+      <div
+        className={`${holdingContent} pt-[calc(var(--header-height)+3rem)] pb-20`}
+      >
+        <p className={holdingEyebrow}>Error</p>
+        <h1 id="error-title" className={heroTitle}>
+          Something went wrong
+        </h1>
+        <p className={holdingText}>
           Please try again. If the problem continues, contact us by phone or
           email.
         </p>
         {error.digest ? (
-          <p className="site-muted">Reference: {error.digest}</p>
+          <p className={holdingMuted}>Reference: {error.digest}</p>
         ) : null}
-        <p className="site-holding__actions">
-          <button type="button" className="site-button" onClick={reset}>
+        <p className={holdingActions}>
+          <button
+            type="button"
+            className={button("primary-dark")}
+            onClick={reset}
+          >
             Try again
           </button>
-          <Link href="/" className="site-button site-button--ghost">
+          <Link href="/" className={button("ghost-dark")}>
             Go to the home page
           </Link>
         </p>

@@ -8,6 +8,15 @@ import { editorTextFromRichText } from "@/domain/shared/rich-text";
 import { DESCRIPTION_HINT } from "@/presentation/admin/content/catalog-form";
 import { FieldShell } from "@/presentation/admin/ui/form";
 import { RepeatableFields } from "@/presentation/admin/ui/repeatable-fields";
+import {
+  check,
+  checkInput,
+  control,
+  fieldsetFlat,
+  formGrid,
+  legend,
+  textarea as textareaClass,
+} from "@/presentation/admin/ui/classes";
 
 // Editor state is a plain object of strings and booleans per section type.
 // The server converts it to the stored payload and validates it against the
@@ -132,6 +141,7 @@ function Text({
         multiline ? (
           <textarea
             id={id}
+            className={textareaClass}
             rows={rows ?? 3}
             maxLength={maxLength}
             value={value}
@@ -142,6 +152,7 @@ function Text({
         ) : (
           <input
             id={id}
+            className={control}
             maxLength={maxLength}
             value={value}
             aria-invalid={invalid || undefined}
@@ -177,6 +188,7 @@ function Choice({
       {(describedBy, invalid) => (
         <select
           id={id}
+          className={control}
           value={value}
           aria-invalid={invalid || undefined}
           aria-describedby={describedBy}
@@ -207,9 +219,10 @@ function Toggle({
   onChange: (value: boolean) => void;
 }>) {
   return (
-    <label className="admin-check">
+    <label className={check}>
       <input
         type="checkbox"
+        className={checkInput}
         id={sectionFieldId(sectionId, path)}
         checked={checked}
         onChange={(event) => onChange(event.target.checked)}
@@ -224,9 +237,9 @@ function CallToAction({ sectionId, state, onChange, errors }: FieldsProps) {
   const set = (patch: Record<string, string>) =>
     onChange({ ...state, cta: { ...cta, ...patch } });
   return (
-    <fieldset className="admin-fieldset admin-fieldset--nested">
-      <legend>Button</legend>
-      <div className="admin-form-grid">
+    <fieldset className={fieldsetFlat}>
+      <legend className={legend}>Button</legend>
+      <div className={formGrid}>
         <Text
           sectionId={sectionId}
           path="cta.label"

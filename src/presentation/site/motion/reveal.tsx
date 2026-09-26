@@ -51,6 +51,11 @@ export function useReveal<T extends Element>() {
 
 const instantly = { duration: 0 } as const;
 
+// Printed pages show everything, whatever the reveal state.
+const PRINT = "print:opacity-100! print:[transform:none]!";
+const withPrint = (className: string | undefined) =>
+  className ? `${className} ${PRINT}` : PRINT;
+
 const ITEM: Variants = {
   hidden: { opacity: 0, y: 36, transition: instantly },
   shown: {
@@ -135,6 +140,7 @@ export function Reveal({
       animate={state}
       variants={variants}
       {...rest}
+      className={withPrint(rest.className)}
     >
       {children}
     </Component>
@@ -156,7 +162,7 @@ export function RevealItem({
   const Component = m[as] as typeof m.div;
   return (
     <Component
-      className={className}
+      className={withPrint(className)}
       data-reveal-item=""
       variants={variant === "fade" ? FADE : ITEM}
     >
@@ -178,7 +184,9 @@ export function RevealImage({
   return (
     <m.div
       ref={ref}
-      className={`${className} site-reveal-image`}
+      className={withPrint(
+        `${className} relative overflow-hidden [&_img]:[transition:transform_1.6s_var(--ease-out-soft)] data-[reveal-state=hidden]:[&_img]:[transform:scale(1.14)] data-[reveal-state=hidden]:[&_img]:[transition:none]`,
+      )}
       data-reveal=""
       data-reveal-state={state}
       initial={false}
@@ -188,7 +196,7 @@ export function RevealImage({
       {armed ? (
         <m.span
           aria-hidden="true"
-          className="site-reveal-image__curtain"
+          className="pointer-events-none absolute inset-0 z-1 origin-top bg-plum-900 print:hidden"
           variants={delayed(CURTAIN, delay)}
         />
       ) : null}

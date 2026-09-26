@@ -18,6 +18,7 @@ import {
   type FormAction,
 } from "@/presentation/admin/ui/form-state";
 import { useToast } from "@/presentation/admin/ui/toast";
+import { form } from "@/presentation/admin/ui/classes";
 
 export function PageDetailsForm({
   action,
@@ -46,7 +47,7 @@ export function PageDetailsForm({
       : fallback;
 
   return (
-    <form className="admin-form" action={formAction} noValidate>
+    <form className={form} action={formAction} noValidate>
       {state.status === "error" ? (
         <ErrorSummary
           title={state.message}

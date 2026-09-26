@@ -4,9 +4,10 @@ import Link from "next/link";
 import type { PromotionDisplayState } from "@/application/promotions/promotion-admin";
 import type { PromotionDto } from "@/application/ports/repositories";
 import { formatDateTime } from "@/presentation/admin/format";
+import { link } from "@/presentation/admin/ui/classes";
 
 const winnerLink = (winner: PromotionDto) => (
-  <Link href={`/admin/promotions/${winner.id}` as Route} className="admin-link">
+  <Link href={`/admin/promotions/${winner.id}` as Route} className={link}>
     {winner.internalName}
   </Link>
 );
@@ -66,7 +67,10 @@ export function DisplayNote({
       break;
   }
   return (
-    <p className="admin-display-note" role="note">
+    <p
+      className="rounded-control bg-admin-canvas px-4 py-3 in-card:text-neutral-800"
+      role="note"
+    >
       {message}
     </p>
   );

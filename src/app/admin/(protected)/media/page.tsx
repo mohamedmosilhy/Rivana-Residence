@@ -61,7 +61,9 @@ export default async function MediaPage({ searchParams }: MediaPageProps) {
       />
       <Notice code={noticeFrom(params.notice)} />
       <Uploader />
-      <h2 className="admin-section__title admin-media-heading">Library</h2>
+      <h2 className="mt-4 mb-4 text-[1.125rem] font-medium text-neutral-950">
+        Library
+      </h2>
       <ListFilters
         action="/admin/media"
         searchLabel="Search description, file name, or caption"

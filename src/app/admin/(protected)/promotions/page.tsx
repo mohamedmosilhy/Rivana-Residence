@@ -13,6 +13,12 @@ import { ListFilters, Pagination } from "@/presentation/admin/ui/list-controls";
 import { Notice, noticeFrom } from "@/presentation/admin/ui/notice";
 import { PageHeader } from "@/presentation/admin/ui/page-header";
 import { EmptyState } from "@/presentation/admin/ui/states";
+import {
+  button,
+  link,
+  tablePrimary,
+  tableSecondary,
+} from "@/presentation/admin/ui/classes";
 
 export const metadata: Metadata = { title: "Promotions" };
 
@@ -67,7 +73,7 @@ export default async function PromotionsPage({
           </p>
         }
         actions={
-          <Link href="/admin/promotions/new" className="admin-button">
+          <Link href="/admin/promotions/new" className={button()}>
             Add promotion
           </Link>
         }
@@ -114,13 +120,11 @@ export default async function PromotionsPage({
                 <>
                   <Link
                     href={`/admin/promotions/${promotion.id}` as Route}
-                    className="admin-table__primary admin-link"
+                    className={`${tablePrimary} ${link}`}
                   >
                     {promotion.internalName}
                   </Link>
-                  <span className="admin-table__secondary">
-                    {promotion.headline}
-                  </span>
+                  <span className={tableSecondary}>{promotion.headline}</span>
                 </>
               ),
             },
@@ -131,7 +135,7 @@ export default async function PromotionsPage({
             {
               header: "Status",
               cell: (promotion) => (
-                <span className="admin-badges">
+                <span className="inline-flex flex-wrap gap-1">
                   <PublicationBadge status={promotion.status} />
                   {promotion.status !== "ARCHIVED" ? (
                     <Badge>
@@ -164,7 +168,7 @@ export default async function PromotionsPage({
         <EmptyState
           title="No promotions yet"
           action={
-            <Link href="/admin/promotions/new" className="admin-button">
+            <Link href="/admin/promotions/new" className={button()}>
               Add promotion
             </Link>
           }

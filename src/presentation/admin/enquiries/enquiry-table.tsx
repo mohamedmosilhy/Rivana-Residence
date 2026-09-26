@@ -2,6 +2,7 @@ import type { ContactEnquiryDto } from "@/application/ports/repositories";
 import { formatDateTime } from "@/presentation/admin/format";
 import { EnquiryBadge } from "@/presentation/admin/ui/badge";
 import { DataTable } from "@/presentation/admin/ui/data-table";
+import { tablePrimary, tableSecondary } from "@/presentation/admin/ui/classes";
 
 const PREVIEW_LENGTH = 120;
 
@@ -29,8 +30,8 @@ export function EnquiryTable({
           rowHeader: true,
           cell: (enquiry) => (
             <>
-              <span className="admin-table__primary">{enquiry.name}</span>
-              <span className="admin-table__secondary">{enquiry.email}</span>
+              <span className={tablePrimary}>{enquiry.name}</span>
+              <span className={tableSecondary}>{enquiry.email}</span>
             </>
           ),
         },
@@ -39,10 +40,10 @@ export function EnquiryTable({
           wrap: true,
           cell: (enquiry) => (
             <>
-              <span className="admin-table__primary">
+              <span className={tablePrimary}>
                 {enquiry.subject ?? "No subject"}
               </span>
-              <span className="admin-table__secondary">
+              <span className={tableSecondary}>
                 {enquiry.message.length > PREVIEW_LENGTH
                   ? `${enquiry.message.slice(0, PREVIEW_LENGTH)}…`
                   : enquiry.message}

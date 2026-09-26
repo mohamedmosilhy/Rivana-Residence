@@ -19,6 +19,7 @@ import {
 } from "@/presentation/admin/ui/form-state";
 import { useToast } from "@/presentation/admin/ui/toast";
 import { useUnsavedChanges } from "@/presentation/admin/ui/use-unsaved-changes";
+import { form, formStack } from "@/presentation/admin/ui/classes";
 
 type EntityImagesFormProps = Readonly<{
   noun: string;
@@ -62,7 +63,7 @@ export function EntityImagesForm({
     };
 
   return (
-    <form className="admin-form" action={formAction} noValidate>
+    <form className={form} action={formAction} noValidate>
       {state.status === "error" ? (
         <ErrorSummary
           title={state.message}
@@ -77,7 +78,7 @@ export function EntityImagesForm({
         name="media"
         value={JSON.stringify({ hero, gallery, social })}
       />
-      <div id="entity-images" tabIndex={-1} className="admin-form-stack">
+      <div id="entity-images" tabIndex={-1} className={formStack}>
         <SingleImage
           label="Hero image"
           hint={`The main image for this ${noun}. Required to publish.`}

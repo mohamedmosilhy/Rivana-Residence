@@ -135,7 +135,7 @@ describe("image choices", () => {
       />,
     );
     expect(
-      screen.getByText("Indoor pool", { selector: ".admin-image-choice span" }),
+      screen.getByText("Indoor pool", { selector: "[data-image-choice] span" }),
     ).toBeInTheDocument();
     fireEvent.change(screen.getByLabelText(/Alt text here/), {
       target: { value: "Pool at night" },

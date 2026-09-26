@@ -3,6 +3,12 @@
 import { useId, useRef, type ReactNode } from "react";
 
 import { SubmitButton } from "@/presentation/admin/ui/form";
+import {
+  button,
+  dialog,
+  dialogActions,
+  dialogBody,
+} from "@/presentation/admin/ui/classes";
 
 type ConfirmDialogProps = Readonly<{
   /** Text of the button that opens the dialog. */
@@ -47,7 +53,7 @@ export function ConfirmDialog({
       <button
         ref={triggerRef}
         type="button"
-        className={`admin-button ${destructive ? "admin-button--danger-quiet" : "admin-button--secondary"}`}
+        className={button(destructive ? "danger-quiet" : "secondary")}
         disabled={triggerDisabled}
         aria-haspopup="dialog"
         onClick={open}
@@ -56,7 +62,7 @@ export function ConfirmDialog({
       </button>
       <dialog
         ref={dialogRef}
-        className="admin-dialog"
+        className={dialog}
         role="alertdialog"
         aria-modal="true"
         aria-labelledby={titleId}
@@ -64,11 +70,11 @@ export function ConfirmDialog({
         onClose={() => triggerRef.current?.focus()}
       >
         <h2 id={titleId}>{title}</h2>
-        <div id={bodyId} className="admin-dialog__body">
+        <div id={bodyId} className={dialogBody}>
           {children}
         </div>
         <form
-          className="admin-dialog__actions"
+          className={dialogActions}
           action={async () => {
             await action();
             dialogRef.current?.close();
@@ -77,7 +83,7 @@ export function ConfirmDialog({
           <button
             ref={cancelRef}
             type="button"
-            className="admin-button admin-button--secondary"
+            className={button("secondary")}
             onClick={() => dialogRef.current?.close()}
           >
             Cancel

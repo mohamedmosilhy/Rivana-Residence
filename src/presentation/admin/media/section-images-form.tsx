@@ -19,6 +19,7 @@ import {
   type FormAction,
 } from "@/presentation/admin/ui/form-state";
 import { useToast } from "@/presentation/admin/ui/toast";
+import { form, formStack } from "@/presentation/admin/ui/classes";
 
 type SectionImagesFormProps = Readonly<{
   sectionId: string;
@@ -48,7 +49,7 @@ export function SectionImagesForm({
     setChosen((current) => ({ ...current, [role]: value }));
 
   return (
-    <form className="admin-form" action={formAction} noValidate>
+    <form className={form} action={formAction} noValidate>
       {state.status === "error" ? (
         <ErrorSummary
           title={state.message}
@@ -62,7 +63,7 @@ export function SectionImagesForm({
       <div
         id={`section-images-${sectionId}`}
         tabIndex={-1}
-        className="admin-form-stack"
+        className={formStack}
       >
         {slots.map((slot) =>
           slot.multiple ? (

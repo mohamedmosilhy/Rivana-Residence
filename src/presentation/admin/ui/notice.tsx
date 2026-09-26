@@ -1,3 +1,5 @@
+import { notice } from "@/presentation/admin/ui/classes";
+
 // One-time outcome messages carried across a redirect as `?notice=<code>`.
 // Only known codes render, so the URL cannot inject text into the page.
 const NOTICES = {
@@ -18,7 +20,7 @@ export function noticeFrom(value: unknown): NoticeCode | null {
 export function Notice({ code }: Readonly<{ code: NoticeCode | null }>) {
   if (!code) return null;
   return (
-    <p className="admin-notice" role="status">
+    <p className={notice} role="status">
       {NOTICES[code]}
     </p>
   );

@@ -7,6 +7,7 @@ import { DeniedPage } from "@/presentation/admin/denied-page";
 import { PageHeader } from "@/presentation/admin/ui/page-header";
 
 import { changePasswordAction, revokeOtherSessionsAction } from "./actions";
+import { card } from "@/presentation/admin/ui/classes";
 
 export const metadata: Metadata = {
   title: "Account",
@@ -32,7 +33,11 @@ export default async function AccountPage() {
         }
       />
 
-      <section className="admin-card" aria-labelledby="sessions-title">
+      <section
+        className={card}
+        data-admin-card=""
+        aria-labelledby="sessions-title"
+      >
         <h2 id="sessions-title">Active sessions</h2>
         <SessionList
           sessions={sessions.ok ? sessions.value : []}
@@ -40,7 +45,11 @@ export default async function AccountPage() {
         />
       </section>
 
-      <section className="admin-card" aria-labelledby="password-title">
+      <section
+        className={card}
+        data-admin-card=""
+        aria-labelledby="password-title"
+      >
         <h2 id="password-title">Change password</h2>
         <PasswordForm action={changePasswordAction} />
       </section>
