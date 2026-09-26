@@ -139,6 +139,7 @@ export class UpdateSiteImages {
       {
         logoMediaId: optionalMediaId(values, "logoMediaId"),
         stickyLogoMediaId: optionalMediaId(values, "stickyLogoMediaId"),
+        faviconMediaId: optionalMediaId(values, "faviconMediaId"),
         defaultOgMediaId: optionalMediaId(values, "defaultOgMediaId"),
       },
       access.value,

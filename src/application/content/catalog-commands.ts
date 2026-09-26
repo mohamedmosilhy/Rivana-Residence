@@ -81,8 +81,7 @@ export class CatalogCommands<Dto extends CatalogRecord, Input> {
         await this.repository.update(id, input, actor),
       );
       if (!result.ok || before.status !== "PUBLISHED") return result;
-      const renamed = before.slug !== result.value.slug;
-      await this.invalidatePublic([before.slug, result.value.slug], renamed);
+      await this.invalidatePublic([before.slug, result.value.slug]);
       return result;
     });
   }
@@ -143,7 +142,9 @@ export class CatalogCommands<Dto extends CatalogRecord, Input> {
     const order = active.map((record) => record.id);
     [order[index], order[target]] = [order[target]!, order[index]!];
     const result = await this.repository.reorder(order, access.value);
-    if (result.ok) await this.cache.invalidate([this.kind.listTag]);
+    if (result.ok) {
+      await this.cache.invalidate([this.kind.listTag, CACHE_TAGS.sitemap]);
+    }
     return result;
   }
 
@@ -180,7 +181,7 @@ export class CatalogCommands<Dto extends CatalogRecord, Input> {
         actor,
       );
       if (before.status === "PUBLISHED") {
-        await this.invalidatePublic([before.slug], false);
+        await this.invalidatePublic([before.slug]);
       }
       return result;
     });
@@ -201,12 +202,12 @@ export class CatalogCommands<Dto extends CatalogRecord, Input> {
     return operation(access.value, before);
   }
 
-  private async invalidatePublic(slugs: readonly string[], sitemap = true) {
+  private async invalidatePublic(slugs: readonly string[]) {
     await this.cache.invalidate([
       this.kind.listTag,
       ...[...new Set(slugs)].map(this.kind.itemTag),
-      // Only a new, removed, or renamed public URL changes the sitemap.
-      ...(sitemap ? [CACHE_TAGS.sitemap] : []),
+      // Public edits also change sitemap lastmod and possibly its image list.
+      CACHE_TAGS.sitemap,
     ]);
   }
 

@@ -308,6 +308,6 @@ describe("library queries and cache tags", () => {
           slug: null,
         },
       ]),
-    ).toEqual(["rooms", "room:nile", "page:home", "site-settings"]);
+    ).toEqual(["rooms", "sitemap", "room:nile", "page:home", "site-settings"]);
   });
 });

@@ -91,10 +91,6 @@ const serverEnvSchema = z
 
 export type ServerEnv = z.infer<typeof serverEnvSchema>;
 
-const publicEnvSchema = z.object({
-  NEXT_PUBLIC_SITE_URL: z.url().default("http://localhost:3000"),
-});
-
 function formatIssues(error: z.ZodError) {
   return error.issues
     .map(
@@ -109,18 +105,6 @@ export function parseServerEnv(input: Record<string, string | undefined>) {
   if (!result.success) {
     throw new Error(
       `Invalid server environment:\n${formatIssues(result.error)}`,
-    );
-  }
-
-  return result.data;
-}
-
-export function parsePublicEnv(input: Record<string, string | undefined>) {
-  const result = publicEnvSchema.safeParse(input);
-
-  if (!result.success) {
-    throw new Error(
-      `Invalid public environment:\n${formatIssues(result.error)}`,
     );
   }
 

@@ -81,6 +81,109 @@ for (const route of ROUTES) {
   });
 }
 
+test("publishes unique metadata, canonicals, crawl files, and safe structured data", async ({
+  page,
+  request,
+  isMobile,
+}) => {
+  test.skip(isMobile, "SEO responses are identical across viewports.");
+  const titles = new Set<string>();
+  for (const route of ROUTES) {
+    await page.goto(route.path);
+    const canonical =
+      route.path === "/"
+        ? "http://127.0.0.1:3100"
+        : `http://127.0.0.1:3100${route.path}`;
+    const title = await page.title();
+    expect(titles.has(title), `duplicate title: ${title}`).toBe(false);
+    titles.add(title);
+    await expect(page.locator('link[rel="canonical"]')).toHaveAttribute(
+      "href",
+      canonical,
+    );
+    await expect(page.locator('meta[property="og:url"]')).toHaveAttribute(
+      "content",
+      canonical,
+    );
+  }
+
+  await page.goto("/rooms/studio-with-balcony");
+  const jsonLd = await page
+    .locator('script[type="application/ld+json"]')
+    .allTextContents();
+  const structured = jsonLd.map((value) => JSON.parse(value));
+  expect(structured.some((value) => value["@type"] === "Hotel")).toBe(true);
+  expect(structured.some((value) => value["@type"] === "HotelRoom")).toBe(true);
+  expect(structured.some((value) => value["@type"] === "BreadcrumbList")).toBe(
+    true,
+  );
+  expect(JSON.stringify(structured).toLowerCase()).not.toMatch(
+    /"@type":"offer"|price|availability|aggregaterating|review/,
+  );
+
+  const sitemap = await (await request.get("/sitemap.xml")).text();
+  for (const route of ROUTES) {
+    expect(sitemap).toContain(`http://127.0.0.1:3100${route.path}`);
+  }
+  expect(sitemap).not.toContain("private-draft-room");
+  expect(sitemap).not.toContain("retired-room");
+  expect(sitemap).not.toContain("/admin");
+
+  const robots = await (await request.get("/robots.txt")).text();
+  expect(robots).toContain("Disallow: /admin/");
+  expect(robots).toContain("Sitemap: http://127.0.0.1:3100/sitemap.xml");
+});
+
+test("legacy public URLs redirect permanently to canonical routes", async ({
+  request,
+  isMobile,
+}) => {
+  test.skip(isMobile, "Redirect responses are identical across viewports.");
+  const redirects = {
+    "/about.html": "/about",
+    "/rooms.html": "/rooms",
+    "/room-studio-balcony.html": "/rooms/studio-with-balcony",
+    "/gym.html": "/facilities/fitness-room",
+    "/swimming-pool.html": "/facilities/swimming-pool",
+  } as const;
+  for (const [source, destination] of Object.entries(redirects)) {
+    const response = await request.get(source, { maxRedirects: 0 });
+    expect(response.status()).toBe(308);
+    expect(response.headers().location).toBe(destination);
+  }
+});
+
+test("published pages contain no broken internal links or images", async ({
+  page,
+  request,
+  isMobile,
+}) => {
+  test.skip(isMobile, "The same resources are audited once on desktop.");
+  const targets = new Set<string>();
+  for (const route of ROUTES) {
+    await page.goto(route.path);
+    const discovered = await page
+      .locator("a[href], img[src]")
+      .evaluateAll((elements) =>
+        elements.flatMap((element) => {
+          const value =
+            element instanceof HTMLAnchorElement
+              ? element.href
+              : (element as HTMLImageElement).src;
+          const url = new URL(value, location.href);
+          return url.origin === location.origin
+            ? [url.pathname + url.search]
+            : [];
+        }),
+      );
+    discovered.forEach((target) => targets.add(target));
+  }
+  for (const target of targets) {
+    const response = await request.get(target);
+    expect(response.status(), target).toBeLessThan(400);
+  }
+});
+
 test("unpublished, archived, and unknown content returns 404", async ({
   page,
   request,

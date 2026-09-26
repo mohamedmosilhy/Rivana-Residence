@@ -259,7 +259,10 @@ describe("page commands", () => {
 
     const live = setup(true);
     await live.commands.moveSection(editor, "ABOUT", "s2", 1);
-    expect(live.cache.invalidate).toHaveBeenCalledWith(["page:about"]);
+    expect(live.cache.invalidate).toHaveBeenCalledWith([
+      "page:about",
+      "sitemap",
+    ]);
   });
 
   it("publishing refreshes the page and the sitemap", async () => {

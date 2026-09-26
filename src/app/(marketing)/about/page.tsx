@@ -10,6 +10,7 @@ export async function generateMetadata(): Promise<Metadata> {
   return pageMetadata({
     title: page?.seoTitle ?? page?.title ?? "About",
     description: page?.seoDescription ?? null,
+    image: page?.socialImage,
     path: "/about",
   });
 }

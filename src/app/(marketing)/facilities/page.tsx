@@ -1,8 +1,10 @@
 import type { Metadata } from "next";
 
-import { getPublishedFacilities } from "@/composition/public";
+import { breadcrumbJsonLd } from "@/application/public/seo";
+import { getPublicOrigin, getPublishedFacilities } from "@/composition/public";
 import { CardGrid, FacilityCard } from "@/presentation/site/cards";
 import { PageHero } from "@/presentation/site/heroes";
+import { StructuredData } from "@/presentation/site/structured-data";
 
 import { pageMetadata } from "../site-content";
 
@@ -18,6 +20,13 @@ export default async function FacilitiesPage() {
   const facilities = await getPublishedFacilities();
   return (
     <>
+      <StructuredData
+        id="breadcrumb-structured-data"
+        data={breadcrumbJsonLd(getPublicOrigin(), [
+          { name: "Home", path: "/" },
+          { name: "Facilities", path: "/facilities" },
+        ])}
+      />
       <PageHero
         eyebrow="Life at Rivana"
         title="Facilities"

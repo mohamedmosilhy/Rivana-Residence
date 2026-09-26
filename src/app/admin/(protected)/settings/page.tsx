@@ -110,6 +110,7 @@ export default async function SettingsPage() {
           values={{
             logoMediaId: current.logoMediaId,
             stickyLogoMediaId: current.stickyLogoMediaId,
+            faviconMediaId: current.faviconMediaId,
             defaultOgMediaId: current.defaultOgMediaId,
           }}
         />

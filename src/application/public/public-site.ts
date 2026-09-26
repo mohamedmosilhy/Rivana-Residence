@@ -37,48 +37,56 @@ export class PublicSite {
     }>,
   ) {}
 
+  private async image(id: string | null) {
+    if (!id) return null;
+    const asset = await this.deps.media.findAdminById(id);
+    return asset
+      ? publicImage({
+          ...asset,
+          altOverride: null,
+          rightsConfirmed: asset.rightsStatus === "CONFIRMED",
+        })
+      : null;
+  }
+
   async settings() {
     const settings = await this.deps.settings.getPublic();
     if (!settings) return null;
-    const image = async (id: string | null) => {
-      if (!id) return null;
-      const asset = await this.deps.media.findAdminById(id);
-      return asset
-        ? publicImage({
-            ...asset,
-            altOverride: null,
-            rightsConfirmed: asset.rightsStatus === "CONFIRMED",
-          })
-        : null;
-    };
-    const [logo, share] = await Promise.all([
-      image(settings.logoMediaId),
-      image(settings.defaultOgMediaId),
+    const [logo, favicon, share] = await Promise.all([
+      this.image(settings.logoMediaId),
+      this.image(settings.faviconMediaId),
+      this.image(settings.defaultOgMediaId),
     ]);
-    return publicSettings(settings, logo, share);
+    return publicSettings(settings, logo, favicon, share);
   }
 
   async page(key: PageKey) {
     const page = await this.deps.pages.findPublishedByKey(key);
-    return page ? publicPage(page) : null;
+    return page ? publicPage(page, await this.image(page.ogMediaId)) : null;
   }
 
   async rooms() {
-    return (await this.deps.rooms.listPublished()).map(publicRoom);
+    return (await this.deps.rooms.listPublished()).map((room) =>
+      publicRoom(room),
+    );
   }
 
   async room(slug: string) {
     const room = await this.deps.rooms.findPublishedBySlug(slug);
-    return room ? publicRoom(room) : null;
+    return room ? publicRoom(room, await this.image(room.ogMediaId)) : null;
   }
 
   async facilities() {
-    return (await this.deps.facilities.listPublished()).map(publicFacility);
+    return (await this.deps.facilities.listPublished()).map((facility) =>
+      publicFacility(facility),
+    );
   }
 
   async facility(slug: string) {
     const facility = await this.deps.facilities.findPublishedBySlug(slug);
-    return facility ? publicFacility(facility) : null;
+    return facility
+      ? publicFacility(facility, await this.image(facility.ogMediaId))
+      : null;
   }
 
   /**

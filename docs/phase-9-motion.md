@@ -1,6 +1,6 @@
 # Phase 9 interaction and motion handoff
 
-Status: **Ready for review**
+Status: **Accepted on 2026-09-26**
 Completed: 2026-09-26
 Scope: interaction and motion layered onto the accepted Phase 8 visual system, plus four client requests made during the phase: the logo in the admin dashboard, the logo as the site favicon, white facility-tile headings, and pre-phase admin screenshots.
 
@@ -82,7 +82,7 @@ New Playwright coverage lives in `tests/e2e/public-site.spec.ts` under "interact
 
 - Every animation uses transform or opacity. The only other animated properties are the SVG `stroke-dashoffset` ray drawing, which runs once on small hero ornaments, and the Phase 8 colour transitions. Scroll handlers are passive and batched to one `requestAnimationFrame`. No layout properties change on scroll.
 - Gzipped client JavaScript per public page, measured on production builds: **185 KB** (Phase 8) → **242 KB** (Phase 9). Motion's runtime accounts for about 43 KB, and its feature set loads asynchronously. Both builds exceed the aspirational 120 KB target, which Phase 10 owns.
-- Phase 10 still needs a Lighthouse trace. None was recorded in this phase.
+- Phase 10 records the production Lighthouse trace and replaces the estimate with a 205 KB HTTP script-transfer baseline.
 
 ## Evidence
 
@@ -104,7 +104,7 @@ New Playwright coverage lives in `tests/e2e/public-site.spec.ts` under "interact
 - **Parallax:** the design system listed "no unverified parallax". The hero drift is a deliberate, client-requested exception: transform only, capped, and off under reduced motion. Please confirm it during review.
 - **Browser support:** view-transition morphs need a Chromium 125+, recent Safari, or recent Firefox browser. Elsewhere, navigation is instant, as before.
 - **Screen readers:** announcements were verified through the ARIA roles and live-region text in automated tests. A manual VoiceOver/NVDA pass is still to be done in Phase 11.
-- **CMS favicon:** the managed favicon field in site settings is not yet wired into metadata. The static crest icon is the default until Phase 10's metadata work.
+- **CMS favicon:** resolved in Phase 10. Site Images now manages the favicon used by Metadata, with the static crest as fallback.
 - **Bundle size:** see the Performance section.
 
-The next phase (Phase 10 — SEO, performance, and production content readiness) has **not** started.
+Phase 10 is complete and ready for review. See [phase-10-seo-performance.md](./phase-10-seo-performance.md).

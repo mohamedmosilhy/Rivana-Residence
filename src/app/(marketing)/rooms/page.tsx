@@ -1,8 +1,10 @@
 import type { Metadata } from "next";
 
-import { getPublishedRooms } from "@/composition/public";
+import { breadcrumbJsonLd } from "@/application/public/seo";
+import { getPublicOrigin, getPublishedRooms } from "@/composition/public";
 import { CardGrid, RoomCard } from "@/presentation/site/cards";
 import { PageHero } from "@/presentation/site/heroes";
+import { StructuredData } from "@/presentation/site/structured-data";
 
 import { pageMetadata } from "../site-content";
 
@@ -18,6 +20,13 @@ export default async function RoomsPage() {
   const rooms = await getPublishedRooms();
   return (
     <>
+      <StructuredData
+        id="breadcrumb-structured-data"
+        data={breadcrumbJsonLd(getPublicOrigin(), [
+          { name: "Home", path: "/" },
+          { name: "Rooms", path: "/rooms" },
+        ])}
+      />
       <PageHero
         eyebrow="Stay with us"
         title="Rooms"

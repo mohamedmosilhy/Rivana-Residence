@@ -240,7 +240,7 @@ describe("room lifecycle", () => {
 
     const order = await client.room.findMany({ orderBy: { sortOrder: "asc" } });
     expect(order.map((room) => room.id)).toEqual([a.id, c.id, b.id]);
-    expect(cache.invalidate).toHaveBeenLastCalledWith(["rooms"]);
+    expect(cache.invalidate).toHaveBeenLastCalledWith(["rooms", "sitemap"]);
   });
 
   it("keeps a published room publishable when edited", async () => {
@@ -358,7 +358,7 @@ describe("page management", () => {
         payload: JSON.stringify({ documentText: "Welcome." }),
       }),
     ).toMatchObject({ ok: false, error: { code: "NOT_PUBLISHABLE" } });
-    expect(cache.invalidate).toHaveBeenCalledWith(["page:home"]);
+    expect(cache.invalidate).toHaveBeenCalledWith(["page:home", "sitemap"]);
 
     expect(await pages.unpublish(editor, "HOME")).toMatchObject({
       ok: true,

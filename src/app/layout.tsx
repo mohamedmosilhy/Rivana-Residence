@@ -11,6 +11,7 @@ export const metadata: Metadata = {
     template: "%s | Rivana Residence",
   },
   description: "Rivana Residence: serviced rooms and suites in New Cairo.",
+  icons: { icon: "/rivana-icon.png", apple: "/apple-icon.png" },
 };
 
 type RootLayoutProps = Readonly<{

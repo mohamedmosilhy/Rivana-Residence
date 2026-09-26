@@ -71,16 +71,19 @@ export function tagsForUsage(usage: readonly MediaUsage[]) {
       case "ROOM":
       case "ROOM_SHARING":
         tags.add(CACHE_TAGS.rooms);
+        tags.add(CACHE_TAGS.sitemap);
         if (item.slug) tags.add(CACHE_TAGS.room(item.slug));
         break;
       case "FACILITY":
       case "FACILITY_SHARING":
         tags.add(CACHE_TAGS.facilities);
+        tags.add(CACHE_TAGS.sitemap);
         if (item.slug) tags.add(CACHE_TAGS.facility(item.slug));
         break;
       case "PAGE_SECTION":
       case "PAGE_SHARING":
         tags.add(CACHE_TAGS.page(item.ownerId as "HOME" | "ABOUT" | "CONTACT"));
+        tags.add(CACHE_TAGS.sitemap);
         break;
       case "SITE_SETTINGS":
         tags.add(CACHE_TAGS.siteSettings);
