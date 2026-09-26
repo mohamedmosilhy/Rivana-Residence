@@ -103,7 +103,6 @@ SettingsRepository
 MediaRepository
 EnquiryRepository
 PromotionRepository
-UnitOfWork
 MediaStorage
 ContactDelivery
 BookingProvider

@@ -80,15 +80,15 @@ Controls:
 
 ## Headers and browser policy
 
-Production headers include:
+Implemented in Phase 11 (`src/infrastructure/http/security-headers.ts`):
 
-- Content Security Policy built from the minimum required origins;
-- `frame-ancestors 'none'` unless a documented hosting need changes it;
-- `X-Content-Type-Options: nosniff`;
-- strict referrer policy;
-- permissions policy disabling unused camera/microphone/geolocation features;
-- HSTS after HTTPS/domain readiness;
-- clickjacking protections through CSP.
+- `src/proxy.ts` gives every rendered page a fresh 128-bit nonce and an enforced Content Security Policy: `default-src 'self'`; `script-src 'self' 'nonce-…' 'strict-dynamic'` (no `unsafe-inline` or `unsafe-eval` for scripts in production); `style-src 'self' 'unsafe-inline'` because server-rendered React and `next/image` emit `style=""` attributes; `img-src 'self' data: blob:`; `connect-src 'self'`; `frame-src https://www.google.com` for the optional Maps embed only; `object-src 'none'`; `base-uri 'self'`; `form-action 'self'`; `frame-ancestors 'none'`; and `upgrade-insecure-requests` when `APP_URL` is HTTPS. Next applies the nonce to its own scripts, so every page is rendered per request (the only previously static page, the root not-found page, now calls `connection()`).
+- `next.config.ts` adds to every response, including static files: `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`, `Referrer-Policy: strict-origin-when-cross-origin`, `Cross-Origin-Opener-Policy: same-origin`, and a `Permissions-Policy` that disables camera, microphone, geolocation, payment, USB, and topics.
+- `/media/*` keeps its own `default-src 'none'; sandbox` policy, `nosniff`, and `Cross-Origin-Resource-Policy: same-origin`.
+- Admin responses additionally carry `X-Robots-Tag: noindex, nofollow` and `Cache-Control: private, no-store`.
+- HSTS is deliberately deferred to Phase 12: it is sent only once the canonical HTTPS domain is live, starting with a short `max-age` before a long one.
+
+Under `'strict-dynamic'`, a script created by already-trusted page code is allowed; injected markup (inline handlers, `javascript:` URLs, parser-inserted scripts) is refused. `tests/e2e/security.spec.ts` proves both the refusal and that every page hydrates with zero violations.
 
 The future booking integration gets explicit `script-src`, `frame-src`, `connect-src`, and consent review; it is not covered by broad wildcards.
 
@@ -102,7 +102,19 @@ The future booking integration gets explicit `script-src`, `frame-src`, `connect
 
 ## Database and operations
 
-- Application database role has only required schema privileges; migration credentials are separate when the platform supports it.
+- Application database role has only required schema privileges; migration credentials are separate when the platform supports it. Recommended provisioning (Phase 12), where `rivana_owner` owns the schema and runs `prisma migrate deploy`, and `rivana_app` is the runtime role:
+
+  ```sql
+  REVOKE ALL ON SCHEMA public FROM PUBLIC;
+  GRANT USAGE ON SCHEMA public TO rivana_app;
+  GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO rivana_app;
+  GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO rivana_app;
+  ALTER DEFAULT PRIVILEGES FOR ROLE rivana_owner IN SCHEMA public
+    GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO rivana_app;
+  REVOKE INSERT, UPDATE, DELETE ON "_prisma_migrations" FROM rivana_app;
+  ```
+
+  The runtime role cannot create, alter, or drop objects or rewrite migration history.
 - Encrypted database connections where supported; local media permissions restrict access to the application account and backup operator.
 - Parameterized Prisma queries; raw SQL only reviewed and parameterized.
 - Backups, restore drills, migration review, dependency/security updates, and audit logs for auth failures/infrastructure errors.
@@ -120,7 +132,7 @@ The future booking integration gets explicit `script-src`, `frame-src`, `connect
 - threat-model admin auth, uploads/local path handling, promotions, contact form, and booking boundary;
 - dependency audit and supported versions;
 - authorization tests for every command;
-- CSP tested in report-only then enforced;
+- CSP enforced and verified with zero violations across public and admin pages (Phase 11);
 - backup restore tested;
 - no default credentials or secrets in repository/build output;
 - penetration-style checks for IDOR, upload bypass, stored XSS, CSRF, brute force, and open redirects.

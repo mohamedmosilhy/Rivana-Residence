@@ -13,6 +13,8 @@ type SiteImageProps = Readonly<{
   className?: string;
   /** Decorative uses pass an empty alt deliberately. */
   decorative?: boolean;
+  /** "contain" shows the whole photo (the viewer); "cover" crops to fill. */
+  fit?: "cover" | "contain";
 }>;
 
 export function SiteImage({
@@ -22,6 +24,7 @@ export function SiteImage({
   preload = false,
   className,
   decorative = false,
+  fit = "cover",
 }: SiteImageProps) {
   const alt = decorative ? "" : image.alt;
   const common = {
@@ -29,7 +32,10 @@ export function SiteImage({
     sizes,
     className,
     preload,
-    style: { objectFit: "cover" as const, objectPosition: image.position },
+    style: {
+      objectFit: fit,
+      objectPosition: fit === "cover" ? image.position : "center",
+    },
   };
   return fill ? (
     <Image {...common} alt={alt} fill />

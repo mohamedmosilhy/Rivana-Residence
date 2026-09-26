@@ -331,6 +331,37 @@ describe("upload verification", () => {
     expect(await objectFiles()).toEqual([]);
   });
 
+  it("leaves nothing servable when the browser aborts mid-upload", async () => {
+    const bytes = await image("png");
+    async function* interrupted() {
+      yield bytes.slice(0, Math.floor(bytes.byteLength / 2));
+      throw Object.assign(new Error("aborted"), { code: "ECONNRESET" });
+    }
+
+    const outcome = await library
+      .upload(editor, {
+        filename: "partial.png",
+        declaredType: "image/png",
+        declaredBytes: bytes.byteLength,
+        source: interrupted(),
+        rightsConfirmed: true,
+      })
+      .then(
+        (result) => ({ threw: false, ok: result.ok }),
+        () => ({ threw: true, ok: false }),
+      );
+
+    expect(outcome.ok).toBe(false);
+    expect(await client.mediaAsset.count({ where: { status: "READY" } })).toBe(
+      0,
+    );
+    expect(await storage.listQuarantine()).toEqual([]);
+    expect(await objectFiles()).toEqual([]);
+
+    // A retry of the same file then succeeds normally.
+    expect((await upload(bytes, "partial.png", "image/png")).ok).toBe(true);
+  });
+
   it("finalizes idempotently", async () => {
     const asset = await readyImage();
     const again = await media.markReady(asset.id, {

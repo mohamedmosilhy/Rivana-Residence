@@ -254,12 +254,6 @@ export const mediaDetailsSchema = z
 
 export type MediaDetailsInput = z.output<typeof mediaDetailsSchema>;
 
-export const altOverrideSchema = z
-  .string()
-  .trim()
-  .max(300, "Use 300 characters or fewer.")
-  .nullable();
-
 export type PageSectionMediaRole =
   | "BACKGROUND"
   | "PRIMARY"

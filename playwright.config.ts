@@ -3,6 +3,25 @@ import { defineConfig, devices } from "@playwright/test";
 const port = 3100;
 const e2eDatabaseUrl = process.env.E2E_DATABASE_URL;
 
+// Release acceptance (`npm run test:e2e:browsers`) repeats the public,
+// shell, and security suites in Firefox and WebKit at phone, tablet, and
+// desktop sizes. Admin journeys stay on Chromium: production cookies are
+// Secure, and WebKit will not keep them on plain-HTTP 127.0.0.1.
+const crossBrowser = process.env.CROSS_BROWSER === "1";
+const CROSS_BROWSER_PROJECTS = crossBrowser
+  ? [
+      { name: "firefox-desktop", device: devices["Desktop Firefox"] },
+      { name: "webkit-desktop", device: devices["Desktop Safari"] },
+      { name: "webkit-tablet", device: devices["iPad (gen 7)"] },
+      { name: "webkit-phone", device: devices["iPhone 14"] },
+    ].map(({ name, device }) => ({
+      name,
+      use: { ...device },
+      testMatch: [/public-site\.spec/, /shells\.spec/, /security\.spec/],
+      dependencies: ["desktop-chromium", "mobile-chromium"],
+    }))
+  : [];
+
 export default defineConfig({
   testDir: "./tests/e2e",
   globalSetup: "./tests/e2e/global-setup.ts",
@@ -63,11 +82,16 @@ export default defineConfig({
       testMatch: /visual\.spec/,
       dependencies: ["public-desktop", "public-mobile"],
     },
+    ...CROSS_BROWSER_PROJECTS,
     {
       name: "promotions",
       use: { ...devices["Desktop Chrome"] },
       testMatch: /promotion-popup\.spec/,
-      dependencies: ["visual-desktop", "visual-mobile"],
+      dependencies: [
+        "visual-desktop",
+        "visual-mobile",
+        ...CROSS_BROWSER_PROJECTS.map((project) => project.name),
+      ],
     },
   ],
   webServer: {

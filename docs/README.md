@@ -1,6 +1,6 @@
 # Rivana Residence production documentation
 
-This directory began as the Phase 0 blueprint for rebuilding Rivana Residence as a production marketing website and content-management system. Phases 0–9 are approved, and Phase 10 SEO, performance, and production-content readiness is ready for review.
+This directory began as the Phase 0 blueprint for rebuilding Rivana Residence as a production marketing website and content-management system. Phases 0–10 are approved, and the Phase 11 release candidate (test completion and security hardening) is ready for review.
 
 The source of truth for the visual audit is `../design/`. The legacy WordPress export in the parent workspace was treated only as content and asset provenance. Its plugin/theme architecture will not be migrated.
 
@@ -42,6 +42,7 @@ Every Book Now control initially renders as a visually complete, disabled/inert 
 | [phase-8-visual-system.md](./phase-8-visual-system.md) | Phase 8 visual system: tokens, contrast report, page compositions, before/after boards, responsive and visual-regression evidence |
 | [phase-9-motion.md](./phase-9-motion.md) | Phase 9 interaction and motion: reveals, photo viewer, menu sheet, page morphs, reduced motion, keyboard/focus evidence, bundle cost |
 | [phase-10-seo-performance.md](./phase-10-seo-performance.md) | Phase 10 SEO/performance handoff: route matrix, structured data, redirects, caching, Lighthouse evidence, and launch blockers |
+| [phase-11-release-candidate.md](./phase-11-release-candidate.md) | Phase 11 release-candidate report: test totals, security and accessibility findings, browser matrix, restore drill, residual risks |
 
 ## Current technical baseline
 
@@ -61,4 +62,4 @@ The retained identity is deep plum (`#652A4C`), warm gold (`#DBAF71`), editorial
 
 ## Status
 
-Phases 0–6 were approved by the client on 2026-09-25, and Phases 7–9 on 2026-09-26. Phase 10 is implemented and `Ready for review`; its evidence and explicit production launch blockers are recorded in the Phase 10 handoff.
+Phases 0–6 were approved by the client on 2026-09-25, and Phases 7–10 on 2026-09-26. Phase 11 is implemented and `Ready for review`; the release-candidate report lists its evidence, residual risks, and the launch blockers carried from Phase 10.

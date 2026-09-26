@@ -52,6 +52,26 @@ Do not run development migrations or schema push in production. Destructive migr
 - record recovery point/time objectives with the client before launch (initial target: RPO ≤ 24h, RTO ≤ 4h, improved if provider plans allow);
 - content migration source assets retained separately until acceptance.
 
+### Backup and restore tooling
+
+`scripts/backup.sh` and `scripts/restore.sh` (Phase 11) need `pg_dump`/`pg_restore`/`psql` at least as new as the server.
+
+```bash
+# Nightly (cron), then copy the new directory off the server:
+DATABASE_URL=... MEDIA_STORAGE_ROOT=... scripts/backup.sh /path/to/backups
+
+# Drill into a scratch database and media root (refuses non-empty targets):
+RESTORE_DATABASE_URL=postgresql://.../rivana_restore_test \
+RESTORE_MEDIA_ROOT=/absolute/scratch/media \
+  scripts/restore.sh /path/to/backups/rivana-<timestamp>
+
+# Real recovery (drops and recreates restored objects, swaps images/):
+RESTORE_DATABASE_URL=... RESTORE_MEDIA_ROOT=... \
+  scripts/restore.sh /path/to/backups/rivana-<timestamp> --replace
+```
+
+A backup holds a custom-format database dump (no owners or grants), `images/` as a tarball, a checksum for every image file, and `SHA256SUMS` over the set; directories are created mode 700. Restore verifies all checksums before touching anything, restores media through a staging directory, re-applies `750`/`640` permissions, and fails if any `READY` media record has no file. Prisma-only URL parameters are stripped (only `sslmode` is passed to libpq). The Phase 11 drill is recorded in [phase-11-release-candidate.md](./phase-11-release-candidate.md#backup-and-restore-drill).
+
 ## Observability
 
 - structured server logs with request/correlation IDs;
