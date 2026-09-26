@@ -10,7 +10,7 @@ export default async function NotFound() {
   return (
     <main id="main-content" className="site-holding site-holding--bare">
       <div className="site-holding__content site-container">
-        <BrandLogo tone="inverse" className="site-logo" />
+        <BrandLogo tone="inverse" className="site-logo" eager />
         <h1>This page could not be found</h1>
         <p>It may have moved or is not available yet.</p>
         <p className="site-holding__actions">

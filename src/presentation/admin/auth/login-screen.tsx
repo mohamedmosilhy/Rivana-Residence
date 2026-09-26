@@ -9,7 +9,7 @@ export function LoginScreen({ children }: Readonly<{ children: ReactNode }>) {
     <main className="admin-login" id="admin-content">
       <div className="admin-login__brand" aria-hidden="true">
         <SunRays className="admin-login__rays" />
-        <BrandLogo tone="inverse" className="admin-login__logo" />
+        <BrandLogo tone="inverse" className="admin-login__logo" eager />
         <p>Content studio</p>
       </div>
       <section className="admin-login__panel" aria-labelledby="login-title">

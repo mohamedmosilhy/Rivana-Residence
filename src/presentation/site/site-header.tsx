@@ -18,8 +18,16 @@ export function SiteHeader({
       <span className="site-header__progress" aria-hidden="true" />
       <div className="site-header__inner site-container">
         <Link href="/" className="site-header__brand">
-          <BrandLogo tone="inverse" className="site-logo site-logo--inverse" />
-          <BrandLogo tone="default" className="site-logo site-logo--default" />
+          <BrandLogo
+            tone="inverse"
+            className="site-logo site-logo--inverse"
+            eager
+          />
+          <BrandLogo
+            tone="default"
+            className="site-logo site-logo--default"
+            eager
+          />
           <span className="sr-only">
             {settings?.siteName ?? "Rivana Residence"} home
           </span>
