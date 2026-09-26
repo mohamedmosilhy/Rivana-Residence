@@ -21,6 +21,15 @@ import {
 import { RepeatableFields } from "@/presentation/admin/ui/repeatable-fields";
 import { useToast } from "@/presentation/admin/ui/toast";
 import { useUnsavedChanges } from "@/presentation/admin/ui/use-unsaved-changes";
+import {
+  check,
+  checkInput,
+  fieldset,
+  fieldsetHint,
+  form,
+  formGrid,
+  legend,
+} from "@/presentation/admin/ui/classes";
 
 export type CatalogFormValues = Readonly<{
   name: string;
@@ -129,12 +138,7 @@ export function CatalogForm({
   const errors = (field: string) => fieldErrorsFor(state, field);
 
   return (
-    <form
-      className="admin-form"
-      action={formAction}
-      onInput={markDirty}
-      noValidate
-    >
+    <form className={form} action={formAction} onInput={markDirty} noValidate>
       {state.status === "error" ? (
         <ErrorSummary
           title={state.message}
@@ -143,8 +147,8 @@ export function CatalogForm({
         />
       ) : null}
 
-      <fieldset className="admin-fieldset">
-        <legend>Basics</legend>
+      <fieldset className={fieldset}>
+        <legend className={legend}>Basics</legend>
         <TextField
           id={id("name")}
           name="name"
@@ -208,13 +212,13 @@ export function CatalogForm({
 
       {variant === "room" ? (
         <>
-          <fieldset className="admin-fieldset">
-            <legend>Room facts</legend>
-            <p className="admin-fieldset__hint">
+          <fieldset className={fieldset}>
+            <legend className={legend}>Room facts</legend>
+            <p className={fieldsetHint}>
               Marketing facts only. Prices and availability come from the
               reservation system, not this website.
             </p>
-            <div className="admin-form-grid">
+            <div className={formGrid}>
               <TextField
                 id={id("sizeSqm")}
                 name="sizeSqm"
@@ -241,7 +245,7 @@ export function CatalogForm({
                 errors={errors("maxChildren")}
               />
             </div>
-            <div className="admin-form-grid">
+            <div className={formGrid}>
               <TextField
                 id={id("bedSummary")}
                 name="bedSummary"
@@ -280,11 +284,12 @@ export function CatalogForm({
         </>
       ) : null}
 
-      <fieldset className="admin-fieldset">
-        <legend>Discovery</legend>
-        <label className="admin-check">
+      <fieldset className={fieldset}>
+        <legend className={legend}>Discovery</legend>
+        <label className={check}>
           <input
             type="checkbox"
+            className={checkInput}
             name="featured"
             defaultChecked={
               state.status === "error" && state.values
@@ -294,15 +299,15 @@ export function CatalogForm({
           />
           Feature on the home page
         </label>
-        <p className="admin-fieldset__hint">
+        <p className={fieldsetHint}>
           The display order is set from the{" "}
           {variant === "room" ? "rooms" : "facilities"} list.
         </p>
       </fieldset>
 
-      <fieldset className="admin-fieldset">
-        <legend>Search appearance</legend>
-        <p className="admin-fieldset__hint">
+      <fieldset className={fieldset}>
+        <legend className={legend}>Search appearance</legend>
+        <p className={fieldsetHint}>
           Leave blank to use the name and short description.
         </p>
         <TextField

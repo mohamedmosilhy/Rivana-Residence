@@ -14,6 +14,13 @@ import {
   type FormAction,
 } from "@/presentation/admin/ui/form-state";
 import { useToast } from "@/presentation/admin/ui/toast";
+import {
+  button,
+  dialog,
+  dialogActions,
+  dialogBody,
+  errorSummary,
+} from "@/presentation/admin/ui/classes";
 
 type ConfirmActionProps = Readonly<{
   triggerLabel: string;
@@ -62,12 +69,13 @@ export function ConfirmAction({
     }
   }, [state, toast]);
 
-  const triggerClass =
+  const triggerClass = button(
     tone === "primary"
-      ? "admin-button"
+      ? "primary"
       : tone === "danger"
-        ? "admin-button admin-button--danger-quiet"
-        : "admin-button admin-button--secondary";
+        ? "danger-quiet"
+        : "secondary",
+  );
 
   return (
     <>
@@ -86,7 +94,7 @@ export function ConfirmAction({
       </button>
       <dialog
         ref={dialogRef}
-        className="admin-dialog"
+        className={dialog}
         role="alertdialog"
         aria-modal="true"
         aria-labelledby={titleId}
@@ -94,13 +102,13 @@ export function ConfirmAction({
         onClose={() => triggerRef.current?.focus()}
       >
         <h2 id={titleId}>{title}</h2>
-        <div id={bodyId} className="admin-dialog__body">
+        <div id={bodyId} className={dialogBody}>
           {children}
         </div>
         {state.status === "error" ? (
           <div
             ref={errorRef}
-            className="admin-error-summary admin-dialog__error"
+            className={`${errorSummary} mt-4 [&_p]:!m-0 [&_p]:!font-medium [&_p]:!text-danger [&_ul]:text-danger`}
             role="alert"
             tabIndex={-1}
           >
@@ -116,14 +124,14 @@ export function ConfirmAction({
             ) : null}
           </div>
         ) : null}
-        <form className="admin-dialog__actions" action={formAction}>
+        <form className={dialogActions} action={formAction}>
           {Object.entries(fields).map(([name, value]) => (
             <input key={name} type="hidden" name={name} value={value} />
           ))}
           <button
             ref={cancelRef}
             type="button"
-            className="admin-button admin-button--secondary"
+            className={button("secondary")}
             onClick={() => dialogRef.current?.close()}
           >
             Cancel

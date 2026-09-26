@@ -28,6 +28,12 @@ import {
   saveMediaDetailsAction,
   setMediaRightsAction,
 } from "../actions";
+import {
+  cardActions,
+  descriptionList,
+  link,
+  muted,
+} from "@/presentation/admin/ui/classes";
 
 export const metadata: Metadata = { title: "Image" };
 
@@ -95,7 +101,7 @@ export default async function MediaDetailPage({
           <p>
             Nothing from this upload is stored or shown. Upload the file again
             from the{" "}
-            <Link href="/admin/media" className="admin-link">
+            <Link href="/admin/media" className={link}>
               media library
             </Link>
             .
@@ -120,7 +126,7 @@ export default async function MediaDetailPage({
       ) : null}
 
       <Panel title="File" titleId="file-title" wide>
-        <dl className="admin-description-list">
+        <dl className={descriptionList}>
           <div>
             <dt>Original file name</dt>
             <dd>{asset.originalFilename}</dd>
@@ -176,7 +182,7 @@ export default async function MediaDetailPage({
           </p>
         ) : null}
         {canConfirmRights && asset.status === "READY" ? (
-          <div className="admin-card__actions">
+          <div className={cardActions}>
             {asset.rightsStatus === "UNCONFIRMED" ? (
               <ConfirmAction
                 triggerLabel="Confirm usage rights"
@@ -215,13 +221,13 @@ export default async function MediaDetailPage({
         {asset.usage.length === 0 ? (
           <p>This image is not used anywhere.</p>
         ) : (
-          <ul className="admin-usage-list">
+          <ul className="mt-4 grid gap-2 pl-5">
             {asset.usage.map((usage, index) => (
               <li key={`${usage.kind}:${usage.ownerId}:${usage.role}:${index}`}>
-                <Link href={usageHref(usage)} className="admin-link">
+                <Link href={usageHref(usage)} className={link}>
                   {usage.ownerName}
                 </Link>{" "}
-                <span className="admin-muted">— {usage.role}</span>{" "}
+                <span className={muted}>— {usage.role}</span>{" "}
                 {usage.isPublic ? (
                   <Badge tone="success">Public</Badge>
                 ) : (
@@ -264,7 +270,7 @@ export default async function MediaDetailPage({
           ) : (
             <>
               <p>This image is not used, so it can be deleted permanently.</p>
-              <div className="admin-card__actions">
+              <div className={cardActions}>
                 <ConfirmAction
                   triggerLabel="Delete image"
                   title={`Delete “${title}” permanently?`}

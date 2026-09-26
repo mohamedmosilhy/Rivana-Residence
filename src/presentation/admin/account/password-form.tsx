@@ -6,6 +6,17 @@ import {
   idleFormState,
   type FormAction,
 } from "@/presentation/admin/ui/form-state";
+import {
+  button,
+  control,
+  field,
+  fieldErrors,
+  fieldHint,
+  fieldLabel,
+  form,
+  formError,
+  formSuccess,
+} from "@/presentation/admin/ui/classes";
 
 export function PasswordForm({ action }: Readonly<{ action: FormAction }>) {
   const [state, formAction, pending] = useActionState(action, idleFormState);
@@ -22,17 +33,13 @@ export function PasswordForm({ action }: Readonly<{ action: FormAction }>) {
     state.status === "error" ? (state.fieldErrors?.[field] ?? []) : [];
 
   return (
-    <form ref={formRef} className="admin-form" action={formAction} noValidate>
+    <form ref={formRef} className={form} action={formAction} noValidate>
       {state.status !== "idle" ? (
         <div
           ref={statusRef}
           tabIndex={-1}
           role={state.status === "error" ? "alert" : "status"}
-          className={
-            state.status === "error"
-              ? "admin-form__error"
-              : "admin-form__success"
-          }
+          className={state.status === "error" ? formError : formSuccess}
         >
           {state.message}
         </div>
@@ -48,10 +55,12 @@ export function PasswordForm({ action }: Readonly<{ action: FormAction }>) {
         const hintId = name === "newPassword" ? "new-password-hint" : undefined;
         const errorId = errors.length > 0 ? `${name}-errors` : undefined;
         return (
-          <div className="admin-field" key={name}>
-            <label htmlFor={name}>{label}</label>
+          <div className={field} key={name}>
+            <label htmlFor={name} className={fieldLabel}>
+              {label}
+            </label>
             {hintId ? (
-              <p className="admin-field__hint" id={hintId}>
+              <p className={fieldHint} id={hintId}>
                 At least 12 characters. Changing it signs out your other
                 sessions.
               </p>
@@ -60,6 +69,7 @@ export function PasswordForm({ action }: Readonly<{ action: FormAction }>) {
               id={name}
               name={name}
               type="password"
+              className={control}
               autoComplete={autoComplete}
               required
               aria-invalid={errors.length > 0 || undefined}
@@ -68,7 +78,7 @@ export function PasswordForm({ action }: Readonly<{ action: FormAction }>) {
               }
             />
             {errorId ? (
-              <ul className="admin-field__errors" id={errorId}>
+              <ul className={fieldErrors} id={errorId}>
                 {errors.map((error) => (
                   <li key={error}>{error}</li>
                 ))}
@@ -78,7 +88,7 @@ export function PasswordForm({ action }: Readonly<{ action: FormAction }>) {
         );
       })}
 
-      <button className="admin-button" type="submit" disabled={pending}>
+      <button className={button()} type="submit" disabled={pending}>
         {pending ? "Updating…" : "Change password"}
       </button>
     </form>

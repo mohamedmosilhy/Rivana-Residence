@@ -42,6 +42,14 @@ Public content reads are cached on disk in `.next/cache/fetch-cache` and invalid
 
 Do not run development migrations or schema push in production. Destructive migrations use expand/migrate/contract steps across releases.
 
+## Initial content
+
+`npm run db:seed:initial` (needs `DATABASE_URL` and `MEDIA_STORAGE_ROOT`) fills a freshly migrated database with the previous rivanaresidence.com content from `prisma/initial-content/`. That covers the three rooms, Swimming Pool and Gym (Café as an unpublished draft until it has a photo), Home/About/Contact copy, contact details, map pin, social links, and 33 full-size photos with alt text, uploaded through the normal media pipeline. It also creates the administrator `admin@rivanaresidence.com`.
+
+- Prices, availability, bookings, guests, and the old booking/refund policy pages are deliberately not imported.
+- The default password `123456` is for local and staging only. With `NODE_ENV=production` the seed refuses it and requires `SEED_ADMIN_PASSWORD`, which must meet the password policy.
+- Re-running is safe: an existing admin keeps its password, and content is added only while there are no rooms, facilities, or images.
+
 ## Backups and recovery
 
 - managed PostgreSQL daily backups plus point-in-time recovery where available;

@@ -162,11 +162,22 @@ Minimum touch target: 44×44px. Every state includes hover (when available), foc
 
 ## Token implementation
 
-CSS custom properties are the source of truth and are exposed to Tailwind through its theme system. shadcn variables map to the same semantic tokens. Arbitrary values are allowed only for a documented one-off composition and should not reproduce a parallel hidden design system.
+Styling is Tailwind utility classes only. `src/app/globals.css` holds no component rules, just the Tailwind configuration:
+
+- `@theme`: colours, fonts, type sizes, radii, shadows, and easing, used as utilities such as `bg-plum-900`, `text-display-lg`, and `rounded-panel`;
+- `:root` layout tokens (container, gutter, header heights, section spacing, motion durations), read through utilities like `py-(--space-section)`;
+- custom variants for runtime state set by scripts: `header-scrolled`, `header-menu-open`, `menu-open`, `menu-closing`, `revealed`, `reveal-hidden`, `in-card`, `can-hover`, `fine-pointer`, and `short`;
+- the `visually-hidden` utility (used instead of Tailwind's `sr-only`);
+- `@layer base` element defaults, focus rings, view-transition rules, and the reduced-motion reset;
+- the keyframes that `animate-[…]` utilities name.
+
+Shared class lists live in `src/presentation/site/classes.ts` (public site), `src/presentation/admin/ui/classes.ts` (admin), and `src/presentation/design/classes.ts`. Each variant there is a complete list, so two conflicting utilities never meet on one element. Scripts and tests find elements through `data-*` hooks (`data-site-header`, `data-site-menu`, `data-lightbox`, `data-reveal-state`, and others), not class names.
+
+Inline `style` attributes are used only for values that come from data or run-time motion: focal-point positions, stagger indexes (`--i`, `--char-delay`), progress and pointer-position variables written by scripts, and transforms driven by the Motion library. Arbitrary values are allowed for a one-off composition, but they should not rebuild a parallel design system.
 
 ## Phase 8 implementation notes
 
-The tokens above live in `src/app/globals.css` (`:root`) and every public rule reads them; Tailwind receives the same values through `@theme inline`. `scripts/contrast-report.mts` recomputes every pairing and is the contrast source of truth. The phase evidence is in [phase-8-visual-system.md](./phase-8-visual-system.md).
+The tokens above live in `src/app/globals.css` (`@theme` and `:root`); every class reads them. `scripts/contrast-report.mts` recomputes every pairing and is the contrast source of truth. The phase evidence is in [phase-8-visual-system.md](./phase-8-visual-system.md).
 
 - **Header:** transparent over the hero with the inverse logo and a soft top scrim. With JavaScript it is fixed and turns into the warm translucent surface with the light-background logo after 24px of scroll. Without JavaScript it scrolls away, so it is always readable.
 - **Brush edge and sun rays:** both are inline SVG (`src/presentation/site/ornaments.tsx`). The rays repeat the crest's 270° arc at low opacity as a watermark on plum surfaces.

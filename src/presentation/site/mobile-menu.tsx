@@ -9,6 +9,8 @@ import {
   type ReactNode,
 } from "react";
 
+import { container } from "@/presentation/site/classes";
+
 const CLOSE_DURATION = 420;
 const FOCUSABLE =
   "summary, a[href], button:not([disabled]), [tabindex]:not([tabindex='-1'])";
@@ -97,7 +99,8 @@ export function MobileMenu({ children }: Readonly<{ children: ReactNode }>) {
   return (
     <details
       ref={ref}
-      className="site-menu"
+      data-site-menu=""
+      className="hidden max-lg:block"
       onToggle={onToggle}
       onKeyDown={(event) => {
         const details = ref.current;
@@ -124,16 +127,13 @@ export function MobileMenu({ children }: Readonly<{ children: ReactNode }>) {
       onClick={(event) => {
         const target = event.target as HTMLElement;
         // The empty backdrop of the sheet, not a link or the contact list.
-        if (
-          target.classList.contains("site-menu__panel") ||
-          target.classList.contains("site-menu__content")
-        ) {
+        if (target.hasAttribute("data-menu-backdrop")) {
           close();
         }
       }}
     >
       <summary
-        className="site-menu__toggle"
+        className="inline-flex min-h-11 min-w-11 cursor-pointer [list-style:none] items-center justify-center gap-3 p-2 text-[0.75rem] font-medium tracking-[0.18em] uppercase [&::-webkit-details-marker]:hidden"
         onClick={(event) => {
           if (ref.current?.open) {
             event.preventDefault();
@@ -141,11 +141,24 @@ export function MobileMenu({ children }: Readonly<{ children: ReactNode }>) {
           }
         }}
       >
-        <span aria-hidden="true" className="site-menu__icon" />
-        <span className="site-menu__label">{open ? "Close" : "Menu"}</span>
+        <span
+          aria-hidden="true"
+          className="relative block h-2 w-6 before:absolute before:top-0 before:left-0 before:h-px before:w-full before:bg-current before:[transition:transform_var(--motion-surface)_var(--ease-out-soft)] after:absolute after:bottom-0 after:left-0 after:h-px after:w-full after:bg-current after:[transition:transform_var(--motion-surface)_var(--ease-out-soft)] menu-open:before:[transform:translateY(0.25rem)_rotate(45deg)] menu-open:after:[transform:translateY(-0.25rem)_rotate(-45deg)]"
+        />
+        <span className="max-[24rem]:absolute max-[24rem]:size-px max-[24rem]:overflow-hidden max-[24rem]:[clip-path:inset(50%)] max-[24rem]:whitespace-nowrap">
+          {open ? "Close" : "Menu"}
+        </span>
       </summary>
-      <div className="site-menu__panel">
-        <div className="site-menu__content site-container">{children}</div>
+      <div
+        data-menu-backdrop=""
+        className="fixed inset-0 -z-1 overflow-y-auto bg-plum-950 bg-[radial-gradient(ellipse_at_85%_10%,rgb(101_42_76/0.85),transparent_55%)] text-surface menu-open:animate-[site-sheet-in_640ms_var(--ease-out-soft)_both] menu-closing:animate-[site-sheet-out_420ms_cubic-bezier(0.7,0,0.84,0)_both] [[data-site-menu]:not([open])_&]:hidden"
+      >
+        <div
+          data-menu-backdrop=""
+          className={`${container} grid min-h-full content-between gap-10 pt-[calc(var(--header-height)+2rem)] pb-10`}
+        >
+          {children}
+        </div>
       </div>
     </details>
   );

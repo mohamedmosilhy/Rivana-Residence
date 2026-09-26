@@ -4,6 +4,9 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useId, useRef, useState } from "react";
 
+const menuItem =
+  "block w-full cursor-pointer rounded-control border-0 bg-transparent px-3 py-2 text-left text-neutral-800 hover:bg-admin-canvas";
+
 type AccountMenuProps = Readonly<{
   name: string;
   roleLabel: string;
@@ -45,36 +48,54 @@ export function AccountMenu({
   }, [open]);
 
   return (
-    <div className="admin-account-menu" ref={rootRef}>
+    <div className="relative" ref={rootRef}>
       <button
         ref={buttonRef}
         type="button"
-        className="admin-account-menu__trigger"
+        className="flex min-h-11 cursor-pointer items-center gap-2 rounded-control border border-transparent bg-transparent px-2 py-1 text-neutral-800 hover:border-neutral-300 aria-expanded:border-neutral-300"
         aria-expanded={open}
         aria-controls={panelId}
         aria-label={`${name}, account options`}
         onClick={() => setOpen(!open)}
       >
-        <span className="admin-account-menu__avatar" aria-hidden="true">
+        <span
+          className="grid size-8 place-items-center rounded-[50%] bg-plum-100 font-medium text-plum-800"
+          aria-hidden="true"
+        >
           {name.trim().charAt(0).toUpperCase() || "?"}
         </span>
-        <span className="admin-account-menu__name">{name}</span>
+        <span className="max-[30rem]:absolute max-[30rem]:size-px max-[30rem]:overflow-hidden max-[30rem]:[clip:rect(0_0_0_0)] max-[30rem]:whitespace-nowrap">
+          {name}
+        </span>
       </button>
-      <div id={panelId} className="admin-account-menu__panel" hidden={!open}>
-        <p className="admin-account-menu__identity">
+      <div
+        id={panelId}
+        className="absolute top-[calc(100%+0.5rem)] right-0 z-30 w-[min(16rem,calc(100vw-2rem))] rounded-panel border border-neutral-300 bg-surface p-2 shadow-[var(--shadow-md)]"
+        hidden={!open}
+      >
+        <p className="grid border-b border-neutral-300 px-3 pt-2 pb-3 font-medium">
           <span>{name}</span>
-          <span className="admin-account-menu__role">{roleLabel}</span>
+          <span className="text-[0.8125rem] font-normal text-neutral-600">
+            {roleLabel}
+          </span>
         </p>
-        <ul>
+        <ul className="py-2">
           <li>
-            <Link href="/admin/account">Account and security</Link>
+            <Link href="/admin/account" className={menuItem}>
+              Account and security
+            </Link>
           </li>
           <li>
-            <Link href="/">View website</Link>
+            <Link href="/" className={menuItem}>
+              View website
+            </Link>
           </li>
         </ul>
-        <form action={signOutAction}>
-          <button type="submit" className="admin-account-menu__signout">
+        <form
+          action={signOutAction}
+          className="border-t border-neutral-300 pt-2"
+        >
+          <button type="submit" className={menuItem}>
             Sign out
           </button>
         </form>

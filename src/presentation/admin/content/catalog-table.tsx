@@ -8,6 +8,11 @@ import { formatDateTime } from "@/presentation/admin/format";
 import { Badge, PublicationBadge } from "@/presentation/admin/ui/badge";
 import { DataTable, type Column } from "@/presentation/admin/ui/data-table";
 import type { FormAction } from "@/presentation/admin/ui/form-state";
+import {
+  link,
+  tablePrimary,
+  tableSecondary,
+} from "@/presentation/admin/ui/classes";
 
 export type CatalogRow = Readonly<{
   id: string;
@@ -46,11 +51,11 @@ export function CatalogTable({
         <>
           <Link
             href={`${basePath}/${row.id}` as Route}
-            className="admin-table__primary admin-link"
+            className={`${tablePrimary} ${link}`}
           >
             {row.name}
           </Link>
-          <span className="admin-table__secondary">/{row.slug}</span>
+          <span className={tableSecondary}>/{row.slug}</span>
         </>
       ),
     },

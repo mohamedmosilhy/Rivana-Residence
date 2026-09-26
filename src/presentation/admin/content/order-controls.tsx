@@ -7,6 +7,7 @@ import {
   type FormAction,
 } from "@/presentation/admin/ui/form-state";
 import { useToast } from "@/presentation/admin/ui/toast";
+import { button } from "@/presentation/admin/ui/classes";
 
 type OrderControlsProps = Readonly<{
   id: string;
@@ -15,6 +16,7 @@ type OrderControlsProps = Readonly<{
   isLast: boolean;
   moveUp: FormAction;
   moveDown: FormAction;
+  className?: string;
 }>;
 
 function MoveButton({
@@ -47,7 +49,7 @@ function MoveButton({
       <button
         type="submit"
         id={id}
-        className="admin-button admin-button--quiet"
+        className={button("quiet", { compact: true })}
         aria-label={label}
         disabled={disabled || pending}
       >
@@ -65,9 +67,10 @@ export function OrderControls({
   isLast,
   moveUp,
   moveDown,
+  className,
 }: OrderControlsProps) {
   return (
-    <div className="admin-order-controls">
+    <div className={`flex gap-1 ${className ?? ""}`}>
       <MoveButton
         id={`order-${id}-up`}
         label={`Move up: ${name}`}

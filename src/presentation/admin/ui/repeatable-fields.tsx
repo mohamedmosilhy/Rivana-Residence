@@ -3,6 +3,15 @@
 import { useEffect, useRef, useState } from "react";
 
 import { FieldShell } from "@/presentation/admin/ui/form";
+import {
+  button,
+  control,
+  fieldset,
+  formGrid,
+  legend as legendClass,
+  muted,
+  textarea,
+} from "@/presentation/admin/ui/classes";
 
 export type RepeatableField = Readonly<{
   key: string;
@@ -116,8 +125,8 @@ export function RepeatableFields({
   }
 
   return (
-    <fieldset className="admin-fieldset">
-      <legend>{legend}</legend>
+    <fieldset className={fieldset}>
+      <legend className={legendClass}>{legend}</legend>
       {name ? (
         <input
           type="hidden"
@@ -125,24 +134,21 @@ export function RepeatableFields({
           value={JSON.stringify(rows.map((row) => row.values))}
         />
       ) : null}
-      <p className="sr-only" role="status" aria-live="polite">
+      <p className="visually-hidden" role="status" aria-live="polite">
         {announcement}
       </p>
       {rows.length === 0 ? (
-        <p className="admin-muted">{emptyText ?? `No ${itemNoun}s yet.`}</p>
+        <p className={muted}>{emptyText ?? `No ${itemNoun}s yet.`}</p>
       ) : (
-        <ol className="admin-repeatable">
+        <ol className="grid gap-4">
           {rows.map((row, index) => {
             const label = nameOf(row, index);
             return (
-              <li key={row.key} className="admin-repeatable__item">
-                <div
-                  className={
-                    fields.length > 1
-                      ? "admin-form-grid"
-                      : "admin-repeatable__single"
-                  }
-                >
+              <li
+                key={row.key}
+                className="rounded-panel border border-neutral-300 bg-admin-canvas p-5"
+              >
+                <div className={fields.length > 1 ? formGrid : "grid"}>
                   {fields.map((field) => {
                     const id = idFor(index, field.key);
                     return (
@@ -163,6 +169,7 @@ export function RepeatableFields({
                           return field.multiline ? (
                             <textarea
                               {...common}
+                              className={textarea}
                               rows={2}
                               onChange={(event) =>
                                 update(index, field.key, event.target.value)
@@ -171,6 +178,7 @@ export function RepeatableFields({
                           ) : (
                             <input
                               {...common}
+                              className={control}
                               onChange={(event) =>
                                 update(index, field.key, event.target.value)
                               }
@@ -181,11 +189,11 @@ export function RepeatableFields({
                     );
                   })}
                 </div>
-                <div className="admin-repeatable__buttons">
+                <div className="mt-3 flex flex-wrap gap-2">
                   <button
                     type="button"
                     id={idFor(index, "up")}
-                    className="admin-button admin-button--quiet"
+                    className={button("quiet")}
                     aria-label={`Move up: ${label}`}
                     disabled={index === 0}
                     onClick={() => move(index, -1)}
@@ -195,7 +203,7 @@ export function RepeatableFields({
                   <button
                     type="button"
                     id={idFor(index, "down")}
-                    className="admin-button admin-button--quiet"
+                    className={button("quiet")}
                     aria-label={`Move down: ${label}`}
                     disabled={index === rows.length - 1}
                     onClick={() => move(index, 1)}
@@ -204,7 +212,7 @@ export function RepeatableFields({
                   </button>
                   <button
                     type="button"
-                    className="admin-button admin-button--danger-quiet"
+                    className={button("danger-quiet")}
                     aria-label={`Remove: ${label}`}
                     disabled={rows.length <= min}
                     onClick={() => remove(index)}
@@ -220,7 +228,7 @@ export function RepeatableFields({
       <button
         type="button"
         id={`${idPrefix}-add`}
-        className="admin-button admin-button--secondary"
+        className={button("secondary")}
         disabled={rows.length >= max}
         onClick={add}
       >

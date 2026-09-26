@@ -4,6 +4,7 @@ import { useCallback, useEffect, useId, useRef, useState } from "react";
 
 import type { PublicPromotion } from "@/application/public/view-models";
 import { PromotionCard } from "@/presentation/features/promotions/promotion-card";
+import { button } from "@/presentation/site/classes";
 
 const STORAGE_KEY = "rivana.promotion.dismissed";
 const DISMISS_DAYS = 7;
@@ -88,7 +89,7 @@ export function PromotionPopup({
   return (
     <dialog
       ref={dialogRef}
-      className="promotion-popup"
+      className="max-h-[calc(100dvh-2rem)] w-[min(30rem,calc(100vw-2rem))] rounded-none border-0 bg-surface p-0 pb-6 shadow-[0_40px_90px_rgb(10_4_8/0.4)] backdrop:bg-[rgb(26_11_20/0.62)] backdrop:[backdrop-filter:blur(3px)] open:animate-[promotion-in_var(--motion-surface)_var(--ease-out-soft)]"
       aria-labelledby={headingId}
       onClose={() => {
         dismiss();
@@ -105,11 +106,12 @@ export function PromotionPopup({
         body={promotion.body}
         code={promotion.code}
         terms={promotion.terms}
+        popup
       />
-      <div className="promotion-popup__actions">
+      <div className="flex flex-wrap gap-3 px-8">
         <button
           type="button"
-          className="site-button"
+          className={button()}
           onClick={copy}
           aria-describedby={statusId}
         >
@@ -117,13 +119,17 @@ export function PromotionPopup({
         </button>
         <button
           type="button"
-          className="site-button site-button--quiet"
+          className={button()}
           onClick={() => dialogRef.current?.close()}
         >
           Close
         </button>
       </div>
-      <p id={statusId} role="status" className="promotion-popup__status">
+      <p
+        id={statusId}
+        role="status"
+        className="mx-8 mt-3 mb-0 min-h-6 text-[0.875rem] text-neutral-800"
+      >
         {copyState === "copied"
           ? `Code ${promotion.code} copied.`
           : copyState === "failed"

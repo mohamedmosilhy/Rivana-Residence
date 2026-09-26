@@ -20,7 +20,10 @@ type RootLayoutProps = Readonly<{
 
 export default function RootLayout({ children }: RootLayoutProps) {
   return (
-    <html lang="en" className={`${jost.variable} ${marcellus.variable}`}>
+    <html
+      lang="en"
+      className={`${jost.variable} ${marcellus.variable} has-[[data-site-menu][open]]:overflow-hidden has-[[data-lightbox][open]]:overflow-hidden`}
+    >
       <body>{children}</body>
     </html>
   );

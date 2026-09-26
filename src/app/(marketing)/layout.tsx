@@ -8,6 +8,7 @@ import {
   getPublicOrigin,
   getSiteSettings,
 } from "@/composition/public";
+import { skipLink } from "@/presentation/design/classes";
 import { PromotionPopup } from "@/presentation/features/promotions/promotion-popup";
 import { SiteFooter } from "@/presentation/site/site-footer";
 import { SiteHeader } from "@/presentation/site/site-header";
@@ -68,12 +69,12 @@ export default async function MarketingLayout({
           data={hotelJsonLd(settings, getPublicOrigin())}
         />
       ) : null}
-      <div className="site-shell">
-        <a className="skip-link" href="#main-content">
+      <div className="grid min-h-screen grid-rows-[auto_1fr_auto] bg-canvas text-neutral-950">
+        <a className={skipLink} href="#main-content">
           Skip to content
         </a>
         <SiteHeader settings={settings} bookingMessage={message} />
-        <main id="main-content" className="site-main" tabIndex={-1}>
+        <main id="main-content" className="focus:[outline:none]" tabIndex={-1}>
           {children}
         </main>
         <SiteFooter settings={settings} />

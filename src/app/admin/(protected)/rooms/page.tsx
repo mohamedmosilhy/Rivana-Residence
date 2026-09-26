@@ -13,6 +13,7 @@ import { PageHeader } from "@/presentation/admin/ui/page-header";
 import { EmptyState } from "@/presentation/admin/ui/states";
 
 import { moveRoomAction } from "./actions";
+import { button, listNote } from "@/presentation/admin/ui/classes";
 
 export const metadata: Metadata = { title: "Rooms" };
 
@@ -58,7 +59,7 @@ export default async function RoomsPage({ searchParams }: RoomsPageProps) {
           </p>
         }
         actions={
-          <Link href="/admin/rooms/new" className="admin-button">
+          <Link href="/admin/rooms/new" className={button()}>
             Add room
           </Link>
         }
@@ -88,7 +89,7 @@ export default async function RoomsPage({ searchParams }: RoomsPageProps) {
               : {})}
           />
           {!reorderable ? (
-            <p className="admin-muted admin-list-note">
+            <p className={listNote}>
               Clear the filters to change the display order.
             </p>
           ) : null}
@@ -101,7 +102,7 @@ export default async function RoomsPage({ searchParams }: RoomsPageProps) {
         <EmptyState
           title="No rooms yet"
           action={
-            <Link href="/admin/rooms/new" className="admin-button">
+            <Link href="/admin/rooms/new" className={button()}>
               Add room
             </Link>
           }

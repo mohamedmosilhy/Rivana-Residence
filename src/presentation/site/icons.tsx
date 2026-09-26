@@ -23,7 +23,7 @@ const PATHS: Record<IconName, string> = {
 
 export function Icon({
   name,
-  className = "site-icon",
+  className = "size-5 flex-none",
 }: Readonly<{ name: IconName; className?: string }>) {
   return (
     <svg

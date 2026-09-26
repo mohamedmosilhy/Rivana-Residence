@@ -78,8 +78,8 @@ function Counter({
 
   return (
     <>
-      <span className="sr-only">{value}</span>
-      <span ref={ref} className="site-count" aria-hidden="true">
+      <span className="visually-hidden">{value}</span>
+      <span ref={ref} className="tabular-nums" data-count="" aria-hidden="true">
         {value}
       </span>
     </>

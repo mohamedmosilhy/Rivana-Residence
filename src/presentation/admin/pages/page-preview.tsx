@@ -2,6 +2,14 @@ import type { PageDto } from "@/application/ports/repositories";
 import { PAGE_SECTION_LABELS } from "@/domain/content/page-sections";
 import { PublicationBadge } from "@/presentation/admin/ui/badge";
 import { RichTextView } from "@/presentation/design/rich-text-view";
+import {
+  noticePreview,
+  preview,
+  previewEyebrow,
+  previewLede,
+  previewPlaceholder,
+  previewTitle,
+} from "@/presentation/admin/ui/classes";
 
 type Payload = Record<string, unknown>;
 const str = (value: unknown) => (typeof value === "string" ? value : "");
@@ -15,10 +23,10 @@ function SectionBody({
     case "HERO":
       return (
         <>
-          <p className="admin-preview__title">{str(payload.title)}</p>
-          <p className="admin-preview__lede">{str(payload.summary)}</p>
+          <p className={previewTitle}>{str(payload.title)}</p>
+          <p className={previewLede}>{str(payload.summary)}</p>
           {cta?.label ? (
-            <p className="admin-preview__cta">[{cta.label}]</p>
+            <p className={previewPlaceholder}>[{cta.label}]</p>
           ) : null}
         </>
       );
@@ -27,22 +35,22 @@ function SectionBody({
     case "IMAGE_TEXT_SPLIT":
       return (
         <>
-          <p className="admin-preview__media">
+          <p className={previewPlaceholder}>
             Image on the {str(payload.imageSide) === "RIGHT" ? "right" : "left"}
           </p>
           <RichTextView document={payload.body} />
           {cta?.label ? (
-            <p className="admin-preview__cta">[{cta.label}]</p>
+            <p className={previewPlaceholder}>[{cta.label}]</p>
           ) : null}
         </>
       );
     case "GALLERY":
-      return <p className="admin-preview__media">Gallery images</p>;
+      return <p className={previewPlaceholder}>Gallery images</p>;
     case "ROOM_GRID":
     case "FACILITY_GRID": {
       const noun = type === "ROOM_GRID" ? "rooms" : "facilities";
       return (
-        <p className="admin-preview__media">
+        <p className={previewPlaceholder}>
           Up to {String(payload.limit)} published{" "}
           {payload.featuredOnly ? `featured ${noun}` : noun}
         </p>
@@ -53,7 +61,7 @@ function SectionBody({
         <>
           <p>{str(payload.body)}</p>
           {payload.formEnabled ? (
-            <p className="admin-preview__media">Enquiry form</p>
+            <p className={previewPlaceholder}>Enquiry form</p>
           ) : null}
         </>
       );
@@ -81,24 +89,24 @@ export function PagePreview({ page }: Readonly<{ page: PageDto }>) {
   const visible = page.sections.filter((section) => section.isVisible);
   return (
     <>
-      <p className="admin-notice admin-notice--preview" role="note">
+      <p className={noticePreview} role="note">
         Private preview.{" "}
-        <PublicationBadge status={page.isPublished ? "PUBLISHED" : "DRAFT"} />{" "}
+        <PublicationBadge
+          status={page.isPublished ? "PUBLISHED" : "DRAFT"}
+          className="mx-1"
+        />{" "}
         Hidden sections are left out. The finished website design is applied
         later.
       </p>
-      <article
-        className="admin-preview"
-        aria-label={`Preview of ${page.title}`}
-      >
+      <article className={preview} aria-label={`Preview of ${page.title}`}>
         {visible.map((section) => (
           <section
             key={section.id}
-            className="admin-preview__section"
+            className="not-first:mt-8 not-first:border-t not-first:border-neutral-300 not-first:pt-6"
             aria-label={PAGE_SECTION_LABELS[section.type]}
           >
             {section.eyebrow ? (
-              <p className="admin-preview__eyebrow">{section.eyebrow}</p>
+              <p className={previewEyebrow}>{section.eyebrow}</p>
             ) : null}
             {section.heading ? <h2>{section.heading}</h2> : null}
             <SectionBody

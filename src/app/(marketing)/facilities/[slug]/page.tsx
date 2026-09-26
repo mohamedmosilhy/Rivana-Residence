@@ -16,6 +16,21 @@ import { Icon } from "@/presentation/site/icons";
 import { StructuredData } from "@/presentation/site/structured-data";
 
 import { pageMetadata } from "../../site-content";
+import {
+  button,
+  container,
+  detailAside,
+  detailLayout,
+  eyebrow,
+  eyebrowFlush,
+  flushSection,
+  lightSection,
+  link,
+  linkIcon,
+  proseLeadPlain,
+  sectionHeader,
+  sectionHeading,
+} from "@/presentation/site/classes";
 
 type FacilityPageProps = Readonly<{ params: Promise<{ slug: string }> }>;
 
@@ -43,7 +58,7 @@ export default async function FacilityPage({ params }: FacilityPageProps) {
   const origin = getPublicOrigin();
 
   return (
-    <article className="site-detail">
+    <article>
       <StructuredData
         id="breadcrumb-structured-data"
         data={breadcrumbJsonLd(origin, [
@@ -62,39 +77,46 @@ export default async function FacilityPage({ params }: FacilityPageProps) {
         image={facility.hero}
         morphName={`facility-${facility.slug}`}
       />
-      <div className="site-container site-detail__layout">
-        <div className="site-detail__main">
+      <div className={`${container} ${detailLayout}`}>
+        <div className="grid gap-12">
           <RichTextView
             document={facility.description}
-            className="site-prose site-prose--lead"
+            className={proseLeadPlain}
           />
         </div>
-        <aside className="site-detail__aside" aria-labelledby="facility-visit">
-          <p className="site-eyebrow" id="facility-visit">
+        <aside className={detailAside} aria-labelledby="facility-visit">
+          <p className={eyebrowFlush} id="facility-visit">
             Plan your visit
           </p>
           {facility.openingHoursText ? (
-            <dl className="site-facts">
-              <div>
-                <dt>Opening hours</dt>
-                <dd>{facility.openingHoursText}</dd>
+            <dl className="m-0 grid">
+              <div className="flex items-baseline justify-between gap-4 border-b border-neutral-300 py-4 first:border-t first:border-neutral-300">
+                <dt className="text-[0.75rem] font-medium tracking-[0.18em] text-neutral-600 uppercase">
+                  Opening hours
+                </dt>
+                <dd className="m-0 text-right font-display text-[1.125rem] text-plum-900">
+                  {facility.openingHoursText}
+                </dd>
               </div>
             </dl>
           ) : null}
-          <Link href="/contact" className="site-button">
+          <Link href="/contact" className={button("primary", "w-full")}>
             Ask about {facility.name}
           </Link>
         </aside>
       </div>
       {facility.gallery.length > 0 ? (
         <section
-          className="site-section site-container site-section--flush"
+          data-light-section=""
+          className={`${flushSection} ${container}`}
           aria-labelledby="facility-gallery"
         >
-          <header className="site-section__header">
+          <header className={sectionHeader}>
             <div>
-              <p className="site-eyebrow">Gallery</p>
-              <h2 id="facility-gallery">Photos</h2>
+              <p className={eyebrow}>Gallery</p>
+              <h2 id="facility-gallery" className={sectionHeading}>
+                Photos
+              </h2>
             </div>
           </header>
           <Gallery
@@ -106,17 +128,20 @@ export default async function FacilityPage({ params }: FacilityPageProps) {
       ) : null}
       {rooms.length > 0 ? (
         <section
-          className="site-section site-container"
+          data-light-section=""
+          className={`${lightSection} ${container}`}
           aria-labelledby="facility-rooms"
         >
-          <header className="site-section__header">
+          <header className={sectionHeader}>
             <div>
-              <p className="site-eyebrow">Rooms</p>
-              <h2 id="facility-rooms">Stay with us</h2>
+              <p className={eyebrow}>Rooms</p>
+              <h2 id="facility-rooms" className={sectionHeading}>
+                Stay with us
+              </h2>
             </div>
-            <Link href="/rooms" className="site-link">
+            <Link href="/rooms" className={link}>
               View all rooms
-              <Icon name="arrow" />
+              <Icon name="arrow" className={linkIcon} />
             </Link>
           </header>
           <CardGrid>

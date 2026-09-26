@@ -22,6 +22,26 @@ import { Icon } from "@/presentation/site/icons";
 import { StructuredData } from "@/presentation/site/structured-data";
 
 import { bookingMessage, pageMetadata } from "../../site-content";
+import {
+  actionFill,
+  button,
+  container,
+  detailAside,
+  detailHeading,
+  detailLayout,
+  eyebrow,
+  eyebrowDark,
+  eyebrowFlush,
+  featureItem,
+  featureList,
+  flushSection,
+  linkIcon,
+  linkInverse,
+  proseLeadPlain,
+  sectionHeader,
+  sectionHeading,
+  sectionHeadingOnPlum,
+} from "@/presentation/site/classes";
 
 type RoomPageProps = Readonly<{ params: Promise<{ slug: string }> }>;
 
@@ -52,7 +72,7 @@ export default async function RoomPage({ params }: RoomPageProps) {
   const origin = getPublicOrigin();
 
   return (
-    <article className="site-detail">
+    <article>
       <StructuredData
         id="room-structured-data"
         data={roomJsonLd(room, settings, origin)}
@@ -72,54 +92,68 @@ export default async function RoomPage({ params }: RoomPageProps) {
         image={room.hero}
         morphName={`room-${room.slug}`}
       >
-        <BookNowButton message={message} />
-        <Link href="/contact" className="site-button site-button--ghost">
+        <BookNowButton message={message} placement="dark" inActions />
+        <Link href="/contact" className={button("ghost-dark", actionFill)}>
           Enquire about this room
         </Link>
       </DetailHero>
 
-      <div className="site-container site-detail__layout">
-        <div className="site-detail__main">
+      <div className={`${container} ${detailLayout}`}>
+        <div className="grid gap-12">
           <RichTextView
             document={room.description}
-            className="site-prose site-prose--lead"
+            className={proseLeadPlain}
           />
           {room.features.length > 0 ? (
             <section aria-labelledby="room-features">
-              <h2 id="room-features">In the room</h2>
-              <ul className="site-feature-list">
+              <h2 id="room-features" className={detailHeading}>
+                In the room
+              </h2>
+              <ul className={featureList}>
                 {room.features.map((feature) => (
-                  <li key={feature}>{feature}</li>
+                  <li key={feature} className={featureItem}>
+                    {feature}
+                  </li>
                 ))}
               </ul>
             </section>
           ) : null}
         </div>
-        <aside className="site-detail__aside" aria-labelledby="room-facts">
-          <p className="site-eyebrow" id="room-facts">
+        <aside className={detailAside} aria-labelledby="room-facts">
+          <p className={eyebrowFlush} id="room-facts">
             At a glance
           </p>
-          <dl className="site-facts">
+          <dl className="m-0 grid">
             {facts.map((fact) => (
-              <div key={fact.label}>
-                <dt>{fact.label}</dt>
-                <dd>{fact.value}</dd>
+              <div
+                key={fact.label}
+                className="flex items-baseline justify-between gap-4 border-b border-neutral-300 py-4 first:border-t first:border-neutral-300"
+              >
+                <dt className="text-[0.75rem] font-medium tracking-[0.18em] text-neutral-600 uppercase">
+                  {fact.label}
+                </dt>
+                <dd className="m-0 text-right font-display text-[1.125rem] text-plum-900">
+                  {fact.value}
+                </dd>
               </div>
             ))}
           </dl>
-          <BookNowButton message={message} />
+          <BookNowButton message={message} fill />
         </aside>
       </div>
 
       {room.gallery.length > 0 ? (
         <section
-          className="site-section site-container site-section--flush"
+          data-light-section=""
+          className={`${flushSection} ${container}`}
           aria-labelledby="room-gallery"
         >
-          <header className="site-section__header">
+          <header className={sectionHeader}>
             <div>
-              <p className="site-eyebrow">Gallery</p>
-              <h2 id="room-gallery">Photos</h2>
+              <p className={eyebrow}>Gallery</p>
+              <h2 id="room-gallery" className={sectionHeading}>
+                Photos
+              </h2>
             </div>
           </header>
           <Gallery
@@ -131,16 +165,22 @@ export default async function RoomPage({ params }: RoomPageProps) {
       ) : null}
 
       {facilities.length > 0 ? (
-        <section className="site-band" aria-labelledby="room-facilities">
-          <div className="site-section site-container">
-            <header className="site-section__header">
+        <section
+          data-dark-surface=""
+          className="bg-plum-900 text-surface"
+          aria-labelledby="room-facilities"
+        >
+          <div className={`py-(--space-section) ${container}`}>
+            <header className={sectionHeader}>
               <div>
-                <p className="site-eyebrow">Amenities</p>
-                <h2 id="room-facilities">During your stay</h2>
+                <p className={eyebrowDark}>Amenities</p>
+                <h2 id="room-facilities" className={sectionHeadingOnPlum}>
+                  During your stay
+                </h2>
               </div>
-              <Link href="/facilities" className="site-link">
+              <Link href="/facilities" className={linkInverse}>
                 View all amenities
-                <Icon name="arrow" />
+                <Icon name="arrow" className={linkIcon} />
               </Link>
             </header>
             <CardGrid variant="tiles">

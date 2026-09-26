@@ -17,6 +17,7 @@ import {
   type FormAction,
 } from "@/presentation/admin/ui/form-state";
 import { useToast } from "@/presentation/admin/ui/toast";
+import { form, formStack } from "@/presentation/admin/ui/classes";
 
 const FIELDS = [
   ["logoMediaId", "Logo", "Shown in the website header."],
@@ -56,7 +57,7 @@ export function SiteImagesForm({
     id ? { mediaId: id, altOverride: null } : null;
 
   return (
-    <form className="admin-form" action={formAction} noValidate>
+    <form className={form} action={formAction} noValidate>
       {state.status === "error" ? (
         <ErrorSummary
           title={state.message}
@@ -72,7 +73,7 @@ export function SiteImagesForm({
           value={chosen[field] ?? ""}
         />
       ))}
-      <div id="site-images" tabIndex={-1} className="admin-form-stack">
+      <div id="site-images" tabIndex={-1} className={formStack}>
         {FIELDS.map(([field, label, hint]) => (
           <SingleImage
             key={field}

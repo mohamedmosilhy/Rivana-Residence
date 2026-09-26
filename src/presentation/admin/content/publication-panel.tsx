@@ -7,6 +7,12 @@ import { PublicLink } from "@/presentation/admin/content/public-link";
 import { PublicationBadge } from "@/presentation/admin/ui/badge";
 import { ConfirmAction } from "@/presentation/admin/ui/confirm-action";
 import type { FormAction } from "@/presentation/admin/ui/form-state";
+import {
+  button,
+  publicationCard,
+  readiness as readinessNote,
+  readinessGaps,
+} from "@/presentation/admin/ui/classes";
 
 export type PublicationActions = Readonly<{
   publish?: FormAction;
@@ -49,10 +55,11 @@ export function PublicationPanel({
   const ready = readiness.length === 0;
   return (
     <section
-      className="admin-card admin-card--wide admin-publication"
+      className={publicationCard}
+      data-admin-card=""
       aria-labelledby="publication-title"
     >
-      <div className="admin-publication__header">
+      <div className="flex items-center gap-3">
         <h2 id="publication-title">Publication</h2>
         <PublicationBadge status={status} />
       </div>
@@ -65,7 +72,7 @@ export function PublicationPanel({
               : `This ${noun} is ready to publish.`}
           </p>
         ) : (
-          <div className="admin-readiness">
+          <div className={readinessNote}>
             <p>
               <strong>
                 {status === "PUBLISHED"
@@ -88,7 +95,7 @@ export function PublicationPanel({
       )}
 
       {warnings.length > 0 && status !== "ARCHIVED" ? (
-        <div className="admin-readiness admin-readiness--gaps">
+        <div className={readinessGaps}>
           <p>
             <strong>Content gaps:</strong>
           </p>
@@ -104,12 +111,9 @@ export function PublicationPanel({
         <PublicLink path={publicPath} isPublic={status === "PUBLISHED"} />
       ) : null}
 
-      <div className="admin-publication__actions">
+      <div className="mt-5 flex flex-wrap gap-3">
         {previewHref ? (
-          <Link
-            href={previewHref}
-            className="admin-button admin-button--secondary"
-          >
+          <Link href={previewHref} className={button("secondary")}>
             Preview
           </Link>
         ) : null}

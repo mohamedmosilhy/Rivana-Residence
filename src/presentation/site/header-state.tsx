@@ -14,7 +14,7 @@ const DIRECTION_THRESHOLD = 6;
 // away while reading downwards, and shows reading progress as a gold rule.
 export function HeaderState() {
   useEffect(() => {
-    const header = document.querySelector<HTMLElement>(".site-header");
+    const header = document.querySelector<HTMLElement>("[data-site-header]");
     if (!header) return;
     let frame = 0;
     let lastY = window.scrollY;
@@ -32,7 +32,7 @@ export function HeaderState() {
       if (Math.abs(delta) < DIRECTION_THRESHOLD) return;
       const pinned =
         header.matches(":focus-within") ||
-        header.querySelector(".site-menu[open]") !== null;
+        header.querySelector("[data-site-menu][open]") !== null;
       header.dataset.tucked = String(!pinned && delta > 0 && y > TUCK_AFTER);
       lastY = y;
     };

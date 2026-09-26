@@ -1,12 +1,22 @@
 import type { EnquiryStatus, PublicationStatus } from "@/domain/shared/types";
+import { BADGE_TONES } from "@/presentation/admin/ui/classes";
 
 export type BadgeTone = "neutral" | "success" | "warning" | "danger" | "brand";
 
 export function Badge({
   tone = "neutral",
   children,
-}: Readonly<{ tone?: BadgeTone; children: string }>) {
-  return <span className={`admin-badge admin-badge--${tone}`}>{children}</span>;
+  className,
+}: Readonly<{ tone?: BadgeTone; children: string; className?: string }>) {
+  return (
+    <span
+      className={
+        className ? `${BADGE_TONES[tone]} ${className}` : BADGE_TONES[tone]
+      }
+    >
+      {children}
+    </span>
+  );
 }
 
 const PUBLICATION: Record<PublicationStatus, [string, BadgeTone]> = {
@@ -29,9 +39,14 @@ export const ENQUIRY_STATUS_LABELS = Object.fromEntries(
 // Status is always conveyed by text; colour only reinforces it.
 export function PublicationBadge({
   status,
-}: Readonly<{ status: PublicationStatus }>) {
+  className,
+}: Readonly<{ status: PublicationStatus; className?: string }>) {
   const [label, tone] = PUBLICATION[status];
-  return <Badge tone={tone}>{label}</Badge>;
+  return (
+    <Badge tone={tone} {...(className ? { className } : {})}>
+      {label}
+    </Badge>
+  );
 }
 
 export function EnquiryBadge({ status }: Readonly<{ status: EnquiryStatus }>) {

@@ -27,15 +27,15 @@ export function SiteImage({
   fit = "cover",
 }: SiteImageProps) {
   const alt = decorative ? "" : image.alt;
+  // The focal point is per-photo data, so it is the one inline value.
   const common = {
     src: image.src,
     sizes,
-    className,
+    className: `${fit === "contain" ? "object-contain" : "object-cover"}${
+      className ? ` ${className}` : ""
+    }`,
     preload,
-    style: {
-      objectFit: fit,
-      objectPosition: fit === "cover" ? image.position : "center",
-    },
+    ...(fit === "cover" ? { style: { objectPosition: image.position } } : {}),
   };
   return fill ? (
     <Image {...common} alt={alt} fill />

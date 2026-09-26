@@ -6,6 +6,14 @@ import {
   idleFormState,
   type FormAction,
 } from "@/presentation/admin/ui/form-state";
+import {
+  button,
+  control,
+  field,
+  fieldLabel,
+  form,
+  formError,
+} from "@/presentation/admin/ui/classes";
 
 type LoginFormProps = Readonly<{
   action: FormAction;
@@ -22,13 +30,13 @@ export function LoginForm({ action, returnTo }: LoginFormProps) {
   }, [state, hasError]);
 
   return (
-    <form className="admin-form" action={formAction} noValidate>
+    <form className={form} action={formAction} noValidate>
       <input type="hidden" name="returnTo" value={returnTo} />
 
       {hasError ? (
         <div
           ref={errorRef}
-          className="admin-form__error"
+          className={formError}
           role="alert"
           tabIndex={-1}
           id="login-error"
@@ -37,12 +45,15 @@ export function LoginForm({ action, returnTo }: LoginFormProps) {
         </div>
       ) : null}
 
-      <div className="admin-field">
-        <label htmlFor="login-email">Email</label>
+      <div className={field}>
+        <label htmlFor="login-email" className={fieldLabel}>
+          Email
+        </label>
         <input
           id="login-email"
           name="email"
           type="email"
+          className={control}
           autoComplete="username"
           inputMode="email"
           defaultValue={hasError ? (state.values?.email ?? "") : ""}
@@ -53,12 +64,15 @@ export function LoginForm({ action, returnTo }: LoginFormProps) {
         />
       </div>
 
-      <div className="admin-field">
-        <label htmlFor="login-password">Password</label>
+      <div className={field}>
+        <label htmlFor="login-password" className={fieldLabel}>
+          Password
+        </label>
         <input
           id="login-password"
           name="password"
           type="password"
+          className={control}
           autoComplete="current-password"
           required
           aria-invalid={hasError || undefined}
@@ -66,7 +80,11 @@ export function LoginForm({ action, returnTo }: LoginFormProps) {
         />
       </div>
 
-      <button className="admin-button" type="submit" disabled={pending}>
+      <button
+        className={button("primary", { stretch: true })}
+        type="submit"
+        disabled={pending}
+      >
         {pending ? "Signing in…" : "Sign in"}
       </button>
     </form>
