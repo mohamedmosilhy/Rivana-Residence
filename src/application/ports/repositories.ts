@@ -155,6 +155,7 @@ export type SiteSettingsDto = Readonly<
     socialLinks: readonly SocialLinkDto[];
     logoMediaId: string | null;
     stickyLogoMediaId: string | null;
+    faviconMediaId: string | null;
     defaultOgMediaId: string | null;
   }
 >;
@@ -168,6 +169,7 @@ export type AdminSiteSettingsDto = SiteSettingsDto &
 export type SiteImagesInput = Readonly<{
   logoMediaId: string | null;
   stickyLogoMediaId: string | null;
+  faviconMediaId: string | null;
   defaultOgMediaId: string | null;
 }>;
 

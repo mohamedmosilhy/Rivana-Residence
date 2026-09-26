@@ -703,7 +703,7 @@ Accepted on 2026-09-26 when the client asked for Phase 8 to be committed, merged
 
 ## Phase 9 — Interaction and motion
 
-Status: `Ready for review`
+Status: `Accepted on 2026-09-26`
 
 ### Objective
 
@@ -762,13 +762,13 @@ Add refined interaction feedback and motion without reducing accessibility or pe
 
 ### Reviewer decision
 
-Awaiting client review. Approve interaction behavior before SEO/performance final tuning changes loading/caching. Please confirm the client-requested hero parallax exception. Evidence: [phase-9-motion.md](./phase-9-motion.md).
+Accepted on 2026-09-26 when the client directed Phase 10 to proceed. The transform-only, reduced-motion-safe hero parallax remains the approved exception. Evidence: [phase-9-motion.md](./phase-9-motion.md).
 
 ---
 
 ## Phase 10 — SEO, performance, and production content readiness
 
-Status: `Not started`
+Status: `Ready for review`
 
 ### Objective
 
@@ -841,7 +841,7 @@ Make the site discoverable, fast, stable, and ready for real domain/content laun
 
 ### Reviewer decision
 
-Approve production readiness inputs before the dedicated hardening phase.
+Implementation is complete and ready for client review. Production launch remains explicitly blocked by the final HTTPS host, official contact data, default social/search settings, approved privacy/media-rights wording, SMTP delivery verification, and one unresolved legacy room redirect. Evidence: [phase-10-seo-performance.md](./phase-10-seo-performance.md).
 
 ---
 

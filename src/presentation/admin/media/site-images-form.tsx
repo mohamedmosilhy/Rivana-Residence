@@ -22,6 +22,11 @@ const FIELDS = [
   ["logoMediaId", "Logo", "Shown in the website header."],
   ["stickyLogoMediaId", "Compact logo", "Shown in the header after scrolling."],
   [
+    "faviconMediaId",
+    "Browser icon",
+    "A square PNG used in browser tabs and bookmarks.",
+  ],
+  [
     "defaultOgMediaId",
     "Default sharing image",
     "Used when a page without its own image is shared on social media.",

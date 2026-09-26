@@ -103,6 +103,31 @@ export async function getPublishedFacility(slug: string) {
   );
 }
 
+/** Canonical deployment origin. APP_URL is server validated and never bundled. */
+export function getPublicOrigin() {
+  return new URL(getServerEnv().APP_URL).origin;
+}
+
+/** Published routes and accurate content timestamps for sitemap.xml. */
+export async function getPublicSitemap() {
+  await connection();
+  return cached(
+    async () => {
+      const publicSite = site();
+      const [home, about, contact, rooms, facilities] = await Promise.all([
+        publicSite.page("HOME"),
+        publicSite.page("ABOUT"),
+        publicSite.page("CONTACT"),
+        publicSite.rooms(),
+        publicSite.facilities(),
+      ]);
+      return { home, about, contact, rooms, facilities };
+    },
+    ["public", "sitemap"],
+    [CACHE_TAGS.sitemap],
+  );
+}
+
 /**
  * The promotion to show now, by the server clock. The candidate list is
  * cached (and refreshed every 5 minutes to drop ended campaigns); the

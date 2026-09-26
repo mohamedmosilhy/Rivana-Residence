@@ -27,7 +27,7 @@ Use Next.js Metadata APIs and `generateMetadata` in server routes. Metadata quer
 
 ## Sitemap and robots
 
-`app/sitemap.ts` emits Home, About, Rooms, published room details, Facilities, published facility details, and Contact with accurate `lastModified` values. `app/robots.ts` allows the marketing site, disallows `/admin`, `/api`, and preview routes, and links the sitemap.
+`app/sitemap.ts` emits Home, About, Rooms, published room details, Facilities, published facility details, and Contact with accurate `lastModified` values. Detail entries include the approved hero image. Empty listings and unpublished records are omitted. `app/robots.ts` allows the marketing site, disallows `/admin` and `/api`, and links the sitemap. Both use the server-validated `APP_URL` origin.
 
 Robots is not an access-control mechanism; protected routes remain authenticated.
 
@@ -42,6 +42,8 @@ Use JSON-LD built from validated server data:
 - website/organization identity where non-duplicative.
 
 Do not publish `Offer`, price range, aggregate rating, availability, or review markup unless sourced from real authoritative data and visible on the page.
+
+Phase 10 implements one site-wide `Hotel`, `HotelRoom` on room details, and `BreadcrumbList` on listing/detail routes. Facilities stay represented by the hotel identity and visible page content rather than invented standalone business types. Unit and browser tests assert the positive types and the absence of commercial fields.
 
 ## On-page requirements
 
@@ -72,3 +74,11 @@ Do not publish `Offer`, price range, aggregate rating, availability, or review m
 ## Measurement
 
 Connect Search Console and privacy-appropriate analytics after domain verification. Monitor index coverage, branded/non-branded queries, room/facility landing traffic, contact conversions, Core Web Vitals, 404s, and future booking handoff clicks. Analytics configuration is an adapter/config concern, not embedded throughout components.
+
+## Phase 10 implementation notes
+
+- Page, room, and facility social images fall back through entity OG image → entity hero → site default.
+- The managed favicon is emitted through Metadata; `/rivana-icon.png` is the static fallback.
+- Eight verified legacy HTML paths use permanent redirects in `next.config.ts`. `/room-studio-pool-view.html` has no approved matching record and remains a launch blocker rather than being guessed.
+- Sitemap freshness is coupled to public content/media cache invalidation. Draft-only edits do not churn public caches.
+- Full route evidence and production blockers are in [phase-10-seo-performance.md](./phase-10-seo-performance.md).

@@ -2,7 +2,13 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
-import { getPublishedFacilities, getPublishedRoom } from "@/composition/public";
+import { breadcrumbJsonLd, roomJsonLd } from "@/application/public/seo";
+import {
+  getPublicOrigin,
+  getPublishedFacilities,
+  getPublishedRoom,
+  getSiteSettings,
+} from "@/composition/public";
 import { RichTextView } from "@/presentation/design/rich-text-view";
 import { BookNowButton } from "@/presentation/site/book-now-button";
 import {
@@ -13,6 +19,7 @@ import {
 import { Gallery } from "@/presentation/site/gallery";
 import { DetailHero } from "@/presentation/site/heroes";
 import { Icon } from "@/presentation/site/icons";
+import { StructuredData } from "@/presentation/site/structured-data";
 
 import { bookingMessage, pageMetadata } from "../../site-content";
 
@@ -27,23 +34,37 @@ export async function generateMetadata({
   return pageMetadata({
     title: room.seoTitle ?? room.name,
     description: room.seoDescription ?? room.shortDescription,
-    image: room.hero,
+    image: room.socialImage ?? room.hero,
     path: `/rooms/${room.slug}`,
   });
 }
 
 export default async function RoomPage({ params }: RoomPageProps) {
   const { slug } = await params;
-  const [room, facilities, message] = await Promise.all([
+  const [room, facilities, message, settings] = await Promise.all([
     getPublishedRoom(slug),
     getPublishedFacilities(),
     bookingMessage(),
+    getSiteSettings(),
   ]);
   if (!room) notFound();
   const facts = roomFactList(room.facts);
+  const origin = getPublicOrigin();
 
   return (
     <article className="site-detail">
+      <StructuredData
+        id="room-structured-data"
+        data={roomJsonLd(room, settings, origin)}
+      />
+      <StructuredData
+        id="breadcrumb-structured-data"
+        data={breadcrumbJsonLd(origin, [
+          { name: "Home", path: "/" },
+          { name: "Rooms", path: "/rooms" },
+          { name: room.name, path: `/rooms/${room.slug}` },
+        ])}
+      />
       <DetailHero
         parent={{ href: "/rooms", label: "Rooms" }}
         title={room.name}

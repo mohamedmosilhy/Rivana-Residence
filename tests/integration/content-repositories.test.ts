@@ -461,6 +461,7 @@ describe("settings repository", () => {
       socialLinks: [],
       logoMediaId: null,
       stickyLogoMediaId: null,
+      faviconMediaId: null,
       defaultOgMediaId: null,
     });
   });

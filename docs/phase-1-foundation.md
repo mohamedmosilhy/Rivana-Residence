@@ -114,8 +114,7 @@ Copy `.env.example` to the environment-specific secret store and set:
 
 | Variable | Exposure | Rule |
 | --- | --- | --- |
-| `NEXT_PUBLIC_SITE_URL` | Browser-safe, build-time inlined | Canonical public URL |
-| `APP_URL` | Server only | Absolute application URL |
+| `APP_URL` | Server only | Absolute application URL; Phase 10 also uses it as the single canonical/search origin |
 | `MEDIA_STORAGE_ROOT` | Server only | Absolute persistent path outside a release directory; required in production |
 
 No database configuration or migration exists in Phase 1. The media root is a validated contract only; upload/storage behavior begins in a later approved phase.

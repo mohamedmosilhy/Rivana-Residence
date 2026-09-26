@@ -9,6 +9,7 @@ import type {
 } from "@/application/public/view-models";
 import {
   getBookingStatus,
+  getPublicOrigin,
   getPublishedFacilities,
   getPublishedRooms,
   getSiteSettings,
@@ -64,35 +65,44 @@ export async function ManagedPageSections({
 export async function pageMetadata(input: {
   title: string | null;
   description: string | null;
-  image?: PublicImage | null;
+  image?: PublicImage | null | undefined;
   path: string;
 }): Promise<Metadata> {
   const settings: PublicSettings | null = await getSiteSettings();
+  const origin = getPublicOrigin();
+  const siteName = settings?.siteName ?? "Rivana Residence";
+  const title = input.title ?? settings?.defaultSeoTitle ?? siteName;
   const description =
     input.description ?? settings?.defaultSeoDescription ?? undefined;
   const image = input.image ?? settings?.defaultShareImage ?? null;
+  const canonical = new URL(input.path, `${origin}/`).toString();
+  const socialImage = image
+    ? {
+        url: new URL(image.src, `${origin}/`).toString(),
+        width: image.width,
+        height: image.height,
+        alt: image.alt || `${siteName} photograph`,
+      }
+    : null;
   return {
-    ...(input.title ? { title: input.title } : {}),
+    title: input.path === "/" ? { absolute: title } : title,
     ...(description ? { description } : {}),
-    alternates: { canonical: input.path },
+    alternates: { canonical },
     openGraph: {
-      title:
-        input.title ??
-        settings?.defaultSeoTitle ??
-        settings?.siteName ??
-        "Rivana Residence",
+      type: "website",
+      locale: "en_EG",
+      siteName,
+      title,
+      url: canonical,
       ...(description ? { description } : {}),
-      ...(image
-        ? {
-            images: [
-              {
-                url: image.src,
-                width: image.width,
-                height: image.height,
-                alt: image.alt,
-              },
-            ],
-          }
+      ...(socialImage ? { images: [socialImage] } : {}),
+    },
+    twitter: {
+      card: socialImage ? "summary_large_image" : "summary",
+      title,
+      ...(description ? { description } : {}),
+      ...(socialImage
+        ? { images: [{ url: socialImage.url, alt: socialImage.alt }] }
         : {}),
     },
   };

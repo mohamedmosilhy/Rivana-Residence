@@ -815,6 +815,7 @@ describe("placing images", () => {
         {
           logoMediaId: asset.id,
           stickyLogoMediaId: null,
+          faviconMediaId: null,
           defaultOgMediaId: pending.id,
         },
         actor,
@@ -825,6 +826,7 @@ describe("placing images", () => {
         {
           logoMediaId: asset.id,
           stickyLogoMediaId: null,
+          faviconMediaId: null,
           defaultOgMediaId: asset.id,
         },
         actor,

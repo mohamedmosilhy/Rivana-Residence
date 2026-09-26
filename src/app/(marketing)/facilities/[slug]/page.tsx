@@ -2,12 +2,18 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
-import { getPublishedFacility, getPublishedRooms } from "@/composition/public";
+import { breadcrumbJsonLd } from "@/application/public/seo";
+import {
+  getPublicOrigin,
+  getPublishedFacility,
+  getPublishedRooms,
+} from "@/composition/public";
 import { RichTextView } from "@/presentation/design/rich-text-view";
 import { CardGrid, RoomCard } from "@/presentation/site/cards";
 import { Gallery } from "@/presentation/site/gallery";
 import { DetailHero } from "@/presentation/site/heroes";
 import { Icon } from "@/presentation/site/icons";
+import { StructuredData } from "@/presentation/site/structured-data";
 
 import { pageMetadata } from "../../site-content";
 
@@ -22,7 +28,7 @@ export async function generateMetadata({
   return pageMetadata({
     title: facility.seoTitle ?? facility.name,
     description: facility.seoDescription ?? facility.shortDescription,
-    image: facility.hero,
+    image: facility.socialImage ?? facility.hero,
     path: `/facilities/${facility.slug}`,
   });
 }
@@ -34,9 +40,21 @@ export default async function FacilityPage({ params }: FacilityPageProps) {
     getPublishedRooms(),
   ]);
   if (!facility) notFound();
+  const origin = getPublicOrigin();
 
   return (
     <article className="site-detail">
+      <StructuredData
+        id="breadcrumb-structured-data"
+        data={breadcrumbJsonLd(origin, [
+          { name: "Home", path: "/" },
+          { name: "Facilities", path: "/facilities" },
+          {
+            name: facility.name,
+            path: `/facilities/${facility.slug}`,
+          },
+        ])}
+      />
       <DetailHero
         parent={{ href: "/facilities", label: "Facilities" }}
         title={facility.name}

@@ -97,12 +97,13 @@ describe("catalog cache invalidation", () => {
     expect(cache.invalidate).not.toHaveBeenCalled();
   });
 
-  it("refreshes the list and page, but not the sitemap, for a published edit", async () => {
+  it("refreshes the list, page, and sitemap lastmod for a published edit", async () => {
     const { commands, cache } = setup([live]);
     await commands.update(editor, "p", { slug: "live-room" });
     expect(cache.invalidate).toHaveBeenCalledExactlyOnceWith([
       "rooms",
       "room:live-room",
+      "sitemap",
     ]);
   });
 
@@ -212,7 +213,7 @@ describe("catalog ordering", () => {
     const { commands, repository, cache } = setup(rows);
     await commands.move(editor, "2", -1);
     expect(repository.reorder).toHaveBeenCalledWith(["2", "1", "3"], editor);
-    expect(cache.invalidate).toHaveBeenCalledWith(["rooms"]);
+    expect(cache.invalidate).toHaveBeenCalledWith(["rooms", "sitemap"]);
   });
 
   it("does nothing at either end", async () => {

@@ -93,11 +93,13 @@ Visual snapshots cover major page templates and high-risk interactions, not ever
 
 ## Performance and SEO tests
 
-- Lighthouse CI budgets on Home, rooms listing, and a detail page;
-- assert image dimensions/sizes and no obvious below-fold priority misuse;
-- metadata/canonical/robots/sitemap tests;
-- validate JSON-LD shape and absence of invented offers/prices/ratings;
-- bundle analysis before release.
+- `npm run lighthouse` audits Home, Rooms, a room detail, and Contact with the desktop profile; `npm run lighthouse:mobile` repeats the same matrix under mobile throttling.
+- Lighthouse CI enforces accessibility ≥95, best practices ≥90, SEO ≥95, CLS ≤0.1, and a 260 KB script-transfer ceiling; performance, LCP, and TBT use warning budgets so regressions remain visible without concealing reviewed exceptions.
+- Browser tests assert route titles, canonicals, Open Graph URLs, sitemap/robots output, permanent redirects, and the absence of broken same-origin links/images.
+- Unit and browser tests validate JSON-LD shape and reject invented offers, prices, availability, ratings, and reviews.
+- `npm run audit:content` checks production facts, published content/media readiness, promotion validity, and truthful disabled-booking messaging. It exits 2 while launch inputs are blocked.
+
+The Phase 10 desktop/mobile scores and accepted exceptions are recorded in [phase-10-seo-performance.md](./phase-10-seo-performance.md).
 
 ## Security tests
 

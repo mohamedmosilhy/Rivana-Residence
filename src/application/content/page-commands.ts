@@ -278,7 +278,7 @@ export class PageCommands {
     if (!page) return failure("NOT_FOUND", "Page not found.");
     const result = await operation(access.value, page);
     if (result.ok && page.isPublished) {
-      await this.cache.invalidate([CACHE_TAGS.page(key)]);
+      await this.cache.invalidate([CACHE_TAGS.page(key), CACHE_TAGS.sitemap]);
     }
     return result;
   }

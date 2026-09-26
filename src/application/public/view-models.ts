@@ -83,6 +83,10 @@ export type PublicSettings = Readonly<{
   tagline: string | null;
   phone: string | null;
   email: string | null;
+  addressLine1: string | null;
+  addressLine2: string | null;
+  city: string | null;
+  country: string | null;
   addressLines: readonly string[];
   latitude: number | null;
   longitude: number | null;
@@ -92,12 +96,14 @@ export type PublicSettings = Readonly<{
   defaultSeoDescription: string | null;
   socialLinks: readonly PublicSocialLink[];
   logo: PublicImage | null;
+  favicon: PublicImage | null;
   defaultShareImage: PublicImage | null;
 }>;
 
 export function publicSettings(
   settings: SiteSettingsDto,
   logo: PublicImage | null,
+  favicon: PublicImage | null,
   defaultShareImage: PublicImage | null,
 ): PublicSettings {
   return {
@@ -105,6 +111,10 @@ export function publicSettings(
     tagline: settings.tagline,
     phone: settings.phone,
     email: settings.email,
+    addressLine1: settings.addressLine1,
+    addressLine2: settings.addressLine2,
+    city: settings.city,
+    country: settings.country,
     addressLines: [
       settings.addressLine1,
       settings.addressLine2,
@@ -120,6 +130,7 @@ export function publicSettings(
       .filter((link) => link.isVisible)
       .map(({ platform, label, url }) => ({ platform, label, url })),
     logo,
+    favicon,
     defaultShareImage,
   };
 }
@@ -137,6 +148,7 @@ export type PublicRoomCard = Readonly<{
   name: string;
   shortDescription: string;
   featured: boolean;
+  updatedAt: string;
   facts: PublicRoomFacts;
   hero: PublicImage | null;
 }>;
@@ -146,17 +158,22 @@ export type PublicRoom = PublicRoomCard &
     description: RichTextDocument;
     features: readonly string[];
     gallery: readonly PublicImage[];
+    socialImage: PublicImage | null;
     seoTitle: string | null;
     seoDescription: string | null;
   }>;
 
-export function publicRoom(room: RoomDto): PublicRoom {
+export function publicRoom(
+  room: RoomDto,
+  socialImage: PublicImage | null = null,
+): PublicRoom {
   const { hero, gallery } = images(room.media);
   return {
     slug: room.slug,
     name: room.name,
     shortDescription: room.shortDescription,
     featured: room.featured,
+    updatedAt: room.updatedAt.toISOString(),
     facts: {
       sizeSqm: room.sizeSqm,
       maxAdults: room.maxAdults,
@@ -168,6 +185,7 @@ export function publicRoom(room: RoomDto): PublicRoom {
     description: room.description,
     features: room.features.map((feature) => feature.label),
     gallery,
+    socialImage,
     seoTitle: room.seoTitle,
     seoDescription: room.seoDescription,
   };
@@ -178,6 +196,7 @@ export type PublicFacilityCard = Readonly<{
   name: string;
   shortDescription: string;
   featured: boolean;
+  updatedAt: string;
   openingHoursText: string | null;
   hero: PublicImage | null;
 }>;
@@ -186,21 +205,27 @@ export type PublicFacility = PublicFacilityCard &
   Readonly<{
     description: RichTextDocument;
     gallery: readonly PublicImage[];
+    socialImage: PublicImage | null;
     seoTitle: string | null;
     seoDescription: string | null;
   }>;
 
-export function publicFacility(facility: FacilityDto): PublicFacility {
+export function publicFacility(
+  facility: FacilityDto,
+  socialImage: PublicImage | null = null,
+): PublicFacility {
   const { hero, gallery } = images(facility.media);
   return {
     slug: facility.slug,
     name: facility.name,
     shortDescription: facility.shortDescription,
     featured: facility.featured,
+    updatedAt: facility.updatedAt.toISOString(),
     openingHoursText: facility.openingHoursText,
     hero,
     description: facility.description,
     gallery,
+    socialImage,
     seoTitle: facility.seoTitle,
     seoDescription: facility.seoDescription,
   };
@@ -219,8 +244,11 @@ export type PublicSection = Readonly<{
 export type PublicPage = Readonly<{
   key: PageKey;
   title: string;
+  canonicalPath: string;
+  updatedAt: string;
   seoTitle: string | null;
   seoDescription: string | null;
+  socialImage: PublicImage | null;
   sections: readonly PublicSection[];
 }>;
 
@@ -233,12 +261,18 @@ function sectionImages(media: readonly SectionMediaReference[]) {
   return byRole;
 }
 
-export function publicPage(page: PageDto): PublicPage {
+export function publicPage(
+  page: PageDto,
+  socialImage: PublicImage | null = null,
+): PublicPage {
   return {
     key: page.key,
     title: page.title,
+    canonicalPath: page.canonicalPath,
+    updatedAt: page.updatedAt.toISOString(),
     seoTitle: page.seoTitle,
     seoDescription: page.seoDescription,
+    socialImage,
     sections: page.sections.map((section) => ({
       id: section.id,
       type: section.type,

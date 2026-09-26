@@ -38,7 +38,7 @@ The 42 supplied reference images have a reviewed migration manifest. It records 
 | Serving | Through the application route `/media/<key>`, which serves only ready images. Headers: `nosniff`, a sandboxing CSP, same-origin resource policy, byte ranges, ETag, and a one-year immutable cache. | Works on cPanel/Passenger without a web-server alias. Replacement always creates a new key, so long caching is safe. |
 | Distinct galleries | A room or facility with no gallery, or with gallery images shared with another room, shows a **Content gaps** note on its edit page. The note does not block publishing. | The reference reused one gallery for every room; the admin now makes that visible |
 | Section images | Hero and Contact block: background. Text and Image-and-text: one image. Gallery: ordered images. Other sections: none. | Taken from the content model's media roles |
-| Favicon | Not managed in the admin | It needs multi-size ICO/PNG output; it will be handled with the build in Phase 10 |
+| Favicon | Managed in Site Images as of Phase 10 | Metadata uses the approved managed image; the checked-in crest remains the deployment-safe fallback |
 
 ## Storage configuration, permissions, and backup
 

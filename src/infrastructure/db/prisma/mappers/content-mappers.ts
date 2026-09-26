@@ -189,6 +189,7 @@ export function mapSettings(row: SettingsRow): SiteSettingsDto {
     defaultSeoDescription: row.defaultSeoDescription,
     logoMediaId: row.logoMediaId,
     stickyLogoMediaId: row.stickyLogoMediaId,
+    faviconMediaId: row.faviconMediaId,
     defaultOgMediaId: row.defaultOgMediaId,
     socialLinks: [...row.socialLinks]
       .sort((left, right) => left.sortOrder - right.sortOrder)
