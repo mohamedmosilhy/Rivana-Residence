@@ -27,7 +27,7 @@ export const IMAGE_FORMATS: Record<
 };
 
 /**
- * The upload policy proposed for client approval (docs/security.md): still
+ * The upload policy proposed for client approval (docs/security/security-controls.md): still
  * JPEG, PNG, WebP, or AVIF; no SVG or animation; at most 15 MB and 40
  * megapixels before processing.
  */

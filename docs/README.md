@@ -1,65 +1,35 @@
-# Rivana Residence production documentation
+# Rivana Residence documentation
 
-This directory began as the Phase 0 blueprint for rebuilding Rivana Residence as a production marketing website and content-management system. Phases 0–10 are approved, and the Phase 11 release candidate (test completion and security hardening) is ready for review.
+Documentation for the Rivana Residence application: website, staff dashboard, and reservation system. Start with [overview.md](./overview.md).
 
-The source of truth for the visual audit is `../design/`. The legacy WordPress export in the parent workspace was treated only as content and asset provenance. Its plugin/theme architecture will not be migrated.
+Every document covers its topic for the whole product. Where part of a topic is not built yet, the document says so (**Implemented** or **Planned**, with the roadmap step that delivers it).
 
-## Product boundary
+## Map
 
-Rivana is a hospitality marketing site. It owns brand, editorial content, rooms as marketing records, facilities, media, contact details, promotion-code advertising, enquiries, and search visibility. It does **not** own rates, inventory, availability, stays, guests, payments, reservations, promotion validation/redemption, or booking management.
-
-Every Book Now control initially renders as a visually complete, disabled/inert control with accessible explanatory text. The future hotel-management provider enters through the boundary in [booking-integration.md](./booking-integration.md).
-
-## Document map
-
-| Document | Purpose |
+| Folder | What you find there |
 | --- | --- |
-| [requirements.md](./requirements.md) | Scope, actors, functional requirements, exclusions, and acceptance criteria |
-| [architecture.md](./architecture.md) | Runtime architecture, dependency rules, server/client split, and proposed source tree |
-| [architecture-decisions.md](./architecture-decisions.md) | ADR index and decision summary |
-| [domain-model.md](./domain-model.md) | Domain concepts, invariants, ports, and use cases |
-| [database.md](./database.md) | PostgreSQL/Prisma data model, relationships, constraints, and indexes |
-| [content-model.md](./content-model.md) | Structured page sections and CMS editing rules |
-| [design-system.md](./design-system.md) | Reference audit and production design tokens |
-| [component-architecture.md](./component-architecture.md) | UI primitives, design components, feature components, and page composition |
-| [booking-integration.md](./booking-integration.md) | Explicit external reservation boundary and future extension path |
-| [promotions.md](./promotions.md) | Promotion-code admin, public popup, scheduling, and reservation handoff boundary |
-| [admin-dashboard.md](./admin-dashboard.md) | Admin information architecture and workflows |
-| [security.md](./security.md) | Authentication, authorization, validation, uploads, and operational controls |
-| [seo.md](./seo.md) | Metadata, crawlability, structured data, and editorial SEO |
-| [performance.md](./performance.md) | Image, rendering, caching, JavaScript, and Core Web Vitals strategy |
-| [testing.md](./testing.md) | Unit, integration, E2E, accessibility, and visual testing |
-| [deployment.md](./deployment.md) | Environments, infrastructure, migration, backups, and release process |
-| [hosting-preflight.md](./hosting-preflight.md) | Read-only cPanel capability check, confirmed features, and deployment blockers |
-| [roadmap.md](./roadmap.md) | Phase-by-phase implementation plan and completion gates |
-| [phase-1-foundation.md](./phase-1-foundation.md) | Phase 1 implementation, verification, screenshots, limitations, and acceptance evidence |
-| [phase-2-persistence.md](./phase-2-persistence.md) | Phase 2 schema, migration review, repository contracts, test results, and limitations |
-| [phase-3-auth.md](./phase-3-auth.md) | Phase 3 auth configuration, capability matrix, operator procedures, security evidence, and limitations |
-| [phase-4-admin-shell.md](./phase-4-admin-shell.md) | Phase 4 admin shell, shared CMS patterns, settings workflow, accessibility notes, test evidence, and limitations |
-| [phase-5-content-management.md](./phase-5-content-management.md) | Phase 5 room, facility, page, and promotion management; final fields; cache-invalidation matrix; test matrix; limitations |
-| [phase-6-media.md](./phase-6-media.md) | Phase 6 media storage, upload verification and threat tests, library/picker, replace/delete, asset migration manifest, limitations |
-| [phase-7-public-site.md](./phase-7-public-site.md) | Phase 7 public routes, managed-content queries, contact delivery, promotion pop-up, booking boundary, test evidence, and limitations |
-| [phase-8-visual-system.md](./phase-8-visual-system.md) | Phase 8 visual system: tokens, contrast report, page compositions, before/after boards, responsive and visual-regression evidence |
-| [phase-9-motion.md](./phase-9-motion.md) | Phase 9 interaction and motion: reveals, photo viewer, menu sheet, page morphs, reduced motion, keyboard/focus evidence, bundle cost |
-| [phase-10-seo-performance.md](./phase-10-seo-performance.md) | Phase 10 SEO/performance handoff: route matrix, structured data, redirects, caching, Lighthouse evidence, and launch blockers |
-| [phase-11-release-candidate.md](./phase-11-release-candidate.md) | Phase 11 release-candidate report: test totals, security and accessibility findings, browser matrix, restore drill, residual risks |
+| [requirements/](./requirements/business-requirements.md) | [Business](./requirements/business-requirements.md), [functional](./requirements/functional-requirements.md), and [non-functional](./requirements/non-functional-requirements.md) requirements; [roles and permissions](./requirements/user-roles-and-permissions.md); [user stories](./requirements/user-stories-and-acceptance-criteria.md); [stakeholders and workflows](./requirements/stakeholders-and-workflows.md); [scope traceability](./requirements/scope-traceability-matrix.md); [decisions and open questions](./requirements/assumptions-and-open-questions.md) |
+| [domain/](./domain/domain-model.md) | [Domain model](./domain/domain-model.md), [glossary](./domain/glossary.md), [business rules index](./domain/business-rules.md), [content model](./domain/content-model.md), [promotions](./domain/promotions.md), [branches](./domain/branch-model.md), [availability and pricing](./domain/availability-and-pricing-rules.md), [reservation lifecycle](./domain/reservation-lifecycle.md) |
+| [architecture/](./architecture/overview.md) | [Overview and diagrams](./architecture/overview.md), [module boundaries](./architecture/module-boundaries.md), [dependency rules](./architecture/dependency-rules.md), [project structure](./architecture/project-structure.md) |
+| [adr/](./adr/README.md) | Architecture decision records 001–022 |
+| [database/](./database/data-model.md) | [Data model and ERD](./database/data-model.md), [integrity and concurrency](./database/integrity-and-concurrency.md), [migrations and seeding](./database/migrations-and-seeding.md) |
+| [api/](./api/api-contracts.md) | [REST conventions](./api/rest-api-conventions.md), [error model](./api/error-model.md), [endpoint contracts](./api/api-contracts.md) |
+| [security/](./security/security-controls.md) | [Security controls](./security/security-controls.md), [threat model and data protection](./security/threat-model.md) |
+| [frontend/](./frontend/route-map.md) | [Route map](./frontend/route-map.md), [design system](./frontend/design-system.md), [component architecture](./frontend/component-architecture.md), [staff dashboard](./frontend/admin-dashboard.md), [booking and operations UI](./frontend/booking-and-operations-ui.md), [SEO](./frontend/seo.md), [performance](./frontend/performance.md) |
+| [testing/](./testing/testing-strategy.md) | [Strategy](./testing/testing-strategy.md), [quality gates and latest results](./testing/quality-gates.md), [test matrix](./testing/test-matrix.md) |
+| [operations/](./operations/deployment.md) | [Deployment and backups](./operations/deployment.md), [hosting preflight](./operations/hosting-preflight.md), [manual synchronization](./operations/manual-synchronization-procedure.md), [receptionist procedures](./operations/receptionist-procedures.md), [known limitations](./operations/known-limitations.md) |
+| [delivery/](./delivery/roadmap.md) | [Roadmap and status](./delivery/roadmap.md), [risks and constraints](./delivery/risks-and-constraints.md), the client scope document v2.0 for approval ([PDF](./delivery/Rivana_Residence_Project_Scope_v2.pdf), [HTML source](./delivery/client-scope-v2.html)), and `reports/`: the evidence report of every completed phase and milestone, with screenshots |
+| [engineering/](./engineering/engineering-standards.md) | [Engineering standards](./engineering/engineering-standards.md), [agent workflow and skills](./engineering/agent-workflow.md) |
+| [source/](./source/prompt.md) | Source material kept verbatim: the [brief](./source/prompt.md) and the [scope PDF](./source/Rivana_Residence_Project_Scope.pdf) |
 
-## Current technical baseline
+Agent skills write their own folders here when used: `specs/` (`/architect`), `scope/` (`/scope`), and `reviews/` (`/check review`).
 
-The Phase 1 target is Next.js 16.3.3 Active LTS with React 19.2, TypeScript 5.9+, Tailwind CSS 4.3, PostgreSQL 18.6 (17.11 is an acceptable managed-provider fallback), Prisma ORM 7.10, Better Auth 1.7 (locked at 1.7.6 in Phase 3), Zod, React Hook Form where interactive client forms justify it, and selected shadcn/ui source components. Exact compatible patches will be rechecked and locked when Phase 1 starts. Prisma 8 is still a release candidate as of this plan and is intentionally excluded.
+## Reading paths
 
-## Reference audit summary
-
-Inspected:
-
-- all nine supplied HTML pages;
-- both CSS files and both JavaScript files;
-- all 42 supplied raster images, five local fonts, logo variants, dimensions, and usage;
-- the supplied design, design-system, and animation specifications;
-- the legacy WordPress tree at inventory level to distinguish authored content from vendor/plugin code.
-
-The retained identity is deep plum (`#652A4C`), warm gold (`#DBAF71`), editorial Marcellus display type, restrained Jost body type, square-edged property imagery, generous whitespace, and subtle entrance motion. Production work must replace placeholder facility copy, verify image rights, create distinct galleries for each room, and remove all reference-only prices and fake calendars.
+- **New to the project:** overview → requirements/business-requirements → architecture/overview → delivery/roadmap.
+- **Building a feature:** the roadmap step → its requirements and stories → domain rules → data model and API contracts → engineering standards → quality gates.
+- **Running the hotel:** operations/receptionist-procedures and operations/manual-synchronization-procedure.
 
 ## Status
 
-Phases 0–6 were approved by the client on 2026-09-25, and Phases 7–10 on 2026-09-26. Phase 11 is implemented and `Ready for review`; the release-candidate report lists its evidence, residual risks, and the launch blockers carried from Phase 10.
+Phases 0–11 accepted; reservation milestones M0–M3 accepted (design); M4 onward not started, waiting for the client's reply to scope v2.0; the website and reservations launch together. Details: [delivery/roadmap.md](./delivery/roadmap.md#delivery-overview).

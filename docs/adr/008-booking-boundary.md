@@ -1,6 +1,6 @@
 # ADR 008 — External booking provider boundary
 
-Status: Accepted for Phase 1
+Status: **Superseded by [ADR 013](./013-self-managed-reservations.md) on 2026-10-24.** The provider never supplied a module or API, and Rivana now manages reservations itself. The `BookingProvider` port and the disabled state described here remain in use for branches without online booking.
 
 ## Context
 

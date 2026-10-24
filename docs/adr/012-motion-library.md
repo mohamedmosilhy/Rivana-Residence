@@ -29,6 +29,6 @@ Use React's `<ViewTransition>`, which ships with the Next.js App Router, for the
 
 ## Consequences
 
-- Measured on production builds, the per-page gzipped client JavaScript is 185 KB for Phase 8 and 242 KB for Phase 9. Motion's runtime accounts for about 43 KB of the difference. Both builds exceed the aspirational 120 KB budget in [performance.md](../performance.md); Phase 10 owns budget tuning and may replace simple reveals with CSS if the budget demands it.
+- Measured on production builds, the per-page gzipped client JavaScript is 185 KB for Phase 8 and 242 KB for Phase 9. Motion's runtime accounts for about 43 KB of the difference. Both builds exceed the aspirational 120 KB budget in [performance.md](../frontend/performance.md); Phase 10 owns budget tuning and may replace simple reveals with CSS if the budget demands it.
 - Motion components must be `m.*` inside the strict `LazyMotion` boundary. A plain `motion.*` component throws in development.
 - Unit tests run the stable `react` package, which lacks `ViewTransition`. `SharedElement` falls back to rendering its children unchanged there.

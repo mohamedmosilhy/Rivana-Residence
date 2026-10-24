@@ -1,0 +1,388 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Rivana Residence — Project Scope Document v2.0</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Lato:ital,wght@0,400;0,700;0,900;1,400&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --ink: #1f2933;
+    --muted: #6b7785;
+    --soft: #8a96a3;
+    --brand: #124c5a;
+    --line: #e3e7ec;
+    --panel: #f5f7fa;
+    --warn-bg: #fdf6ec;
+    --warn-line: #c98a2b;
+  }
+  @page {
+    size: A4;
+    margin: 20mm 19mm 20mm 19mm;
+    @bottom-left { content: "Rivana Residence | Project Scope Document v2.0"; font: 7.5pt Lato, "Helvetica Neue", Arial, sans-serif; color: #8a96a3; }
+    @bottom-right { content: "Page " counter(page) " of " counter(pages); font: 7.5pt Lato, "Helvetica Neue", Arial, sans-serif; color: #8a96a3; }
+  }
+  @page :first {
+    margin: 0;
+    @bottom-left { content: none; }
+    @bottom-right { content: none; }
+  }
+  * { box-sizing: border-box; }
+  html { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  body { margin: 0; font-family: Lato, "Helvetica Neue", Arial, sans-serif; font-size: 9.6pt; line-height: 1.55; color: var(--ink); background: #fff; }
+  p { margin: 0 0 7pt; }
+  strong { font-weight: 700; }
+
+  /* Cover */
+  .cover { height: 297mm; padding: 62mm 19mm 0; page-break-after: always; position: relative; }
+  .cover .rule { width: 17mm; height: 2.4pt; background: var(--brand); margin-bottom: 9mm; }
+  .cover h1 { font-size: 30pt; line-height: 1.12; font-weight: 900; color: var(--brand); margin: 0 0 5mm; }
+  .cover .subtitle { font-size: 12.5pt; color: var(--muted); margin-bottom: 15mm; }
+  .meta { border-collapse: collapse; }
+  .meta td { padding: 3.2mm 0; vertical-align: top; }
+  .meta td:first-child { width: 22mm; font-size: 7.5pt; letter-spacing: .06em; text-transform: uppercase; color: var(--soft); }
+  .meta td:last-child { font-weight: 700; font-size: 9.6pt; }
+  .cover .note { position: absolute; left: 19mm; right: 19mm; bottom: 62mm; border-left: 2pt solid var(--line); padding: 1mm 0 1mm 4mm; color: var(--muted); font-size: 8.8pt; }
+
+  /* Sections */
+  h2 { font-size: 13.5pt; font-weight: 900; color: var(--brand); margin: 9mm 0 4mm; padding-bottom: 2mm; border-bottom: 1px solid var(--line); break-after: avoid; }
+  h2 .n { color: var(--soft); font-weight: 700; margin-right: 2.5mm; }
+  h3 { font-size: 10.2pt; font-weight: 900; color: var(--ink); margin: 0 0 2.5mm; break-after: avoid; }
+  .section { break-inside: auto; }
+  .break { break-before: page; }
+  .keep { break-inside: avoid; }
+
+  ul { margin: 0 0 7pt; padding: 0; list-style: none; }
+  ul li { position: relative; padding-left: 4mm; margin: 0 0 1.8pt; break-inside: avoid; }
+  ul li::before { content: "•"; position: absolute; left: .6mm; color: var(--ink); }
+  ul.cols { columns: 2; column-gap: 9mm; }
+  ol.steps { margin: 0 0 7pt; padding-left: 5mm; }
+  ol.steps li { margin-bottom: 2.4pt; padding-left: 1mm; }
+
+  .callout { background: var(--panel); border-left: 2.4pt solid var(--brand); padding: 4mm 5mm; margin: 0 0 6mm; }
+  .callout p:last-child { margin: 0; }
+  .warn { background: var(--warn-bg); border-left: 2.4pt solid var(--warn-line); padding: 4mm 5mm; margin: 2mm 0 5mm; break-inside: avoid; }
+  .warn .label, .example .label { font-size: 7.3pt; letter-spacing: .08em; text-transform: uppercase; color: var(--soft); margin-bottom: 1.5mm; }
+  .warn .label { color: #a06a19; font-weight: 700; }
+  .warn p:last-child { margin: 0; }
+  .example { background: var(--panel); border: 1px solid var(--line); border-radius: 3pt; padding: 4mm 5mm; margin: 2mm 0 5mm; break-inside: avoid; }
+  .example p:last-child, .example ul:last-child { margin-bottom: 0; }
+  .card { border: 1px solid var(--line); border-radius: 3pt; padding: 4mm 5mm 3mm; margin: 0 0 4mm; break-inside: avoid; }
+  .card .fine { font-style: italic; color: var(--muted); font-size: 8.6pt; border-top: 1px solid var(--line); padding-top: 2.5mm; margin-top: 2mm; }
+
+  table.grid { width: 100%; border-collapse: collapse; margin: 1mm 0 5mm; font-size: 8.9pt; }
+  table.grid th { text-align: left; font-size: 7.5pt; letter-spacing: .06em; text-transform: uppercase; color: var(--soft); font-weight: 700; padding: 2mm 2.5mm; border-bottom: 1.2pt solid var(--line); }
+  table.grid td { padding: 2.2mm 2.5mm; border-bottom: 1px solid var(--line); vertical-align: top; }
+  table.grid tr { break-inside: avoid; }
+  table.grid td.ref { color: var(--soft); font-size: 7.5pt; white-space: nowrap; }
+  table.grid td.answer { width: 30%; }
+  table.grid td.num { color: var(--soft); font-weight: 700; width: 6mm; }
+  .tag { display: inline-block; font-size: 7.2pt; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; padding: .4mm 1.6mm; border-radius: 2pt; }
+  .tag.done { background: #e6f2ee; color: #1d6b52; }
+  .tag.new { background: #e8eff5; color: var(--brand); }
+
+  .sign { display: flex; gap: 12mm; margin-top: 16mm; break-inside: avoid; }
+  .sign div { flex: 1; border-top: 1px solid #b9c2cc; padding-top: 2.5mm; color: var(--soft); font-size: 8.4pt; }
+  .muted { color: var(--muted); }
+</style>
+</head>
+<body>
+
+<section class="cover">
+  <div class="rule"></div>
+  <h1>Project Scope<br>Document</h1>
+  <div class="subtitle">Rivana Residence — Website, Management Dashboard &amp; Reservation System</div>
+  <table class="meta">
+    <tr><td>Client</td><td>Rivana Residence</td></tr>
+    <tr><td>Document</td><td>Updated Project Scope — Self-Managed Reservations</td></tr>
+    <tr><td>Version</td><td>2.0 (replaces version 1.0 of 15 August 2026)</td></tr>
+    <tr><td>Date</td><td>24 October 2026</td></tr>
+    <tr><td>Status</td><td>For Client Review &amp; Approval</td></tr>
+  </table>
+  <div class="note">This document describes the complete plan for the new system: what is already built, what we will build next, the decisions already taken, and the questions we need you to answer. Once you approve it and answer the open questions, we will start building the reservation system.</div>
+</section>
+
+<div class="callout">
+  <p>Hello. The hotel management company never provided the booking module or the API described in version 1.0 of this document. To avoid waiting any longer, we will build the reservation system ourselves, inside the same website and dashboard.</p>
+  <p>Please review this document, answer the questions in section 17, and sign at the end so we can start the implementation.</p>
+</div>
+
+<h2><span class="n">1.</span>What Has Changed Since Version 1.0</h2>
+<table class="grid">
+  <thead><tr><th style="width:24%">Topic</th><th style="width:36%">Version 1.0 (August 2026)</th><th>Version 2.0 (this document)</th></tr></thead>
+  <tr><td><strong>Availability</strong></td><td>Checked through the hotel system's API</td><td>Managed in our own system, per branch and per room</td></tr>
+  <tr><td><strong>New reservations</strong></td><td>Sent automatically to the hotel system</td><td>Receptionists confirm each website request after checking the hotel system, and enter it there themselves</td></tr>
+  <tr><td><strong>Currency</strong></td><td>Egyptian pounds (EGP)</td><td>US dollars (USD) for all branches</td></tr>
+  <tr><td><strong>Phone verification</strong></td><td>Email / WhatsApp, to be finalized</td><td>Every online booking must verify the phone number with a WhatsApp code</td></tr>
+  <tr><td><strong>Customer accounts</strong></td><td>Accounts with login</td><td>No passwords. One guest record per verified phone number, with booking history, which Admin and Manager can block</td></tr>
+  <tr><td><strong>Notifications</strong></td><td>Email and WhatsApp</td><td>Email and WhatsApp</td></tr>
+  <tr><td><strong>Online payment</strong></td><td>Online payment or pay on arrival</td><td>Pay at the hotel in this phase (online payment later, see section 13)</td></tr>
+  <tr><td><strong>Branches</strong></td><td>Branch subdomains (example)</td><td>One website where the guest chooses the branch</td></tr>
+  <tr><td><strong>Statistics</strong></td><td>Reports to be finalized</td><td>On-screen statistics only, with no file export</td></tr>
+</table>
+
+<h2><span class="n">2.</span>What Is Already Built</h2>
+<p><span class="tag done">Done</span>&nbsp; The new website and the content management dashboard are built and tested. The final version is ready for your review.</p>
+<div class="card">
+  <h3>Public website</h3>
+  <ul class="cols">
+    <li>Home page</li><li>About Us</li><li>Rooms and room details</li><li>Facilities (Gym, Swimming Pool)</li>
+    <li>Contact page with map and contact form</li><li>Promotion pop-up with a copyable code</li>
+    <li>Responsive design for mobile, tablet and desktop</li><li>Search engine optimization (SEO)</li>
+    <li>Accessibility (keyboard and screen readers)</li><li>Fast loading and security protections</li>
+  </ul>
+</div>
+<div class="card">
+  <h3>Content management dashboard</h3>
+  <ul class="cols">
+    <li>Edit page texts and sections</li><li>Add, edit, publish and hide rooms</li><li>Add, edit, publish and hide facilities</li>
+    <li>Media library: upload and replace images</li><li>Create and schedule promotions</li><li>Read contact enquiries</li>
+    <li>Site settings: contact details, social links, logos</li><li>Staff accounts and secure sign-in</li>
+  </ul>
+</div>
+<p>Today the Book Now buttons explain that online booking is coming soon. The new reservation system will connect them to the real booking process.</p>
+
+<h2><span class="n">3.</span>Public Website &amp; Online Booking</h2>
+<p><span class="tag new">To build</span>&nbsp; Guests will book directly on the website:</p>
+<ol class="steps">
+  <li>Choose the branch (skipped automatically while there is only one branch).</li>
+  <li>Choose check-in and check-out dates and the number of adults and children.</li>
+  <li>See which room types are available for those dates, with the total price and the price of each night.</li>
+  <li>Enter their name, email, phone number and any special requests.</li>
+  <li>Verify their phone number with a 6-digit code sent by WhatsApp.</li>
+  <li>Review the booking and submit the request.</li>
+  <li>See their reservation number on screen, and receive it by email and WhatsApp.</li>
+  <li>The hotel confirms or declines the request. The guest is informed by email and WhatsApp.</li>
+</ol>
+<div class="example">
+  <div class="label">Why a "request" first?</div>
+  <p>Because our system is not connected to the hotel's current system (see section 9), a receptionist checks the hotel system before confirming each website booking. The room is held for the guest while the request waits, so nobody else can book it on the website.</p>
+</div>
+<p>Guests can later open <strong>My reservations</strong> on the website, enter their phone number and a WhatsApp code, and see all their bookings. They can cancel a request that is still waiting for confirmation. To cancel a confirmed booking, they contact the hotel.</p>
+
+<h2><span class="n">4.</span>Multi-Branch Support</h2>
+<p>The system supports several branches from the start. Today there is one branch (New Cairo). Admin can add more branches at any time, without development work. Each branch has its own:</p>
+<ul class="cols">
+  <li>Name, description and images</li><li>Address, phone and email</li><li>Room types and actual rooms</li><li>Prices and offers</li>
+  <li>Availability and reservations</li><li>Staff (receptionists and managers)</li><li>"Online booking on / off" switch</li><li>Sync reminder interval (section 9)</li>
+</ul>
+<p>The website shows the correct rooms, prices and availability for the branch the guest chooses. One branch's rooms are never used for another branch.</p>
+
+<h2><span class="n">5.</span>Rooms, Availability &amp; Pricing</h2>
+<h3>Room types and actual rooms</h3>
+<p>Guests book a <strong>room type</strong> (for example "Studio with Balcony"). The hotel records how many actual rooms it has of each type (for example rooms 101, 102 and 205). The website shows a room type as available only if at least one room of that type is free for every night of the stay. The receptionist assigns the actual room number before or at check-in.</p>
+<h3>Maintenance and closed rooms</h3>
+<p>Receptionists can close a specific room for dates (maintenance, owner use or other reasons). Closed rooms are removed from availability automatically. The system refuses to close a room if that would leave booked guests without a room.</p>
+<h3>Prices</h3>
+<ul>
+  <li>Prices are per room per night, in US dollars.</li>
+  <li>Each room type has a normal nightly price.</li>
+  <li><strong>Seasonal prices</strong> for specific dates replace the normal price on those nights.</li>
+  <li><strong>Offers</strong> (for example "Summer Offer") for specific dates replace seasonal and normal prices on those nights, automatically.</li>
+  <li>The price is calculated night by night and shown to the guest before booking. It is saved with the reservation, so later price changes never affect existing bookings.</li>
+  <li>Managers and Admins manage prices. Receptionists can see prices but cannot change them.</li>
+</ul>
+<div class="example">
+  <div class="label">Example</div>
+  <p><strong>Room A</strong> — seasonal prices: 1–15 September = $60 / night, 16–30 September = $70 / night.</p>
+  <p class="muted">A stay from 14 to 18 September (4 nights) costs $60 + $60 + $70 + $70 = <strong>$260</strong>. A "Summer Offer" from 1 to 30 June at $50 / night would apply automatically to June nights.</p>
+</div>
+<p>The existing promotion pop-up stays a marketing message with a code that guests can mention to the hotel. It does not change prices on the website; price offers are entered as offers (above).</p>
+
+<h2><span class="n">6.</span>Reservation Process</h2>
+<table class="grid">
+  <thead><tr><th style="width:22%">Status</th><th>Meaning</th></tr></thead>
+  <tr><td><strong>Pending</strong></td><td>A website request waiting for the hotel to confirm. The room is held.</td></tr>
+  <tr><td><strong>Confirmed</strong></td><td>Accepted by the hotel, or created by a receptionist.</td></tr>
+  <tr><td><strong>Declined</strong></td><td>The hotel refused the request (for example, no room in the hotel system). The room is released.</td></tr>
+  <tr><td><strong>Cancelled</strong></td><td>Cancelled by the guest (pending requests only) or by the hotel. The room is released.</td></tr>
+  <tr><td><strong>Checked in / Checked out</strong></td><td>The guest has arrived / left. An early departure frees the remaining nights.</td></tr>
+  <tr><td><strong>No-show</strong></td><td>The guest did not arrive. The room is released.</td></tr>
+</table>
+<ul>
+  <li>Receptionists can also create bookings for phone and walk-in guests, and record bookings that were made in the hotel system.</li>
+  <li>The system prevents two bookings from taking the last available room at the same moment, so it never overbooks inside our own system.</li>
+  <li>Every reservation gets a unique reservation number (for example RR-7K3M9QX2).</li>
+  <li>Payment is made at the hotel. No online payment in this phase.</li>
+</ul>
+
+<h2><span class="n">7.</span>Phone Verification &amp; Guest Records</h2>
+<p>To stop fake reservations, every online booking must verify the guest's phone number:</p>
+<ul>
+  <li>A 6-digit code is sent to the guest's <strong>WhatsApp</strong>. It is valid for 10 minutes, with a limited number of attempts and resends.</li>
+  <li>The system keeps <strong>one guest record per verified phone number</strong>: name, email, and all their bookings. Staff can search guests and see their history.</li>
+  <li><strong>Admins and Managers can block a phone number</strong> (with a reason), for example after fake bookings. A blocked number cannot receive codes or book online at any branch. Existing bookings stay as they are.</li>
+  <li>Guests without WhatsApp cannot book online. They book by phone with the hotel.</li>
+  <li>Guest and reservation information is <strong>kept permanently</strong>. It is never deleted automatically.</li>
+</ul>
+
+<h2><span class="n">8.</span>Notifications</h2>
+<p>Guests receive these messages by <strong>email and WhatsApp</strong>:</p>
+<ul class="cols">
+  <li>Request received (with reservation number)</li><li>Booking confirmed</li><li>Request declined</li><li>Booking cancelled</li><li>A link to view the booking</li>
+</ul>
+<p>The hotel receives an email alert for each new website request. WhatsApp messages use message templates that Meta (WhatsApp) must approve in advance.</p>
+
+<h2><span class="n">9.</span>Working Alongside the Hotel's Current System</h2>
+<div class="warn">
+  <div class="label">Important</div>
+  <p>Our system and the hotel's current reservation system are <strong>not connected</strong>, because the provider offers no integration. Nothing is copied between them automatically. Our system prevents double bookings among the bookings recorded in it, but a booking that exists only in the hotel's system is invisible to the website until a receptionist records it. Until then, the website could offer a room that is already taken. The procedures below reduce this risk; they cannot remove it completely.</p>
+</div>
+<h3>How the receptionists keep the two systems aligned</h3>
+<ul>
+  <li><strong>Website requests:</strong> check the hotel system, enter the booking there, then confirm it in our system. Otherwise, decline it.</li>
+  <li><strong>Bookings made in the hotel system</strong> (phone, booking sites, travel agents): record them in our system as "external" bookings with the hotel system's reference.</li>
+  <li><strong>Bookings taken by our receptionists:</strong> create them in our system first, then in the hotel system.</li>
+  <li><strong>Changes and cancellations</strong> are copied to the other system immediately.</li>
+  <li><strong>Conflicts</strong> (the same room sold in both systems) are reported clearly and escalated to the manager.</li>
+</ul>
+<h3>Sync reminder every 30 minutes</h3>
+<ul>
+  <li>Every 30 minutes, the dashboard plays a <strong>sound</strong> and opens a <strong>pop-up</strong> for the receptionists of the branch. The pop-up cannot be closed without an answer.</li>
+  <li>The receptionist answers <strong>"I have synced"</strong> or <strong>"I'm syncing now"</strong>. If they choose "I'm syncing now", the reminder comes back after 10 minutes.</li>
+  <li>One answer counts for the whole branch, so all receptionists of that branch stop being reminded.</li>
+  <li>The Admin can change the interval and the follow-up time for each branch in the dashboard.</li>
+  <li>Every answer is recorded with the receptionist's name and time, so managers can review it.</li>
+</ul>
+
+<h2><span class="n">10.</span>Management Dashboard &amp; Permissions</h2>
+<p>There is one dashboard with different permissions for each role. Receptionists and managers only see the branches they are assigned to.</p>
+<div class="card">
+  <h3>Receptionist</h3>
+  <ul class="cols">
+    <li>View reservations and guest details</li><li>Confirm or decline website requests</li><li>Create bookings for phone and walk-in guests</li><li>Record bookings from the hotel system</li>
+    <li>Change dates or room type, and cancel</li><li>Assign rooms, check in, check out, no-show</li><li>Close rooms for maintenance</li><li>View availability and prices</li>
+    <li>Answer the sync reminder</li><li>Read contact enquiries (to confirm, question 16)</li>
+  </ul>
+  <div class="fine">Receptionists cannot change prices, block phone numbers, change settings or edit website content.</div>
+</div>
+<div class="card">
+  <h3>Manager</h3>
+  <p>All receptionist capabilities for their branches, plus:</p>
+  <ul class="cols">
+    <li>Manage prices, seasonal prices and offers</li><li>Set a special price on a booking (with a reason)</li><li>Add or deactivate actual rooms</li><li>Block or unblock phone numbers</li>
+    <li>View statistics</li><li>View the history of actions and sync reminders</li>
+  </ul>
+</div>
+<div class="card">
+  <h3>Admin</h3>
+  <p>Full access to everything, for all branches, plus:</p>
+  <ul class="cols">
+    <li>Website content, images, rooms, facilities, promotions</li><li>Branches and branch settings</li><li>Sync reminder settings per branch</li><li>Staff accounts, roles and branch assignments</li>
+    <li>Site settings</li>
+  </ul>
+</div>
+<div class="card">
+  <h3>Content Editor <span class="muted" style="font-weight:400">(existing role, kept)</span></h3>
+  <p class="muted" style="margin:0">Edits website content only, with no access to reservations.</p>
+</div>
+
+<h2><span class="n">11.</span>Statistics</h2>
+<p>Managers and Admins see these statistics on screen, for a chosen branch and date range:</p>
+<ul class="cols">
+  <li>Number of reservations, by status and source</li><li>Confirmed, cancelled and declined reservations</li><li>Occupancy (% of room-nights sold)</li><li>Performance of each room type</li>
+  <li>Revenue from recorded prices</li><li>Average nightly price</li><li>Trends by day, week or month</li>
+</ul>
+<p class="muted">Statistics are shown on screen only, with no file export, because the hotel system already provides exports. Revenue means recorded booking prices, not payments received.</p>
+
+<h2><span class="n">12.</span>Action History &amp; Security</h2>
+<ul>
+  <li>The system records important actions with the user's name and time, for example price changes, reservation changes, confirmations, cancellations, room closures, blocked numbers, sync answers and staff permission changes.</li>
+  <li>Each staff member has their own account. Permissions are checked by the server on every action, not just hidden on screen.</li>
+  <li>Guest information is visible only to authorized staff, and to the guest through a verified phone or their booking link.</li>
+  <li>Protection against fake bookings: phone verification, limits on codes and requests, and phone blocking.</li>
+</ul>
+
+<h2><span class="n">13.</span>Not Included in This Phase</h2>
+<p>These items can be added later as separate requests:</p>
+<ul class="cols">
+  <li>Online payment (Stripe, Paymob, etc.)</li><li>Customer accounts with passwords and loyalty programs</li><li>SMS verification codes (WhatsApp only)</li><li>Export of statistics to files</li>
+  <li>Automatic connection to the hotel's current system</li><li>Separate subdomains per branch</li><li>Discount codes applied to the price</li><li>Different website pages per branch</li>
+  <li>Booking several rooms in one reservation</li><li>Arabic website (English first)</li>
+</ul>
+
+<h2><span class="n">14.</span>Delivery Plan</h2>
+<p>We will build the reservation system in stages. At the end of each stage we show you the result, and the next stage starts after your approval.</p>
+<table class="grid">
+  <thead><tr><th style="width:8mm">#</th><th style="width:34%">Stage</th><th>What you will be able to see</th></tr></thead>
+  <tr><td class="num">1</td><td><strong>Foundations</strong></td><td>New staff roles (Receptionist, Manager) and branch setup, without changing the current website.</td></tr>
+  <tr><td class="num">2</td><td><strong>Branches &amp; rooms</strong></td><td>Branches, room types per branch, and actual rooms.</td></tr>
+  <tr><td class="num">3</td><td><strong>Availability &amp; prices</strong></td><td>Availability calculation, normal and seasonal prices, offers, closed rooms.</td></tr>
+  <tr><td class="num">4</td><td><strong>Reservations &amp; verification</strong></td><td>The full reservation process, WhatsApp verification, guest records, email and WhatsApp messages.</td></tr>
+  <tr><td class="num">5</td><td><strong>Online booking pages</strong></td><td>The booking journey and "My reservations" on the website.</td></tr>
+  <tr><td class="num">6</td><td><strong>Receptionist tools</strong></td><td>Reservation lists, booking forms, availability calendar, room closures, guest search, sync reminder.</td></tr>
+  <tr><td class="num">7</td><td><strong>Manager &amp; admin tools</strong></td><td>Price management, statistics, branch and staff management, action history.</td></tr>
+  <tr><td class="num">8</td><td><strong>Testing &amp; security review</strong></td><td>Full testing on phones and computers, security and performance checks.</td></tr>
+  <tr><td class="num">9</td><td><strong>Launch</strong></td><td>The new website and the reservation system go live together. Staff training.</td></tr>
+</table>
+<p class="muted">We will share the schedule for each stage once this scope is approved.</p>
+
+<h2><span class="n">15.</span>What We Need From You</h2>
+<ul>
+  <li><strong>WhatsApp Business:</strong> a phone number for the hotel's WhatsApp Business account, and access to complete Meta's business verification. Meta must approve the verification and notification messages, which can take several weeks, so this should start early.</li>
+  <li><strong>Email account</strong> for sending booking emails, and the inbox that should receive new-request alerts.</li>
+  <li><strong>Database hosting:</strong> the current hosting's database version is too old, so a managed database service is needed (monthly cost).</li>
+  <li><strong>Domain access:</strong> access to the Cloudflare account that manages the domain.</li>
+  <li><strong>Room data:</strong> the actual room numbers for each room type, and normal, seasonal and offer prices.</li>
+  <li><strong>Staff list:</strong> names, emails, roles and branches.</li>
+  <li><strong>Texts:</strong> Terms &amp; Conditions, cancellation policy, privacy notice, child policy, and check-in / check-out times.</li>
+  <li><strong>Hotel system:</strong> the name of the current reservation system, and whether it can print or export daily booking reports.</li>
+</ul>
+
+<h2><span class="n">16.</span>Decisions Already Agreed</h2>
+<p>These points were decided during planning. Please confirm them by approving this document:</p>
+<ul>
+  <li>Website bookings are requests that the hotel confirms or declines.</li>
+  <li>Guests can cancel online only while a request is pending; confirmed bookings are cancelled through the hotel.</li>
+  <li>Prices are in US dollars for all branches.</li>
+  <li>Phone numbers are verified by WhatsApp only; no SMS.</li>
+  <li>No customer accounts with passwords: one guest record per verified phone number.</li>
+  <li>Admins and Managers can block phone numbers.</li>
+  <li>Messages to guests go by email and WhatsApp.</li>
+  <li>A sync reminder every 30 minutes per branch, with sound and pop-up, adjustable by the Admin.</li>
+  <li>Statistics on screen only, with no file export.</li>
+  <li>Guest and reservation information is kept permanently.</li>
+  <li>The Content Editor role is kept, for website content only.</li>
+  <li>The new website and the reservation system launch together.</li>
+</ul>
+<div class="warn">
+  <div class="label">Please check</div>
+  <p>Keeping guest personal information permanently may have legal implications (for example under Egypt's Personal Data Protection Law). We recommend you confirm this with your legal adviser; the privacy notice on the website will state how long information is kept.</p>
+</div>
+
+<h2><span class="n">17.</span>Questions We Need You to Answer</h2>
+<p>Our recommendation is shown for each question. You can simply write "OK" to accept it, or write your answer.</p>
+<table class="grid">
+  <thead><tr><th style="width:6mm">#</th><th style="width:34%">Question</th><th style="width:30%">Our recommendation</th><th>Your answer</th></tr></thead>
+  <tr><td class="num">1</td><td>Do the prices include VAT, service charge or city tax? Are there any extra fees?</td><td>Please tell us. Until then, prices are shown exactly as entered, without tax wording.</td><td class="answer"></td></tr>
+  <tr><td class="num">2</td><td>Is "pay at the hotel" the only payment option for this phase?</td><td>Yes. Online payment can be added later as a separate project.</td><td class="answer"></td></tr>
+  <tr><td class="num">3</td><td>Maximum stay length, how far ahead guests can book, and any minimum stay?</td><td>Up to 30 nights, up to 18 months ahead, no minimum stay.</td><td class="answer"></td></tr>
+  <tr><td class="num">4</td><td>Can guests book for the same day? Until what time?</td><td>Yes, until the end of the day.</td><td class="answer"></td></tr>
+  <tr><td class="num">5</td><td>Should WhatsApp messages also be in Arabic?</td><td>English first, Arabic shortly after launch.</td><td class="answer"></td></tr>
+  <tr><td class="num">6</td><td>How quickly should the hotel answer a website request? Should unanswered requests expire automatically?</td><td>Within 4 working hours. No automatic expiry; late requests are highlighted to the manager.</td><td class="answer"></td></tr>
+  <tr><td class="num">7</td><td>Is one room per booking enough for now?</td><td>Yes. Guests needing two rooms make two bookings.</td><td class="answer"></td></tr>
+  <tr><td class="num">8</td><td>When an offer and a seasonal price cover the same night, which wins?</td><td>The offer.</td><td class="answer"></td></tr>
+  <tr><td class="num">9</td><td>When the hotel changes a booking's dates or room type, should the new nights use today's prices?</td><td>Yes. Both totals are shown before saving, and a manager can set a special price.</td><td class="answer"></td></tr>
+  <tr><td class="num">10</td><td>Should managers be able to close a room even if guests are booked in it?</td><td>No. Move or cancel those bookings first.</td><td class="answer"></td></tr>
+  <tr><td class="num">11</td><td>Should cancelled or declined bookings be restorable?</td><td>No. Create a new booking instead.</td><td class="answer"></td></tr>
+  <tr><td class="num">12</td><td>What are the child age and infant rules?</td><td>Please send the policy text.</td><td class="answer"></td></tr>
+  <tr><td class="num">13</td><td>Branch website addresses: one website with branch selection, or separate subdomains?</td><td>One website with branch selection.</td><td class="answer"></td></tr>
+  <tr><td class="num">14</td><td>Should each branch have its own website pages, facilities and promotions?</td><td>Not now. Rooms, prices, images and contact details are per branch.</td><td class="answer"></td></tr>
+  <tr><td class="num">15</td><td>Should changes to website content also appear in the action history?</td><td>Later. Reservations, prices and permissions first.</td><td class="answer"></td></tr>
+  <tr><td class="num">16</td><td>Can receptionists and managers read contact-form enquiries?</td><td>Yes.</td><td class="answer"></td></tr>
+  <tr><td class="num">17</td><td>Should contact-form enquiries also be kept permanently?</td><td>Please decide. Guest reservation data is kept permanently.</td><td class="answer"></td></tr>
+  <tr><td class="num">18</td><td>Should Admins and Managers use a second sign-in step (a code app) for extra security?</td><td>Yes, recommended before launch.</td><td class="answer"></td></tr>
+  <tr><td class="num">19</td><td>Should Managers also get the 30-minute sync pop-up, or only Receptionists?</td><td>Only Receptionists. Managers see late syncs on their dashboard.</td><td class="answer"></td></tr>
+</table>
+
+<div class="callout" style="margin-top:6mm">
+  <p>This document replaces version 1.0 as the project scope. Any feature or requirement added after we agree on it can be evaluated separately, so that we can clearly track changes to the project.</p>
+</div>
+
+<div class="sign">
+  <div>Client — Name, Signature &amp; Date</div>
+  <div>Service Provider — Name, Signature &amp; Date</div>
+</div>
+
+</body>
+</html>

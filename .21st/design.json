@@ -6,10 +6,13 @@
     "stack": ["Next.js", "React", "TypeScript", "Tailwind CSS"]
   },
   "sources": {
-    "tokens": ["docs/design-system.md", "design/DESIGN-SYSTEM.md"],
-    "components": ["docs/component-architecture.md"],
+    "tokens": ["docs/frontend/design-system.md", "design/DESIGN-SYSTEM.md"],
+    "components": ["docs/frontend/component-architecture.md"],
     "assets": ["design/assets"],
-    "instructions": ["docs/requirements.md", "docs/roadmap.md"]
+    "instructions": [
+      "docs/requirements/functional-requirements.md",
+      "docs/delivery/roadmap.md"
+    ]
   },
   "design": {
     "colorMode": "light with plum inverse sections",
@@ -76,6 +79,6 @@
       "decision": "The public enquiry form uses an ivory concierge-letter composition on plum, with restrained gold framing, floating labels, topic shortcuts, required-field progress, and reduced-motion-safe feedback."
     }
   ],
-  "evidence": ["docs/design-system.md", "design/DESIGN-SPEC.md"],
+  "evidence": ["docs/frontend/design-system.md", "design/DESIGN-SPEC.md"],
   "generatedAt": "2026-09-25T00:00:00.000Z"
 }

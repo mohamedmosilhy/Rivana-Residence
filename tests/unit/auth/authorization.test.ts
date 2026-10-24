@@ -9,7 +9,7 @@ import {
 } from "@/domain/auth/capabilities";
 
 // The reviewed role/capability matrix. Changing a row here is a deliberate
-// security decision and must be reflected in docs/phase-3-auth.md.
+// security decision and must be reflected in docs/delivery/reports/phase-3-auth.md.
 const MATRIX: Record<Capability, { EDITOR: boolean; ADMIN: boolean }> = {
   "admin:access": { EDITOR: true, ADMIN: true },
   "content:edit": { EDITOR: true, ADMIN: true },

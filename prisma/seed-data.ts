@@ -24,7 +24,7 @@ type SeedSection = Readonly<{
   payload: Record<string, unknown>;
 }>;
 
-// The approved section sequence for each page (docs/content-model.md). Copy
+// The approved section sequence for each page (docs/domain/content-model.md). Copy
 // is neutral draft text for staff to replace; pages stay unpublished until
 // they do. Staff can edit, hide optional sections, and reorder, but never add
 // or delete sections, so every page keeps its required structure.

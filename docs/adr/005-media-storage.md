@@ -46,4 +46,4 @@ Media uses capacity already included in the hosting plan, but it is not literall
 
 ## Implementation note (Phase 6)
 
-Implemented as `LocalMediaStorage` behind the redesigned `MediaStorage` port, with a quarantine directory inside the media root, atomic no-overwrite object writes, symlink-refusing path handling, and delivery through the application `/media/` route. Uploads are verified and re-encoded with sharp before storage. See [phase-6-media.md](../phase-6-media.md).
+Implemented as `LocalMediaStorage` behind the redesigned `MediaStorage` port, with a quarantine directory inside the media root, atomic no-overwrite object writes, symlink-refusing path handling, and delivery through the application `/media/` route. Uploads are verified and re-encoded with sharp before storage. See [phase-6-media.md](../delivery/reports/phase-6-media.md).
