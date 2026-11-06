@@ -1,6 +1,6 @@
 # Data model
 
-PostgreSQL is the system of record for content, staff identity, enquiries, promotions, media metadata, and (planned) branches, inventory, prices, and reservations. Binary images live in the configured media store (a persistent server directory). Prisma is the migration and persistence adapter, not the domain model; it is imported only under `src/infrastructure/db`.
+PostgreSQL is the system of record for content, staff identity, enquiries, promotions (retired), media metadata, and (planned) branches, inventory, prices, services, coupons, VAT, reservations, payments, and marketing consent. Card data is never stored (Paymob hosted checkout, ADR 025). Binary images live in the configured media store (a persistent server directory). Prisma is the migration and persistence adapter, not the domain model; it is imported only under `src/infrastructure/db`.
 
 The implemented schema is `prisma/schema.prisma` (3 migrations). Tables marked *planned* are specified here and added by milestone migrations ([migrations-and-seeding.md](./migrations-and-seeding.md)).
 
@@ -20,16 +20,19 @@ The implemented schema is `prisma/schema.prisma` (3 migrations). Tables marked *
 | Area | Tables | Status |
 | --- | --- | --- |
 | Staff identity | `User`, `Session`, `Account`, `Verification`, `LoginThrottle` | Implemented; `User.role` gains values and `StaffBranchAssignment` is planned (M4) |
-| Site and pages | `SiteSettings`, `SocialLink`, `Page`, `PageSection`, `PageSectionMedia` | Implemented |
-| Rooms and facilities | `Room`, `RoomFeature`, `RoomMedia`, `Facility`, `FacilityMedia` | Implemented; `Room.branchId` planned (M4) |
+| Site and pages | `SiteSettings`, `SocialLink`, `Page`, `PageSection`, `PageSectionMedia` | Implemented; `Page.branchId` planned (M4) |
+| Rooms and facilities | `Room`, `RoomFeature`, `RoomMedia`, `Facility`, `FacilityMedia` | Implemented; `Room.branchId`, `Room.accommodationType`, `Facility.branchId` planned (M4) |
 | Media | `MediaAsset` | Implemented |
-| Marketing and enquiries | `Promotion`, `ContactEnquiry` | Implemented |
+| Marketing and enquiries | `Promotion` (retired, Q-47; unused from M5, dropped later), `ContactEnquiry` | Implemented; `ContactEnquiry.branchId` planned (M4) |
 | Branches | `Branch`, `StaffBranchAssignment` | Planned (M4) |
-| Inventory | `PhysicalRoom`, `InventoryBlock` | Planned (M5–M6) |
-| Pricing | `RoomBaseRate`, `RatePeriod` | Planned (M6) |
-| Reservations | `Reservation`, `ReservationRoom`, `ReservationNight`, `BranchSyncCheckpoint` | Planned (M7; checkpoints M9) |
-| Guests | `Guest` (verified phone profiles, blocking), `PhoneVerification` | Planned (M7) |
-| Cross-cutting | `AuditEvent` (M4), `NotificationOutbox` (M7) | Planned |
+| Inventory | `PhysicalRoom`, `InventoryBlock` | Planned (M6) |
+| Pricing | `RoomBaseRate`, `RatePeriod` (M6); `ServiceOffering`, `Coupon`, `CouponBranch`, `CommercialSettings` (M7) | Planned |
+| Reservations | `Reservation`, `ReservationRoom`, `ReservationNight`, `ReservationService`, `CouponRedemption`, `BranchSyncCheckpoint` | Planned (M8) |
+| Payments | `Payment`, `PaymentEvent`, `CancellationRequest` | Planned (M9) |
+| Guests | `Guest` (verified phone profiles, blocking, marketing consent), `PhoneVerification` | Planned (M8) |
+| Messaging settings | `WhatsAppSettings`, `WhatsAppTemplate` (Admin-managed, Q-67) | Planned (M8) |
+| Marketing | `Broadcast` | Planned (M13) |
+| Cross-cutting | `AuditEvent` (M4), `NotificationOutbox` (M8) | Planned |
 
 ## Content and identity tables
 
@@ -154,6 +157,8 @@ Constraints/indexes: unique `(storageProvider, storageContainer, storageKey)`; o
 
 ### `Promotion`
 
+Status: **implemented; retired by Q-47.** From M5 nothing reads or writes it; it is dropped by a later expand-and-contract migration after launch. Coupons (`Coupon`, below) replace it.
+
 Purpose: scheduled public promotion-code campaign managed by staff.
 
 Fields: `id`, `internalName`, `headline`, `body`, `code`, `terms?`, `status` (`DRAFT|PUBLISHED|ARCHIVED`), `startsAt?`, `endsAt?`, `priority Int`, `showAsPopup Boolean`, `version Int`, `publishedAt?`, timestamps, `createdById`, `updatedById`.
@@ -166,7 +171,7 @@ Constraints/indexes:
 - use server-side time and a deterministic `priority desc, publishedAt desc, id` order when selecting one public popup.
 - start `version` at 1 and increment it when public popup content/code/terms materially change so an updated campaign may display after an earlier version was dismissed.
 
-A promotion never carries a discount amount, eligibility, or redemption data. Price changes for offers are `RatePeriod` rows of kind `OFFER` (planned, below).
+A promotion never carries a discount amount, eligibility, or redemption data.
 
 ### `ContactEnquiry`
 
@@ -186,21 +191,31 @@ Better Auth owns `User`, `Session`, `Account`, and `Verification` schema for its
 
 | Table | Change | Why |
 | --- | --- | --- |
-| `Room` | `+ branchId VARCHAR(32) NOT NULL` → `Branch.id` (`RESTRICT`); `@@unique([id, branchId])`; `@@index([branchId, status, sortOrder])` | Branch ownership (ADR 017); composite-FK target |
+| `Room` | `+ branchId VARCHAR(32) NOT NULL` → `Branch.id` (`RESTRICT`); `@@unique([id, branchId])`; `@@index([branchId, status, sortOrder])`; `+ accommodationType AccommodationType @default(ROOM)`; `+ bedroomCount Int?`, `+ bathroomCount Int?` (CHECK ≥ 0) | Branch ownership (ADR 017, 026); composite-FK target; rooms and apartments (Q-43) |
+| `Facility` | `+ branchId NOT NULL` → `Branch.id`; `@@index([branchId, status, sortOrder])` | Branch-owned facilities (ADR 026) |
+| `Page` | `+ branchId NOT NULL` → `Branch.id`; unique `key` becomes unique `(branchId, key)`; unique `canonicalPath` becomes `(branchId, canonicalPath)` | Branch-owned pages (ADR 026) |
+| `ContactEnquiry` | `+ branchId` nullable → `Branch.id` | Enquiries per branch contact page |
+| `SiteSettings` | contact, address, coordinates, and `mapEmbedUrl` move to `Branch` (columns kept, unused, until a later contract migration) | Brand vs branch split (Q-42) |
 | `User` | role enum gains `RECEPTIONIST`, `MANAGER` (`ALTER TYPE "AdminRole" ADD VALUE`) | ADR 018 |
 | `LoginThrottle` | no schema change; reused with namespaced HMAC keys (`rsv-create:`, `rsv-lookup:`) for public rate limits | Reuse of an atomic counter store |
 
-No existing column is renamed or dropped.
+No existing column is renamed or dropped in these milestones.
 
 ### New tables (sketch)
 
 ```prisma
 enum BranchStatus       { ACTIVE INACTIVE }
-enum ReservationStatus  { PENDING CONFIRMED DECLINED CANCELLED CHECKED_IN CHECKED_OUT NO_SHOW }
+enum AccommodationType  { ROOM APARTMENT }
+enum ReservationStatus  { AWAITING_PAYMENT CONFIRMED PAYMENT_FAILED CANCELLED CHECKED_IN CHECKED_OUT NO_SHOW }   // PENDING and DECLINED removed (ADR 024)
 enum ReservationSource  { WEBSITE STAFF EXTERNAL }
-enum PaymentMethod      { PAY_AT_HOTEL }
-enum NightRateSource    { BASE SEASONAL OFFER MANUAL }
-enum RatePeriodKind     { SEASONAL OFFER }
+enum PaymentMethod      { PAY_AT_HOTEL PAYMOB }
+enum ReservationPaymentStatus { NOT_REQUIRED AWAITING PAID REFUND_PENDING REFUNDED }
+enum NightRateSource    { BASE PERIOD MANUAL }
+enum ServiceKind        { BREAKFAST AIRPORT_TRANSFER }
+enum CouponKind         { PERCENT FIXED }
+enum PaymentStatus      { INITIATED SUCCEEDED FAILED REFUND_PENDING REFUNDED REFUND_FAILED }
+enum CancellationRequestStatus { OPEN APPROVED REJECTED REFUND_PENDING REFUND_FAILED COMPLETED }
+enum BroadcastStatus    { DRAFT SENDING SENT FAILED }
 enum BlockReason        { MAINTENANCE OWNER_USE OTHER }
 enum OutboxStatus       { PENDING SENT FAILED }
 enum OutboxChannel      { EMAIL WHATSAPP }
@@ -217,8 +232,9 @@ model Branch {
   timeZone             String       @default("Africa/Cairo") @db.VarChar(100)
   currency             String       @default("USD") @db.Char(3)
   phone / email / addressLine1 / addressLine2 / city / country / latitude / longitude   (as SiteSettings)
-  checkInTime          String?      @db.VarChar(20)
-  checkOutTime         String?      @db.VarChar(20)
+  checkInTime          String?      @db.VarChar(5)    // HH:MM, branch time zone; required to enable online booking (CX-1)
+  checkOutTime         String?      @db.VarChar(5)
+  mapEmbedUrl          String?      @db.VarChar(1000) // https://www.google.com/maps/embed… only (Q-52)
   heroMediaId          String?      @db.VarChar(32)   // → MediaAsset RESTRICT
   syncReminderIntervalMinutes Int  @default(30)       // CHECK 10–240 (Q-20)
   syncFollowUpMinutes         Int  @default(10)       // CHECK 5–60 and < interval
@@ -269,10 +285,9 @@ model RoomBaseRate {
   updatedAt / updatedById
 }
 
-model RatePeriod {
+model RatePeriod {                     // one kind (Q-44)
   id          String         @id @db.VarChar(32)
   roomTypeId  String         @db.VarChar(32)
-  kind        RatePeriodKind
   startDate   DateTime       @db.Date
   endDate     DateTime       @db.Date        // exclusive
   amountMinor Int
@@ -300,8 +315,24 @@ model Reservation {
   internalNotes        String?           @db.VarChar(2000)
   externalReference    String?           @db.VarChar(80)
   currency             String            @default("USD") @db.Char(3)
-  totalMinor           Int?              // null only for unpriced EXTERNAL
+  accommodationMinor   Int?              // price snapshot (ADR 027); null only for unpriced EXTERNAL
+  servicesMinor        Int               @default(0)
+  subtotalMinor        Int?
+  discountMinor        Int               @default(0)
+  taxableMinor         Int?
+  vatRateBasisPoints   Int?              // stored rate used (TX-5)
+  vatMinor             Int?
+  totalMinor           Int?              // taxable + vat
+  couponId             String?           @db.VarChar(32)   // → Coupon RESTRICT
+  couponCode           String?           @db.VarChar(32)   // as entered, normalized
+  couponKind           CouponKind?
+  couponValue          Int?              // basis points or cents
   paymentMethod        PaymentMethod     @default(PAY_AT_HOTEL)
+  paymentStatus        ReservationPaymentStatus @default(NOT_REQUIRED)
+  holdExpiresAt        DateTime?         @db.Timestamptz(3) // AWAITING_PAYMENT only
+  pmsEnteredAt         DateTime?         @db.Timestamptz(3) // WEBSITE only (Q-40)
+  pmsEnteredById       String?           @db.VarChar(32)
+  privacyNoticeVersion String?           @db.VarChar(40)
   manageTokenHash      String?           @unique @db.VarChar(64)
   manageTokenExpiresAt DateTime?         @db.Timestamptz(3)
   idempotencyKeyHash   String?           @db.VarChar(64)
@@ -316,6 +347,8 @@ model Reservation {
   @@index([branchId, checkIn, checkOut])
   @@index([guestEmail])
   @@index([guestId, checkIn])
+  @@index([status, holdExpiresAt])      // hold expiry job
+  @@index([branchId, source, pmsEnteredAt])
 }
 
 model ReservationRoom {
@@ -364,6 +397,9 @@ model Guest {
   name            String    @db.VarChar(120)          // latest used
   email           String?   @db.VarChar(320)          // latest used
   phoneVerifiedAt DateTime? @db.Timestamptz(3)        // null for staff-entered profiles
+  marketingOptInAt        DateTime? @db.Timestamptz(3)   // Q-58
+  marketingConsentVersion String?   @db.VarChar(40)
+  marketingOptOutAt       DateTime? @db.Timestamptz(3)
   blockedAt       DateTime? @db.Timestamptz(3)
   blockedById     String?   @db.VarChar(32)
   blockReason     String?   @db.VarChar(500)
@@ -389,10 +425,148 @@ model PhoneVerification {
   @@index([clientKey, createdAt])
 }
 
+model ReservationService {             // flat price per booking (SV-1…4)
+  reservationId String      @db.VarChar(32)   // → Reservation CASCADE
+  kind          ServiceKind
+  priceMinor    Int
+  details       String?     @db.VarChar(300) // e.g. flight number (Q-56), plain text
+  @@id([reservationId, kind])
+}
+
+model ServiceOffering {
+  id          String      @id @db.VarChar(32)
+  branchId    String      @db.VarChar(32)
+  kind        ServiceKind
+  priceMinor  Int                              // CHECK > 0
+  active      Boolean     @default(false)
+  description String?     @db.VarChar(300)
+  updatedAt / updatedById
+  @@unique([branchId, kind])
+}
+
+model Coupon {
+  id                     String     @id @db.VarChar(32)
+  code                   String     @db.VarChar(32)    // unique on upper(code) (SQL index)
+  kind                   CouponKind
+  percentBasisPoints     Int?                          // PERCENT: 1–10000
+  amountMinor            Int?                          // FIXED: > 0
+  startsAt               DateTime?  @db.Timestamptz(3)
+  endsAt                 DateTime?  @db.Timestamptz(3)
+  maxRedemptions         Int?
+  maxRedemptionsPerPhone Int?
+  allBranches            Boolean    @default(false)
+  active                 Boolean    @default(true)
+  description            String?    @db.VarChar(300)
+  createdAt / updatedAt / createdById / updatedById
+}
+
+model CouponBranch {
+  couponId String @db.VarChar(32)   // → Coupon CASCADE
+  branchId String @db.VarChar(32)   // → Branch RESTRICT
+  @@id([couponId, branchId])
+}
+
+model CouponRedemption {
+  couponId      String    @db.VarChar(32)   // → Coupon RESTRICT
+  reservationId String    @id @db.VarChar(32) // one coupon per reservation
+  phone         String?   @db.VarChar(20)
+  releasedAt    DateTime? @db.Timestamptz(3) // payment failed / cancelled (CP-2)
+  createdAt     DateTime  @default(now()) @db.Timestamptz(3)
+  @@index([couponId, releasedAt])
+  @@index([couponId, phone, releasedAt])
+}
+
+model CommercialSettings {              // singleton id "default"
+  id                 String  @id @db.VarChar(32)
+  vatRateBasisPoints Int?                // 0–10000; entered by the Admin in the dashboard (Q-05); null until then
+  updatedAt / updatedById
+}
+
+model WhatsAppSettings {               // singleton id "default" (Q-67, ADR 028)
+  id                    String    @id @db.VarChar(32)
+  businessPhoneNumber   String?   @db.VarChar(20)   // E.164; empty placeholder until the client supplies it
+  providerPhoneNumberId String?   @db.VarChar(64)   // e.g. Meta Cloud API phone-number id; the access token is a server secret, not stored here
+  lastTestAt            DateTime? @db.Timestamptz(3)
+  lastTestOk            Boolean?
+  lastTestError         String?   @db.VarChar(200)
+  updatedAt / updatedById
+}
+
+model WhatsAppTemplate {               // Admin-managed (Q-67)
+  id           String  @id @db.VarChar(32)
+  purpose      String  @db.VarChar(40)    // VERIFICATION_CODE, BOOKING_CONFIRMED, PAYMENT_NOT_COMPLETED, CANCELLATION_RECEIVED, CANCELLATION_APPROVED, CANCELLATION_REJECTED, REFUND_COMPLETED, CANCELLED_BY_HOTEL, MANAGE_LINK, FEEDBACK_REQUEST, MARKETING, TEST
+  language     String  @db.VarChar(10)    // e.g. en, ar
+  providerName String  @db.VarChar(120)   // template name exactly as approved in Meta
+  category     String  @db.VarChar(20)    // AUTHENTICATION, UTILITY, MARKETING
+  variables    Json                       // ordered list of allowlisted field keys, e.g. ["guestFirstName","reference","checkIn"]
+  previewText  String  @db.VarChar(1024)  // staff-facing preview, not sent
+  active       Boolean @default(true)
+  createdAt / updatedAt / updatedById
+  // unique active template per (purpose, language) except MARKETING (several allowed): partial unique index in SQL
+}
+
+model Payment {
+  id                    String        @id @db.VarChar(32)   // also the merchant reference sent to Paymob
+  reservationId         String        @db.VarChar(32)
+  provider              String        @default("PAYMOB") @db.VarChar(16)
+  providerOrderId       String?       @db.VarChar(80)
+  providerIntentionId   String?       @db.VarChar(120)
+  providerTransactionId String?       @unique @db.VarChar(80)
+  amountMinor           Int
+  currency              String        @db.Char(3)
+  status                PaymentStatus @default(INITIATED)
+  expiresAt             DateTime      @db.Timestamptz(3)
+  refundProviderId      String?       @db.VarChar(80)
+  refundedAt            DateTime?     @db.Timestamptz(3)
+  lastError             String?       @db.VarChar(200)
+  createdAt / updatedAt
+  @@index([status, expiresAt])
+  @@index([reservationId])
+}
+
+model PaymentEvent {
+  id              String   @id @db.VarChar(32)
+  paymentId       String?  @db.VarChar(32)
+  providerEventId String   @unique @db.VarChar(120)  // dedupe (PY-4)
+  kind            String   @db.VarChar(40)           // transaction, refund
+  success         Boolean
+  amountMinor     Int?
+  currency        String?  @db.Char(3)
+  receivedAt      DateTime @default(now()) @db.Timestamptz(3)
+  // no card data, no full payload
+}
+
+model CancellationRequest {
+  id             String                    @id @db.VarChar(32)
+  reservationId  String                    @db.VarChar(32)
+  status         CancellationRequestStatus @default(OPEN)
+  guestReason    String?                   @db.VarChar(500)
+  decidedById    String?                   @db.VarChar(32)
+  decidedAt      DateTime?                 @db.Timestamptz(3)
+  decisionReason String?                   @db.VarChar(500)
+  createdAt / updatedAt
+  // partial unique index: one OPEN request per reservation
+  @@index([status, createdAt])
+}
+
+model Broadcast {                      // M13 (ADR 028)
+  id            String          @id @db.VarChar(32)
+  authorId      String          @db.VarChar(32)
+  allBranches   Boolean         @default(false)
+  branchIds     String[]                          // or a join table, decided in the M13 spec
+  templateName  String          @db.VarChar(120)
+  variables     Json
+  couponId      String?         @db.VarChar(32)
+  audienceCount Int             @default(0)
+  status        BroadcastStatus @default(DRAFT)
+  createdAt / sentAt
+}
+
 model NotificationOutbox {
   id            String       @id @db.VarChar(32)
   channel       OutboxChannel
-  kind          String       @db.VarChar(60)    // reservation.request-received, …
+  kind          String       @db.VarChar(60)    // reservation.confirmed, payment.failed, cancellation.approved, feedback.request, marketing.broadcast, …
+  broadcastId   String?      @db.VarChar(32)
   reservationId String?      @db.VarChar(32)
   recipient     String       @db.VarChar(320)   // email address or E.164 phone
   payload       Json                            // template data, no secrets except manage URL
@@ -433,6 +607,15 @@ ALTER TABLE "Reservation"     ADD CHECK ("checkOut" > "checkIn");
 ALTER TABLE "ReservationRoom" ADD CHECK ("checkOut" > "checkIn" AND "adults" >= 1 AND "children" >= 0);
 ALTER TABLE "InventoryBlock"  ADD CHECK ("endDate" > "startDate");
 ALTER TABLE "RatePeriod"      ADD CHECK ("endDate" > "startDate" AND "amountMinor" > 0);
+ALTER TABLE "ServiceOffering" ADD CHECK ("priceMinor" > 0);
+ALTER TABLE "Coupon"          ADD CHECK (("kind" = 'PERCENT' AND "percentBasisPoints" BETWEEN 1 AND 10000 AND "amountMinor" IS NULL) OR ("kind" = 'FIXED' AND "amountMinor" > 0 AND "percentBasisPoints" IS NULL));
+ALTER TABLE "Coupon"          ADD CHECK ("endsAt" IS NULL OR "startsAt" IS NULL OR "endsAt" > "startsAt");
+CREATE UNIQUE INDEX "Coupon_code_upper_key" ON "Coupon" (upper("code"));
+ALTER TABLE "CommercialSettings" ADD CHECK ("vatRateBasisPoints" IS NULL OR "vatRateBasisPoints" BETWEEN 0 AND 10000);
+ALTER TABLE "Reservation"     ADD CHECK ("status" <> 'AWAITING_PAYMENT' OR ("paymentMethod" = 'PAYMOB' AND "holdExpiresAt" IS NOT NULL));
+ALTER TABLE "Reservation"     ADD CHECK ("totalMinor" IS NULL OR ("totalMinor" = "taxableMinor" + "vatMinor" AND "taxableMinor" = "subtotalMinor" - "discountMinor" AND "discountMinor" >= 0 AND "taxableMinor" >= 0));
+CREATE UNIQUE INDEX "CancellationRequest_one_open" ON "CancellationRequest" ("reservationId") WHERE "status" = 'OPEN';
+ALTER TABLE "Branch"          ADD CHECK ("slug" NOT IN ('admin','api','media','reservations','book'));
 ALTER TABLE "RoomBaseRate"    ADD CHECK ("amountMinor" > 0);
 ALTER TABLE "ReservationNight" ADD CHECK ("amountMinor" IS NULL OR "amountMinor" >= 0);
 ALTER TABLE "Reservation"     ADD CHECK ("source" <> 'EXTERNAL' OR "externalReference" IS NOT NULL);
@@ -452,8 +635,8 @@ ALTER TABLE "ReservationRoom" ADD CONSTRAINT "ReservationRoom_no_double_assignme
 ALTER TABLE "InventoryBlock" ADD CONSTRAINT "InventoryBlock_no_overlap"
   EXCLUDE USING gist ("physicalRoomId" WITH =, daterange("startDate","endDate",'[)') WITH &&)
   WHERE ("cancelledAt" IS NULL);
-ALTER TABLE "RatePeriod" ADD CONSTRAINT "RatePeriod_no_same_kind_overlap"
-  EXCLUDE USING gist ("roomTypeId" WITH =, "kind" WITH =, daterange("startDate","endDate",'[)') WITH &&)
+ALTER TABLE "RatePeriod" ADD CONSTRAINT "RatePeriod_no_overlap"
+  EXCLUDE USING gist ("roomTypeId" WITH =, daterange("startDate","endDate",'[)') WITH &&)
   WHERE ("active");
 ```
 
@@ -490,6 +673,15 @@ erDiagram
   ReservationRoom ||--|{ ReservationNight : "price snapshot"
   Reservation ||--o{ NotificationOutbox : "messages (email, WhatsApp)"
   Guest ||--o{ Reservation : "books (verified phone)"
+  Branch ||--o{ Page : "owns (planned)"
+  Branch ||--o{ Facility : "owns (planned)"
+  Branch ||--o{ ServiceOffering : offers
+  Reservation ||--o{ ReservationService : "chosen services"
+  Coupon ||--o{ CouponRedemption : "used by"
+  Reservation ||--o| CouponRedemption : uses
+  Reservation ||--o{ Payment : "paid by"
+  Payment ||--o{ PaymentEvent : "callbacks"
+  Reservation ||--o{ CancellationRequest : "guest requests"
 
   Room {
     string slug UK
@@ -497,6 +689,7 @@ erDiagram
     int maxAdults
     int maxChildren
     string branchId FK "planned"
+    enum accommodationType "planned"
   }
   Reservation {
     string reference UK
@@ -514,7 +707,7 @@ erDiagram
   }
 ```
 
-`Promotion`, `ContactEnquiry`, `AuditEvent`, `Verification`, and `LoginThrottle` are standalone. Records also reference their creating or updating `User` (`updatedById`, `createdById`); `AuditEvent.actorId` is deliberately not a foreign key, so history survives user removal.
+`Promotion` (retired), `ContactEnquiry`, `CommercialSettings`, `WhatsAppSettings`, `WhatsAppTemplate`, `Broadcast`, `AuditEvent`, `Verification`, and `LoginThrottle` are standalone. Records also reference their creating or updating `User` (`updatedById`, `createdById`); `AuditEvent.actorId` is deliberately not a foreign key, so history survives user removal.
 
 ## Transactions
 
@@ -532,6 +725,8 @@ erDiagram
 | PhysicalRoom → blocks/assignments | `RESTRICT` | Units are deactivated, not deleted, once used |
 | User → StaffBranchAssignment | `CASCADE` | Removing a user removes assignments; audit rows keep `actorId` as text (no FK) so history survives |
 | RatePeriod → ReservationNight.ratePeriodId | `SET NULL` | The snapshot keeps the amount and label |
+| Coupon → Reservation / CouponRedemption | `RESTRICT` | Used coupons are deactivated, not deleted; the snapshot keeps code and value |
+| Reservation → Payment, CancellationRequest | `RESTRICT` | Payment and refund history is kept with the reservation |
 
 ## Invariants checklist
 
@@ -541,7 +736,7 @@ erDiagram
 | DB-2 | `checkOut > checkIn` everywhere | CHECK |
 | DB-3 | One physical room is never assigned to overlapping active stays | Exclusion constraint |
 | DB-4 | Blocks on one room do not overlap | Exclusion constraint |
-| DB-5 | Same-kind rate periods do not overlap | Exclusion constraint |
+| DB-5 | Active date periods of one listing do not overlap | Exclusion constraint |
 | DB-6 | References are unique | Unique index |
 | DB-7 | Idempotency keys are unique per source and actor | Unique (NULLS NOT DISTINCT) |
 | DB-8 | External references are unique per branch | Unique index |
@@ -549,3 +744,7 @@ erDiagram
 | DB-10 | Audit is append-only | Runtime role lacks `UPDATE`/`DELETE` on `AuditEvent` (Phase 12 grants) |
 | DB-11 | One guest profile per phone number | Unique `Guest.phone` (normalized E.164) |
 | DB-12 | A website reservation always has a guest profile | CHECK `source <> 'WEBSITE' OR "guestId" IS NOT NULL` |
+| DB-13 | Stored totals are internally consistent (`total = taxable + vat`, `taxable = subtotal − discount ≥ 0`) | CHECK |
+| DB-14 | Coupon codes are unique case-insensitively; values match their kind | Unique index on `upper(code)`; CHECK |
+| DB-15 | A provider transaction is processed once; at most one open cancellation request per reservation | Unique `providerEventId`, `providerTransactionId`; partial unique index |
+| DB-16 | `AWAITING_PAYMENT` always has a Paymob method and a hold expiry | CHECK |

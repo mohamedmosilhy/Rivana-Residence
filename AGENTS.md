@@ -22,7 +22,7 @@ Hotel marketing website, CMS, and (in progress) a self-managed multi-branch rese
 
 ## Build approach
 
-Milestone-gated slices (M4–M12 in [docs/delivery/roadmap.md](./docs/delivery/roadmap.md)). Each milestone is a reviewable, tested slice that stops for approval before the next begins. Backend rules and the API land before the screens that use them.
+Milestone-gated slices (M4–M15 in [docs/delivery/roadmap.md](./docs/delivery/roadmap.md), replanned 2026-11-06; one detailed brief per milestone, with the skills to run, in [docs/delivery/milestones/](./docs/delivery/milestones/README.md)). Each milestone is a reviewable, tested slice that stops for approval before the next begins. Backend rules and the API land before the screens that use them.
 
 ## Commands
 

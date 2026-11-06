@@ -18,7 +18,7 @@ Use Vitest for fast domain/application tests:
 - role authorization policies;
 - disabled and future booking launch mapping;
 - contact enquiry validation and delivery-result behavior;
-- promotion publication window, priority selection, and active-query rules;
+- promotion publication window, priority selection, and active-query rules (removed with the popup in M5);
 - Prisma-to-domain/view-model mappers.
 
 Pure style wrappers do not need unit tests.
@@ -32,7 +32,7 @@ Use React Testing Library with accessible queries for behavior-rich components:
 - contact form errors, pending state, and announcements;
 - admin repeatable fields and destructive dialog;
 - media uploader validation/progress/retry;
-- promotion form validation/preview and public popup close/copy/focus behavior;
+- promotion form validation/preview and public popup close/copy/focus behavior (removed in M5; replaced by a no-popup assertion);
 - Book Now disabled explanation;
 - rich-text renderer sanitization/semantic output.
 
@@ -47,7 +47,7 @@ Run against an isolated PostgreSQL database with real migrations and the Prisma 
 - room/facility CRUD including ordering and media relations;
 - media begin/finalize/delete failure paths with a fake storage adapter;
 - local-media adapter traversal/symlink/root-containment, atomic finalize, and delete/open contract behavior;
-- promotion CRUD, scheduling, active selection, and cache invalidation;
+- promotion CRUD, scheduling, active selection, and cache invalidation (removed in M5);
 - Better Auth session/role checks and inactive-user handling;
 - contact persistence plus fake delivery adapter;
 - transaction rollback on conflicts;
@@ -72,7 +72,7 @@ Use Playwright for high-value flows:
 7. Public Home, About, Rooms, Room Detail, Facilities, Gym, Pool, and Contact render at desktop/mobile widths.
 8. Contact form validates, submits, and stores/delivers once.
 9. Book Now is inert, has no fake destination/data, and communicates unavailable integration.
-10. Editor publishes/schedules a promotion; the eligible public visitor can copy/dismiss it and expired/draft campaigns do not appear.
+10. Editor publishes/schedules a promotion; the eligible public visitor can copy/dismiss it and expired/draft campaigns do not appear (implemented in `tests/e2e/promotion-popup.spec.ts`; deleted in M5 when the popup is removed).
 11. Sitemap excludes drafts/admin and includes published entities.
 
 Use deterministic local adapters and fixtures; do not call production email/storage/booking systems in CI.
@@ -103,7 +103,7 @@ Visual snapshots cover major page templates and high-risk interactions, not ever
 - Lighthouse CI enforces accessibility ≥95, best practices ≥90, SEO ≥95, CLS ≤0.1, and a 260 KB script-transfer ceiling; performance, LCP, and TBT use warning budgets so regressions remain visible without concealing reviewed exceptions.
 - Browser tests assert route titles, canonicals, Open Graph URLs, sitemap/robots output, permanent redirects, and the absence of broken same-origin links/images.
 - Unit and browser tests validate JSON-LD shape and reject invented offers, prices, availability, ratings, and reviews.
-- `npm run audit:content` checks production facts, published content/media readiness, promotion validity, and truthful disabled-booking messaging. It exits 2 while launch inputs are blocked.
+- `npm run audit:content` checks production facts, published content/media readiness, promotion validity (until M5), and truthful disabled-booking messaging; from M5 it checks each branch's contact, map, and content, and from M10 it flags placeholder legal, VAT, and cancellation wording as launch blockers. It exits 2 while launch inputs are blocked.
 
 The Phase 10 desktop/mobile scores and accepted exceptions are recorded in [phase-10-seo-performance.md](../delivery/reports/phase-10-seo-performance.md).
 
@@ -116,7 +116,8 @@ The Phase 10 desktop/mobile scores and accepted exceptions are recorded in [phas
 - upload MIME/extension/magic-byte/size/dimension mismatches;
 - media IDOR/reference deletion;
 - local path traversal, encoded separators, symlink escape, executable upload, and direct access to quarantined/non-ready files;
-- promotion stored-XSS, invalid schedule, unauthorized publish, and client-clock bypass attempts;
+- promotion stored-XSS, invalid schedule, unauthorized publish, and client-clock bypass attempts (until M5);
+- payment callback forgery and replay, refund authorization, coupon guessing and limit races, marketing consent exclusions (M7–M13);
 - open redirect and unsafe return-path cases;
 - login/contact rate limiting;
 - secrets absent from client bundle and logs (bundle scan in the Phase 11 report; the enquiry outage log records only the error class and code).
@@ -132,11 +133,14 @@ The Phase 10 desktop/mobile scores and accepted exceptions are recorded in [phas
 
 Overselling cannot be proven with mocks (ADR 021). A dedicated integration file opens several Prisma clients, each with its own connection, and races them:
 
-- to book the last unit;
+- to book the last unit, including bookings for several units;
 - to book while a block is added;
-- to assign one physical room twice.
+- to assign one physical unit twice;
+- to use the last redemption of a limited coupon;
+- to confirm a payment while its hold expires or the unit is resold;
+- to process the same payment callback twice.
 
-Tests assert the final database state as well as the responses, and each scenario repeats (for example 20 iterations). The scenarios C-1…C-10 are defined in [../database/integrity-and-concurrency.md](../database/integrity-and-concurrency.md#proof-plan-integration-tests-on-real-postgresql). They run alone with `vitest run --config vitest.integration.config.ts tests/integration/reservations/concurrency.test.ts`.
+Tests assert the final database state as well as the responses, and each scenario repeats (for example 20 iterations). The scenarios C-1…C-15 are defined in [../database/integrity-and-concurrency.md](../database/integrity-and-concurrency.md#proof-plan-integration-tests-on-real-postgresql). They run alone with `vitest run --config vitest.integration.config.ts tests/integration/reservations/concurrency.test.ts`.
 
 ## Coverage
 

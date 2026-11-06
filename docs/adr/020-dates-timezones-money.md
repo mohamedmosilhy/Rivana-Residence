@@ -1,6 +1,6 @@
 # ADR 020 — Date-only stays, branch time zones, and integer US-dollar money
 
-Status: **Accepted** (2026-10-24; tax/fee inclusion, Q-05, still **needs the client's answer**)
+Status: **Accepted** (2026-10-24). **Amended by [ADR 027](./027-booking-price-composition.md) (2026-11-06):** VAT, coupons, and services enter the price composition, with basis-point percentages rounded half-up once per amount. The VAT rate itself is still open (Q-05). Dates, time zones, and integer US-dollar money below are unchanged.
 
 ## Context
 

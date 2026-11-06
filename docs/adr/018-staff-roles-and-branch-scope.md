@@ -1,6 +1,6 @@
 # ADR 018 — Staff roles, capabilities, and branch-scoped authorization
 
-Status: **Accepted** (2026-10-24). The `EDITOR` question (Q-01) was **decided on 2026-10-24**: keep it as a CMS-only role.
+Status: **Accepted** (2026-10-24). The `EDITOR` question (Q-01) was **decided on 2026-10-24**: keep it as a CMS-only role. **Extended by ADRs [024](./024-immediate-confirmation.md)–[028](./028-whatsapp-guest-messaging.md) (2026-11-06):** `reservations:decide` is removed (no `PENDING` status); `reservations:pms-entry`, `reservations:cancel-paid`, `cancellations:decide`, `services:manage`, `coupons:manage`, `tax:manage`, and `marketing:broadcast` are added; `promotions:manage` is retired. The current matrix is in [user-roles-and-permissions.md](../requirements/user-roles-and-permissions.md); the role and branch-scope decision below is unchanged.
 
 ## Context
 

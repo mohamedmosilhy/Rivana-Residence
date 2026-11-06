@@ -1,6 +1,6 @@
 # Data integrity and concurrency
 
-Status: **Planned**, design accepted 2026-10-24 (ADR 016, ADR 022). This document specifies how overselling is prevented and how that is proven.
+Status: **Planned**, design accepted 2026-10-24 (ADR 016, ADR 022), extended 2026-11-06 for several units per booking, payment holds, late payment results, and coupon limits (ADR 024, 025, 027). This document specifies how overselling and limit breaches are prevented and how that is proven.
 
 ## Threats to consistency
 
@@ -15,7 +15,13 @@ Status: **Planned**, design accepted 2026-10-24 (ADR 016, ADR 022). This documen
 | A browser retries a timed-out POST | Duplicate reservation | Idempotency key (unique) |
 | Two staff edit one reservation | Lost update | `version` column; `If-Match` / `expectedVersion`; `412` on mismatch |
 | A cron job and a request process the same outbox row | Double email | `SELECT … FOR UPDATE SKIP LOCKED` claim with an `attempts` increment |
-| More than one Node process (Passenger) | In-memory locks useless | All coordination in PostgreSQL |
+| Two guests use the last redemption of a limited coupon | Limit exceeded | Booking transaction locks the coupon row (`FOR UPDATE`) and counts unreleased redemptions before inserting |
+| A guest abandons the Paymob page | Units held forever | `holdExpiresAt`; expiry job every minute; any booking for the same listing expires overdue holds under the lock first |
+| Paymob success arrives after the hold expired and the unit was resold | Oversell, or a charge with no room | Late success re-locks the listings and re-checks; if not free, automatic refund (PY-5) |
+| Paymob sends the same callback twice, or two callbacks race | Double confirmation or double message | Unique `providerEventId`; reservation row `FOR UPDATE`; transitions only from `AWAITING_PAYMENT` |
+| Hold expiry job and a success callback race | Confirmed after release, or released after confirmation | Both lock the reservation row; whichever commits first wins; the other sees the new status and follows PY-5 |
+| A booking with several units needs two listings | Partial booking | All listings locked in id order in one transaction; all units checked before any insert |
+| More than one Node process (deploy overlap, restarts, a later second instance) | In-memory locks useless | All coordination in PostgreSQL |
 
 ## The booking transaction
 
@@ -26,21 +32,45 @@ unitOfWork.transaction(async (tx) => {
   existing = tx.reservations.findByIdempotencyKey(scope, keyHash)
   if existing: return replay(existing, fingerprint)          // 200 or 422
 
-  tx.inventoryLock.lockRoomTypes(branchId, [roomTypeId])     // SELECT … ORDER BY id FOR NO KEY UPDATE
-  roomType = tx.catalog.bookableRoomType(branchId, roomTypeId)  // published, branch active
-  capacity = tx.inventory.capacityByNight(branchId, roomTypeId, stay)
-  sold     = tx.inventory.soldByNight(branchId, roomTypeId, stay)
-  decision = AvailabilityCalculator.check(stay, capacity, sold, quantity = 1)
-  if !decision.available: return failure(INVENTORY_UNAVAILABLE, decision.firstFullNight)
+  tx.verifications.consume(token, phone); guard not blocked; guard per-phone caps (Q-60)
+  listingIds = sorted(unique(command.lines.map(l => l.roomTypeId)))
+  tx.inventoryLock.lockRoomTypes(branchId, listingIds)       // SELECT … ORDER BY id FOR NO KEY UPDATE
+  tx.reservations.expireOverdueHolds(branchId, listingIds, now)   // PY-6
+  for each listing: bookable? capacity & sold per night; AvailabilityCalculator.check(stay, capacity, sold, unitsRequested)
+  if any unavailable: return failure(INVENTORY_UNAVAILABLE, firstFullNight)
 
-  nights = PriceResolver.resolve(stay, tx.rates.for(roomTypeId, stay))
-  if total(nights) != command.expectedTotalMinor: return failure(PRICE_CHANGED, quote)
+  nights   = NightlyPriceResolver.resolve(stay, tx.rates.for(listingIds, stay))
+  services = tx.services.active(branchId, command.services)
+  coupon   = command.couponCode ? tx.coupons.lockForRedemption(code) : null   // SELECT … FOR UPDATE
+  CouponPolicy.validate(coupon, counts read under that lock)  → failure(COUPON_INVALID, reason)
+  quote    = QuoteCalculator.compute(nights, services, coupon, tx.settings.vatRate())
+  if quote.total != command.expectedTotalMinor: return failure(PRICE_CHANGED, quote)
 
-  reservation = Reservation.createPending(…)                 // domain invariants
-  tx.reservations.insert(reservation)                        // reservation + line + nights
-  tx.audit.append(…); tx.outbox.enqueue(…)
+  reservation = method == PAY_AT_HOTEL
+    ? Reservation.createConfirmed(…)                         // ADR 024
+    : Reservation.createAwaitingPayment(…, holdExpiresAt = now + 15 min)   // ADR 025
+  tx.reservations.insert(reservation)                        // reservation + lines + nights + services
+  if coupon: tx.coupons.insertRedemption(…)
+  tx.guests.upsertFromBooking(…); tx.audit.append(…)
+  if reservation.status == CONFIRMED: tx.outbox.enqueue(confirmation email + WhatsApp, staff alert)
 })
-// after commit: outbox dispatcher (no network I/O inside the transaction)
+// after commit: outbox dispatcher; for PAYMOB, PaymentGateway.createCheckout (no network I/O inside the transaction)
+```
+
+Payment callback (ADR 025):
+
+```text
+verified = gateway.verifyCallback(rawBody, headers)          // HMAC; reject otherwise
+unitOfWork.transaction(async (tx) => {
+  if !tx.paymentEvents.insertOnce(verified.eventId): return ok   // duplicate
+  reservation = tx.reservations.findForUpdate(payment.reservationId)
+  if verified.success and amount/currency match:
+    if reservation.status == AWAITING_PAYMENT: confirm, outbox confirmations
+    else if reservation.status == PAYMENT_FAILED (expired):  // late success, PY-5
+      lock listings in id order; re-check availability
+      free ? confirm (re-insert redemption if still within limits) : mark for automatic refund + staff alert
+  else if reservation.status == AWAITING_PAYMENT: PAYMENT_FAILED, release lines and redemption
+})
 ```
 
 Isolation level is `READ COMMITTED`, the default. Because each statement in `READ COMMITTED` takes a new snapshot, the counts read after the lock is granted include every competing booking that committed while this transaction waited.
@@ -73,7 +103,7 @@ Raw SQL is parameterized through Prisma's tagged `$queryRaw` and lives only in `
 ## Lock discipline
 
 1. Lock order: room-type ids sorted ascending. A single transaction never locks a lower id after a higher one.
-2. Lock scope: only availability-reducing writes take the lock.
+2. Lock scope: only availability-reducing writes take the lock (bookings, payment holds, late payment confirmations, stay changes, blocks, unit deactivation). The coupon row lock is taken after the listing locks, always in that order.
 3. Lock duration: from the lock statement to commit. There is no I/O to email, external services, or the filesystem in between.
 4. Lock timeout: `SET LOCAL lock_timeout = '5s'`. On timeout the request fails with `503 TRY_AGAIN` rather than piling up.
 5. Read paths (public availability search, staff grid) take no locks. They can show availability that is gone a millisecond later, which is acceptable because creation re-checks.
@@ -92,5 +122,10 @@ Raw SQL is parameterized through Prisma's tagged `$queryRaw` and lives only in `
 | C-8 branch isolation | Branch A sold out, branch B free (same names) | Create in B | Succeeds; A's counts unchanged |
 | C-9 idempotent retry | — | Same key ×5 in parallel | One reservation; all responses carry its reference |
 | C-10 modification type switch | Type X full, type Y free | Move X→Y while another books Y's last unit | No oversell in Y |
+| C-11 coupon limit | Coupon with 1 redemption left | 10 parallel bookings using it | Exactly 1 redemption; others `COUPON_INVALID` (`LIMIT_REACHED`) and nothing created |
+| C-12 late payment success | Hold expired; unit resold | Success callback arrives | No oversell; reservation not confirmed; automatic refund requested; staff alert |
+| C-13 duplicate callbacks | `AWAITING_PAYMENT` | Same verified callback ×5 in parallel | One `CONFIRMED` transition, one set of messages |
+| C-14 hold versus booking | Last unit held, hold just expired | Expiry job, a new booking, and a success callback race | Never more than one inventory-consuming reservation for the unit |
+| C-15 multi-unit booking | Listing with 2 free units | Booking for 2 units racing a booking for 1 | Never more than 2 units sold; the losing request creates nothing |
 
 Each test repeats (for example 20 iterations) and asserts the final database state.

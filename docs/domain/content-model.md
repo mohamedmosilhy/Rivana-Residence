@@ -6,6 +6,21 @@ Use structured entities for rooms, facilities, site settings, social links, medi
 
 The React component registry owns layout. The database owns content and ordering.
 
+## Branch ownership (planned, ADR 026)
+
+Implemented today as one global site. From M4 (data) and M5 (site), content belongs to branches:
+
+| Content | Owner | Notes |
+| --- | --- | --- |
+| Pages (Home, About, Contact) and their sections | Branch | Unique `(branchId, key)`; the same section registry and page policies for every branch |
+| Facilities | Branch | Rendered at `/{branch}/facilities` |
+| Accommodation listings (`Room`) | Branch | `accommodationType` `ROOM` or `APARTMENT`; rendered at `/{branch}/stay` |
+| Contact details, address, coordinates, map embed, check-in and check-out times, hero image | Branch | Moved from site settings to `Branch` |
+| Logo variants, brand name, social links, footer and legal text, default SEO, chooser introduction | Brand (`SiteSettings`) | Shared by every branch |
+| Media assets | Shared library | Any branch's content may reference any asset |
+
+Every branch uses the same templates and design; there is no per-branch component, layout, or theme. Editors and Admins pick the branch they edit (FR-CMS-11).
+
 ## Page sections
 
 Each `PageSection.type` maps to one versioned Zod payload schema and one presentation component. Editors can edit approved fields, hide optional sections, and reorder only where a page policy permits it.
@@ -49,7 +64,7 @@ Required hero, story split, and contact CTA. Optional stats, gallery, and room g
 
 Required hero/contact information and enabled contact form. Optional map and supporting rich text. Map coordinates/embed configuration live in Site Settings so they remain consistent.
 
-### Room and facility detail
+### Listing and facility detail
 
 These are entity templates, not PageSection documents. Their fields and media determine the composition. This avoids storing the same room data in two systems.
 
@@ -86,9 +101,10 @@ Canonical paths are application-controlled. Editors do not enter arbitrary canon
 
 - Home hero, brand introduction, rooms, facilities, lifestyle story, contact CTA.
 - About welcome, exterior story, quote/stats, featured rooms, contact CTA.
-- Rooms become three marketing records initially: Studio With Balcony, Studio With Pool View, Deluxe Double.
+- Rooms become three marketing records initially: Studio With Balcony, Studio With Pool View, Deluxe Double (all `ROOM`, branch New Cairo from M4).
+- Apartments are added by staff as listings with `accommodationType = APARTMENT`, optional bedroom and bathroom counts, and kitchen or living facts as features.
 - Facilities initially include Gym and Swimming Pool. “Cafe” and “Wellness & Spa” remain unpublished until real content and approved imagery exist.
-- Reference room prices and booking calendars are discarded.
+- Reference room prices and booking calendars are discarded. Real prices come from the pricing module (M6), never from content fields.
 - Reference room facts are drafts pending client verification.
 
 ## Editorial guardrails

@@ -1,6 +1,6 @@
 # ADR 013 — Self-managed reservations with an explicit external-system boundary
 
-Status: **Accepted (business direction, 2026-10-24)**. Supersedes [ADR 008](./008-booking-boundary.md). The detailed design decisions in ADRs 014–022 were accepted on 2026-10-24.
+Status: **Accepted (business direction, 2026-10-24)**. Supersedes [ADR 008](./008-booking-boundary.md). The detailed design decisions in ADRs 014–022 were accepted on 2026-10-24. **Amended by [ADR 024](./024-immediate-confirmation.md) (2026-11-06):** website bookings are confirmed immediately, so the request-to-book mitigation named under Risks no longer applies; the manual synchronization and the `HotelSystemSync` port are unchanged.
 
 ## Context
 

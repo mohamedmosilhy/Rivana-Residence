@@ -4,7 +4,7 @@ The implemented security controls of the application, and the rules new features
 
 ## Trust boundaries
 
-Untrusted inputs include login credentials, all public/admin form data, URL params/slugs, rich-text documents, upload metadata and bytes, storage callbacks, environment variables, reservation API requests (public and staff), guest manage tokens, and map/embed URLs. Client-side validation improves UX but is never authoritative.
+Untrusted inputs include login credentials, all public/admin form data, URL params/slugs (including branch slugs), rich-text documents, upload metadata and bytes, storage callbacks, environment variables, reservation API requests (public and staff), coupon codes, guest manage tokens, payment provider callbacks (planned: accepted only with a valid HMAC), WhatsApp provider webhooks (planned), and map/embed URLs (site settings today, each branch from M5; Google embed allowlist). Client-side validation improves UX but is never authoritative.
 
 ## Authentication
 
@@ -64,7 +64,7 @@ Controls:
 - upload operations remain same-origin, authenticated, CSRF/origin checked, and tied to the session/user;
 - Content-Type, `nosniff`, cache, range, and content-disposition headers are set intentionally.
 
-## Promotion safety
+## Promotion safety (implemented; retired by Q-47, removed in M5)
 
 - Promotion fields use strict length limits and plain text; no arbitrary HTML, script, URL, or style input.
 - Codes use a conservative printable allowlist and are rendered as text.
@@ -97,7 +97,7 @@ The future booking integration gets explicit `script-src`, `frame-src`, `connect
 ## Secrets and configuration
 
 - Validate server environment at startup with a server-only Zod schema.
-- Store database URLs, auth secret, storage credentials, email keys, WhatsApp provider tokens, and any future provider secrets in deployment secret management.
+- Store database URLs, auth secret, storage credentials, email keys, WhatsApp provider tokens, Paymob API key, secret key, HMAC secret, and integration ids (supplied by the client at M9), and any future provider secrets in deployment secret management. None of them may reach a client bundle. The WhatsApp business number, phone-number id, and templates are Admin-editable settings in the database (Q-67); the WhatsApp access token is not.
 - Never prefix secrets with `NEXT_PUBLIC_`; only publish explicitly safe config.
 - Maintain separate media roots/containers, credentials, and databases per environment.
 - Rotate secrets and revoke old credentials after incidents or staff changes.
@@ -131,7 +131,7 @@ The future booking integration gets explicit `script-src`, `frame-src`, `connect
 
 ## Security release gate
 
-- threat-model admin auth, uploads and local path handling, promotions, contact form, and the reservation API ([threat-model.md](./threat-model.md));
+- threat-model admin auth, uploads and local path handling, promotions (until M5), contact form, the reservation API, payments and refunds, coupons, and marketing consent ([threat-model.md](./threat-model.md));
 - dependency audit and supported versions;
 - authorization tests for every command;
 - CSP enforced and verified with zero violations across public and admin pages (Phase 11);

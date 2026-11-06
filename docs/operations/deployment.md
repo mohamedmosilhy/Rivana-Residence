@@ -2,30 +2,33 @@
 
 ## Initial topology
 
-- **Application:** Next.js 16 production Node process on Hosting.com/cPanel, deployed over the existing SSH access after account preflight.
-- **Database:** PostgreSQL 18.6 where supported (17.11 fallback), either on the Hosting.com account or an external managed service, with backups and separate runtime/migration credentials where available.
-- **Media:** persistent local directory on the Hosting.com account behind `MediaStorage`, outside the application checkout/release tree and exposed at a controlled `/media/` URL.
+Planned in [ADR 023](../adr/023-hostinger-vps-deployment.md); not yet provisioned.
+
+- **Server:** a Hostinger KVM VPS used only for Rivana, running a current Ubuntu LTS release, in the data centre closest to Egypt.
+- **Application:** Next.js 16 production server (`next start`) on Node 22.23, one process run by a systemd service as a dedicated unprivileged user, listening on `127.0.0.1`. Nginx in front terminates TLS and sets `X-Forwarded-For` (`AUTH_TRUST_PROXY_HEADERS=true`).
+- **Database:** PostgreSQL 18.6 (17.11 fallback). The default is the same VPS, installed from the PostgreSQL project's packages; a managed service is the alternative (Q-25). Separate runtime and migration roles.
+- **Media:** persistent local directory on the VPS (for example `/var/lib/rivana/media`) behind `MediaStorage`, outside the application release tree and exposed at a controlled `/media/` URL.
 - **Email:** SMTP behind `ContactDelivery` for contact enquiries; auth reset delivery remains disabled until its provider flow is implemented.
-- **DNS/TLS:** production domain with managed TLS.
+- **DNS/TLS:** the production domain's DNS stays in the client's Cloudflare zone; Nginx serves TLS with a Let's Encrypt certificate, or a Cloudflare origin certificate when the record is proxied.
 
-The app remains deployable as a standard Node process/container because domain/application code does not depend on cPanel APIs. Host-specific process, cache, image, and filesystem integration stays in infrastructure/configuration.
+The app remains deployable as a standard Node process/container because domain/application code does not depend on any host's APIs. Host-specific process, cache, image, and filesystem integration stays in infrastructure/configuration.
 
-The initial read-only SSH preflight is recorded in [hosting-preflight.md](./hosting-preflight.md). Node 22/Passenger, rsync, cron, and account capacity are available. The login shell still defaults to Node 10, so deployment must explicitly use the CloudLinux Node 22 application environment. The local PostgreSQL tooling is version 10 and no account database is allocated; use an external supported PostgreSQL 17+ service unless Hosting.com provisions a supported major. Do not commit hostnames, usernames, keys, or absolute account paths.
+The VPS provisioning checklist is in [hosting-preflight.md](./hosting-preflight.md). Do not commit hostnames, IP addresses, usernames, keys, or secrets.
 
 ## Environments
 
 - **Local:** local PostgreSQL, temporary local-media root, captured/fake email; online booking on with demo branches and fictional guests.
 - **Preview:** isolated database, separate media root, sandbox email, demo branches; no production personal data.
-- **Client staging:** `staging.rivanaresidence.com`, deployed as a separate Node 22/Passenger application and protected from indexing. It must use staging-only database credentials and media root. Its Cloudflare DNS record is deferred until deployment/account access is available.
+- **Client staging:** `staging.rivanaresidence.com`, a separate systemd service, Nginx site, database, database role, and media root on the VPS (or a second small VPS), protected from indexing. Its Cloudflare DNS record is deferred until the client regains access to the zone.
 - **Production:** dedicated database credentials and persistent media root, verified email domain, configured canonical origin.
 
 Never let preview deployments write to the production media root or database.
 
-Docker is not available on the current shared cPanel plan. Build/test container images may still be used in CI or local development, but cPanel deployment uses the standard Next.js Node server under CloudLinux/Passenger. This preserves the same application artifact without requiring a container runtime on the host.
+Docker can run on the VPS but is not used: one Node process under systemd is simpler to operate. Container images may still be used in CI or local development.
 
 ## Configuration
 
-Expected server secrets/config include the WhatsApp provider credentials, business sender id, and approved template names (planned, Q-10), database runtime/migration URLs, auth secret/base URL, absolute `MEDIA_STORAGE_ROOT`, contact delivery mode and SMTP host/port/user/password/from/to addresses, canonical site URL, and optional observability DSN. Public environment variables are limited to genuinely public configuration. The database stores relative media keys, not `MEDIA_STORAGE_ROOT`. See `.env.example` and [phase-7-public-site.md](../delivery/reports/phase-7-public-site.md#contact-delivery-evidence) for the exact contact variables and pre-deployment smoke check.
+Expected server secrets/config include the WhatsApp provider access token (planned; the business number, phone-number id, and template names are entered by the Admin in the dashboard, Q-67), the Paymob API key, secret key, HMAC secret, and integration ids, and the public callback URL registered with Paymob (planned M9, Q-55), database runtime/migration URLs, auth secret/base URL, absolute `MEDIA_STORAGE_ROOT`, contact delivery mode and SMTP host/port/user/password/from/to addresses, canonical site URL, and optional observability DSN. Public environment variables are limited to genuinely public configuration. The database stores relative media keys, not `MEDIA_STORAGE_ROOT`. See `.env.example` and [phase-7-public-site.md](../delivery/reports/phase-7-public-site.md#contact-delivery-evidence) for the exact contact variables and pre-deployment smoke check.
 
 All configuration is validated at startup. Missing critical production configuration fails the build/start clearly rather than silently disabling security.
 
@@ -34,9 +37,9 @@ All configuration is validated at startup. Missing critical production configura
 1. CI installs from the lockfile and runs quality gates.
 2. Build uses pinned Node/dependency versions.
 3. Production migration job runs `prisma migrate deploy` once using migration credentials/direct URL.
-4. Upload a versioned release over SSH, build/install as supported by the account, and switch the active release only after migration success.
+4. Upload a versioned release over SSH into `releases/<id>`, run `npm ci` and the build there, and switch the `current` symlink only after migration success.
 5. Smoke checks verify public routes, admin login page, database health, media delivery, and contact delivery in a controlled mode.
-6. Restart/reload the managed Node process and retain the previous release for rollback. The shared media root is never copied over or removed by deployment cleanup.
+6. Restart the systemd service and retain the previous releases for rollback. The shared media root is never copied over or removed by deployment cleanup.
 
 Public content reads are cached on disk in `.next/cache/fetch-cache` and invalidated by CMS actions. After any out-of-band database change (backup restore, seed, SQL fix, CLI import), delete that directory and restart the app so visitors do not see stale content. See [phase-7-public-site.md](../delivery/reports/phase-7-public-site.md#public-cache).
 
@@ -52,8 +55,9 @@ Do not run development migrations or schema push in production. Destructive migr
 
 ## Backups and recovery
 
-- managed PostgreSQL daily backups plus point-in-time recovery where available;
-- nightly off-server backup of the media root plus checksums/manifest; cPanel account backups alone are not the only copy;
+- nightly `scripts/backup.sh` copied off the server, plus point-in-time recovery (WAL archiving on the VPS, or the managed provider's);
+- nightly off-server backup of the media root plus checksums/manifest; Hostinger VPS snapshots and backups are an extra layer, never the only copy;
+- planned reservation jobs (cron, app user): `npm run reservations -- outbox` every minute or two (M8), `npm run reservations -- expire-holds` every minute and `npm run reservations -- reconcile-payments` every 5 minutes (M9), `npm run reservations -- expire-tokens` daily (M8) ([migrations-and-seeding.md](../database/migrations-and-seeding.md#scheduled-jobs-cron));
 - hourly `npm run media -- cleanup` (cron) to fail abandoned uploads, clear stray quarantine files, and finish deletions whose file removal failed; see [phase-6-media.md](../delivery/reports/phase-6-media.md#storage-configuration-permissions-and-backup) for the media root layout and permissions;
 - after any database restore, clear `.next/cache/fetch-cache` and restart the app;
 - quarterly restore drill into a non-production environment;
@@ -79,6 +83,15 @@ RESTORE_DATABASE_URL=... RESTORE_MEDIA_ROOT=... \
 ```
 
 A backup holds a custom-format database dump (no owners or grants), `images/` as a tarball, a checksum for every image file, and `SHA256SUMS` over the set; directories are created mode 700. Restore verifies all checksums before touching anything, restores media through a staging directory, re-applies `750`/`640` permissions, and fails if any `READY` media record has no file. Prisma-only URL parameters are stripped (only `sslmode` is passed to libpq). The Phase 11 drill is recorded in [phase-11-release-candidate.md](../delivery/reports/phase-11-release-candidate.md#backup-and-restore-drill).
+
+## Server operations
+
+- install security updates automatically (unattended upgrades) and reboot in an announced window;
+- firewall: the Hostinger firewall plus `ufw`, allowing only SSH, HTTP, and HTTPS; PostgreSQL listens on localhost only;
+- SSH with keys only, no root login and no passwords; `fail2ban` on SSH;
+- the app, PostgreSQL, and backups run as separate users; the media root is writable only by the app user;
+- alerts on free disk space, memory, and the service being down;
+- apply PostgreSQL minor updates promptly; major upgrades are planned changes with a backup first.
 
 ## Observability
 

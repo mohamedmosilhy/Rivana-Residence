@@ -1,10 +1,10 @@
 # ADR 016 — Room-type inventory with transaction-scoped locks
 
-Status: **Accepted** (2026-10-24)
+Status: **Accepted** (2026-10-24). **Extended by [ADR 025](./025-paymob-online-payment.md) and [ADR 027](./027-booking-price-composition.md) (2026-11-06):** payment holds (`AWAITING_PAYMENT`) consume inventory and are expired under the lock; the booking transaction also locks the coupon row. The lock-plus-count decision is unchanged.
 
 ## Context
 
-Guests book a room type (for example "Studio with Balcony"), not a numbered room. The hotel later puts the guest in one of that type's physical rooms. Two guests can submit at the same moment for the last room. Staff also record external (PMS) reservations and maintenance blocks that consume the same inventory. Production runs on PostgreSQL 17+ (ADR 002, ADR 022). Cloud Linux Passenger may run several Node processes.
+Guests book a room type (for example "Studio with Balcony"), not a numbered room. The hotel later puts the guest in one of that type's physical rooms. Two guests can submit at the same moment for the last room. Staff also record external (PMS) reservations and maintenance blocks that consume the same inventory. Production runs on PostgreSQL 17+ (ADR 002, ADR 022). More than one Node process can be live at once (deploy overlap, restarts, a later second instance).
 
 ## Problem
 

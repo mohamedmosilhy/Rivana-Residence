@@ -1,54 +1,65 @@
-# Hosting.com/cPanel preflight
+# Hosting preflight (Hostinger VPS)
 
-Checked read-only over the existing SSH connection on 2026-09-25. Hostnames, usernames, keys, and absolute account paths are intentionally omitted.
+Production and staging run on a Hostinger KVM VPS ([ADR 023](../adr/023-hostinger-vps-deployment.md)). The VPS is **not yet provisioned**. This checklist is completed in Phase 12.1, and its results are recorded here. Hostnames, IP addresses, usernames, keys, and secrets are never written in the repository.
 
-## Confirmed
+## Plan and server
 
-- SSH access works with the dedicated Rivana deployment key.
-- CloudLinux Node Selector is enabled with Passenger active.
-- Node.js `22.23.2` is available for an application even though the login shell defaults to obsolete Node `10.24.0`; deployment commands must enter the Node 22 selector environment explicitly.
-- `rsync` and user cron are available.
-- Docker and Podman are not installed for this shared account; rootless container execution is not an approved deployment path.
-- The account reports no fixed megabyte quota through cPanel and is under its quota; about 4 GB is currently used.
-- The inode allowance is 600,000 with about 70,250 currently used.
-- A local PostgreSQL service responds and cPanel exposes PostgreSQL management, but no database is currently allocated to this account.
+- [ ] Choose a KVM plan with at least 2 vCPU, 8 GB RAM, and enough NVMe disk for PostgreSQL, the media root, logs, and several releases, with room to grow. `next build` and sharp need memory headroom.
+- [ ] Pick the data centre closest to Egypt and measure latency from Egypt.
+- [ ] Install a current Ubuntu LTS template and confirm `x86_64` and glibc ≥ 2.28 (sharp 0.35's minimum).
+- [ ] Confirm Hostinger's included backups and snapshots, their frequency and retention, and the price of more frequent backups.
 
-## Blockers and decisions before deployment
+## Access and hardening
 
-- The installed PostgreSQL client is `10.23`, an end-of-life major version and below the project's supported baseline. Do not use it for production unless Hosting.com can provision a currently supported PostgreSQL version. The default plan is therefore an external managed PostgreSQL 17+ database while keeping the app and media on cPanel.
-- Configure the application with Node 22 in CloudLinux/Passenger; never rely on the login shell's default `node` binary.
-- Choose and provision a persistent media root outside both `public_html` and every versioned application release. Serve it through the application `/media/` route unless a reviewed non-executable web-server alias is available.
-- Confirm domain-to-application mapping, environment-secret entry, restart command, process limits, request-body/time limits, and log locations in the cPanel Node application UI.
-- Configure an off-server database and media backup, then prove a restore before launch.
-- Add a free-space alert. The underlying shared filesystem reported high aggregate utilization during the check; cPanel reports the user account itself under quota, but provider-level capacity remains outside application control.
+- [ ] SSH with a dedicated deployment key only; password and root login disabled.
+- [ ] Hostinger firewall and `ufw` allow only SSH, HTTP, and HTTPS.
+- [ ] Unattended security upgrades, `fail2ban`, and time sync (UTC system clock).
+- [ ] Separate OS users for the app and for backups.
 
-## Deployment readiness
+## Runtime
 
-The account is suitable in principle for the Next.js application and local media storage. Production deployment remains blocked until the supported PostgreSQL connection, cPanel Node application configuration, persistent media root, backup target, and domain mapping are provisioned and tested.
+- [ ] Node 22.23 (the `.nvmrc` version) installed system-wide from a pinned source; `node -v` checked as the app user.
+- [ ] A systemd service runs `next start` on `127.0.0.1`, restarts on failure, and reads its environment from a root-owned file readable only by the app user.
+- [ ] Nginx proxies to the app, serves TLS, redirects HTTP to HTTPS, sets `X-Forwarded-For`, and allows the upload body size the media policy needs.
+- [ ] Release layout (`releases/<id>` plus a `current` symlink) and the restart command proven with a dummy release and a rollback.
+- [ ] App user's crontab runs `npm run media -- cleanup` hourly, plus the reservation jobs from M8 and M9 (outbox, hold expiry every minute, payment reconciliation, token expiry).
+- [ ] Nginx passes `POST /api/v1/payments/paymob/callback` to the app unchanged (no body rewriting, so the HMAC can be verified), and the callback URL is registered in the Paymob dashboard for staging (test keys) and production (live keys) separately.
 
-## Staging environment
+## Database
 
-- cPanel subdomain `staging.rivanaresidence.com` was created on 2026-09-25 with an isolated document root.
-- The current static reference build was deployed there temporarily so the origin can be reviewed before the Next.js application exists.
-- Directory listing is disabled and responses carry `X-Robots-Tag: noindex, nofollow, noarchive`; `robots.txt` disallows crawling.
-- The origin returns HTTP 200 when addressed with the staging host.
-- Public DNS is hosted by Cloudflare, not cPanel. The staging site becomes publicly reachable after adding a proxied or DNS-only `A` record for `staging` pointing to the cPanel origin IP and allowing Cloudflare/AutoSSL to issue or serve HTTPS.
-- Public DNS activation is intentionally deferred until deployment because the client does not currently have access to the Cloudflare account that owns the zone. Do not change nameservers or add the domain to a different Cloudflare account as a workaround.
-- When Phase 1 produces the real application, replace the temporary static reference with a Node 22/Passenger staging app and give it separate database credentials and media root.
+Decide Q-25: PostgreSQL on the VPS (default) or a managed service. Either way, confirm the ADR 022 requirements.
 
-## Staging media root (2026-09-25)
+- [ ] PostgreSQL 18 (17 minimum) from the PostgreSQL project's packages, listening on localhost only.
+- [ ] `CREATE EXTENSION btree_gist` works.
+- [ ] Separate runtime and migration roles, and a direct URL for `prisma migrate deploy`.
+- [ ] WAL archiving off the server for point-in-time recovery, in addition to nightly `scripts/backup.sh`.
+- [ ] `pg_dump`, `pg_restore`, and `psql` are at least as new as the server.
 
-Provisioned and checked over SSH for Phase 6. Only Rivana's own staging paths were touched; the account also hosts other, unrelated sites.
+## Media
 
-- Created `~/rivana-staging/media` (home-relative) with a `quarantine/` subfolder, both mode `750` and owned by the account user. It is outside `public_html`, outside the `staging.rivanaresidence.com` document root, and outside any future release directory, so no URL maps to it. Images are served only through the application's `/media/` route.
-- Checked the operations the storage adapter relies on, then removed the test files:
-  - exclusive create;
-  - a same-filesystem hard link from quarantine into `images/`;
-  - a second link to an existing key is refused, so objects cannot be overwritten;
-  - new files are created with mode `640`.
-- Account capacity: about 4.0 GB used with no fixed megabyte quota, and 70,376 of 600,000 inodes used (88% of inodes free).
-- **Risk:** the shared filesystem behind the account reports **99% used (about 61 GB free)** at the provider level. The account is under its own quota, but disk exhaustion by other tenants would affect uploads. Ask Hosting.com about capacity, and add a free-space alert before launch.
-- **Image processing:** the server is `x86_64` with glibc `2.28` and Node `22.23.2` (`/opt/alt/alt-nodejs22`). sharp 0.35's prebuilt Linux binaries require glibc ≥ 2.28, so the pinned version is compatible, but only just. Check the glibc requirement before upgrading sharp.
-- Staging environment value: `MEDIA_STORAGE_ROOT=<home>/rivana-staging/media` (absolute path in the app's cPanel environment settings).
+- [ ] Media root (for example `/var/lib/rivana/media`) with a `quarantine/` subfolder, mode `750`, owned by the app user, outside every release directory and outside any Nginx root.
+- [ ] The storage adapter's operations work there: exclusive create, a same-filesystem hard link from quarantine into `images/`, refusal to overwrite an existing key, and new files created with mode `640`.
+- [ ] Images are served only through the application `/media/` route.
+- [ ] `MEDIA_STORAGE_ROOT` set to that absolute path in the service environment.
 
-Still open: an off-server backup of the media root and a restore drill, which remain launch tasks. Production gets its own separate root (e.g. `~/rivana-production/media`) when production is provisioned.
+## Backups and monitoring
+
+- [ ] Nightly `scripts/backup.sh` copied to storage outside Hostinger, and a restore drill with `scripts/restore.sh` into a scratch database and media root.
+- [ ] Alerts on free disk space, memory, the service being down, and the public site (uptime check).
+
+## Domains and staging
+
+- [ ] DNS stays in the client's Cloudflare zone. The client must regain access to that account before records change. Do not move nameservers or add the domain to a different Cloudflare account as a workaround.
+- [ ] `staging.rivanaresidence.com` gets its own systemd service, Nginx site with `X-Robots-Tag: noindex, nofollow, noarchive` and a disallowing `robots.txt`, database, database role, and media root.
+- [ ] Production gets its own media root and credentials; staging can never write to them.
+
+## Earlier target: Hosting.com cPanel (dropped 2026-10-24)
+
+ADR 011 planned to use the client's shared Hosting.com cPanel account. A read-only preflight on 2026-09-25 found:
+
+- PostgreSQL 10 only (end of life, unsupported by Prisma 7);
+- Node 22 only through the CloudLinux selector, with Node 10 as the login default, and no Docker;
+- the provider's shared disk at 99% use;
+- an account shared with other live sites.
+
+These findings led to ADR 023. A staging subdomain (`staging.rivanaresidence.com`, serving the static reference build) and a staging media root were created on that account on 2026-09-25 for review and the Phase 6 storage checks. They are no longer part of the plan. Remove them only after confirming with the client, because the account also hosts other sites.

@@ -48,16 +48,17 @@ Status: **Planned**, design accepted 2026-10-24 (ADR 014). No `/api/v1` endpoint
 - **Guest**: `Authorization: Bearer <manage token>` (ADR 019).
 - **Staff**: the Better Auth session cookie (`HttpOnly`, `Secure`, `SameSite=Lax`). Every handler resolves the principal through `getCurrentStaff()` (database session check). Branch assignments are reloaded per request.
 - **CSRF** for cookie-authenticated, state-changing requests: require an `Origin` equal to `APP_URL` and `Sec-Fetch-Site: same-origin` when present (the existing `isSameOriginRequest`), plus `Content-Type: application/json`, which forces a CORS preflight that the API does not grant. Never mutate on `GET`.
+- **Webhooks**: the Paymob callback (`/api/v1/payments/paymob/callback`, ADR 025) uses the `webhookRoute` wrapper instead: no session and no browser CSRF check, the raw body is kept for HMAC verification, and an unverified request gets `401` with no detail.
 - **CORS**: none. The API answers same-origin only until a future client is approved. A non-browser client would then need a token mechanism (for example a Better Auth bearer or API-key plugin), added under its own ADR.
 
 ## Handler anatomy
 
 ```ts
-// src/app/api/v1/staff/reservations/[id]/confirmation/route.ts  (illustrative)
+// src/app/api/v1/staff/reservations/[id]/pms-entry/route.ts  (illustrative)
 export const POST = staffRoute(
-  { body: confirmReservationBody, capability: "reservations:decide" },
+  { body: markPmsEntryBody, capability: "reservations:pms-entry" },
   async ({ staff, body, params, requestId }) =>
-    toHttp(await reservations().confirm(staff, { id: params.id, ...body }), {
+    toHttp(await reservations().markEnteredInHotelSystem(staff, { id: params.id, ...body }), {
       ok: (value) => json(200, toReservationDto(value)),
     }),
 );

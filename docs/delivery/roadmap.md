@@ -1,6 +1,6 @@
 # Roadmap
 
-The single delivery plan for Rivana Residence. Work is delivered as a sequence of reviewable contracts, not a loose backlog: one step at a time, evidence at the end, explicit approval before the next. The website and content management were built as **Phases 0–11**. The reservation system is built as **milestones M0–M11**, under the same governance. **Phase 12 and M12 are one joint launch** of the whole product (decision Q-16, 2026-10-24).
+The single delivery plan for Rivana Residence. Work is delivered as a sequence of reviewable contracts, not a loose backlog: one step at a time, evidence at the end, explicit approval before the next. The website and content management were built as **Phases 0–11**. The reservation system and the branch websites are built as **milestones M0–M14**, under the same governance (replanned on 2026-11-06 after the client decisions Q-36…Q-53). **Phase 12 and M15 are one joint launch** of the whole product (decision Q-16, 2026-10-24).
 
 ## Delivery overview
 
@@ -22,24 +22,28 @@ The single delivery plan for Rivana Residence. Work is delivered as a sequence o
 | M1 | Requirements and business rules | Accepted 2026-10-24; client answers pending (scope v2.0) | [../requirements/](../requirements/business-requirements.md) |
 | M2 | Domain, architecture, database, API design | Accepted 2026-10-24; ADRs 014–022 accepted | [../domain/](../domain/domain-model.md), [../architecture/](../architecture/overview.md), [../database/](../database/data-model.md), [../api/](../api/api-contracts.md), [../security/](../security/threat-model.md) |
 | M3 | Agent setup and engineering foundation | Accepted 2026-10-24 | [../engineering/](../engineering/engineering-standards.md), `AGENTS.md`, `CLAUDE.md` |
-| M4–M11 | Reservation backend, booking journey, staff tools, hardening | Not started; waits for the client's reply to scope v2.0 | — |
-| Phase 12 + M12 | Joint deployment and launch | Not started | — |
+| M4–M14 | Branch websites, catalog, quote, reservations, payments, booking journey, staff tools, messaging, hardening (replanned 2026-11-06; [briefs](./milestones/README.md)) | Not started; plan approved by the project owner 2026-11-06 | — |
+| Phase 12 + M15 | Joint deployment and launch | Not started | — |
 
 The external reservation module integration once planned as Phase 13 never started. The provider supplied no module or API, and the reservation system replaces it (ADR 013).
 
 ```mermaid
 flowchart LR
-  P0["Phases 0–10 ✓"] --> P11["Phase 11"]
-  P11 --> M0 --> M1 --> M2 --> M3 --> M4 --> M5 --> M6 --> M7
-  M7 --> M8
-  M7 --> M9
-  M6 --> M10
+  P0["Phases 0–10 ✓"] --> P11["Phase 11 ✓"]
+  P11 --> M0["M0–M3 ✓"] --> M4 --> M5 --> M6 --> M7 --> M8 --> M9
   M9 --> M10
-  M8 --> M11
-  M10 --> M11
-  P11 --> P12a["Phase 12.1–12.2: infrastructure + staging (parallel with M4–M11)"]
-  P12a --> M11
-  M11 --> L["Phase 12.3–12.5 + M12: joint launch"]
+  M9 --> M11
+  M8 --> M12
+  M9 -. payment figures .-> M12
+  M8 --> M13
+  M10 --> M13
+  M10 --> M14
+  M11 --> M14
+  M12 --> M14
+  M13 --> M14
+  P11 --> P12a["Phase 12.1–12.2: infrastructure + staging (parallel with M4–M14)"]
+  P12a --> M14
+  M14 --> L["Phase 12.3–12.5 + M15: joint launch"]
   P12a --> L
 ```
 
@@ -968,104 +972,51 @@ Ready for review on 2026-09-26; accepted by the project owner on 2026-10-24 afte
 
 ## Reservation milestones
 
-Milestones M0–M3 produced the reservation design, which is recorded across `requirements/`, `domain/`, `architecture/`, `database/`, `api/`, `security/`, `frontend/`, `testing/`, and `operations/`. M4–M11 build it. M12 is the joint launch, together with Phase 12.
+Milestones M0–M3 produced the reservation design (accepted 2026-10-24). The client decisions of 2026-11-06 (immediate confirmation, Paymob payment and refunds, branch websites, rooms and apartments, optional services, coupons, VAT, WhatsApp messaging; [Q-36…Q-53](../requirements/assumptions-and-open-questions.md#decided-2026-11-06-client-decisions)) changed that design. They are recorded in ADRs 024–028 and in the current requirements, domain, database, API, security, frontend, testing, and operations documents. The M0–M3 evidence stays as it was. **This plan replaces the earlier M4–M12 plan**: M4–M14 build the product, and **M15 is the joint launch**, together with Phase 12.
+
+Each milestone has a detailed brief in [milestones/](./milestones/README.md) with its tasks by layer, files, database and API impact, numbered acceptance criteria, tests, evidence, risks, and the agent skills to run at each step (`/architect` → `/develop` → `/test` → `/debug` → `/check verify` → `/check review` → `/sync` → `/document`). The brief is the contract; this section is the summary.
+
+Ordering rule: foundations and data or API contracts come before the screens that use them. Every milestone is a reviewable, tested slice that stops for approval before the next begins. The plan was approved by the project owner on 2026-11-06; none has started.
 
 ### Completion rules (every milestone)
 
-Definition of done is [the brief's §23](../source/prompt.md) plus the roadmap's per-phase definition of done:
+Definition of done is [the brief's §23](../source/prompt.md), the roadmap's per-phase definition of done, and the [milestone loop](./milestones/README.md#the-loop-every-milestone-follows):
 
 - format, lint, typecheck, unit, integration, build, and Chromium E2E pass on the final tree, with counts recorded;
 - docs updated, including the delivery overview above;
-- diff reviewed (`/check review` on a different model is recommended);
+- diff reviewed (`/check review` on a different model);
 - an evidence doc `docs/delivery/reports/m<N>-<name>.md`;
 - the next milestone has **not** started.
 
+### Milestone summary
 
-### M4 — Backend foundations
+| Milestone | Objective | Main requirements | Database | API | Depends on |
+| --- | --- | --- | --- | --- | --- |
+| [M4](./milestones/m4-backend-foundations.md) Backend foundations and branch data ownership | REST plumbing, contracts, OpenAPI, roles and branch scope, audit; every room, facility, and page gets a branch; no visible change | FR-IAM-1/3, FR-AUD-1, FR-CAT-1/2, FR-SITE-1, NFR-3/10 | `branches_and_staff_roles` | health | M3; approval of this plan |
+| [M5](./milestones/m5-branch-websites.md) Branch websites and the rooms-and-apartments catalog | `/{branch}/…` sites on shared templates, chooser, switcher, redirects, per-branch content and maps, Room or Apartment listings; promotion popup removed | FR-SITE-1…8, FR-CAT-1…5, FR-BR-1…4 | none new | P1–P4, A1–A3 | M4 |
+| [M6](./milestones/m6-inventory-and-availability.md) Inventory, date prices, availability | Units, blocks, base rates and one kind of date period, availability, all under the room-type lock | FR-INV-1…3, FR-AV-1…4, FR-PR-1/2/6, NFR-1/2 | `inventory_and_rates` | P5, S20–S27, S30–S34 | M5 |
+| [M7](./milestones/m7-booking-quote.md) Booking quote: services, coupons, VAT | Server-side quote composing units, services, coupon, and VAT exactly; staff APIs for services, coupons, VAT | FR-PR-3, FR-SVC, FR-CPN, FR-TAX | `commercial_rules` | P6, S35–S39, A5 | M6 |
+| [M8](./milestones/m8-reservations.md) Reservations, immediate confirmation, verification, messages | Pay-at-hotel website bookings `CONFIRMED` in the reserving transaction; staff and external bookings; lifecycle; PMS-entry marker; WhatsApp verification; confirmations after commit; Admin WhatsApp settings, templates, and test message | FR-RES, FR-GST, FR-LKP, FR-NTF, FR-AUD, FR-OPS-7 | `reservations` | P7, P9, P10, G1, G3, G4, S1–S6, S9–S16, S28, S29, S50–S53, A6–A8 | M7 |
+| [M9](./milestones/m9-payments-and-cancellations.md) Paymob payments, holds, cancellation requests, refunds | Paymob hosted checkout with 15-minute holds, verified callbacks, late-success handling; guest cancellation requests; Manager or Admin decisions; refunds through Paymob | FR-PAY, FR-CXL | `payments_and_cancellations` | P7 (online), P8, G2, G4, S9, S17–S19, S44, S45 | M8; Paymob sandbox keys from the client (Q-55) |
+| [M10](./milestones/m10-guest-booking-journey.md) Guest booking journey | End-to-end booking UI with several units, services, coupon, payment choice, VAT review; manage page and cancellation requests | US-G1…G7, FR-SITE-5, FR-WEB-10 | none | consumes M5–M9 | M9 |
+| [M11](./milestones/m11-front-desk.md) Front-desk operations | Desk overview, reservations, PMS-entry marking, cancellation queue, staff and external forms, grid, blocks, sync reminder, guests | FR-OPS-1…8, US-R*, US-M4, US-M6 | none | consumes M8–M9 | M9 |
+| [M12](./milestones/m12-manager-admin.md) Manager and admin tools | Pricing, services, coupons, VAT, reports, branches, staff assignment, audit viewer | FR-PR/SVC/CPN/TAX (UI), FR-RPT, FR-BR, FR-IAM-2, FR-AUD-2 | none | S40–S43, A4 | M8 (M9 for payment figures) |
+| [M13](./milestones/m13-whatsapp-marketing.md) WhatsApp broadcasts and feedback | Consented marketing broadcasts with coupon codes; feedback request after recorded check-out | FR-MKT-1…6 | `marketing` | S60–S62 | M8, M10; Q-58, Q-59; templates entered by the Admin (Q-67) |
+| [M14](./milestones/m14-hardening.md) Security, regression, E2E hardening | Release candidate for the whole product | all NFRs | — | OpenAPI review | M10, M11, M12, M13 |
+| [M15](./milestones/m15-joint-launch.md) Joint launch and handover | Go-live with Phase 12.3–12.5; training; online booking per branch | Phase 12 | production migration | — | M14; Phase 12.1–12.2 |
 
-- **Objective:** the plumbing every later milestone uses, without changing public behavior.
-- **Requirements:** FR-IAM-1/3 (model), FR-AUD-1 (table), FR-CAT-1 (migration), NFR-3, NFR-10.
-- **Tasks:**
-  1. HTTP layer `src/app/api/v1/_http/`: JSON parsing with size cap, content-type check, Zod validation, CSRF check (reuse `isSameOriginRequest`), `staffRoute` and `publicRoute` wrappers, problem+json serializer, request id, redacting logger.
-  2. Extend `ApplicationErrorCode` and the error mapping table.
-  3. `src/contracts/api/v1/` with shared primitives (Money, Stay, Occupancy, problem).
-  4. `scripts/openapi.mts` plus a freshness test; `GET /api/v1/health` (DB ping), the first endpoint.
-  5. Roles `RECEPTIONIST` and `MANAGER`; new capabilities; `authorizeBranch`; `StaffPrincipal.branchIds`; staff CLI `--role` values and `assign-branch`.
-  6. Migration `branches_and_staff_roles`: `Branch` (backfilled from `SiteSettings`), `Room.branchId`, `StaffBranchAssignment`, `AuditEvent`.
-  7. CMS room form: branch select (single branch preselected).
-  8. Boundary rules D-1a, D-7…D-12; replace the `booking scope` test.
-  9. Navigation: hide CMS destinations from Receptionist and Manager (they already lack capabilities).
-- **Dependencies:** approval of M1–M3; Q-01, Q-26.
-- **DB changes:** migration above (additive).
-- **API changes:** `/api/v1/health`.
-- **Acceptance:** existing suites green; Receptionist and Manager accounts can sign in and see no CMS; the one branch exists and every room has it; the OpenAPI file is generated and tested.
-- **Tests:** unit (capabilities, authorizeBranch, problem mapping, HTTP wrappers); integration (migration backfill on seeded data, audit append, health handler); E2E (Receptionist denied on CMS routes).
-- **Risks:** enum `ADD VALUE` migration quirks; Prisma drift with the backfill SQL.
-- **Done when:** all of the above, plus `migrate diff` is clean.
+### What changed from the earlier plan
 
-### M5 — Branches and room catalog
-
-- **Objective:** branches and branch-scoped catalog through the API; physical rooms.
-- **Requirements:** FR-BR-1…4, FR-CAT-1…3, FR-INV-1.
-- **Tasks:** branch use cases and repositories; API-P1–P4, API-A1–A3; physical-room model, migration, use cases, API-S21–S23 (deactivation without lock until M6, so S23 deactivation is disabled until then); demo seed of a second branch; room pages show branch.
-- **DB:** `PhysicalRoom` (part of `inventory_and_pricing`, or a split migration).
-- **Acceptance:** branch isolation in catalog queries; inactive branch hidden; staff see only assigned branches.
-- **Tests:** T-BR, T-CAT, cross-branch `404`, sweep; E2E room page shows branch.
-- **Risks:** SEO impact of room page changes; keep canonicals stable.
-
-### M6 — Availability, pricing, and inventory safety
-
-- **Objective:** correct availability and price, provably safe under concurrency.
-- **Requirements:** FR-AV-1…4, FR-PR-1…3/6, FR-INV-2/3, NFR-1/2.
-- **Tasks:** `LocalDate`, `StayRange`, `Money`; `AvailabilityCalculator`, `PriceResolver`; `RoomBaseRate`, `RatePeriod`, `InventoryBlock` plus exclusion constraints; `UnitOfWork`, `InventoryLock`, `InventoryReader`; block use cases (S24–S27) and unit deactivation under lock; rate API (S30–S34); availability and quote API (P5, P6); staff grid (S20); concurrency harness and tests C-4, C-8.
-- **Dependencies:** Q-06, Q-09, Q-17; `btree_gist` locally and in CI (`postgres:18` image includes it).
-- **Acceptance:** date-boundary and pricing suites pass; blocks can never oversell; same-kind overlap refused; worked pricing example priced to $260.00.
-- **Risks:** lock contention, SQL performance; measure query plans on demo data.
-
-### M7 — Reservation lifecycle and REST API
-
-- **Objective:** all reservation operations through the API, with idempotency, audit, and email.
-- **Requirements:** FR-RES-1…10, FR-LKP-1…3, FR-NTF-1…3, FR-AUD-1/2.
-- **Tasks:** reservation tables migration; reference and token generator; create (P7, S3, S4) with lock and idempotency; transitions (S7–S13, G2); modifications (S5, S6); assignment (S10) plus exclusion constraint; phone verification by WhatsApp (P9, P10) with the `WhatsAppSender` adapter, guest profiles and blocking (S50–S53), guest access (G1–G4, S14); history (S15); outbox per channel (email and WhatsApp) and dispatcher with cron script; email and WhatsApp templates; rate limits; OpenAPI complete; concurrency tests C-1…3, C-5…7, C-9, C-10.
-- **Dependencies:** Q-08, Q-10 (WhatsApp provider, business number, approved templates — start the Meta setup during M4–M6), Q-12, Q-18, Q-19 answered. Q-02, Q-07, Q-27–Q-29, Q-32 are decided.
-- **Acceptance:** every lifecycle rule tested; concurrency suite green 20× in a row; no personal data in logs.
-- **Risks:** email deliverability; token handling mistakes (security review mid-milestone).
-
-### M8 — Customer reservation experience
-
-- **Objective:** guests can book end to end.
-- **Requirements:** US-G1…G5, NFR-8/9/13.
-- **Tasks:** `/book`, `/book/[branch]`, `/book/[branch]/[room]` with the phone verification step (WhatsApp code), `/reservations/manage`, `/reservations/find` ("My reservations" by phone and code); typed API client; Book Now internal launch mode in `BookingProvider` per branch; privacy notice and approved wording, including indefinite retention and phone verification (Q-05, Q-22, Q-30); visual baselines for the new pages.
-- **Acceptance:** E2E-G-1…6 pass; axe clean; no layout overflow at 320 px; conflict and price-change paths work.
-- **Risks:** copy and legal wording not ready; keep online booking off until it is.
-
-### M9 — Receptionist operations
-
-- **Objective:** front-desk work in the dashboard.
-- **Requirements:** FR-OPS-1…6, FR-GST-3/4, US-R1…R7, US-R1a, US-M4, US-A4, FR-INV-2/3 (UI).
-- **Tasks:** overview widgets; reservation list, detail, and actions; new staff and external forms; availability grid; inventory and blocks screens; sync reminder in the staff shell (sound, blocking pop-up, "I have synced" / "I'm syncing now", per-branch status polling, API-S28/S29) and the branch sync settings form for Admin (Q-20); guest profiles and blocking screens (`/admin/guests`, API-S50–S53); branch switcher.
-- **Acceptance:** E2E-R-1…6 and E2E-M-3; every action shows server errors; `412` reload path; the reminder opens on time with a fake clock and clears for all receptionists of the branch.
-
-### M10 — Manager and admin capabilities
-
-- **Objective:** pricing UI, reports, branch and staff management, audit viewer.
-- **Requirements:** FR-PR (UI), FR-RPT-1…3, FR-BR (UI), FR-IAM-2, FR-AUD-2, US-M1…M3, US-A1…A3.
-- **Tasks:** `/admin/pricing`, `/admin/reports` (API-S40–S42; on screen only, no CSV export, Q-14), the rest of `/admin/branches`, staff role and branch assignment (API-A4), `/admin/audit` (S43).
-- **Dependencies:** Q-15.
-- **Acceptance:** E2E-M-1/2, E2E-A-1…3; report figures match fixtures.
-
-### M11 — Security, regression, and E2E hardening
-
-- **Objective:** release candidate for reservations.
-- **Tasks:** threat-model test list; dependency audit; full sweep; branch isolation review; performance (NFR-6) against a production-like database; accessibility pass including VoiceOver on the booking journey; cross-browser WebKit (Firefox in Linux CI); OpenAPI review; log redaction check; restore drill including the new tables.
-- **Acceptance:** all gates green or blockers documented with an owner and plan.
-
-### M12 — Joint launch and operational handover
-
-- **Objective:** launch the new website and reservations together (Q-16), as roadmap Phase 12.3–12.5 plus reservation go-live.
-- **Dependencies:** M11; roadmap Phase 12.1–12.2 infrastructure already provisioned and rehearsed on staging (managed PostgreSQL per ADR 022, SMTP, domain and DNS access); Phase 10 launch blockers resolved; Q-05, Q-13, Q-21, Q-23, Q-24.
-- **Tasks:** production migration; physical rooms, rates, and staff entered; cron jobs; procedures training; release checklist (to be written at M11 from the Phase 12 checklist); enable `onlineBookingEnabled` per branch; monitor the first week (pending ages, conflicts).
-- **Acceptance:** staff trained and acknowledged; reconciliation run for two consecutive days without unresolved differences; rollback (switch booking off) rehearsed.
+| Earlier (2026-10-24) | Now |
+| --- | --- |
+| M5 Branches and room catalog (booking-only branch paths, global pages) | M5 branch websites with branch-owned content, chooser, switcher, apartments, maps, popup removal |
+| M6 pricing with `SEASONAL` and `OFFER` precedence | M6 one kind of date period; discounts move to M7 coupons |
+| — | M7 quote composition (services, coupons, VAT) before reservations store it |
+| M7 lifecycle with request to book, confirm and decline | M8 immediate confirmation; `PENDING` and `DECLINED` removed; PMS-entry marker |
+| No online payment | M9 Paymob, holds, cancellation requests, refunds |
+| M8 customer journey, M9 receptionist, M10 manager and admin | M10, M11, M12 (same split, new content) |
+| — | M13 WhatsApp broadcasts and feedback |
+| M11 hardening, M12 launch | M14 hardening, M15 launch |
 
 ---
 
@@ -1073,7 +1024,7 @@ Definition of done is [the brief's §23](../source/prompt.md) plus the roadmap's
 
 Status: `Not started`
 
-> Phase 12 is the joint launch of the website and reservations (Q-16). Sections 12.1 (production infrastructure) and 12.2 (content migration rehearsal) run in parallel with milestones M4–M11, so staging exercises the real topology. Sections 12.3–12.5 (go-live, smoke tests, handover) run together with M12.
+> Phase 12 is the joint launch of the website and reservations (Q-16). Sections 12.1 (production infrastructure) and 12.2 (content migration rehearsal) run in parallel with milestones M4–M14, so staging exercises the real topology. Sections 12.3–12.5 (go-live, smoke tests, handover) run together with M15.
 
 ### Objective
 
@@ -1086,7 +1037,7 @@ Provision production safely, migrate approved content, launch, and prove recover
 
 ### 12.1 Production infrastructure
 
-- Preflight and provision the Hosting.com/cPanel Node application/process, PostgreSQL connection, persistent media root/URL, transactional email, DNS/TLS, secrets, backups, and monitoring.
+- Preflight and provision the Hostinger VPS (ADR 023): Node service, Nginx, PostgreSQL 17+, persistent media root/URL, transactional email, WhatsApp sender, Paymob callback URL, DNS/TLS, secrets, backups, and monitoring.
 - Separate production and preview credentials/resources.
 - Configure pooled runtime and direct migration database connections.
 
@@ -1107,12 +1058,12 @@ Provision production safely, migrate approved content, launch, and prove recover
 
 - Run public/admin/contact/media smoke suite against production.
 - Verify logs/alerts/Web Vitals and no secret/sensitive logging.
-- Verify online booking works end to end for each enabled branch, and that branches with booking off show the disabled Book Now.
+- Verify online booking works end to end for each enabled branch (pay at hotel, and a live low-value Paymob payment and refund), that every branch site and the chooser render with their own content, and that branches with booking off show the disabled Book Now.
 - Observe initial traffic/errors and establish incident escalation.
 
 ### 12.5 Handover
 
-- Train administrators on pages, rooms, facilities, media, enquiries, publication, and recovery contacts.
+- Train administrators on branch pages, listings (rooms and apartments), facilities, media, enquiries, publication, and recovery contacts, and staff on the reservation procedures (M15).
 - Deliver operations runbook, environment inventory, backup/restore instructions, update process, and known limitations.
 - Record ownership for content, infrastructure, and security updates.
 
@@ -1135,7 +1086,7 @@ Provision production safely, migrate approved content, launch, and prove recover
 - Approved content and media are complete and consistent.
 - Critical smoke tests pass and rollback path is understood.
 - Admins are trained and bootstrap access is removed.
-- Online booking is enabled only for branches that passed M11, with the manual-sync procedures in force.
+- Online booking is enabled only for branches that passed M14, with the manual-sync procedures in force.
 
 ### Required review evidence
 

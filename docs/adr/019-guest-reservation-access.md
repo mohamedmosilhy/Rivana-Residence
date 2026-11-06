@@ -1,6 +1,6 @@
 # ADR 019 — Verified phone profiles for guests, without accounts
 
-Status: **Accepted** (2026-10-24). The business choices were decided by the project owner on 2026-10-24: verified phone profiles instead of accounts (Q-27), codes by WhatsApp only (Q-28), Admin and Manager may block numbers (Q-29), and guests cancel only pending requests online (Q-07).
+Status: **Accepted** (2026-10-24). **Amended by [ADR 024](./024-immediate-confirmation.md) and [ADR 028](./028-whatsapp-guest-messaging.md) (2026-11-06):** guests no longer cancel `PENDING` requests (that status is removed); they submit cancellation requests until 24 hours before check-in, which a Manager or Admin approves. WhatsApp also carries feedback requests and consented marketing broadcasts. Phone verification, profiles, blocking, and guest access below are unchanged. The business choices were decided by the project owner on 2026-10-24: verified phone profiles instead of accounts (Q-27), codes by WhatsApp only (Q-28), Admin and Manager may block numbers (Q-29), and guests cancel only pending requests online (Q-07).
 
 ## Context
 

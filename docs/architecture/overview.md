@@ -2,7 +2,7 @@
 
 Rivana is **one deployable Next.js application**, a modular monolith. The public website, the booking journey, the staff dashboard (content management and reservation operations), and the REST API share one codebase, one database, one authentication system, and one design system. Module boundaries are enforced in source by lint rules and architecture tests, not by separate services. A separate CMS, booking service, or API server would duplicate deployment, authentication, schema, and UI without a business need (ADR 001, ADR 014).
 
-Status: everything described here for content, media, enquiries, promotions, and staff accounts is **implemented**. Branches, inventory, pricing, reservations, the `/api/v1` REST API, and audit are **planned** (milestones M4–M10). Diagrams show both, and planned parts are labelled where it matters.
+Status: everything described here for content, media, enquiries, promotions, and staff accounts is **implemented** (single site; the promotion popup is retired and removed in M5). Branch websites, inventory, pricing, services, coupons, VAT, reservations, Paymob payments, WhatsApp messaging, the `/api/v1` REST API, and audit are **planned** (milestones M4–M13, replanned 2026-11-06). Diagrams show both, and planned parts are labelled where it matters.
 
 ## System context
 
@@ -11,7 +11,7 @@ flowchart LR
   Guest(["Guest (browser)"])
   Staff(["Receptionist / Manager / Admin (browser)"])
   subgraph Rivana["Rivana Next.js application (one deployable)"]
-    Site["Public site + booking journey"]
+    Site["Branch websites + booking journey"]
     Admin["Staff dashboard (/admin) + CMS"]
     API["REST API /api/v1"]
   end
@@ -19,6 +19,8 @@ flowchart LR
   Media[("Persistent media directory")]
   SMTP["SMTP provider"]
   WA["WhatsApp Business provider (planned)"]
+  PSP["Paymob hosted checkout + API (planned)"]
+  Maps["Google Maps embed (branch maps)"]
   PMS["Hotel operational system (PMS)"]
   Future["Future clients (mobile app, partner, PMS adapter)"]
 
@@ -30,7 +32,11 @@ flowchart LR
   Admin --> Media
   API --> SMTP
   API --> WA
-  WA -. "codes, booking messages" .-> Guest
+  WA -. "codes, confirmations, feedback, consented offers" .-> Guest
+  Guest -. "pays (redirect)" .-> PSP
+  PSP -- "signed callback" --> API
+  API -- "checkout, refunds" --> PSP
+  Site -. "iframe" .-> Maps
   Staff -. "manual copy / reconciliation" .- PMS
   Future -. "later, under its own ADR" .-> API
 ```
@@ -140,26 +146,27 @@ Client Components receive serializable DTOs, never database records or Prisma ty
 
 ## Data and provider boundaries
 
-- Content repositories (`Room`, `Facility`, `Page`, `Settings`, `Media`, `Enquiry`, `Promotion`) hide Prisma. `PromotionRepository` returns only active, published campaigns to public queries.
+- Content repositories (`Room`, `Facility`, `Page`, `Settings`, `Media`, `Enquiry`, `Promotion`) hide Prisma. `PromotionRepository` returns only active, published campaigns to public queries (until M5 retires it). From M5 page, listing, and facility queries take a branch.
 - `MediaStorage` exposes write, finalize, delete, and open operations without local-path or S3 types. Production writes immutable objects below a persistent directory outside the release tree.
 - `ContactDelivery` sends enquiry notifications independently of persistence. Reservation emails reuse its SMTP configuration through an outbox.
 - Operations ports (`ReservationUnitOfWork`, `InventoryLock`, `RateRepository`, `RoomTypeCatalog`, and others) are listed in [../domain/domain-model.md](../domain/domain-model.md#application-ports).
-- `WhatsAppSender` (planned) sends verification codes and booking messages through approved templates. The provider (Meta Cloud API or a provider such as Twilio, Q-10) stays inside the adapter; secrets are server-only.
+- `WhatsAppSender` (planned) sends verification codes, transactional messages, feedback requests, and consented marketing broadcasts through the templates the Admin manages in the dashboard (ADR 028, Q-67); the business number is an Admin setting and the access token a server secret. The provider (Meta Cloud API or a provider such as Twilio, Q-10) stays inside the adapter; secrets are server-only.
+- `PaymentGateway` (planned, ADR 025) creates Paymob hosted checkouts, verifies HMAC-signed callbacks, queries transactions, and requests refunds. Paymob SDKs and payloads stay in `src/infrastructure/payments/paymob/`; no card data reaches Rivana.
 - `HotelSystemSync` reserves the place for a future PMS integration. It has no adapter; synchronization is manual (ADR 013).
 - `Clock`, ids, and tokens are injected where logic needs deterministic tests.
 
 ## Book Now entry point
 
-All Book Now controls (header, room cards, room detail, mobile bar) use one shared component driven by the `BookingProvider` port. Pages pass only context (placement, room slug); they never build booking URLs.
+All Book Now controls (header, listing cards, listing detail, mobile bar) use one shared component driven by the `BookingProvider` port. Pages pass only context (placement, branch, listing slug); they never build booking URLs.
 
 - **Today (implemented):** `DisabledBookingProvider` returns "not available". Each control is a real `<button>` with `aria-disabled`, focusable, with an accessible explanation of how to book by phone or contact. There is no fake date picker, price, calendar, or success state.
-- **Planned (M8):** the provider gains an internal mode. For a room whose branch is active, has online booking enabled, and is bookable (IN-4), Book Now opens `/book/[branchSlug]/[roomSlug]`. Otherwise the disabled behavior stays, so switching a branch's online booking off needs no deploy.
+- **Planned (M10):** the provider gains an internal mode. For a listing whose branch is active, has online booking enabled, and is bookable (IN-4), Book Now opens `/{branchSlug}/book` with the listing preselected. Otherwise the disabled behavior stays, so switching a branch's online booking off needs no deploy.
 - Analytics events, if analytics is approved: `booking_cta_view`, `booking_cta_click`, never with guest-entered data.
 
 ## Caching and publication
 
-- Published content uses Next.js cache tags (`site-settings`, `page:home`, `rooms`, `room:{slug}`, `facilities`, `facility:{slug}`, `promotion:active`, and `branches` once planned). Mutations invalidate only their own tags, plus the sitemap when publication or slugs change.
-- Dashboard views, availability, quotes, and everything under `/api/v1` are dynamic and never cached.
+- Published content uses Next.js cache tags (`site-settings`, `page:home`, `rooms`, `room:{slug}`, `facilities`, `facility:{slug}`, `promotion:active`; from M5 branch-qualified tags such as `branch:{slug}:page:home` and `branches`, and `promotion:active` is removed). Mutations invalidate only their own tags, plus the sitemap when publication or slugs change.
+- Dashboard views, availability, quotes, payment status, and everything under `/api/v1` are dynamic and never cached.
 - Draft and unpublished records never appear in public queries.
 
 ## Error handling
@@ -190,13 +197,13 @@ sequenceDiagram
 
 ```mermaid
 flowchart LR
-  CF["Cloudflare DNS/TLS (client account)"] --> Apache["cPanel Apache + Passenger"]
-  Apache --> Node1["Node 22: next start (process 1..n)"]
-  Node1 --> PG[("Managed PostgreSQL 17+, btree_gist, direct + pooled URLs")]
-  Node1 --> FS[("~/rivana-production/media")]
+  CF["Cloudflare DNS (client account)"] --> Nginx["Nginx + TLS (Hostinger VPS)"]
+  Nginx --> Node1["Node 22: next start (systemd)"]
+  Node1 --> PG[("PostgreSQL 17+ on the VPS or managed, btree_gist")]
+  Node1 --> FS[("/var/lib/rivana/media")]
   Node1 --> SMTP["SMTP"]
   Node1 --> WA2["WhatsApp provider API"]
-  Cron["cPanel cron"] --> Jobs["npm run media -- cleanup / reservations -- outbox / expire-tokens"]
+  Cron["cron (app user)"] --> Jobs["npm run media -- cleanup / reservations -- outbox / expire-holds / reconcile-payments / expire-tokens"]
   Jobs --> PG
   Backup["Nightly backup.sh → off-server"] --> PG
   Backup --> FS
@@ -229,13 +236,17 @@ Exact versions are pinned (`save-exact`). Preview and release-candidate dependen
 | Dashboard | One admin route group for content and operations | 007 |
 | Rendering | Server Components by default; narrow client islands | 009 |
 | Styling and motion | Tailwind tokens; `motion`; View Transitions | 010, 012 |
-| Hosting | cPanel Node deployment with portable adapters | 011, 022 |
+| Hosting | Hostinger VPS: Node under systemd, Nginx, local media; portable adapters | 023 (supersedes 011), 022 |
 | Reservations | Self-managed; manual PMS sync; integration port without adapter | 013 (supersedes 008) |
 | API | REST under `/api/v1`, problem+json, OpenAPI from Zod | 014 |
 | Module structure | Layered tree with per-module folders; `src/contracts`; unit of work | 015 |
 | Inventory | Room-type counts plus row lock; exclusion constraints | 016 |
-| Branches | Branch-owned rows; composite foreign keys | 017 |
+| Branches | Branch-owned rows; composite foreign keys; branch websites at `/{branch}/…` | 017, 026 |
 | Authorization | Capabilities plus branch assignments | 018 |
 | Guests | Verified phone profiles by WhatsApp code; blocking; no accounts | 019 |
+| Confirmation | Website bookings confirmed immediately when inventory (and payment) is secured; cancellation requests | 024 |
+| Payments | Paymob hosted checkout, holds, verified callbacks, refunds | 025 |
+| Price composition | Date prices, services, coupons, VAT; popup retired | 027 |
+| Guest messaging | WhatsApp confirmations, feedback, consented broadcasts | 028 |
 | Dates and money | `DATE`, branch time zone, US dollars as integer cents | 020 |
 | Testing | Real-database integration and concurrency tests | 021 |

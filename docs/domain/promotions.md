@@ -1,50 +1,49 @@
-# Promotion codes
+# Promotions and coupons
 
-## Scope
+Status: the **promotion popup** described in the first section is **implemented** (Phases 5 and 7) and **retired by the client on 2026-11-06 (Q-47)**; its removal is scheduled for M5. **Coupons** are **planned** (M7 quote, M8 redemption, M10 and M12 screens), and offers reach guests through WhatsApp broadcasts (M13). See [ADR 027](../adr/027-booking-price-composition.md) and [ADR 028](../adr/028-whatsapp-guest-messaging.md).
 
-Rivana owns the marketing presentation of promotion codes. Staff can create, schedule, preview, publish, unpublish, prioritize, and archive campaigns. The public site may show one active campaign in an accessible popup and let the visitor copy the code.
+## Promotion popup (implemented; removal planned in M5)
 
-Rivana does not validate codes, calculate discounts, track redemptions, or decide eligibility. A promotion is marketing only. When an offer should change the price, staff create an `OFFER` rate period for the room types and dates instead (see [availability-and-pricing-rules.md](./availability-and-pricing-rules.md#pricing-scope-pdf-sections-23)); it applies automatically to bookings for those nights.
+What exists today, kept here so the running system is described accurately until M5 removes it:
 
-## Admin behavior
+- Staff create, schedule, preview, publish, unpublish, prioritize, and archive campaigns in `/admin/promotions` (internal name, headline, body, code, optional terms, optional active window, popup flag, priority).
+- The public site shows at most one active campaign in an accessible popup (published, popup enabled, inside its window; highest priority, then most recently published) and lets the visitor copy the code. Dismissal is stored in the browser for seven days per campaign version.
+- Rivana does not validate the code, calculate a discount, or count redemptions. The popup says that terms apply.
 
-The protected `/admin/promotions` area provides list, create, and edit workflows. A publishable promotion requires:
+M5 removes the popup from the public layout and retires the CMS area (no create, edit, or publish). The `Promotion` table stays read-only for one release and is dropped later by an expand-and-contract migration. The accepted Phase 5 and Phase 7 reports and screenshots keep showing the popup as it was built.
 
-- an internal name;
-- a public headline and concise plain-text body;
-- a non-empty code using the approved printable allowlist;
-- an optional plain-text terms summary;
-- a valid optional start/end window in the property's configured timezone;
-- popup enabled/disabled and a priority value.
+## Coupons (planned)
 
-The form previews the real public component. When another campaign has higher priority, the UI names the campaign that will display. Draft, unpublished, archived, and expired records remain available to staff but are never returned by the public query.
+A coupon is a code a guest enters while booking that **changes the quote and the total**. Coupons are distinct from date-based prices: date periods set the nightly accommodation price automatically by stay date (PR-2…4); coupons are opt-in discounts on the whole booking.
 
-## Public selection
+### Definition
 
-The server selects at most one campaign where:
+| Field | Rules |
+| --- | --- |
+| `code` | Printable allowlist, bounded length, unique case-insensitively, shown in upper case |
+| `kind` and value | `PERCENT` with basis points (1–10 000; 15% = 1500), or `FIXED` with an amount in USD cents |
+| Validity | Optional `startsAt` and `endsAt` (server time; `endsAt > startsAt`) |
+| Limits | Optional total redemptions; optional redemptions per verified phone |
+| Branch scope | All branches, or a list of branches |
+| `active` | Switch; inactive codes are refused |
+| `description` | Staff-only note |
 
-- status is `PUBLISHED`;
-- popup display is enabled;
-- `startsAt` is absent or not in the future;
-- `endsAt` is absent or still in the future.
+Who manages them: Admin for any code; a Manager only for codes limited to branches they are assigned to (`coupons:manage`). All changes are audited.
 
-Sort by priority descending, then publication time descending, then stable ID. Cache the result under `promotion:active`; every promotion mutation invalidates that tag. Server time is authoritative.
+### Use in a booking
 
-## Popup experience
+1. The guest enters one code (FR-CPN-3). The quote endpoint validates it and returns the discount, or a refusal reason (CP-7).
+2. The discount applies to the subtotal (accommodation + services) before VAT (CP-4, CP-5, TX-2).
+3. The booking transaction re-validates the code and locks the coupon row before counting redemptions, so limits hold under concurrency (CP-3). The reservation stores the code, kind, value, and discount in its snapshot, and a `CouponRedemption` row records the use.
+4. A redemption is released when the payment fails or the hold expires, and (recommended, Q-57) when the reservation is cancelled.
+5. Staff bookings may use codes (recommended, Q-57).
 
-- Render no popup/client JavaScript when no campaign is active.
-- Present the active campaign after the primary page content becomes usable; do not block the initial render or LCP.
-- Use a labelled modal dialog with a close button, Escape, focus containment/return, and reduced-motion behavior.
-- Keep the code visible and selectable. The copy button announces success or failure; manual selection remains the fallback.
-- Store only `{promotionId, version, dismissedUntil}` in browser storage. The default dismissal period is seven days for that version.
-- Do not use sound, countdown pressure, auto-rotation, or personal profiling.
+Still open (Q-57): release on cancellation, minimum nights or amount, and use on staff bookings, each with the recommendation shown.
 
-## Relationship to booking
+### Distribution
 
-The booking journey has no promotion-code field (codes are not redeemed, BR-12). A visitor can quote the code to the hotel, which applies any benefit by its own policy. Offer prices that the website should show automatically are `OFFER` rate periods, not codes.
-
-The website must never claim that copying the code guarantees acceptance or a particular price. The popup says that terms apply.
+Codes are not shown on the website. Admin and Managers send them in WhatsApp marketing broadcasts to guests who opted in (FR-MKT, ADR 028). A broadcast may attach a coupon; the coupon's own rules still decide whether it is accepted.
 
 ## Analytics
 
-If analytics is approved, record only non-sensitive events such as popup shown, dismissed, and copy attempted/succeeded, keyed by campaign ID. Do not store clipboard contents, guest identity, reservation details, or redemption claims.
+If analytics is approved, record only non-sensitive events (coupon applied, coupon refused with reason), keyed by coupon id. Do not store guest identity or reservation details in analytics.

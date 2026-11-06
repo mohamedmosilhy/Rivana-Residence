@@ -38,7 +38,9 @@ Located under `src/presentation/design`:
 - `MediaGallery` with client controls/lightbox
 - `FactsList`
 - `ContactCTA`
-- `PromotionPopup` with a small client controller for dismissal/copy behavior
+- `PromotionPopup` with a small client controller for dismissal/copy behavior (implemented; removed in M5, Q-47)
+- `AccommodationBadge` (Room or Apartment; M5)
+- `LocationMap` (lazy Google Maps embed with address and directions fallback; per branch from M5)
 - `SocialLinks`
 - `RichTextRenderer`
 - `Reveal` (progressive enhancement only)
@@ -53,7 +55,8 @@ Public:
 - `RoomList`, `RoomDetails`, `RoomFeatureList`
 - `FacilityList`, `FacilityDetails`
 - `ContactForm`
-- `ActivePromotion`
+- `ActivePromotion` (implemented; removed in M5)
+- `BranchChooser`, `BranchSwitcher` (M5)
 - `BookNowButton` / `BookingLauncher`
 - `MapPanel`
 - `SeoJsonLd`
@@ -67,7 +70,7 @@ Admin:
 - `MediaLibrary`, `MediaUploader`, `MediaPicker`, `MediaDetailsPanel`
 - `SettingsForm`, `SocialLinksFields`
 - `EnquiryTable`, `EnquiryDetails`
-- `PromotionTable`, `PromotionForm`, `PromotionPreview`
+- `PromotionTable`, `PromotionForm`, `PromotionPreview` (implemented; removed in M5)
 - `PublishControls`, `DestructiveAction`
 
 Feature forms are Client Components only when repeatable fields, live previews, upload progress, or dirty-state handling require them. Server Actions remain the normal mutation boundary; the upload route remains an explicit HTTP boundary.
@@ -85,7 +88,7 @@ MarketingLayout
   SectionHeading + FacilityList(featured)
   EditorialSplit(lifestyle)
   ContactCTA + ContactForm
-  PromotionPopup(active campaign, when eligible)
+  PromotionPopup(active campaign, when eligible)   ← implemented; removed in M5
   SiteFooter
 ```
 
@@ -133,7 +136,7 @@ Application queries map to compact view models, for example:
 - `RoomCardView`: id, slug, name, shortDescription, verified facts, hero image;
 - `RoomDetailView`: above plus rich description, features, ordered gallery, SEO;
 - `MediaView`: id, URL, dimensions, alt, focal point, caption/credit;
-- `ActivePromotionView`: id, version, headline, body, code, terms, active window;
+- `ActivePromotionView`: id, version, headline, body, code, terms, active window (implemented; removed in M5);
 - `BookingView`: disabled/external/embed discriminated union.
 
 Components never infer publication state, build storage URLs, query repositories, or interpret section JSON directly. A section registry validates/maps payloads before rendering.
@@ -146,7 +149,7 @@ Components never infer publication state, build storage URLs, query repositories
 - dialogs/sheets manage initial focus, focus trap, Escape, and focus return.
 - form fields bind label, description, and error IDs.
 - disabled booking controls expose why they are unavailable.
-- the promotion popup is a labelled dialog, never steals focus before it is visible, closes by button/Escape, returns focus, announces copy success/failure, and leaves the code selectable when clipboard access fails.
+- (until M5) the promotion popup is a labelled dialog, never steals focus before it is visible, closes by button/Escape, returns focus, announces copy success/failure, and leaves the code selectable when clipboard access fails.
 
 ## Error and loading states
 
@@ -154,7 +157,7 @@ Components never infer publication state, build storage URLs, query repositories
 - Route-level `loading.tsx` skeletons reserve final dimensions.
 - Admin mutations show pending state, preserve entered data on validation failure, and announce success/failure.
 - Uploads show per-file progress, validation failure, retry, and finalization state.
-- Promotion copy failure keeps the code visible/selectable and never blocks the page; no active campaign means no popup markup or client island.
+- (until M5) Promotion copy failure keeps the code visible/selectable and never blocks the page; no active campaign means no popup markup or client island.
 - Empty admin lists include the next action; public empty featured grids are omitted rather than showing CMS language.
 
 ## Component tests

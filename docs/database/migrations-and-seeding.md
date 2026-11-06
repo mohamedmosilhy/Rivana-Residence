@@ -18,11 +18,18 @@ How the schema evolves and how databases are filled. The production deployment f
 
 ## Planned migrations (one per milestone, each reviewed)
 
+Replanned 2026-11-06 ([roadmap](../delivery/roadmap.md#reservation-milestones)).
+
 | Migration | Milestone | Contents | Data handling |
 | --- | --- | --- | --- |
-| `…_branches_and_staff_roles` | M4 | `Branch`; `StaffBranchAssignment`; role enum values; `AuditEvent`; `Room.branchId` | Inserts one branch from `SiteSettings` (name, contact, time zone), sets every `Room.branchId` to it, then `SET NOT NULL`. Existing `ADMIN` users need no assignment; `EDITOR`s are untouched (Q-01) |
-| `…_inventory_and_pricing` | M5/M6 | `PhysicalRoom`, `InventoryBlock`, `RoomBaseRate`, `RatePeriod`; `btree_gist`; exclusion constraints | No data. Physical rooms and rates are entered by staff, or by a reviewed seed of approved real data (Q-23) |
-| `…_reservations` | M7 | `Reservation`, `ReservationRoom`, `ReservationNight`, `NotificationOutbox` (per channel), `Guest`, `PhoneVerification`, `BranchSyncCheckpoint`, branch sync settings columns; checks; composite FKs | No data |
+| `…_branches_and_staff_roles` (plus a separate enum migration if needed) | M4 | `Branch` (contact, address, map embed, check-in and check-out times, sync settings); `StaffBranchAssignment`; role enum values; `AuditEvent`; `Room.branchId`, `accommodationType`, `bedroomCount`, `bathroomCount`; `Facility.branchId`; `Page.branchId` with unique `(branchId, key)`; `ContactEnquiry.branchId` | Inserts one branch from `SiteSettings` (name, contact, address, coordinates, map, time zone) and sets every room, facility, and page to it, then `SET NOT NULL`. Existing `ADMIN` users need no assignment; `EDITOR`s are untouched (Q-01) |
+| none | M5 | Uses M4 columns; `Promotion` left unused | Demo seed adds a second fictional branch with its own pages, facilities, a room, and an apartment |
+| `…_inventory_and_rates` | M6 | `PhysicalRoom`, `InventoryBlock`, `RoomBaseRate`, `RatePeriod` (one kind); `btree_gist`; exclusion constraints | No data. Units and rates are entered by staff, or by a reviewed seed of approved real data (Q-23) |
+| `…_commercial_rules` | M7 | `ServiceOffering`, `Coupon`, `CouponBranch`, `CommercialSettings` (VAT nullable) | No production data; the Admin enters the VAT rate in the dashboard (Q-05) |
+| `…_reservations` | M8 | `WhatsAppSettings` (empty number placeholder), `WhatsAppTemplate`, `Reservation` (price snapshot, payment columns, PMS-entry columns), `ReservationRoom`, `ReservationNight`, `ReservationService`, `CouponRedemption`, `NotificationOutbox` (per channel), `Guest` (with marketing consent), `PhoneVerification`, `BranchSyncCheckpoint`; checks; composite FKs | No data |
+| `…_payments_and_cancellations` | M9 | `Payment`, `PaymentEvent`, `CancellationRequest`; hold index; status checks | No data |
+| `…_marketing` | M13 | `Broadcast`; outbox `broadcastId` | No data |
+| `…_drop_promotions` and `SiteSettings` contact columns | After launch (contract step) | Drops the retired `Promotion` table and moved settings columns | Only after a release in which nothing reads them |
 
 Rules for these migrations (in addition to the policy above):
 
@@ -36,13 +43,15 @@ Rules for these migrations (in addition to the policy above):
 | Seed | Purpose | Contents |
 | --- | --- | --- |
 | `db:seed` (required) | Every environment | Adds nothing reservation-specific except that the default branch exists, which the migration already ensures |
-| `db:seed:demo` (extend in M5–M7) | Local review | A second fictional branch ("Demo Giza", inactive by default), 2–4 physical rooms per room type, base rates and one seasonal and one offer period, a handful of reservations in every status with **fictional** guests (`guest1@example.test`, phones in the fictional `+1 555 01xx` range), one blocked guest, and a sync checkpoint history, one block |
+| `db:seed:demo` (extend in M5–M9) | Local review | A second fictional branch ("Demo Giza", inactive by default) with its own pages, facilities, a room listing and an apartment listing; 2–4 units per listing; base rates and one date period; demo services and coupons with clearly fictional values; a demo VAT rate for local use only; reservations in every status (including `AWAITING_PAYMENT`, `PAYMENT_FAILED`, an open cancellation request, website bookings entered and not entered in the hotel system) with **fictional** guests (`guest1@example.test`, phones in the fictional `+1 555 01xx` range); one blocked guest; a sync checkpoint history; one block |
 | Test fixtures | Integration/E2E | Built per test; two branches with identically named room types to prove isolation |
 
 Never seed real guest data or real credentials. Demo staff accounts for Receptionist and Manager are created through `npm run staff -- create`. Passwords come from stdin or a prompt, never from a file in the repository.
 
-## Scheduled jobs (cron, M7)
+## Scheduled jobs (cron)
 
-- `npm run reservations -- outbox` every few minutes: sends pending email and WhatsApp messages and retries failures with backoff.
-- `npm run reservations -- expire-tokens` daily: clears manage-token hashes past expiry.
+- `npm run reservations -- outbox` every minute or two (M8): sends pending email and WhatsApp messages (transactional, feedback, broadcasts) and retries failures with backoff.
+- `npm run reservations -- expire-holds` every minute (M9): moves `AWAITING_PAYMENT` past `holdExpiresAt` to `PAYMENT_FAILED`, releasing units and coupon redemptions.
+- `npm run reservations -- reconcile-payments` every 5 minutes (M9): asks Paymob for the result of sessions that expired with no callback.
+- `npm run reservations -- expire-tokens` daily (M8): clears manage-token hashes past expiry.
 - No data-retention purge: guest and reservation data is kept indefinitely (Q-13).

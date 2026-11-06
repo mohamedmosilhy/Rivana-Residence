@@ -9,9 +9,10 @@ The staff dashboard is a protected route group inside the same Next.js applicati
 Primary navigation (all routes: [route-map.md](./route-map.md)):
 
 - Overview
-- Content: Pages, Rooms, Facilities, Media, Promotions, Enquiries
-- Operations (planned): Reservations, Availability, Inventory, Pricing, Reports, Audit
-- Administration: Settings, Staff, and Branches (planned)
+- Content: Pages, Rooms & Apartments, Facilities, Media, Enquiries (per branch from M5; Promotions implemented and retired in M5)
+- Operations (planned): Reservations, Cancellations, Availability, Inventory, Guests
+- Commercial (planned): Pricing, Services, Coupons, Broadcasts, Reports, Audit
+- Administration: Settings (brand, VAT), Staff, and Branches (planned)
 
 The workflows below cover content management. Reservation screens follow the same shell, forms, tables, dialogs, and toasts, and are described in [booking-and-operations-ui.md](./booking-and-operations-ui.md).
 
@@ -23,12 +24,12 @@ Show only useful operational information:
 
 - published/draft room and facility counts;
 - media items needing alt text or failed uploads;
-- currently active and upcoming promotion status;
+- currently active and upcoming promotion status (implemented; removed with the popup in M5);
 - new enquiries;
 - recently updated content;
 - shortcuts to edit Home, add a room, upload media, and view the site.
 
-Do not add charts, revenue, occupancy, booking, or enterprise widgets.
+Content roles see no charts, revenue, or occupancy. Reservation roles get the desk widgets in [booking-and-operations-ui.md](./booking-and-operations-ui.md) (M11); managers get reports on their own page (M12).
 
 ## Page editor
 
@@ -40,7 +41,9 @@ Do not add charts, revenue, occupancy, booking, or enterprise widgets.
 - Show SEO preview and publish-readiness issues.
 - Provide “View page” and authenticated preview behavior.
 
-## Room workflow
+## Room (listing) workflow
+
+From M5 the list and forms work per branch (branch selector) and the form has an accommodation type (Room or Apartment) with optional bedrooms and bathrooms for apartments.
 
 List columns: thumbnail, name, slug, status, featured, updated time, actions. Filters: status and featured; search by name.
 
@@ -54,13 +57,13 @@ Edit groups:
 6. SEO — title, description, OG image.
 7. Publication — readiness, draft/publish/archive.
 
-There are no price or availability fields.
+There are no price or availability fields in the content form; prices are managed in `/admin/pricing` (M12).
 
 ## Facility workflow
 
 Mirrors room UX with facility-specific fields: name, slug, summary, body, optional opening hours, hero/gallery, featured/order, SEO, and publication.
 
-## Promotions workflow
+## Promotions workflow (implemented; retired by Q-47, removed in M5)
 
 List columns: internal name, public headline, code, status, active window, priority, and updated time. Filters: status and timing (`active`, `scheduled`, `expired`); search by internal name, headline, or code.
 
@@ -100,7 +103,8 @@ Groups:
 - Social links: platform, URL, visibility, order.
 - Footer/legal: footer text and approved policy links.
 - Default SEO: title template, description, social image.
-- Booking: read-only “Not configured” status initially; no pretend URL field until provider requirements exist.
+- Booking: read-only “Not configured” status initially (implemented). From M5 online booking is switched per branch on the branch screen; VAT is set here by the Admin only (M12, any rate).
+- WhatsApp (Admin only, M8): business number (placeholder until the client supplies it), provider phone-number id, token-configured indicator, template manager per purpose and language, setup gaps, and **Send test message**.
 - Media storage: read-only provider/root health and free-space warning; filesystem paths are never editable in the browser.
 - Account/security: current user password/session management; user management is administrator-only.
 

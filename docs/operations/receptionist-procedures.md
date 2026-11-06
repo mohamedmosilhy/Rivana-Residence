@@ -1,27 +1,33 @@
 # Receptionist procedures
 
-Status: **Draft for client review.** Screen names refer to the planned staff dashboard (M9). Read with [manual-synchronization-procedure.md](./manual-synchronization-procedure.md).
+Status: **Draft for client review**, revised for immediate confirmation and online payment (2026-11-06). Screen names refer to the planned staff dashboard (M11). Read with [manual-synchronization-procedure.md](./manual-synchronization-procedure.md).
 
 ## Start of shift
 
 1. Sign in at `/admin/login`. You see only your assigned branches.
-2. Open the **Overview**: today's arrivals, departures, in-house guests, pending requests, and the last sync checkpoint.
+2. Open the **Overview**: today's arrivals, departures, in-house guests, website bookings not yet in the hotel system, and the last sync checkpoint.
 3. Reconcile with the hotel system, including the next 14 days of arrivals, and record a sync checkpoint.
 
 ## Sync reminder (every 30 minutes)
 
 When the sound plays and the pop-up opens, compare what changed since the last checkpoint in both systems, fix differences, and press **I have synced**. If you need a few minutes, press **I'm syncing now**; the pop-up comes back after the follow-up delay. Do not press "I have synced" without checking: your name and the time are recorded.
 
-## Website requests (status "Pending")
+## New website bookings (already "Confirmed")
 
-1. Open the request. Check the dates, room type, guests, and contact details.
-2. Check the hotel system for the same room type and nights.
-3. If available: enter the booking in the hotel system, tick **I have checked the hotel system**, then **Confirm**. The guest gets an email and a WhatsApp message.
-4. If not available, or the details are unusable: **Decline** with a reason. The guest gets an email and a WhatsApp message, and the room is released.
+Website bookings are confirmed by Rivana immediately; nobody approves them. Rivana has **not** checked the hotel system.
+
+1. Open each booking in **Not yet in hotel system** (newest alerts also arrive by email).
+2. Enter it in the hotel system: dates, units, guests, contact, extras (breakfast, transfer), and whether it is paid online or pays at the hotel.
+3. Press **Mark entered in hotel system**.
+4. If the hotel system has no room for it, do not cancel it yourself: follow *Conflicts* in the synchronization procedure and call your Manager.
+
+## Cancellation requests
+
+Guests can ask to cancel online until 24 hours before check-in time. Managers and Admins approve or reject requests; you cannot. If a guest calls about a request, check its status on the reservation and pass the call to a Manager if needed. After a request is approved, cancel the booking in the hotel system too.
 
 ## Phone, email, and walk-in bookings
 
-**Reservations → New → Staff booking.** Rivana checks availability and price. You cannot change prices; ask a manager if a special price is needed. After saving, enter the booking in the hotel system.
+**Reservations → New → Staff booking.** Rivana checks availability and price (with extras, coupon, and VAT). Staff bookings are paid at the hotel. You cannot change prices; ask a manager if a special price is needed. After saving, enter the booking in the hotel system.
 
 ## Bookings that already exist in the hotel system
 
@@ -31,7 +37,7 @@ When the sound plays and the pop-up opens, compare what changed since the last c
 
 - Change dates or room type with **Change stay**. Rivana re-checks availability and shows the old and new totals.
 - Guest details and notes: **Edit details**.
-- Cancel with **Cancel reservation** and a reason. Choose whether to notify the guest.
+- Cancel unpaid bookings with **Cancel reservation** and a reason. Choose whether to notify the guest. Bookings paid online can only be cancelled by a Manager or Admin, because cancelling refunds the guest.
 - Make the same change in the hotel system straight away.
 
 ## Arrivals and departures
@@ -51,7 +57,7 @@ Guests can open **My reservations** on the website with their phone number and a
 
 ## Fake or abusive bookings
 
-Decline or cancel the booking with a reason, and tell your manager. A Manager or Admin can open **Guests**, find the phone number, and **Block** it with a reason. A blocked number can no longer get codes or book online at any branch.
+Cancel the booking with a reason if it is unpaid (ask a Manager if it was paid online), and tell your manager. A Manager or Admin can open **Guests**, find the phone number, and **Block** it with a reason. A blocked number can no longer get codes or book online at any branch.
 
 ## Guests without WhatsApp
 
@@ -59,7 +65,7 @@ Online booking needs a WhatsApp code. Take the booking by phone as a staff booki
 
 ## Things never to do
 
-- Never confirm a request without checking the hotel system.
+- Never leave a website booking unmarked: enter it in the hotel system and mark it entered.
 - Never record an external booking twice to "make it fit", or under a different room type to avoid a conflict.
 - Never share your account. Never write passwords down.
 - Never copy guest details into personal devices or messaging apps.

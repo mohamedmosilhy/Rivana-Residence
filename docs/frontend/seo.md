@@ -2,7 +2,9 @@
 
 ## Goals
 
-Help prospective guests discover Rivana Residence and understand its location, rooms, and facilities without publishing unsupported price or availability claims.
+Help prospective guests discover Rivana Residence and each of its branches, and understand each branch's location, rooms and apartments, and facilities, without publishing unsupported price or availability claims.
+
+From M5 (ADR 026) every branch has its own indexable pages under `/{branchSlug}/…`; implemented URLs redirect permanently to the first branch, and canonicals move with them.
 
 ## Metadata model
 
@@ -27,7 +29,7 @@ Use Next.js Metadata APIs and `generateMetadata` in server routes. Metadata quer
 
 ## Sitemap and robots
 
-`app/sitemap.ts` emits Home, About, Rooms, published room details, Facilities, published facility details, and Contact with accurate `lastModified` values. Detail entries include the approved hero image. Empty listings and unpublished records are omitted. `app/robots.ts` allows the marketing site, disallows `/admin` and `/api`, and links the sitemap. Both use the server-validated `APP_URL` origin.
+`app/sitemap.ts` emits Home, About, Rooms, published room details, Facilities, published facility details, and Contact with accurate `lastModified` values (implemented). From M5 it emits, per active branch, the branch home, About, Stay, published listings, Facilities, published facilities, and Contact, plus `/` when it is the chooser; booking pages are not indexed. Detail entries include the approved hero image. Empty listings and unpublished records are omitted. `app/robots.ts` allows the marketing site, disallows `/admin` and `/api`, and links the sitemap. Both use the server-validated `APP_URL` origin.
 
 Robots is not an access-control mechanism; protected routes remain authenticated.
 
@@ -35,7 +37,8 @@ Robots is not an access-control mechanism; protected routes remain authenticated
 
 Use JSON-LD built from validated server data:
 
-- one `Hotel`/`LodgingBusiness` entity with name, description, URL, logo, telephone, email, postal address, coordinates when confirmed, images, and social `sameAs` URLs;
+- one `Hotel`/`LodgingBusiness` entity with name, description, URL, logo, telephone, email, postal address, coordinates when confirmed, images, and social `sameAs` URLs (implemented as one site-wide entity; from M5 one entity per branch on that branch's pages, with its own address and contact);
+- apartments use an accommodation type appropriate to apartments (checked at implementation) rather than `HotelRoom`;
 - room detail may reference `HotelRoom`/`Room`-appropriate accommodation data only when schema semantics are verified during implementation;
 - facility details may be expressed through amenity features on the hotel rather than invented standalone business types;
 - breadcrumb structured data on nested routes;
@@ -51,7 +54,7 @@ Phase 10 implements one site-wide `Hotel`, `HotelRoom` on room details, and `Bre
 - logical `h2`/`h3` hierarchy in section renderers and rich text;
 - semantic landmarks, address, lists, and links;
 - descriptive link text and image alt text;
-- room/facility names and New Cairo location used naturally, never keyword-stuffed;
+- listing and facility names and each branch's location used naturally, never keyword-stuffed;
 - important copy rendered in initial HTML, not only after client JavaScript.
 
 ## Social metadata

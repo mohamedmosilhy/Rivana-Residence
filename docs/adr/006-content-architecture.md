@@ -1,6 +1,6 @@
 # ADR 006 — Typed sections plus structured entities
 
-Status: Accepted for Phase 1
+Status: Accepted for Phase 1. **Extended by [ADR 026](./026-branch-websites-and-accommodation.md) (2026-11-06):** pages and facilities become branch-owned; the section registry is unchanged.
 
 ## Context
 

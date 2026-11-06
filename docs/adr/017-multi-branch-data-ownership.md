@@ -1,6 +1,6 @@
 # ADR 017 — Branch as an explicit owner of catalog, inventory, prices, and reservations
 
-Status: **Accepted** (2026-10-24)
+Status: **Accepted** (2026-10-24). **Extended by [ADR 026](./026-branch-websites-and-accommodation.md) (2026-11-06):** pages and facilities become branch-owned, and branch websites use `/{branchSlug}/…` paths (Q-03 and Q-04 answered). The ownership and composite-key decisions below are unchanged.
 
 ## Context
 

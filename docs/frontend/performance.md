@@ -58,7 +58,7 @@ Set per-route budgets during implementation rather than optimizing only a global
 ## Third parties
 
 - Self-host critical fonts/icons.
-- Lazy-load the map after consent/interaction or show a static location panel/link first.
+- Lazy-load the map (`loading="lazy"` iframe, below the fold) and always render the address and directions link first. From M5 each branch's Contact page and home location section embed that branch's map (ADR 026).
 - Future booking scripts load on user intent where provider constraints permit.
 - Each analytics/chat/embed dependency needs a performance, privacy, and failure-mode review.
 - The reference's floating chat button is not included unless a real provider/use case is approved.

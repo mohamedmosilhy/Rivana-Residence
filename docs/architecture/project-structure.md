@@ -26,49 +26,61 @@ docs/                       this documentation
 .claude/skills, .agents/skills   JavaScript Mastery agent skills (Claude Code / Codex)
 ```
 
-## Planned additions (ADR 015)
+## Planned additions (ADR 015, ADR 026; milestones from the 2026-11-06 replan)
 
 ```text
 src/
   app/
-    (marketing)/book/                     branch selection, search/results, details & review   (M8)
-    (marketing)/reservations/manage/      guest manage page (token from fragment)              (M8)
-    (marketing)/reservations/find/        "send me my link"                                    (M8)
-    admin/(protected)/reservations/       list, new, [id]                                      (M9)
-    admin/(protected)/availability/       grid                                                 (M9)
-    admin/(protected)/inventory/          physical rooms, blocks                               (M9)
-    admin/(protected)/pricing/            rates & periods                                      (M10)
-    admin/(protected)/reports/            statistics                                           (M10)
-    admin/(protected)/branches/           branch admin                                         (M10)
-    admin/(protected)/guests/             guest profiles, blocking                             (M9)
-    admin/(protected)/audit/              audit log                                            (M10)
+    (marketing)/page.tsx                  branch chooser or redirect to the only branch         (M5)
+    (marketing)/[branch]/                 home, about, stay/[slug], facilities/[slug], contact (M5)
+    (marketing)/[branch]/book/            search/results, details & review, confirmed, payment  (M10)
+    (marketing)/reservations/manage/      guest manage page (token from fragment)              (M10)
+    (marketing)/reservations/find/        "My reservations" (phone + code)                     (M10)
+    admin/(protected)/reservations/       list, new, [id]                                      (M11)
+    admin/(protected)/cancellations/      cancellation requests, refunds                       (M11)
+    admin/(protected)/availability/       grid                                                 (M11)
+    admin/(protected)/inventory/          units, blocks                                        (M11)
+    admin/(protected)/guests/             guest profiles, blocking                             (M11)
+    admin/(protected)/pricing/            rates & date periods                                 (M12)
+    admin/(protected)/services/           breakfast, airport transfer                          (M12)
+    admin/(protected)/coupons/            coupon codes                                         (M12)
+    admin/(protected)/reports/            statistics                                           (M12)
+    admin/(protected)/branches/           branch admin (minimal M5)                            (M5, M12)
+    admin/(protected)/audit/              audit log                                            (M12)
+    admin/(protected)/broadcasts/         WhatsApp offers                                      (M13)
     api/v1/
-      _http/                              route wrappers, problem mapping, CSRF, request ids    (M4)
-      branches/…, reservations/…, phone-verifications/…, guest/reservation(s)/…           (M5–M7)
-      staff/…                                                                                  (M5–M7)
+      _http/                              route wrappers (public, staff, webhook), problem mapping, CSRF, request ids (M4)
+      branches/…, quotes, reservations/…, phone-verifications/…, guest/reservation(s)/…    (M5–M9)
+      payments/paymob/callback/           Paymob webhook (HMAC)                                (M9)
+      staff/…                                                                                  (M5–M13)
   contracts/api/v1/                       Zod DTOs shared by handlers, client, OpenAPI         (M4+)
   domain/
-    shared/  + local-date.ts, stay-range.ts, money.ts                                          (M6)
-    branches/, inventory/, pricing/, reservations/, guests/, audit/                               (M4–M7)
+    shared/  + local-date.ts, stay-range.ts, money.ts, rounding.ts                             (M6–M7)
+    branches/, inventory/, pricing/, coupons/, services/, reservations/, payments/, guests/, marketing/, audit/   (M4–M13)
   application/
-    branches/, inventory/, pricing/, reservations/, guests/, reporting/, audit/, notifications/        (M4–M10)
-    ports/   + reservation ports (UnitOfWork, locks, readers, outbox, tokens)
+    branches/, inventory/, pricing/, coupons/, services/, reservations/, payments/, guests/, reporting/, marketing/, audit/, notifications/   (M4–M13)
+    ports/   + reservation ports (UnitOfWork, locks, readers, outbox, tokens, PaymentGateway)
   infrastructure/
-    db/prisma/repositories/{branches,inventory,pricing,reservations,reporting,audit}/
+    db/prisma/repositories/{branches,inventory,pricing,coupons,reservations,payments,guests,reporting,marketing,audit}/
     db/prisma/unit-of-work.ts
     email/ + reservation-email-sender.ts, outbox-dispatcher.ts
-    whatsapp/ whatsapp-sender.ts (provider adapter: verification codes, booking messages)
+    whatsapp/ whatsapp-sender.ts (provider adapter: authentication, transactional, feedback, marketing templates)
+    payments/paymob/ paymob-gateway.ts (hosted checkout, HMAC verification, refunds; server-only)
     crypto/ secure-token-generator.ts
-  composition/  + branches.ts, reservations.ts, reporting.ts
+  composition/  + branches.ts, reservations.ts, payments.ts, reporting.ts, marketing.ts
   presentation/
-    features/booking/                    booking journey components                           (M8)
-    admin/reservations/, admin/inventory/, admin/pricing/, admin/reports/                     (M9–M10)
+    features/branches/                   chooser, switcher, branch-aware links                 (M5)
+    features/booking/                    booking journey components                           (M10)
+    admin/{reservations,cancellations,inventory,guests,sync}/                                  (M11)
+    admin/{pricing,services,coupons,reports,branches,audit}/                                   (M12)
+    admin/broadcasts/                                                                          (M13)
     api-client/                          typed fetch wrappers over src/contracts              (M4)
-scripts/  + openapi.mts, reservations.mts (outbox, expire-tokens)
+scripts/  + openapi.mts, reservations.mts (outbox, expire-holds, reconcile-payments, expire-tokens)
 tests/
-  unit/domain/reservations/…, unit/architecture/ (+ new boundary tests)
+  unit/domain/{reservations,pricing,coupons,payments}/…, unit/architecture/ (+ new boundary tests)
   integration/reservations/ (repositories, use cases, route handlers, concurrency.test.ts)
-  e2e/booking.spec.ts, e2e/reception.spec.ts, e2e/management.spec.ts
+  integration/payments/ (fake gateway, callbacks, refunds)
+  e2e/branches.spec.ts, e2e/booking.spec.ts, e2e/reception.spec.ts, e2e/management.spec.ts
 docs/api/openapi.json                    generated
 ```
 
@@ -77,5 +89,5 @@ docs/api/openapi.json                    generated
 - It keeps one convention (layer first, module second) so existing lint rules and tests keep working (ADR 015).
 - Staff reservation screens live in the existing `/admin` shell: one sign-in, a capability-filtered navigation already exists (`src/presentation/admin/navigation.ts`), and the proxy and admin headers already cover `/admin`.
 - `src/contracts` is a new top-level folder because both server handlers and client code need the same schemas, and neither `application` (server logic) nor `presentation` (UI) is the right owner.
-- The booking journey lives under `(marketing)` to inherit the site header, footer, fonts, and CSP. Its route segment is `/book`, so it does not collide with `/rooms/[slug]`.
+- Branch pages and the booking journey live under `(marketing)/[branch]` to inherit the site header, footer, fonts, and CSP. Branch slugs are validated against reserved top-level segments (ADR 026). The booking journey is `/{branch}/book`.
 - No `src/shared` or `src/utils` dumping ground is created.

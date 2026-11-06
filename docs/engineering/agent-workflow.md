@@ -30,7 +30,7 @@ Both copies were verified identical (`diff -r`). Each skill ships `SKILL.md` (bo
 
 | Skill | Purpose | Frontend/backend | Use on Rivana |
 | --- | --- | --- | --- |
-| `scope` | Living feature scope in `docs/scope/` | Both | Optional: enroll M4–M12 as scope features after approval, so `/develop` can find them |
+| `scope` | Living feature scope in `docs/scope/` | Both | Optional: enroll M4–M15 as scope features after approval, so `/develop` can find them |
 | `architect` | Decision discovery; writes `docs/specs/NNNN-*.md` | Both | Per milestone, turn the approved design docs into a build spec. It must cite, not contradict, the ADRs |
 | `audit` | Bootstraps or gap-fills `AGENTS.md` | Both | Run in gap-fill mode only; never let it overwrite curated `AGENTS.md` text |
 | `develop` | Builds from a spec (UI track `ui-guide.md`, logic track `logical-guide.md`) | Both | Implementation per milestone |
@@ -56,6 +56,10 @@ Verification:
 Prerequisites: Node and npx; network access to GitHub for install or update. The skills run with full agent permissions, so review updates (`npx skills update`) before accepting them.
 
 Should these be committed? Recommended: commit `.claude/skills/`, `.agents/skills/`, and `skills-lock.json` so every clone and both agents get the same skills. Keep `.claude/settings.local.json` uncommitted (personal permissions).
+
+## Skills per milestone
+
+Each milestone brief in [../delivery/milestones/](../delivery/milestones/README.md) has a "Skills for this milestone" table naming the `/architect` mode, the `/develop` track (logic or UI), the focus of `/check review`, and what `/sync` should record. The shared step-by-step loop (approval check → branch → read → `/architect` → `/develop` → `/test` → `/debug` → gates → `/check verify` → `/check review` → docs → evidence report → `/sync` → `/document` → stop) is in the [briefs README](../delivery/milestones/README.md#the-loop-every-milestone-follows).
 
 ## Nested agent instructions
 

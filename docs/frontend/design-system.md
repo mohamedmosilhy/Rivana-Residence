@@ -110,7 +110,7 @@ Minimum touch target: 44×44px. Every state includes hover (when available), foc
 
 ## Cards and sections
 
-- Room cards foreground property imagery and show only verified marketing facts—never price.
+- Listing cards foreground property imagery and show only verified marketing facts and a Room or Apartment badge. Prices appear only in the booking journey, from the server, before VAT during selection (M10).
 - Facility cards use persistent readable labels; supporting copy cannot exist only on hover.
 - Editorial split sections may use a quiet surface or subtle warm gradient, not heavy glass.
 - Contact panels may use a soft shadow to separate from canvas.
@@ -124,7 +124,10 @@ Minimum touch target: 44×44px. Every state includes hover (when available), foc
 - Required state is announced programmatically.
 - Destructive confirmation states name the affected record.
 
-## Promotion popup
+## Promotion popup (implemented; retired by Q-47, removed in M5)
+
+Kept as the record of the implemented component until M5 deletes it. No new popup or interstitial is planned; offers reach guests through WhatsApp (ADR 028).
+
 
 - Use one restrained dialog/card, not a full-screen takeover: warm-white surface, plum heading/action, thin neutral rule, and a small gold accent.
 - Keep the headline and message short; show the code in a high-contrast, selectable monospace-style row with an adjacent 44px-minimum “Copy code” button.
