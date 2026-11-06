@@ -1,6 +1,6 @@
 # ADR 011 — Hosting.com/cPanel deployment with portable adapters
 
-Status: Accepted for Phase 1
+Status: **Superseded by [ADR 023](./023-hostinger-vps-deployment.md) on 2026-10-24.** The Hosting.com preflight found PostgreSQL 10, a shared account, and a nearly full provider disk, and the client chose a Hostinger VPS instead. The portable-adapter approach below still applies.
 
 ## Context
 

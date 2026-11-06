@@ -4,13 +4,13 @@ Status: Accepted for Phase 1
 
 ## Context
 
-The site is image-heavy and editors need uploads, replacements, and deletion. Production will run as one application instance on the client's Hosting.com/cPanel account, which can provide a persistent writable directory. The client prefers to use storage already included with hosting rather than purchase a separate object-storage service.
+The site is image-heavy and editors need uploads, replacements, and deletion. Production will run as one application instance on a Hostinger VPS (ADR 023), which provides a persistent writable disk. The client prefers to use storage already included with hosting rather than purchase a separate object-storage service.
 
 PostgreSQL must not store image binaries, deployments must not erase uploads, and the implementation should survive a future move to object storage or another host.
 
 ## Decision
 
-Store production image files in a configured persistent directory on the Hosting.com server, outside the Git checkout and application release/build directories. Store only provider-neutral metadata and a server-generated relative `storageKey` in `MediaAsset`; never store an absolute server path in PostgreSQL.
+Store production image files in a configured persistent directory on the production server, outside the Git checkout and application release/build directories. Store only provider-neutral metadata and a server-generated relative `storageKey` in `MediaAsset`; never store an absolute server path in PostgreSQL.
 
 Access files only through the `MediaStorage` port. The local adapter writes immutable keys, finalizes uploads atomically where the filesystem permits, opens/deletes files, and resolves a controlled public `/media/...` URL. A route handler or reviewed web-server alias serves that URL with correct content type, cache, range, and `nosniff` headers. The storage root comes from server-only configuration and cannot be changed in the admin UI.
 
@@ -18,7 +18,7 @@ Use a temporary/quarantine directory for upload validation, then move a verified
 
 ## Reasoning
 
-For a single persistent cPanel deployment and the expected small editorial team, local media is the simplest and lowest incremental-cost option. It avoids a separate storage account and credentials while still letting administrators upload without a code deployment. Keeping `MediaStorage` prevents filesystem assumptions from leaking into domain, database, or UI code.
+For a single persistent server deployment and the expected small editorial team, local media is the simplest and lowest incremental-cost option. It avoids a separate storage account and credentials while still letting administrators upload without a code deployment. Keeping `MediaStorage` prevents filesystem assumptions from leaking into domain, database, or UI code.
 
 ## Alternatives considered
 
@@ -29,7 +29,7 @@ For a single persistent cPanel deployment and the expected small editorial team,
 
 ## Preconditions
 
-Before production implementation, verify on the actual cPanel account:
+Before production implementation, verify on the actual server:
 
 - the Next.js application runs as a persistent Node process supported by the plan;
 - the chosen directory is writable by only the application account and survives deployments/restarts;
@@ -42,8 +42,12 @@ If any precondition fails, use an S3-compatible adapter without changing domain 
 
 ## Consequences
 
-Media uses capacity already included in the hosting plan, but it is not literally costless: it consumes the paid plan's disk, inode, transfer, and backup allowances. The server is a storage single point of failure, so off-server backups and restore tests are mandatory. Horizontal multi-server deployment is not supported by the local adapter. Moving hosts requires copying the media directory while preserving keys/checksums, or migrating to object storage.
+Media uses capacity already included in the hosting plan, but it is not literally costless: it consumes the plan's disk, transfer, and backup allowances. The server is a storage single point of failure, so off-server backups and restore tests are mandatory. Horizontal multi-server deployment is not supported by the local adapter. Moving hosts requires copying the media directory while preserving keys/checksums, or migrating to object storage.
 
 ## Implementation note (Phase 6)
 
 Implemented as `LocalMediaStorage` behind the redesigned `MediaStorage` port, with a quarantine directory inside the media root, atomic no-overwrite object writes, symlink-refusing path handling, and delivery through the application `/media/` route. Uploads are verified and re-encoded with sharp before storage. See [phase-6-media.md](../delivery/reports/phase-6-media.md).
+
+## Hosting change (2026-10-24)
+
+The production host changed from the Hosting.com cPanel account to a Hostinger VPS ([ADR 023](./023-hostinger-vps-deployment.md)). The decision is unchanged, because the VPS has a persistent local disk. The preconditions above are rechecked in the VPS preflight ([hosting-preflight.md](../operations/hosting-preflight.md)).

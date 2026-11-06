@@ -64,7 +64,7 @@ Cron (hourly)                         npm run media -- cleanup
 - Quarantine writes use exclusive create and stop reading as soon as the 15 MB cap is exceeded.
 - Final objects are written to a private temporary file, then atomically **hard-linked** into place. `link()` fails if the key already exists, so no object is ever overwritten.
 
-**Hosting check (2026-09-25):** the staging media root `~/rivana-staging/media` was created over SSH and checked on the real server: permissions `750`/`640`, same-filesystem hard links, refusal to overwrite, and location outside every web root. The account has about 4 GB used and 88% of its inodes free. The server's glibc 2.28 meets sharp 0.35's minimum. See [hosting-preflight.md](../../operations/hosting-preflight.md#staging-media-root-2026-09-25).
+**Hosting check (2026-09-25):** the staging media root `~/rivana-staging/media` was created over SSH and checked on the real server: permissions `750`/`640`, same-filesystem hard links, refusal to overwrite, and location outside every web root. The account has about 4 GB used and 88% of its inodes free. The server's glibc 2.28 meets sharp 0.35's minimum. See [hosting-preflight.md](../../operations/hosting-preflight.md#earlier-target-hostingcom-cpanel-dropped-2026-10-24).
 
 **Still open for launch (Phase 12):**
 
