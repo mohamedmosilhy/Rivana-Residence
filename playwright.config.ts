@@ -34,15 +34,16 @@ export default defineConfig({
     trace: "on-first-retry",
   },
   // Admin suites run first; the public-site suites depend on them so they
-  // see a stable, published site; visual baselines follow; the promotion
-  // suite runs last because an active campaign opens a modal on every page.
+  // see a stable, published site; visual baselines follow; the branch
+  // websites suite runs last because it activates a second branch, which
+  // turns `/` into the chooser (spec 0002).
   projects: [
     {
       name: "desktop-chromium",
       use: { ...devices["Desktop Chrome"] },
       testIgnore: [
         /public-site\.spec/,
-        /promotion-popup\.spec/,
+        /branch-websites\.spec/,
         /visual\.spec/,
       ],
     },
@@ -51,7 +52,7 @@ export default defineConfig({
       use: { ...devices["Pixel 7"] },
       testIgnore: [
         /public-site\.spec/,
-        /promotion-popup\.spec/,
+        /branch-websites\.spec/,
         /visual\.spec/,
       ],
     },
@@ -84,9 +85,9 @@ export default defineConfig({
     },
     ...CROSS_BROWSER_PROJECTS,
     {
-      name: "promotions",
+      name: "branches",
       use: { ...devices["Desktop Chrome"] },
-      testMatch: /promotion-popup\.spec/,
+      testMatch: /branch-websites\.spec/,
       dependencies: [
         "visual-desktop",
         "visual-mobile",

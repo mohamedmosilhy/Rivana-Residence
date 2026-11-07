@@ -52,6 +52,11 @@ export function EnquiryTable({
           ),
         },
         {
+          header: "Branch",
+          // Enquiries sent before branch websites (M5) have no branch.
+          cell: (enquiry) => enquiry.branchName ?? "–",
+        },
+        {
           header: "Status",
           cell: (enquiry) => <EnquiryBadge status={enquiry.status} />,
         },

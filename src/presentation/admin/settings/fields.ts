@@ -1,17 +1,9 @@
 // Shared by the client form and its Server Action, so it must not live in a
 // "use client" module (server code would receive a client reference).
+// Brand-wide fields only; contact and map are set per branch (spec 0002).
 export const SITE_SETTINGS_FIELDS = [
   "siteName",
   "tagline",
-  "phone",
-  "email",
-  "addressLine1",
-  "addressLine2",
-  "city",
-  "country",
-  "latitude",
-  "longitude",
-  "mapEmbedUrl",
   "footerText",
   "defaultSeoTitle",
   "defaultSeoDescription",

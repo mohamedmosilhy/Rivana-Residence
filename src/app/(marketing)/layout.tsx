@@ -1,28 +1,8 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
-import { Suspense } from "react";
 
-import { hotelJsonLd } from "@/application/public/seo";
-import {
-  getActivePromotion,
-  getPublicOrigin,
-  getSiteSettings,
-} from "@/composition/public";
-import { skipLink } from "@/presentation/design/classes";
-import { PromotionPopup } from "@/presentation/features/promotions/promotion-popup";
-import { SiteFooter } from "@/presentation/site/site-footer";
-import { SiteHeader } from "@/presentation/site/site-header";
+import { getPublicOrigin, getSiteSettings } from "@/composition/public";
 import { MotionProvider } from "@/presentation/site/motion/motion-provider";
-import { StructuredData } from "@/presentation/site/structured-data";
-
-import { bookingMessage } from "./site-content";
-
-// Rendered in its own Suspense boundary so the promotion query never delays
-// the page. No active campaign means no popup markup or script at all.
-async function ActivePromotion() {
-  const promotion = await getActivePromotion();
-  return promotion ? <PromotionPopup promotion={promotion} /> : null;
-}
 
 export async function generateMetadata(): Promise<Metadata> {
   const settings = await getSiteSettings();
@@ -54,34 +34,14 @@ export async function generateMetadata(): Promise<Metadata> {
   };
 }
 
-export default async function MarketingLayout({
+/**
+ * Fonts, motion, and site metadata. The header, footer, and Hotel JSON-LD
+ * come from the branch layout (`[branch]/layout.tsx`) or, for the chooser
+ * and top-level 404, the brand-only shell (spec 0002). No promotion popup
+ * (retired, Q-47).
+ */
+export default function MarketingLayout({
   children,
 }: Readonly<{ children: ReactNode }>) {
-  const [settings, message] = await Promise.all([
-    getSiteSettings(),
-    bookingMessage(),
-  ]);
-  return (
-    <MotionProvider>
-      {settings ? (
-        <StructuredData
-          id="hotel-structured-data"
-          data={hotelJsonLd(settings, getPublicOrigin())}
-        />
-      ) : null}
-      <div className="grid min-h-screen grid-rows-[auto_1fr_auto] bg-canvas text-neutral-950">
-        <a className={skipLink} href="#main-content">
-          Skip to content
-        </a>
-        <SiteHeader settings={settings} bookingMessage={message} />
-        <main id="main-content" className="focus:[outline:none]" tabIndex={-1}>
-          {children}
-        </main>
-        <SiteFooter settings={settings} />
-        <Suspense fallback={null}>
-          <ActivePromotion />
-        </Suspense>
-      </div>
-    </MotionProvider>
-  );
+  return <MotionProvider>{children}</MotionProvider>;
 }

@@ -4,12 +4,13 @@ import { expect, test, type Page } from "@playwright/test";
 // proof that the policy is enforced without breaking any page.
 
 const PAGES = [
-  "/",
-  "/about",
-  "/rooms",
-  "/facilities",
-  "/contact",
-  "/not-a-real-page",
+  "/new-cairo",
+  "/new-cairo/about",
+  "/new-cairo/stay",
+  "/new-cairo/facilities",
+  "/new-cairo/contact",
+  "/new-cairo/not-a-real-page",
+  "/not-a-real-branch",
   "/admin/login",
 ] as const;
 
@@ -105,8 +106,11 @@ test("pages hydrate under the enforced policy with no violations", async ({
   await page.evaluate(() => {
     (window as unknown as { __marker: boolean }).__marker = true;
   });
-  await page.locator('main a[href^="/rooms/"]:visible').first().click();
-  await expect(page).toHaveURL(/\/rooms\/[a-z0-9-]+$/);
+  await page
+    .locator('main a[href^="/new-cairo/stay/"]:visible')
+    .first()
+    .click();
+  await expect(page).toHaveURL(/\/new-cairo\/stay\/[a-z0-9-]+$/);
   expect(
     await page.evaluate(
       () => (window as unknown as { __marker?: boolean }).__marker,

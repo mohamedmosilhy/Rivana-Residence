@@ -87,9 +87,6 @@ describe("site settings writes", () => {
       ok: true,
       value: {
         siteName: "Rivana Residence",
-        latitude: 30.0131,
-        longitude: 31.4913,
-        addressLine2: null,
         updatedByName: "Test Administrator",
       },
     });
@@ -98,7 +95,6 @@ describe("site settings writes", () => {
     // The change is visible through the public settings query.
     expect(await publicQuery.execute()).toMatchObject({
       siteName: "Rivana Residence",
-      email: "stay@rivana.example",
       footerText: "© Rivana Residence",
       defaultSeoTitle: "Rivana Residence, New Cairo",
       timeZone: "Africa/Cairo",

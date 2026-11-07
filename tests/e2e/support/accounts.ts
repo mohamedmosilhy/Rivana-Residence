@@ -4,7 +4,7 @@ export const E2E_PROJECTS = [
   "mobile-chromium",
   "public-desktop",
   "public-mobile",
-  "promotions",
+  "branches",
 ] as const;
 
 // Each Playwright project gets its own accounts so parallel runs never share

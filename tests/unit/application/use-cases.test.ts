@@ -1,8 +1,6 @@
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 
 import { ResolveBooking } from "@/application/booking/resolve-booking";
-import type { PromotionRepository } from "@/application/ports/repositories";
-import { GetCurrentPromotion } from "@/application/promotions/get-current-promotion";
 import { failure, notPublishable, success } from "@/application/shared/result";
 import { DomainValidationError } from "@/domain/shared/domain-error";
 import { DisabledBookingProvider } from "@/infrastructure/booking/disabled-booking-provider";
@@ -51,18 +49,6 @@ describe("booking", () => {
         "Online booking is not available yet. Please contact Rivana Residence directly.",
     });
     expect(descriptor).not.toHaveProperty("url");
-  });
-});
-
-describe("current promotion", () => {
-  it("queries with the injected clock", async () => {
-    const now = new Date("2026-10-01T12:00:00Z");
-    const getCurrent = vi.fn().mockResolvedValue(null);
-    const promotions = { getCurrent } as unknown as PromotionRepository;
-
-    await new GetCurrentPromotion(promotions, { now: () => now }).execute();
-
-    expect(getCurrent).toHaveBeenCalledWith(now);
   });
 });
 

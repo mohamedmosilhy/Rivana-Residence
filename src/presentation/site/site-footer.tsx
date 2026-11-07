@@ -1,10 +1,15 @@
+import type { Route } from "next";
 import Link from "next/link";
 
-import type { PublicSettings } from "@/application/public/view-models";
+import type {
+  PublicBranch,
+  PublicSettings,
+} from "@/application/public/view-models";
+import { stayLabel } from "@/domain/catalog";
 import { BrandLogo } from "@/presentation/site/brand-logo";
 import { Icon } from "@/presentation/site/icons";
 import { SunRays } from "@/presentation/site/ornaments";
-import { SITE_LINKS } from "@/presentation/site/site-links";
+import { siteLinks } from "@/presentation/site/site-links";
 import { container, linkIcon, linkInverse } from "@/presentation/site/classes";
 
 const HEADING =
@@ -15,9 +20,18 @@ const LINK =
 const LIST_LINK = `inline-flex min-h-9 items-center ${LINK}`;
 const CONTACT = "grid gap-2 not-italic [overflow-wrap:anywhere]";
 
+/**
+ * Brand, tagline, social links, and legal text (settings), plus the
+ * branch's links, address, and contact on branch pages (spec 0002). The
+ * chooser and top-level 404 show the brand only.
+ */
 export function SiteFooter({
   settings,
-}: Readonly<{ settings: PublicSettings | null }>) {
+  branch = null,
+}: Readonly<{
+  settings: PublicSettings | null;
+  branch?: PublicBranch | null;
+}>) {
   const siteName = settings?.siteName ?? "Rivana Residence";
   return (
     <footer
@@ -38,56 +52,64 @@ export function SiteFooter({
             {settings.tagline}
           </p>
         ) : null}
-        <Link
-          href="/contact"
-          className={`${linkInverse} hover:[text-decoration:underline] hover:underline-offset-[0.3em]`}
-        >
-          Plan your stay
-          <Icon name="arrow" className={linkIcon} />
-        </Link>
+        {branch ? (
+          <Link
+            href={`/${branch.slug}/contact` as Route}
+            className={`${linkInverse} hover:[text-decoration:underline] hover:underline-offset-[0.3em]`}
+          >
+            Plan your stay
+            <Icon name="arrow" className={linkIcon} />
+          </Link>
+        ) : null}
       </div>
       <div
         className={`${container} grid grid-cols-[repeat(auto-fit,minmax(min(100%,12rem),1fr))] gap-10 py-16`}
       >
-        <nav aria-labelledby="footer-explore">
-          <h2 id="footer-explore" className={HEADING}>
-            Explore
-          </h2>
-          <ul className={LIST}>
-            {SITE_LINKS.map((link) => (
-              <li key={link.href}>
-                <Link href={link.href} className={LIST_LINK}>
-                  {link.label}
-                </Link>
-              </li>
-            ))}
-          </ul>
-        </nav>
-        {settings && settings.addressLines.length > 0 ? (
+        {branch ? (
+          <nav aria-labelledby="footer-explore">
+            <h2 id="footer-explore" className={HEADING}>
+              Explore
+            </h2>
+            <ul className={LIST}>
+              {siteLinks(
+                branch.slug,
+                stayLabel(branch.stayTypes),
+                branch.hasFacilities,
+              ).map((link) => (
+                <li key={link.href}>
+                  <Link href={link.href} className={LIST_LINK}>
+                    {link.label}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </nav>
+        ) : null}
+        {branch && branch.addressLines.length > 0 ? (
           <div>
             <h2 className={HEADING}>Visit</h2>
             <address className={CONTACT}>
-              {settings.addressLines.map((line) => (
+              {branch.addressLines.map((line) => (
                 <span key={line}>{line}</span>
               ))}
             </address>
           </div>
         ) : null}
-        {settings && (settings.phone || settings.email) ? (
+        {branch && (branch.phone || branch.email) ? (
           <div>
             <h2 className={HEADING}>Contact</h2>
             <address className={CONTACT}>
-              {settings.phone ? (
+              {branch.phone ? (
                 <a
-                  href={`tel:${settings.phone.replace(/[^+0-9]/g, "")}`}
+                  href={`tel:${branch.phone.replace(/[^+0-9]/g, "")}`}
                   className={LINK}
                 >
-                  {settings.phone}
+                  {branch.phone}
                 </a>
               ) : null}
-              {settings.email ? (
-                <a href={`mailto:${settings.email}`} className={LINK}>
-                  {settings.email}
+              {branch.email ? (
+                <a href={`mailto:${branch.email}`} className={LINK}>
+                  {branch.email}
                 </a>
               ) : null}
             </address>

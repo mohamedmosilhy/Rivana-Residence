@@ -21,6 +21,8 @@ export function BookNowButton({
   placement = "light",
   fill = false,
   inActions = false,
+  branchSlug,
+  listingSlug,
 }: Readonly<{
   message: string;
   label?: string;
@@ -30,6 +32,9 @@ export function BookNowButton({
   fill?: boolean;
   /** In a row of actions, which it fills on phones. */
   inActions?: boolean;
+  /** Booking context for when online booking arrives (M10). */
+  branchSlug?: string;
+  listingSlug?: string;
 }>) {
   const [announced, setAnnounced] = useState(false);
   const statusId = useId();
@@ -41,6 +46,8 @@ export function BookNowButton({
   return (
     <span
       data-book-now=""
+      data-branch={branchSlug}
+      data-listing={listingSlug}
       className={`relative inline-grid gap-2 ${width}`.trim()}
     >
       <button

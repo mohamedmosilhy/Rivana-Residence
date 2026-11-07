@@ -146,7 +146,7 @@ Client Components receive serializable DTOs, never database records or Prisma ty
 
 ## Data and provider boundaries
 
-- Content repositories (`Room`, `Facility`, `Page`, `Settings`, `Media`, `Enquiry`, `Promotion`) hide Prisma. `PromotionRepository` returns only active, published campaigns to public queries (until M5 retires it). From M5 page, listing, and facility queries take a branch.
+- Content repositories (`Room`, `Facility`, `Page`, `Settings`, `Media`, `Enquiry`, `Branch`) hide Prisma. Page, listing, and facility queries take a branch id the server resolved (M5); the promotion repository was removed in M5.
 - `MediaStorage` exposes write, finalize, delete, and open operations without local-path or S3 types. Production writes immutable objects below a persistent directory outside the release tree.
 - `ContactDelivery` sends enquiry notifications independently of persistence. Reservation emails reuse its SMTP configuration through an outbox.
 - Operations ports (`ReservationUnitOfWork`, `InventoryLock`, `RateRepository`, `RoomTypeCatalog`, and others) are listed in [../domain/domain-model.md](../domain/domain-model.md#application-ports).
@@ -165,7 +165,7 @@ All Book Now controls (header, listing cards, listing detail, mobile bar) use on
 
 ## Caching and publication
 
-- Published content uses Next.js cache tags (`site-settings`, `page:home`, `rooms`, `room:{slug}`, `facilities`, `facility:{slug}`, `promotion:active`; from M5 branch-qualified tags such as `branch:{slug}:page:home` and `branches`, and `promotion:active` is removed). Mutations invalidate only their own tags, plus the sitemap when publication or slugs change.
+- Published content uses Next.js cache tags, branch-qualified since M5 (spec 0002): `site-settings`, `sitemap`, `branches` (the active branch list and branch view models), and per branch `branch:{slug}:page:{key}`, `branch:{slug}:stay`, `branch:{slug}:stay:{roomSlug}`, `branch:{slug}:facilities`, `branch:{slug}:facility:{slug}`. Every `unstable_cache` key names its branch. Mutations invalidate only their own branch's tags, plus the sitemap when publication or slugs change, plus `branches` when a branch's published listing types or facilities change. An edit to one branch never expires another branch's tags (tested).
 - Dashboard views, availability, quotes, payment status, and everything under `/api/v1` are dynamic and never cached.
 - Draft and unpublished records never appear in public queries.
 

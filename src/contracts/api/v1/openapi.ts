@@ -1,5 +1,18 @@
 import { z } from "zod";
 
+import {
+  BranchDetail,
+  BranchInput,
+  BranchList,
+  BranchPatch,
+  BranchSummary,
+  Image,
+  RoomTypeDetail,
+  RoomTypeList,
+  RoomTypeSummary,
+  StaffBranch,
+  StaffBranchList,
+} from "./branches";
 import { HealthResponse } from "./health";
 import { Money, Occupancy, Problem, Stay } from "./primitives";
 import { API_ROUTES, type ApiRoute } from "./routes";
@@ -15,6 +28,17 @@ const COMPONENTS: Readonly<Record<string, z.ZodType>> = {
   Stay,
   Occupancy,
   HealthResponse,
+  Image,
+  BranchSummary,
+  BranchDetail,
+  BranchList,
+  RoomTypeSummary,
+  RoomTypeDetail,
+  RoomTypeList,
+  StaffBranch,
+  StaffBranchList,
+  BranchInput,
+  BranchPatch,
 };
 
 function componentSchemas() {
@@ -53,6 +77,32 @@ const problemContent = {
   },
 };
 
+/** Path parameters from `{name}` segments, then the query schema's keys. */
+function parameters(route: ApiRoute) {
+  const path = [...route.path.matchAll(/\{([^}]+)\}/g)].map((match) => ({
+    name: match[1],
+    in: "path",
+    required: true,
+    schema: { type: "string" },
+  }));
+  const query = route.query
+    ? Object.entries(route.query.shape).map(([name, schema]) => {
+        const json = z.toJSONSchema(schema as z.ZodType, {
+          unrepresentable: "any",
+          io: "input",
+        }) as Record<string, unknown>;
+        delete json.$schema;
+        return {
+          name,
+          in: "query",
+          required: !(schema as z.ZodType).safeParse(undefined).success,
+          schema: json,
+        };
+      })
+    : [];
+  return [...path, ...query];
+}
+
 function operation(route: ApiRoute) {
   const responses: Record<string, unknown> = {};
   for (const [status, response] of Object.entries(route.responses)) {
@@ -76,6 +126,7 @@ function operation(route: ApiRoute) {
     summary: route.summary,
     tags: [route.tag],
     security: route.security === "staff" ? [{ staffSession: [] }] : [],
+    ...(parameters(route).length > 0 ? { parameters: parameters(route) } : {}),
     ...(route.request
       ? {
           requestBody: {

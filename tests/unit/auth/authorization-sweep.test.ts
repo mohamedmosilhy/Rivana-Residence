@@ -7,7 +7,7 @@ import { CatalogQueries } from "@/application/content/catalog-queries";
 import { PageCommands } from "@/application/content/page-commands";
 import { ListEnquiries } from "@/application/enquiries/list-enquiries";
 import { MediaLibrary } from "@/application/media/media-library";
-import { PromotionAdmin } from "@/application/promotions/promotion-admin";
+import { ListBranches, ManageBranches } from "@/application/branches";
 import {
   GetAdminSiteSettings,
   ReplaceSocialLinks,
@@ -41,8 +41,8 @@ function tripwire(name: string): never {
 
 const kind = {
   noun: "room",
-  listTag: "rooms",
-  itemTag: (slug: string) => `room:${slug}`,
+  listTag: (branch: string) => `branch:${branch}:stay`,
+  itemTag: (branch: string, slug: string) => `branch:${branch}:stay:${slug}`,
 } as never;
 
 type Call = Readonly<{
@@ -67,9 +67,12 @@ const queries = () =>
 const pages = () =>
   new PageCommands(tripwire("pages"), tripwire("cache"), tripwire("branches"));
 const media = () => new MediaLibrary(tripwire("deps"), tripwire("cache"));
-const promotions = () =>
-  new PromotionAdmin(tripwire("promotions"), tripwire("cache"), {
-    now: () => new Date("2026-09-26T00:00:00Z"),
+const branches = () =>
+  new ManageBranches({
+    branches: tripwire("branches"),
+    cache: tripwire("cache"),
+    media: tripwire("media"),
+    clock: tripwire("clock"),
   });
 const settingsRepo = () => tripwire("settings");
 
@@ -78,7 +81,7 @@ const CALLS: readonly Call[] = [
   {
     name: "catalog.create",
     capability: "content:edit",
-    run: (s) => catalog().create(s, {}),
+    run: (s) => catalog().create(s, "new-cairo", {}),
   },
   {
     name: "catalog.update",
@@ -144,42 +147,43 @@ const CALLS: readonly Call[] = [
   {
     name: "pages.list",
     capability: "content:edit",
-    run: (s) => pages().list(s),
+    run: (s) => pages().list(s, "new-cairo"),
   },
   {
     name: "pages.get",
     capability: "content:edit",
-    run: (s) => pages().get(s, "HOME"),
+    run: (s) => pages().get(s, "new-cairo", "HOME"),
   },
   {
     name: "pages.saveSection",
     capability: "content:edit",
-    run: (s) => pages().saveSection(s, "HOME", "section", {}),
+    run: (s) => pages().saveSection(s, "new-cairo", "HOME", "section", {}),
   },
   {
     name: "pages.updateDetails",
     capability: "content:edit",
-    run: (s) => pages().updateDetails(s, "HOME", {} as never),
+    run: (s) => pages().updateDetails(s, "new-cairo", "HOME", {} as never),
   },
   {
     name: "pages.saveSectionMedia",
     capability: "content:edit",
-    run: (s) => pages().saveSectionMedia(s, "HOME", "section", [] as never),
+    run: (s) =>
+      pages().saveSectionMedia(s, "new-cairo", "HOME", "section", [] as never),
   },
   {
     name: "pages.moveSection",
     capability: "content:edit",
-    run: (s) => pages().moveSection(s, "HOME", "section", 1),
+    run: (s) => pages().moveSection(s, "new-cairo", "HOME", "section", 1),
   },
   {
     name: "pages.publish",
     capability: "content:publish",
-    run: (s) => pages().publish(s, "HOME"),
+    run: (s) => pages().publish(s, "new-cairo", "HOME"),
   },
   {
     name: "pages.unpublish",
     capability: "content:publish",
-    run: (s) => pages().unpublish(s, "HOME"),
+    run: (s) => pages().unpublish(s, "new-cairo", "HOME"),
   },
   // Media library.
   {
@@ -222,51 +226,31 @@ const CALLS: readonly Call[] = [
     capability: "media:delete",
     run: (s) => media().delete(s, "id"),
   },
-  // Promotions.
+  // Branches (spec 0002).
   {
-    name: "promotions.list",
-    capability: "promotions:manage",
-    run: (s) => promotions().list(s, {} as never),
+    name: "branches.list",
+    capability: "branches:manage",
+    run: (s) => branches().list(s),
   },
   {
-    name: "promotions.get",
-    capability: "promotions:manage",
-    run: (s) => promotions().get(s, "id"),
+    name: "branches.get",
+    capability: "branches:manage",
+    run: (s) => branches().get(s, "id"),
   },
   {
-    name: "promotions.create",
-    capability: "promotions:manage",
-    run: (s) => promotions().create(s, {} as never),
+    name: "branches.create",
+    capability: "branches:manage",
+    run: (s) => branches().create(s, {}),
   },
   {
-    name: "promotions.update",
-    capability: "promotions:manage",
-    run: (s) => promotions().update(s, "id", {} as never),
+    name: "branches.update",
+    capability: "branches:manage",
+    run: (s) => branches().update(s, "id", {}),
   },
   {
-    name: "promotions.publish",
-    capability: "promotions:manage",
-    run: (s) => promotions().publish(s, "id"),
-  },
-  {
-    name: "promotions.unpublish",
-    capability: "promotions:manage",
-    run: (s) => promotions().unpublish(s, "id"),
-  },
-  {
-    name: "promotions.archive",
-    capability: "promotions:manage",
-    run: (s) => promotions().archive(s, "id"),
-  },
-  {
-    name: "promotions.restore",
-    capability: "promotions:manage",
-    run: (s) => promotions().restore(s, "id"),
-  },
-  {
-    name: "promotions.delete",
-    capability: "content:delete",
-    run: (s) => promotions().delete(s, "id"),
+    name: "branches.forStaff",
+    capability: "inventory:read",
+    run: (s) => new ListBranches(tripwire("branches")).forStaff(s),
   },
   // Settings, enquiries, overview.
   {
@@ -302,7 +286,10 @@ const CALLS: readonly Call[] = [
     name: "enquiries.list",
     capability: "enquiries:read",
     run: (s) =>
-      new ListEnquiries(tripwire("enquiries")).execute(s, {} as never),
+      new ListEnquiries(tripwire("enquiries"), tripwire("branches")).execute(
+        s,
+        {} as never,
+      ),
   },
   {
     name: "overview.read",
@@ -354,6 +341,8 @@ describe("authorization sweep across protected commands", () => {
         "media:delete",
         "media:rights",
         "settings:edit",
+        "branches:manage",
+        "inventory:read",
       ]),
     );
   });
@@ -372,7 +361,7 @@ describe("authorization sweep across protected commands", () => {
 });
 
 // AC-4: Receptionists and Managers hold no CMS capability, so every content,
-// media, promotion, and settings command refuses them before touching data,
+// media, settings, and branch admin command refuses them before touching data,
 // even with a branch assignment.
 describe.each(["RECEPTIONIST", "MANAGER"] as const)(
   "authorization sweep for %s",
@@ -382,10 +371,10 @@ describe.each(["RECEPTIONIST", "MANAGER"] as const)(
       (call) => !roleHasCapability(role, call.capability),
     );
 
-    it("covers every command except the branch-scoped enquiry list", () => {
+    it("covers every command except their branch-scoped reads", () => {
       expect(
         CALLS.filter((call) => !denied.includes(call)).map((call) => call.name),
-      ).toEqual(["enquiries.list"]);
+      ).toEqual(["branches.forStaff", "enquiries.list"]);
     });
 
     it.each(denied.map((call) => [call.name, call] as const))(

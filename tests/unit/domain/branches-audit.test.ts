@@ -1,4 +1,7 @@
 // @vitest-environment node
+import { readdirSync, readFileSync } from "node:fs";
+import { join } from "node:path";
+
 import { describe, expect, it } from "vitest";
 
 import { auditEvent } from "@/domain/audit";
@@ -49,16 +52,24 @@ describe("branch slugs", () => {
     },
   );
 
+  // AC-16: the domain list and the newest `Branch_slug_check` agree.
   it("names the reserved list the database check uses", () => {
-    expect(RESERVED_BRANCH_SLUGS).toEqual([
-      "admin",
-      "api",
-      "media",
-      "reservations",
-      "book",
-      "sitemap.xml",
-      "robots.txt",
+    const migrations = join(__dirname, "../../../prisma/migrations");
+    const latest = readdirSync(migrations)
+      .filter((name) => /^\d{14}_/.test(name))
+      .sort()
+      .map((name) =>
+        readFileSync(join(migrations, name, "migration.sql"), "utf8"),
+      )
+      .filter((sql) => sql.includes('ADD CONSTRAINT "Branch_slug_check"'))
+      .at(-1)!;
+    const list = /"slug" NOT IN \(([^)]*)\)/.exec(latest)![1]!;
+    expect([...list.matchAll(/'([^']+)'/g)].map((match) => match[1])).toEqual([
+      ...RESERVED_BRANCH_SLUGS,
     ]);
+    expect(RESERVED_BRANCH_SLUGS).toEqual(
+      expect.arrayContaining(["about", "contact", "rooms", "facilities"]),
+    );
   });
 });
 

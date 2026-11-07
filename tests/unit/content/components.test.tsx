@@ -4,7 +4,6 @@ import { describe, expect, it, vi } from "vitest";
 
 import { CatalogForm } from "@/presentation/admin/content/catalog-form";
 import { SectionEditor } from "@/presentation/admin/pages/section-editor";
-import { PromotionForm } from "@/presentation/admin/promotions/promotion-form";
 import { ConfirmAction } from "@/presentation/admin/ui/confirm-action";
 import {
   idleFormState,
@@ -122,6 +121,35 @@ describe("CatalogForm", () => {
       target: { value: "Nile Suite 2" },
     });
     expect(screen.getByLabelText("Web address")).toHaveValue("river");
+  });
+
+  // AC-5, AC-13: create forms offer a branch choice; apartments show counts.
+  it("offers the branches on create and shows counts only for apartments", () => {
+    withToasts(
+      <CatalogForm
+        variant="room"
+        action={idle}
+        values={values}
+        isNew
+        submitLabel="Create draft"
+        branchOptions={{
+          branches: [
+            { slug: "new-cairo", name: "New Cairo" },
+            { slug: "demo-giza", name: "Giza" },
+          ],
+          selected: "demo-giza",
+        }}
+      />,
+    );
+    expect(screen.getByLabelText("Branch")).toHaveValue("demo-giza");
+    expect(
+      screen.getByLabelText("Bedrooms", { exact: false }),
+    ).not.toBeVisible();
+    fireEvent.click(screen.getByLabelText("Apartment"));
+    expect(screen.getByLabelText("Bedrooms", { exact: false })).toBeVisible();
+    expect(
+      screen.getByRole("group", { name: "Apartment facts" }),
+    ).toBeInTheDocument();
   });
 
   it("never follows the name when editing an existing record", () => {
@@ -255,43 +283,6 @@ describe("SectionEditor", () => {
     expect(
       screen.getByLabelText("Show this section on the page"),
     ).not.toBeChecked();
-  });
-});
-
-describe("PromotionForm", () => {
-  it("updates the preview as staff type and labels the time zone", () => {
-    withToasts(
-      <PromotionForm
-        action={idle}
-        timeZone="Africa/Cairo"
-        submitLabel="Create draft"
-        values={{
-          internalName: "",
-          headline: "",
-          body: "",
-          code: "",
-          terms: "",
-          startsAt: "",
-          endsAt: "",
-          priority: "0",
-          showAsPopup: true,
-        }}
-      />,
-    );
-    fireEvent.change(screen.getByLabelText("Headline"), {
-      target: { value: "Autumn by the river" },
-    });
-    fireEvent.change(screen.getByLabelText("Code"), {
-      target: { value: "AUTUMN26" },
-    });
-    const preview = screen.getByRole("complementary", { name: "Preview" });
-    expect(
-      within(preview).getByRole("heading", { name: "Autumn by the river" }),
-    ).toBeInTheDocument();
-    expect(within(preview).getByText("AUTUMN26")).toBeInTheDocument();
-    expect(
-      screen.getByLabelText(/Starts \(Africa\/Cairo time\)/),
-    ).toHaveAttribute("type", "datetime-local");
   });
 });
 

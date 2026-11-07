@@ -282,6 +282,7 @@ describe("library queries and cache tags", () => {
           role: "Gallery",
           isPublic: true,
           slug: "nile",
+          branchSlug: "new-cairo",
         },
         {
           kind: "FACILITY",
@@ -290,6 +291,7 @@ describe("library queries and cache tags", () => {
           role: "Hero image",
           isPublic: false,
           slug: "pool",
+          branchSlug: "new-cairo",
         },
         {
           kind: "PAGE_SECTION",
@@ -298,6 +300,7 @@ describe("library queries and cache tags", () => {
           role: "Hero section",
           isPublic: true,
           slug: null,
+          branchSlug: "demo-giza",
         },
         {
           kind: "SITE_SETTINGS",
@@ -306,8 +309,25 @@ describe("library queries and cache tags", () => {
           role: "Logo",
           isPublic: true,
           slug: null,
+          branchSlug: null,
+        },
+        {
+          kind: "BRANCH",
+          ownerId: "b1",
+          ownerName: "Giza",
+          role: "Hero image",
+          isPublic: true,
+          slug: null,
+          branchSlug: "demo-giza",
         },
       ]),
-    ).toEqual(["rooms", "sitemap", "room:nile", "page:home", "site-settings"]);
+    ).toEqual([
+      "sitemap",
+      "branch:new-cairo:stay",
+      "branch:new-cairo:stay:nile",
+      "branch:demo-giza:page:home",
+      "site-settings",
+      "branches",
+    ]);
   });
 });

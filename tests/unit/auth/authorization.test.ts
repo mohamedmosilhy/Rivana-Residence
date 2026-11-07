@@ -29,7 +29,6 @@ const MATRIX: Record<Capability, Row> = {
   "media:upload": [1, 0, 0, 1],
   "media:delete": [0, 0, 0, 1],
   "media:rights": [0, 0, 0, 1],
-  "promotions:manage": [1, 0, 0, 1],
   // Receptionists and Managers read their branches' enquiries (Q-26).
   "enquiries:read": [1, 1, 1, 1],
   "enquiries:manage": [1, 1, 1, 1],

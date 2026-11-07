@@ -62,28 +62,44 @@ export function parseMediaListQuery(
   };
 }
 
-/** The public cache tags that show an image in these places. */
+/**
+ * The public cache tags that show an image in these places. Content tags
+ * name the owning branch (spec 0002).
+ */
 export function tagsForUsage(usage: readonly MediaUsage[]) {
   const tags = new Set<string>();
   for (const item of usage) {
     if (!item.isPublic) continue;
+    const branch = item.branchSlug;
     switch (item.kind) {
       case "ROOM":
       case "ROOM_SHARING":
-        tags.add(CACHE_TAGS.rooms);
         tags.add(CACHE_TAGS.sitemap);
-        if (item.slug) tags.add(CACHE_TAGS.room(item.slug));
+        if (!branch) break;
+        tags.add(CACHE_TAGS.stay(branch));
+        if (item.slug) tags.add(CACHE_TAGS.stayItem(branch, item.slug));
         break;
       case "FACILITY":
       case "FACILITY_SHARING":
-        tags.add(CACHE_TAGS.facilities);
         tags.add(CACHE_TAGS.sitemap);
-        if (item.slug) tags.add(CACHE_TAGS.facility(item.slug));
+        if (!branch) break;
+        tags.add(CACHE_TAGS.facilities(branch));
+        if (item.slug) tags.add(CACHE_TAGS.facility(branch, item.slug));
         break;
       case "PAGE_SECTION":
       case "PAGE_SHARING":
-        tags.add(CACHE_TAGS.page(item.ownerId as "HOME" | "ABOUT" | "CONTACT"));
         tags.add(CACHE_TAGS.sitemap);
+        if (branch) {
+          tags.add(
+            CACHE_TAGS.page(
+              branch,
+              item.ownerId as "HOME" | "ABOUT" | "CONTACT",
+            ),
+          );
+        }
+        break;
+      case "BRANCH":
+        tags.add(CACHE_TAGS.branches);
         break;
       case "SITE_SETTINGS":
         tags.add(CACHE_TAGS.siteSettings);

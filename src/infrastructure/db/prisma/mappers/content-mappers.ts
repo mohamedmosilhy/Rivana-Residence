@@ -5,7 +5,6 @@ import type {
   FacilityDto,
   MediaAssetDto,
   PageDto,
-  PromotionDto,
   RoomDto,
   SiteSettingsDto,
 } from "@/application/ports/repositories";
@@ -97,6 +96,9 @@ export function mapRoom(row: RoomRow): RoomDto {
     branchId: row.branchId,
     name: row.name,
     slug: row.slug,
+    accommodationType: row.accommodationType,
+    bedroomCount: row.bedroomCount,
+    bathroomCount: row.bathroomCount,
     shortDescription: row.shortDescription,
     description: richText(row.description),
     sizeSqm: row.sizeSqm ? Number(row.sizeSqm) : null,
@@ -178,15 +180,6 @@ export function mapSettings(row: SettingsRow): SiteSettingsDto {
     timeZone: row.timeZone,
     siteName: row.siteName,
     tagline: row.tagline,
-    phone: row.phone,
-    email: row.email,
-    addressLine1: row.addressLine1,
-    addressLine2: row.addressLine2,
-    city: row.city,
-    country: row.country,
-    latitude: row.latitude === null ? null : row.latitude.toNumber(),
-    longitude: row.longitude === null ? null : row.longitude.toNumber(),
-    mapEmbedUrl: row.mapEmbedUrl,
     footerText: row.footerText,
     defaultSeoTitle: row.defaultSeoTitle,
     defaultSeoDescription: row.defaultSeoDescription,
@@ -237,28 +230,15 @@ export function mapMedia(row: MediaRow): MediaAssetDto {
   };
 }
 
-export function mapPromotion(row: PromotionDto): PromotionDto {
+export function mapEnquiry(
+  row: Omit<ContactEnquiryDto, "branchName"> & {
+    branch?: { name: string } | null;
+  },
+): ContactEnquiryDto {
   return {
     id: row.id,
-    internalName: row.internalName,
-    headline: row.headline,
-    body: row.body,
-    code: row.code,
-    terms: row.terms,
-    status: row.status,
-    startsAt: row.startsAt,
-    endsAt: row.endsAt,
-    priority: row.priority,
-    showAsPopup: row.showAsPopup,
-    version: row.version,
-    publishedAt: row.publishedAt,
-    updatedAt: row.updatedAt,
-  };
-}
-
-export function mapEnquiry(row: ContactEnquiryDto): ContactEnquiryDto {
-  return {
-    id: row.id,
+    branchId: row.branchId,
+    branchName: row.branch?.name ?? null,
     name: row.name,
     email: row.email,
     phone: row.phone,

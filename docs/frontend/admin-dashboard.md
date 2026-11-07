@@ -9,7 +9,8 @@ The staff dashboard is a protected route group inside the same Next.js applicati
 Primary navigation (all routes: [route-map.md](./route-map.md)):
 
 - Overview
-- Content: Pages, Rooms & Apartments, Facilities, Media, Enquiries (per branch from M5; Promotions implemented and retired in M5)
+- Content: Pages, Rooms & Apartments, Facilities, Media, Enquiries (per branch with the branch selector since M5; Promotions removed in M5)
+- Administration: Branches (Admin, M5), Settings, Staff
 - Operations (planned): Reservations, Cancellations, Availability, Inventory, Guests
 - Commercial (planned): Pricing, Services, Coupons, Broadcasts, Reports, Audit
 - Administration: Settings (brand, VAT), Staff, and Branches (planned)
@@ -43,7 +44,7 @@ Content roles see no charts, revenue, or occupancy. Reservation roles get the de
 
 ## Room (listing) workflow
 
-From M5 the list and forms work per branch (branch selector) and the form has an accommodation type (Room or Apartment) with optional bedrooms and bathrooms for apartments.
+Since M5 the list and forms work per branch (a `?branch=<slug>` selector; the create form preselects it and the branch is fixed afterwards) and the form has an accommodation type (Room or Apartment) with optional bedrooms and bathrooms for apartments.
 
 List columns: thumbnail, name, slug, status, featured, updated time, actions. Filters: status and featured; search by name.
 
@@ -103,7 +104,7 @@ Groups:
 - Social links: platform, URL, visibility, order.
 - Footer/legal: footer text and approved policy links.
 - Default SEO: title template, description, social image.
-- Booking: read-only “Not configured” status initially (implemented). From M5 online booking is switched per branch on the branch screen; VAT is set here by the Admin only (M12, any rate).
+- Booking: read-only “Not configured” status initially (implemented). Online booking will be switched per branch on the branch screen (shown read only as Off since M5; enabled from M10); VAT is set here by the Admin only (M12, any rate).
 - WhatsApp (Admin only, M8): business number (placeholder until the client supplies it), provider phone-number id, token-configured indicator, template manager per purpose and language, setup gaps, and **Send test message**.
 - Media storage: read-only provider/root health and free-space warning; filesystem paths are never editable in the browser.
 - Account/security: current user password/session management; user management is administrator-only.

@@ -75,7 +75,9 @@ export default async function EditFacilityPage({
         status={facility.status}
         warnings={gaps}
         readiness={readinessIssues(() => assertFacilityPublishable(facility))}
-        publicPath={`/facilities/${facility.slug}`}
+        {...(branch
+          ? { publicPath: `/${branch.slug}/facilities/${facility.slug}` }
+          : {})}
         previewHref={`/admin/facilities/${facility.id}/preview` as Route}
         actions={{
           publish: publishFacilityAction.bind(null, facility.id),

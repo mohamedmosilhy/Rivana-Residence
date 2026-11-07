@@ -30,9 +30,13 @@ const usableImage = (usage: {
 const prisma = getPrisma();
 
 try {
-  const [settings, pages, rooms, facilities, promotions, booking] =
+  const [settings, branches, pages, rooms, facilities, booking] =
     await Promise.all([
       prisma.siteSettings.findUnique({ where: { id: "default" } }),
+      prisma.branch.findMany({
+        where: { status: "ACTIVE" },
+        orderBy: [{ sortOrder: "asc" }, { id: "asc" }],
+      }),
       prisma.page.findMany({ where: { isPublished: true } }),
       prisma.room.findMany({
         where: { status: "PUBLISHED" },
@@ -42,7 +46,6 @@ try {
         where: { status: "PUBLISHED" },
         include: { media: { include: { media: true } } },
       }),
-      prisma.promotion.findMany({ where: { status: "PUBLISHED" } }),
       new ResolveBooking(new DisabledBookingProvider()).execute(),
     ]);
 
@@ -52,35 +55,34 @@ try {
     origin.protocol === "https:" && origin.hostname !== "localhost",
     origin.origin,
   );
-  record(
-    "Official contact details",
-    Boolean(
-      settings &&
-        !placeholder(settings.phone) &&
-        !placeholder(settings.email) &&
-        settings.addressLine1 &&
-        settings.city &&
-        settings.country,
-    ),
-    settings
-      ? `${settings.phone ?? "missing phone"}; ${settings.email ?? "missing email"}; ${[
-          settings.addressLine1,
-          settings.city,
-          settings.country,
-        ]
-          .filter(Boolean)
-          .join(", ")}`
-      : "Site settings are missing.",
-  );
-  record(
-    "Confirmed location",
-    Boolean(
-      settings && settings.latitude !== null && settings.longitude !== null,
-    ),
-    settings?.latitude !== null && settings?.longitude !== null
-      ? `${settings?.latitude}, ${settings?.longitude}`
-      : "Latitude and longitude are incomplete.",
-  );
+  // Contact details and locations belong to each branch since M5.
+  record("Active branch", branches.length > 0, `${branches.length} active`);
+  for (const branch of branches) {
+    record(
+      `Official contact details (${branch.slug})`,
+      Boolean(
+        !placeholder(branch.phone) &&
+          !placeholder(branch.email) &&
+          branch.addressLine1 &&
+          branch.city &&
+          branch.country,
+      ),
+      `${branch.phone ?? "missing phone"}; ${branch.email ?? "missing email"}; ${[
+        branch.addressLine1,
+        branch.city,
+        branch.country,
+      ]
+        .filter(Boolean)
+        .join(", ")}`,
+    );
+    record(
+      `Confirmed location (${branch.slug})`,
+      branch.latitude !== null && branch.longitude !== null,
+      branch.latitude !== null && branch.longitude !== null
+        ? `${branch.latitude}, ${branch.longitude}`
+        : "Latitude and longitude are incomplete.",
+    );
+  }
   record(
     "Default search/social metadata",
     Boolean(
@@ -91,12 +93,18 @@ try {
     "Requires a default title, description, and sharing image.",
   );
 
-  const pageKeys = new Set(pages.map((page) => page.key));
-  record(
-    "Required managed pages published",
-    ["HOME", "ABOUT", "CONTACT"].every((key) => pageKeys.has(key as never)),
-    `Published: ${[...pageKeys].join(", ") || "none"}`,
-  );
+  for (const branch of branches) {
+    const pageKeys = new Set(
+      pages
+        .filter((page) => page.branchId === branch.id)
+        .map((page) => page.key),
+    );
+    record(
+      `Required managed pages published (${branch.slug})`,
+      ["HOME", "ABOUT", "CONTACT"].every((key) => pageKeys.has(key as never)),
+      `Published: ${[...pageKeys].join(", ") || "none"}`,
+    );
+  }
   record(
     "Published page descriptions",
     pages.every(
@@ -131,22 +139,6 @@ try {
       : `${facilities.length} published facility/facilities have approved heroes.`,
   );
 
-  const invalidPromotions = promotions.filter(
-    (promotion) =>
-      !promotion.headline.trim() ||
-      !promotion.body.trim() ||
-      !promotion.code.trim() ||
-      (promotion.startsAt &&
-        promotion.endsAt &&
-        promotion.startsAt >= promotion.endsAt),
-  );
-  record(
-    "Published promotion copy and windows",
-    invalidPromotions.length === 0,
-    invalidPromotions.length > 0
-      ? `Review: ${invalidPromotions.map((promotion) => promotion.internalName).join(", ")}`
-      : `${promotions.length} published promotion(s) checked.`,
-  );
   record(
     "Booking status is truthful",
     booking.available === false,

@@ -34,6 +34,7 @@ export function actionResult(
     }
     return errorState(result.error, values);
   }
-  revalidatePath(path);
+  // The query (e.g. `?branch=`) only matters for the return path.
+  revalidatePath(path.split("?")[0]!);
   return { status: "success", message: successMessage };
 }

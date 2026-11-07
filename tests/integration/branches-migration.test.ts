@@ -13,12 +13,14 @@ import { testDatabaseUrl } from "./support/test-database";
 
 const migrationsDir = join(__dirname, "../../prisma/migrations");
 const M4_START = "20261106";
+const M5_START = "20261107";
 const migrations = readdirSync(migrationsDir, { withFileTypes: true })
   .filter((entry) => entry.isDirectory())
   .map((entry) => entry.name)
   .sort();
 const m3 = migrations.filter((name) => name < M4_START);
-const m4 = migrations.filter((name) => name >= M4_START);
+const m4 = migrations.filter((name) => name >= M4_START && name < M5_START);
+const m5 = migrations.filter((name) => name >= M5_START);
 
 const base = testDatabaseUrl();
 const scratchName = base.database.replace(/_test$/, "_m4_backfill_test");
@@ -201,4 +203,21 @@ describe("branches_and_staff_roles migration on M3 data", () => {
     );
     expect(output).toContain("No difference detected.");
   }, 60_000);
+
+  // AC-16 (M5): the reserved-slug migration applies cleanly on migrated data
+  // and refuses the old top-level paths.
+  it("applies the M5 reserved-slug migration on top", async () => {
+    expect(m5).toEqual(["20261107120000_reserve_legacy_branch_slugs"]);
+    await apply(m5);
+    for (const slug of ["about", "contact", "rooms", "facilities"]) {
+      await expect(
+        db.query(
+          `INSERT INTO "Branch" ("id","slug","name","sortOrder","updatedAt") VALUES ($1,$2,'X',9,now())`,
+          [`reserved-${slug}`, slug],
+        ),
+      ).rejects.toThrow(/Branch_slug_check/);
+    }
+    const { rows } = await db.query(`SELECT count(*)::int AS n FROM "Branch"`);
+    expect(rows[0].n).toBe(1);
+  });
 });

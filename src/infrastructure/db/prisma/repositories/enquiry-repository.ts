@@ -38,10 +38,13 @@ export class PrismaEnquiryRepository implements EnquiryRepository {
         }
       : undefined;
     const where = {
-      // A list of ids never matches enquiries without a branch (Q-26).
-      ...(query.branchScope === "ALL"
-        ? {}
-        : { branchId: { in: [...query.branchScope] } }),
+      // A list of ids never matches enquiries without a branch (Q-26). The
+      // branch filter is already limited to the scope by the use case.
+      ...(query.branchId
+        ? { branchId: query.branchId }
+        : query.branchScope === "ALL"
+          ? {}
+          : { branchId: { in: [...query.branchScope] } }),
       ...(query.status ? { status: query.status } : {}),
       ...(contains
         ? {
@@ -58,6 +61,7 @@ export class PrismaEnquiryRepository implements EnquiryRepository {
       this.client.contactEnquiry.findMany({
         where,
         orderBy: [{ createdAt: "desc" }, { id: "asc" }],
+        include: { branch: { select: { name: true } } },
         skip: (query.page - 1) * query.pageSize,
         take: query.pageSize,
       }),
@@ -70,7 +74,12 @@ export class PrismaEnquiryRepository implements EnquiryRepository {
     };
   }
 
-  async create(input: Omit<ContactEnquiryDto, "id" | "status" | "createdAt">) {
+  async create(
+    input: Omit<
+      ContactEnquiryDto,
+      "id" | "status" | "createdAt" | "branchName"
+    >,
+  ) {
     const validated = contactEnquirySchema.safeParse(input);
     if (!validated.success) {
       return invalid(
@@ -80,7 +89,7 @@ export class PrismaEnquiryRepository implements EnquiryRepository {
     }
     try {
       const row = await this.client.contactEnquiry.create({
-        data: { id: createId(), ...validated.data },
+        data: { id: createId(), ...validated.data, branchId: input.branchId },
       });
       return success(mapEnquiry(row));
     } catch (error) {

@@ -9,8 +9,9 @@ import { connection } from "next/server";
 import { CACHE_TAGS } from "@/application/cache/cache-tags";
 import { SubmitEnquiry } from "@/application/enquiries/submit-enquiry";
 import type { ContactDelivery } from "@/application/ports/providers";
-import { PublicSite, activePromotion } from "@/application/public/public-site";
+import { PublicSite } from "@/application/public/public-site";
 import type { PageKey } from "@/domain/content/page-sections";
+import { SLUG_PATTERN } from "@/domain/shared/slug";
 import { getPrisma } from "@/infrastructure/db/prisma/client";
 import { PrismaBranchRepository } from "@/infrastructure/db/prisma/repositories/branches/branch-repository";
 import { PrismaLoginThrottleStore } from "@/infrastructure/db/prisma/repositories/login-throttle-store";
@@ -18,7 +19,6 @@ import { PrismaEnquiryRepository } from "@/infrastructure/db/prisma/repositories
 import { PrismaFacilityRepository } from "@/infrastructure/db/prisma/repositories/facility-repository";
 import { PrismaMediaRepository } from "@/infrastructure/db/prisma/repositories/media-repository";
 import { PrismaPageRepository } from "@/infrastructure/db/prisma/repositories/page-repository";
-import { PrismaPromotionRepository } from "@/infrastructure/db/prisma/repositories/promotion-repository";
 import { PrismaRoomRepository } from "@/infrastructure/db/prisma/repositories/room-repository";
 import { PrismaSettingsRepository } from "@/infrastructure/db/prisma/repositories/settings-repository";
 import { HmacFormTokens } from "@/infrastructure/email/hmac-form-tokens";
@@ -35,7 +35,6 @@ function site() {
     pages: new PrismaPageRepository(),
     rooms: new PrismaRoomRepository(),
     facilities: new PrismaFacilityRepository(),
-    promotions: new PrismaPromotionRepository(),
     branches: new PrismaBranchRepository(),
   });
 }
@@ -64,44 +63,85 @@ export async function getSiteSettings() {
   );
 }
 
-export async function getPublishedPage(key: PageKey) {
+/** The branch a public page renders for: id for queries, slug for tags. */
+export type BranchRef = Readonly<{ id: string; slug: string }>;
+
+/**
+ * Active branches by display order (chooser, switcher, sitemap, and the
+ * single-branch redirect on `/`). Expired by `branches`.
+ */
+export async function getActiveBranches() {
   await connection();
   return cached(
-    () => site().page(key),
-    ["public", "page", key],
-    [CACHE_TAGS.page(key)],
+    () => site().activeBranches(),
+    ["public", "branches"],
+    [CACHE_TAGS.branches],
   );
 }
 
-export async function getPublishedRooms() {
-  await connection();
-  return cached(() => site().rooms(), ["public", "rooms"], [CACHE_TAGS.rooms]);
-}
-
-export async function getPublishedRoom(slug: string) {
-  await connection();
-  return cached(
-    () => site().room(slug),
-    ["public", "room", slug],
-    [CACHE_TAGS.rooms, CACHE_TAGS.room(slug)],
+/**
+ * The active branch for a URL slug; null when unknown or inactive. Resolved
+ * from the cached active list, so arbitrary URL segments never create cache
+ * entries of their own (review of M5).
+ */
+export async function getActiveBranchBySlug(slug: string) {
+  return (
+    (await getActiveBranches()).find((branch) => branch.slug === slug) ?? null
   );
 }
 
-export async function getPublishedFacilities() {
+/** Only well-formed slugs reach the cache; anything else is simply absent. */
+function isCacheableSlug(slug: string) {
+  return slug.length <= 120 && SLUG_PATTERN.test(slug);
+}
+
+export async function getPublishedPage(branch: BranchRef, key: PageKey) {
   await connection();
   return cached(
-    () => site().facilities(),
-    ["public", "facilities"],
-    [CACHE_TAGS.facilities],
+    () => site().page(branch.id, key),
+    ["public", "branch", branch.id, "page", key],
+    [CACHE_TAGS.page(branch.slug, key)],
   );
 }
 
-export async function getPublishedFacility(slug: string) {
+export async function getPublishedRooms(branch: BranchRef) {
   await connection();
   return cached(
-    () => site().facility(slug),
-    ["public", "facility", slug],
-    [CACHE_TAGS.facilities, CACHE_TAGS.facility(slug)],
+    () => site().rooms(branch.id),
+    ["public", "branch", branch.id, "rooms"],
+    [CACHE_TAGS.stay(branch.slug)],
+  );
+}
+
+export async function getPublishedRoom(branch: BranchRef, slug: string) {
+  await connection();
+  if (!isCacheableSlug(slug)) return null;
+  return cached(
+    () => site().room(branch.id, slug),
+    ["public", "branch", branch.id, "room", slug],
+    [CACHE_TAGS.stay(branch.slug), CACHE_TAGS.stayItem(branch.slug, slug)],
+  );
+}
+
+export async function getPublishedFacilities(branch: BranchRef) {
+  await connection();
+  return cached(
+    () => site().facilities(branch.id),
+    ["public", "branch", branch.id, "facilities"],
+    [CACHE_TAGS.facilities(branch.slug)],
+  );
+}
+
+export async function getPublishedFacility(branch: BranchRef, slug: string) {
+  await connection();
+  if (!isCacheableSlug(slug)) return null;
+  return cached(
+    () => site().facility(branch.id, slug),
+    ["public", "branch", branch.id, "facility", slug],
+    [
+      CACHE_TAGS.facilities(branch.slug),
+      CACHE_TAGS.facility(branch.slug, slug),
+    ],
   );
 }
 
@@ -110,41 +150,32 @@ export function getPublicOrigin() {
   return new URL(getServerEnv().APP_URL).origin;
 }
 
-/** Published routes and accurate content timestamps for sitemap.xml. */
+/**
+ * Published routes and accurate content timestamps for sitemap.xml, per
+ * active branch (spec 0002).
+ */
 export async function getPublicSitemap() {
   await connection();
   return cached(
     async () => {
       const publicSite = site();
-      const [home, about, contact, rooms, facilities] = await Promise.all([
-        publicSite.page("HOME"),
-        publicSite.page("ABOUT"),
-        publicSite.page("CONTACT"),
-        publicSite.rooms(),
-        publicSite.facilities(),
-      ]);
-      return { home, about, contact, rooms, facilities };
+      const branches = await publicSite.activeBranches();
+      return Promise.all(
+        branches.map(async (branch) => {
+          const [home, about, contact, rooms, facilities] = await Promise.all([
+            publicSite.page(branch.id, "HOME"),
+            publicSite.page(branch.id, "ABOUT"),
+            publicSite.page(branch.id, "CONTACT"),
+            publicSite.rooms(branch.id),
+            publicSite.facilities(branch.id),
+          ]);
+          return { branch, home, about, contact, rooms, facilities };
+        }),
+      );
     },
     ["public", "sitemap"],
-    [CACHE_TAGS.sitemap],
+    [CACHE_TAGS.sitemap, CACHE_TAGS.branches],
   );
-}
-
-/**
- * The promotion to show now, by the server clock. The candidate list is
- * cached (and refreshed every 5 minutes to drop ended campaigns); the
- * winner is chosen per request so schedules are honoured exactly.
- */
-export async function getActivePromotion() {
-  await connection();
-  const now = new Date();
-  const candidates = await cached(
-    () => site().promotionCandidates(now),
-    ["public", "promotions"],
-    [CACHE_TAGS.activePromotion],
-    300,
-  );
-  return activePromotion(candidates, now);
 }
 
 let formSecret: string | undefined;
@@ -192,6 +223,7 @@ export async function submitEnquiry(values: Readonly<Record<string, unknown>>) {
   const prisma = getPrisma();
   return new SubmitEnquiry({
     enquiries: new PrismaEnquiryRepository(prisma),
+    branches: new PrismaBranchRepository(prisma),
     throttle: new PrismaLoginThrottleStore(prisma),
     tokens: tokens(),
     delivery: contactDelivery(),

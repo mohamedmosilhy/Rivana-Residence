@@ -7,7 +7,6 @@ import { PrismaEnquiryRepository } from "@/infrastructure/db/prisma/repositories
 import { PrismaFacilityRepository } from "@/infrastructure/db/prisma/repositories/facility-repository";
 import { PrismaMediaRepository } from "@/infrastructure/db/prisma/repositories/media-repository";
 import { PrismaPageRepository } from "@/infrastructure/db/prisma/repositories/page-repository";
-import { PrismaPromotionRepository } from "@/infrastructure/db/prisma/repositories/promotion-repository";
 import { PrismaRoomRepository } from "@/infrastructure/db/prisma/repositories/room-repository";
 import { PrismaSettingsRepository } from "@/infrastructure/db/prisma/repositories/settings-repository";
 
@@ -195,7 +194,6 @@ describe("default branch resolution", () => {
     pages: new PrismaPageRepository(client),
     rooms: new PrismaRoomRepository(client),
     facilities: new PrismaFacilityRepository(client),
-    promotions: new PrismaPromotionRepository(client),
     branches,
   });
 
@@ -209,18 +207,24 @@ describe("default branch resolution", () => {
     expect((await branches.findDefaultActive())?.id).toBe(OTHER);
   });
 
-  it("shows visitors nothing when no branch is active", async () => {
+  it("shows visitors no branch when none is active", async () => {
     await createRoom(client, { status: "PUBLISHED" });
     await client.branch.updateMany({ data: { status: "INACTIVE" } });
-    expect(await site.rooms()).toEqual([]);
-    expect(await site.page("HOME")).toBeNull();
+    expect(await site.activeBranches()).toEqual([]);
+    expect(await site.branch("new-cairo")).toBeNull();
   });
 });
 
 // Q-26: Receptionists and Managers see their branches' enquiries only.
 describe("enquiry branch scope", () => {
   const enquiries = new PrismaEnquiryRepository(client);
-  const query = { status: null, search: null, page: 1, pageSize: 20 };
+  const query = {
+    status: null,
+    search: null,
+    page: 1,
+    pageSize: 20,
+    branchId: null,
+  };
 
   beforeEach(async () => {
     await client.contactEnquiry.createMany({
@@ -302,5 +306,70 @@ describe("audit log", () => {
         },
       }),
     ).rejects.toThrow(/AuditEvent_actorType_check/);
+  });
+});
+
+// T-SITE-3 (AC-12): a branch, its pages, and its audit row commit together;
+// a failure part way leaves nothing behind.
+describe("branch creation is atomic", () => {
+  const repository = new PrismaBranchRepository(client);
+  const input = {
+    slug: "demo-alex",
+    name: "Alexandria",
+    summary: null,
+    status: "INACTIVE" as const,
+    timeZone: "Africa/Cairo",
+    phone: null,
+    email: null,
+    addressLine1: null,
+    addressLine2: null,
+    city: null,
+    country: null,
+    latitude: null,
+    longitude: null,
+    mapEmbedUrl: null,
+    checkInTime: null,
+    checkOutTime: null,
+    syncReminderIntervalMinutes: 30,
+    syncFollowUpMinutes: 10,
+    heroMediaId: null,
+    onlineBookingEnabled: false,
+    sortOrder: 5,
+  };
+  const audit = (branchId: string) => ({
+    occurredAt: new Date("2026-11-07T10:00:00Z"),
+    actorType: "SYSTEM" as const,
+    actorId: null,
+    action: "branch.created" as const,
+    entityType: "Branch" as const,
+    entityId: branchId,
+    branchId,
+    reason: null,
+    changes: { slug: "demo-alex", name: "Alexandria", status: "INACTIVE" },
+  });
+
+  it("rolls back the branch when a page cannot be written", async () => {
+    // An unexpected write error is thrown, not mapped; either way the
+    // transaction rolls back.
+    const attempt = repository.create(
+      input,
+      [
+        {
+          key: "HOME",
+          title: "Home",
+          canonicalPath: "/",
+          sections: [
+            { type: "NOT_A_SECTION" as never, isVisible: true, payload: {} },
+          ],
+        },
+      ],
+      audit,
+    );
+    await expect(attempt).rejects.toThrow();
+    expect(
+      await client.branch.findUnique({ where: { slug: "demo-alex" } }),
+    ).toBeNull();
+    expect(await client.page.count({ where: { title: "Home" } })).toBe(0);
+    expect(await client.auditEvent.count()).toBe(0);
   });
 });

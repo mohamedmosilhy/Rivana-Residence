@@ -1,7 +1,12 @@
 import { z } from "zod";
 
 import { authorize } from "@/application/auth/authorize";
-import type { BranchRepository } from "@/application/branches";
+import {
+  chooseBranch,
+  type BranchChoice,
+  type BranchRecord,
+  type BranchRepository,
+} from "@/application/branches";
 import type { StaffPrincipal } from "@/application/auth/ports";
 import { CACHE_TAGS } from "@/application/cache/cache-tags";
 import type { CacheInvalidator } from "@/application/ports/providers";
@@ -49,7 +54,14 @@ export type PageSummary = Readonly<{
   readiness: readonly string[];
 }>;
 
+export type PageList = Readonly<{
+  branchChoice: BranchChoice;
+  pages: readonly PageSummary[];
+}>;
+
 export type PageEditorView = Readonly<{
+  branch: BranchRecord;
+  branchChoice: BranchChoice;
   page: PageDto;
   readiness: readonly string[];
   lockedTypes: readonly PageSectionType[];
@@ -125,8 +137,9 @@ const detailsSchema = z.object({
 });
 
 /**
- * Staff commands for the default branch's pages (the only branch until M5,
- * when the CMS gains a branch selector).
+ * Staff commands for a branch's pages (spec 0002). Reads take the CMS
+ * branch selector (`?branch=<slug>`, else the first branch); writes take the
+ * slug posted by the editor and re-resolve it on the server.
  */
 export class PageCommands {
   constructor(
@@ -135,22 +148,27 @@ export class PageCommands {
     private readonly branches: BranchRepository,
   ) {}
 
-  private async branchId() {
-    return (await this.branches.findDefault())?.id ?? null;
+  private async branch(slug: unknown) {
+    return typeof slug === "string" && slug
+      ? this.branches.findBySlug(slug)
+      : null;
   }
 
   async list(
     staff: StaffPrincipal | null,
-  ): Promise<Result<readonly PageSummary[]>> {
+    branchSlug: unknown,
+  ): Promise<Result<PageList>> {
     const access = authorize(staff, "content:edit");
     if (!access.ok) return access;
-    const branchId = await this.branchId();
-    if (!branchId) return success([]);
+    const branchChoice = await chooseBranch(this.branches, branchSlug);
+    const branchId = branchChoice.selected?.id;
+    if (!branchId) return success({ branchChoice, pages: [] });
     const pages = await Promise.all(
       PAGE_KEYS.map((key) => this.pages.findAdminByKey(branchId, key)),
     );
-    return success(
-      pages.flatMap((page) =>
+    return success({
+      branchChoice,
+      pages: pages.flatMap((page) =>
         page
           ? [
               {
@@ -164,21 +182,25 @@ export class PageCommands {
             ]
           : [],
       ),
-    );
+    });
   }
 
   async get(
     staff: StaffPrincipal | null,
+    branchSlug: unknown,
     key: PageKey,
   ): Promise<Result<PageEditorView | null>> {
     const access = authorize(staff, "content:edit");
     if (!access.ok) return access;
-    const branchId = await this.branchId();
-    const page = branchId
-      ? await this.pages.findAdminByKey(branchId, key)
+    const branchChoice = await chooseBranch(this.branches, branchSlug);
+    const branch = branchChoice.selected;
+    const page = branch
+      ? await this.pages.findAdminByKey(branch.id, key)
       : null;
-    if (!page) return success(null);
+    if (!branch || !page) return success(null);
     return success({
+      branch,
+      branchChoice,
       page,
       readiness: pageReadiness(page),
       lockedTypes: page.sections
@@ -189,40 +211,48 @@ export class PageCommands {
 
   async saveSection(
     staff: StaffPrincipal | null,
+    branchSlug: unknown,
     key: PageKey,
     sectionId: string,
     values: FormValues,
   ): Promise<Result<PageDto>> {
-    return this.edit(staff, "content:edit", key, async (actor, page) => {
-      const section = page.sections.find((item) => item.id === sectionId);
-      if (!section) {
-        return failure("NOT_FOUND", "This section no longer exists.");
-      }
-      return this.pages.saveSection(
-        page.branchId,
-        key,
-        {
-          id: section.id,
-          type: section.type,
-          heading: optionalString(values, "heading"),
-          eyebrow: optionalString(values, "eyebrow"),
-          isVisible: checkbox(values, "isVisible"),
-          payload: sectionPayloadFromForm(
-            section.type,
-            jsonValue(values, "payload"),
-          ),
-        },
-        actor,
-      );
-    });
+    return this.edit(
+      staff,
+      "content:edit",
+      branchSlug,
+      key,
+      async (actor, page) => {
+        const section = page.sections.find((item) => item.id === sectionId);
+        if (!section) {
+          return failure("NOT_FOUND", "This section no longer exists.");
+        }
+        return this.pages.saveSection(
+          page.branchId,
+          key,
+          {
+            id: section.id,
+            type: section.type,
+            heading: optionalString(values, "heading"),
+            eyebrow: optionalString(values, "eyebrow"),
+            isVisible: checkbox(values, "isVisible"),
+            payload: sectionPayloadFromForm(
+              section.type,
+              jsonValue(values, "payload"),
+            ),
+          },
+          actor,
+        );
+      },
+    );
   }
 
   async updateDetails(
     staff: StaffPrincipal | null,
+    branchSlug: unknown,
     key: PageKey,
     values: FormValues,
   ): Promise<Result<PageDto>> {
-    return this.edit(staff, "content:edit", key, (actor, page) => {
+    return this.edit(staff, "content:edit", branchSlug, key, (actor, page) => {
       const parsed = detailsSchema.safeParse({
         seoTitle: optionalString(values, "seoTitle"),
         seoDescription: optionalString(values, "seoDescription"),
@@ -242,49 +272,71 @@ export class PageCommands {
 
   async saveSectionMedia(
     staff: StaffPrincipal | null,
+    branchSlug: unknown,
     key: PageKey,
     sectionId: string,
     values: FormValues,
   ): Promise<Result<PageDto>> {
-    return this.edit(staff, "content:edit", key, async (actor, page) => {
-      const media = sectionMediaFromForm(values);
-      if (!media.ok) return media;
-      return this.pages.replaceSectionMedia(
-        page.branchId,
-        key,
-        sectionId,
-        media.value,
-        actor,
-      );
-    });
+    return this.edit(
+      staff,
+      "content:edit",
+      branchSlug,
+      key,
+      async (actor, page) => {
+        const media = sectionMediaFromForm(values);
+        if (!media.ok) return media;
+        return this.pages.replaceSectionMedia(
+          page.branchId,
+          key,
+          sectionId,
+          media.value,
+          actor,
+        );
+      },
+    );
   }
 
   async moveSection(
     staff: StaffPrincipal | null,
+    branchSlug: unknown,
     key: PageKey,
     sectionId: string,
     offset: -1 | 1,
   ): Promise<Result<void>> {
-    return this.edit(staff, "content:edit", key, async (actor, page) => {
-      const order = page.sections.map((section) => section.id);
-      const index = order.indexOf(sectionId);
-      const target = index + offset;
-      if (index < 0)
-        return failure("NOT_FOUND", "This section no longer exists.");
-      if (target < 0 || target >= order.length) return success(undefined);
-      [order[index], order[target]] = [order[target]!, order[index]!];
-      return this.pages.reorderSections(page.id, order, actor);
-    });
+    return this.edit(
+      staff,
+      "content:edit",
+      branchSlug,
+      key,
+      async (actor, page) => {
+        const order = page.sections.map((section) => section.id);
+        const index = order.indexOf(sectionId);
+        const target = index + offset;
+        if (index < 0)
+          return failure("NOT_FOUND", "This section no longer exists.");
+        if (target < 0 || target >= order.length) return success(undefined);
+        [order[index], order[target]] = [order[target]!, order[index]!];
+        return this.pages.reorderSections(page.id, order, actor);
+      },
+    );
   }
 
-  async publish(staff: StaffPrincipal | null, key: PageKey) {
-    return this.release(staff, key, (actor, branchId) =>
+  async publish(
+    staff: StaffPrincipal | null,
+    branchSlug: unknown,
+    key: PageKey,
+  ) {
+    return this.release(staff, branchSlug, key, (actor, branchId) =>
       this.pages.publish(branchId, key, actor),
     );
   }
 
-  async unpublish(staff: StaffPrincipal | null, key: PageKey) {
-    return this.release(staff, key, (actor, branchId) =>
+  async unpublish(
+    staff: StaffPrincipal | null,
+    branchSlug: unknown,
+    key: PageKey,
+  ) {
+    return this.release(staff, branchSlug, key, (actor, branchId) =>
       this.pages.unpublish(branchId, key, actor),
     );
   }
@@ -293,19 +345,23 @@ export class PageCommands {
   private async edit<T>(
     staff: StaffPrincipal | null,
     capability: "content:edit",
+    branchSlug: unknown,
     key: PageKey,
     operation: (actor: StaffPrincipal, page: PageDto) => Promise<Result<T>>,
   ): Promise<Result<T>> {
     const access = authorize(staff, capability);
     if (!access.ok) return access;
-    const branchId = await this.branchId();
-    const page = branchId
-      ? await this.pages.findAdminByKey(branchId, key)
+    const branch = await this.branch(branchSlug);
+    const page = branch
+      ? await this.pages.findAdminByKey(branch.id, key)
       : null;
-    if (!page) return failure("NOT_FOUND", "Page not found.");
+    if (!branch || !page) return failure("NOT_FOUND", "Page not found.");
     const result = await operation(access.value, page);
     if (result.ok && page.isPublished) {
-      await this.cache.invalidate([CACHE_TAGS.page(key), CACHE_TAGS.sitemap]);
+      await this.cache.invalidate([
+        CACHE_TAGS.page(branch.slug, key),
+        CACHE_TAGS.sitemap,
+      ]);
     }
     return result;
   }
@@ -313,6 +369,7 @@ export class PageCommands {
   /** Publication changes the page and the sitemap. */
   private async release(
     staff: StaffPrincipal | null,
+    branchSlug: unknown,
     key: PageKey,
     operation: (
       actor: StaffPrincipal,
@@ -321,11 +378,14 @@ export class PageCommands {
   ) {
     const access = authorize(staff, "content:publish");
     if (!access.ok) return access;
-    const branchId = await this.branchId();
-    if (!branchId) return failure("NOT_FOUND", "Page not found.");
-    const result = await operation(access.value, branchId);
+    const branch = await this.branch(branchSlug);
+    if (!branch) return failure("NOT_FOUND", "Page not found.");
+    const result = await operation(access.value, branch.id);
     if (result.ok) {
-      await this.cache.invalidate([CACHE_TAGS.page(key), CACHE_TAGS.sitemap]);
+      await this.cache.invalidate([
+        CACHE_TAGS.page(branch.slug, key),
+        CACHE_TAGS.sitemap,
+      ]);
     }
     return result;
   }

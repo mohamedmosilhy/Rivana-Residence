@@ -1,12 +1,8 @@
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
 
-import type {
-  PromotionInput,
-  RoomInput,
-} from "@/application/ports/repositories";
+import type { RoomInput } from "@/application/ports/repositories";
 import { PrismaFacilityRepository } from "@/infrastructure/db/prisma/repositories/facility-repository";
 import { PrismaPageRepository } from "@/infrastructure/db/prisma/repositories/page-repository";
-import { PrismaPromotionRepository } from "@/infrastructure/db/prisma/repositories/promotion-repository";
 import { PrismaRoomRepository } from "@/infrastructure/db/prisma/repositories/room-repository";
 
 import {
@@ -23,7 +19,6 @@ const client = createTestClient();
 const rooms = new PrismaRoomRepository(client);
 const facilities = new PrismaFacilityRepository(client);
 const pages = new PrismaPageRepository(client);
-const promotions = new PrismaPromotionRepository(client);
 
 afterAll(() => client.$disconnect());
 beforeEach(async () => {
@@ -105,6 +100,60 @@ describe("room writes", () => {
       ok: false,
       error: { code: "NOT_FOUND" },
     });
+  });
+});
+
+// T-CAT-1, T-CAT-2 (AC-5): the accommodation type and apartment counts are
+// stored and read back; rooms default to ROOM.
+describe("accommodation type", () => {
+  it("defaults a listing to ROOM with no unit counts", async () => {
+    const created = await rooms.create(TEST_BRANCH_ID, roomInput, actor);
+    expect(created).toMatchObject({
+      ok: true,
+      value: {
+        accommodationType: "ROOM",
+        bedroomCount: null,
+        bathroomCount: null,
+      },
+    });
+  });
+
+  it("stores an apartment with its bedrooms and bathrooms", async () => {
+    const created = await rooms.create(
+      TEST_BRANCH_ID,
+      {
+        ...roomInput,
+        slug: "family-apartment",
+        accommodationType: "APARTMENT",
+        bedroomCount: 2,
+        bathroomCount: 1,
+      },
+      actor,
+    );
+    if (!created.ok) throw new Error(created.error.message);
+    expect(await rooms.findAdminById(created.value.id)).toMatchObject({
+      accommodationType: "APARTMENT",
+      bedroomCount: 2,
+      bathroomCount: 1,
+    });
+    const changed = await rooms.update(
+      created.value.id,
+      { ...roomInput, slug: "family-apartment", accommodationType: "ROOM" },
+      actor,
+    );
+    expect(changed).toMatchObject({
+      ok: true,
+      value: { accommodationType: "ROOM", bedroomCount: null },
+    });
+  });
+
+  it("refuses negative counts at the database too", async () => {
+    await expect(
+      client.room.update({
+        where: { id: (await createRoom(client)).id },
+        data: { bedroomCount: -1 },
+      }),
+    ).rejects.toThrow();
   });
 });
 
@@ -268,60 +317,5 @@ describe("page section writes", () => {
         actor,
       ),
     ).toMatchObject({ ok: false, error: { code: "NOT_FOUND" } });
-  });
-});
-
-describe("promotion writes", () => {
-  const input: PromotionInput = {
-    internalName: "Autumn 2026",
-    headline: "Autumn by the river",
-    body: "Stay three nights, pay for two.",
-    code: "AUTUMN26",
-    terms: null,
-    startsAt: new Date("2026-10-01T00:00:00Z"),
-    endsAt: new Date("2026-11-01T00:00:00Z"),
-    priority: 10,
-    showAsPopup: true,
-  };
-
-  it("creates drafts and bumps version only for public content changes", async () => {
-    const created = await promotions.create(input, actor);
-    if (!created.ok) throw new Error(created.error.message);
-    expect(created.value).toMatchObject({ status: "DRAFT", version: 1 });
-
-    const renamed = await promotions.update(
-      created.value.id,
-      { ...input, internalName: "Autumn campaign" },
-      actor,
-    );
-    expect(renamed).toMatchObject({ ok: true, value: { version: 1 } });
-
-    const recoded = await promotions.update(
-      created.value.id,
-      { ...input, code: "FALL26" },
-      actor,
-    );
-    expect(recoded).toMatchObject({ ok: true, value: { version: 2 } });
-  });
-
-  it("rejects an invalid schedule", async () => {
-    expect(
-      await promotions.create({ ...input, endsAt: input.startsAt }, actor),
-    ).toMatchObject({
-      ok: false,
-      error: {
-        code: "VALIDATION",
-        fieldErrors: {
-          endsAt: ["Promotion end time must be after its start time."],
-        },
-      },
-    });
-  });
-
-  it("returns only public fields", async () => {
-    const created = await promotions.create(input, actor);
-    if (!created.ok) throw new Error(created.error.message);
-    expect(created.value).not.toHaveProperty("createdById");
-    expect(created.value).not.toHaveProperty("updatedById");
   });
 });

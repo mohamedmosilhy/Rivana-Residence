@@ -10,7 +10,10 @@ import { PrismaClient } from "../../src/generated/prisma/client.ts";
 import { seedDatabase } from "../../prisma/seed-data.ts";
 import { createStaff, setStaffActive } from "../../scripts/staff-admin.ts";
 import { E2E_PASSWORD, E2E_PROJECTS, accountsFor } from "./support/accounts.ts";
-import { seedPublicContent } from "./fixtures/public-content.mts";
+import {
+  seedPublicContent,
+  seedSecondBranch,
+} from "./fixtures/public-content.mts";
 
 const url = process.env.E2E_DATABASE_URL;
 if (!url) throw new Error("E2E_DATABASE_URL is required.");
@@ -86,10 +89,15 @@ await rm("/tmp/rivana-e2e-outbox", { recursive: true, force: true });
     const author = await client.user.findFirstOrThrow({
       where: { role: "ADMIN" },
     });
-    await seedPublicContent(client, "/tmp/rivana-e2e-media", {
-      id: author.id,
-      role: "ADMIN",
-    });
+    const actor = { id: author.id, role: "ADMIN" as const };
+    const images = await seedPublicContent(
+      client,
+      "/tmp/rivana-e2e-media",
+      actor,
+    );
+    // A second, inactive branch: the branches project activates it through
+    // the admin screen, so the one-branch site is the default (spec 0002).
+    await seedSecondBranch(client, actor, images);
   } finally {
     await client.$disconnect();
   }

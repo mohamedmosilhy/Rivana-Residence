@@ -26,4 +26,4 @@ Status: living document. Items marked *planned* describe the reservation design 
 | L-15 | Sync reminders reach only receptionists who are signed in with the dashboard open | A branch with nobody signed in is not reminded | Overdue checkpoints show on the manager overview and in the history |
 | L-16 | Guest data is kept indefinitely (Q-13) | Possible conflict with privacy laws or guest deletion requests | Client to confirm with a legal adviser (RK-14) |
 | L-17 | Feedback requests depend on staff recording check-out in Rivana; guest replies stay in the WhatsApp inbox (Q-51) | No feedback request if check-out is not recorded; no feedback reports in Rivana | Check-out is part of the front-desk routine |
-| L-18 | The promotion popup (implemented) remains on the current build until M5 removes it | — | Not launched publicly (joint launch, Q-16) |
+| L-18 | The promotion popup was removed in M5; the unused `Promotion` table, and the retired contact and map columns on `SiteSettings`, stay until a later contract migration | — | Closed for the popup (M5); table cleanup after launch |

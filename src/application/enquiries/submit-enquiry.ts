@@ -1,4 +1,5 @@
 import type { LoginThrottleStore } from "@/application/auth/ports";
+import type { BranchRepository } from "@/application/branches";
 import type { Clock, ContactDelivery } from "@/application/ports/providers";
 import type { EnquiryRepository } from "@/application/ports/repositories";
 import {
@@ -41,11 +42,15 @@ const THANK_YOU = "accepted" as const;
  * nothing, but nothing is stored or sent. The enquiry is saved before
  * delivery, so a mail failure never loses a message: staff see it in the
  * admin inbox marked "Delivery failed".
+ *
+ * Each enquiry records the branch whose Contact page sent it (spec 0002):
+ * the posted slug must name an ACTIVE branch, otherwise nothing is stored.
  */
 export class SubmitEnquiry {
   constructor(
     private readonly deps: Readonly<{
       enquiries: EnquiryRepository;
+      branches: BranchRepository;
       throttle: LoginThrottleStore;
       tokens: FormTokens;
       delivery: ContactDelivery | null;
@@ -88,6 +93,18 @@ export class SubmitEnquiry {
       );
     }
 
+    const branchSlug =
+      typeof values.branch === "string" ? values.branch.trim() : "";
+    const branch = branchSlug
+      ? await this.deps.branches.findBySlug(branchSlug)
+      : null;
+    if (!branch || branch.status !== "ACTIVE") {
+      return failure(
+        "VALIDATION",
+        "This form could not be sent. Reload the page and try again.",
+      );
+    }
+
     const text = (name: string) =>
       typeof values[name] === "string" ? (values[name] as string) : "";
     const optional = (name: string) => text(name).trim() || null;
@@ -107,7 +124,10 @@ export class SubmitEnquiry {
 
     // Count accepted messages, not attempts, toward the limit.
     await this.deps.throttle.recordFailure(key, rule, now);
-    const saved = await this.deps.enquiries.create(parsed.data);
+    const saved = await this.deps.enquiries.create({
+      ...parsed.data,
+      branchId: branch.id,
+    });
     if (!saved.ok) return saved;
 
     if (this.deps.delivery) {
@@ -116,8 +136,9 @@ export class SubmitEnquiry {
         const { messageId } = await this.deps.delivery.deliver({
           enquiryId: enquiry.id,
           replyTo: enquiry.email,
-          subject: enquiry.subject ?? "Website enquiry",
+          subject: `[${branch.name}] ${enquiry.subject ?? "Website enquiry"}`,
           text: [
+            `Branch: ${branch.name}`,
             `Name: ${enquiry.name}`,
             `Email: ${enquiry.email}`,
             `Phone: ${enquiry.phone ?? "—"}`,

@@ -8,14 +8,21 @@ Status: design accepted 2026-10-24 (ADR 017) and extended on 2026-11-06 (ADR 026
 - Branch ownership of rooms, facilities, and pages.
 - `StaffBranchAssignment` and branch-scoped staff access.
 
-**Planned:** branch sites, the chooser and switcher, redirects, and per-branch maps and contact (M5); the sync reminders (M11); branch admin screens (M12). Until M5, the public site still reads contact and map details from `SiteSettings`, so editing those settings does not update the branch copy.
+**Implemented in M5** (spec [0002](../specs/0002-m5-branch-websites.md)):
+
+- Branch sites at `/{branch}/…`, the chooser, the header switcher, and the single-hop redirects from the old URLs.
+- Per-branch content, maps, and contact (the public site reads contact and map from the branch only).
+- The minimal branch admin (`/admin/branches`), and the branch API (API-P1…P4, API-A1…A3).
+- The longer reserved-slug list, and the guard that keeps the default branch `new-cairo` active.
+
+**Planned:** the sync reminders (M11) and the full branch admin screens (M12).
 
 ## Identity and attributes
 
 | Attribute | Notes |
 | --- | --- |
 | `id` | CUID2, like every other table |
-| `slug` | URL-safe, unique, immutable after the branch is first activated (`new-cairo`) |
+| `slug` | URL-safe, unique, and fixed once the branch is created (M5; stricter than "after first activation"). The default branch is `new-cairo` (`src/domain/branches/default-branch.ts`) |
 | `name` | "Rivana Residence New Cairo" |
 | `summary` | Short public description |
 | `status` | `ACTIVE` or `INACTIVE` |
@@ -72,8 +79,8 @@ Availability is computed per `(branch, room type, night)`. Queries always take a
 - **Switching:** the header shows the current branch and, with more than one active branch, a switcher. Switching keeps the page type when it exists at the other branch, otherwise it opens that branch's listing or home.
 - **Carry-through:** links, Book Now, and the booking journey always use the current branch; a booking never mixes branches.
 - **Server validation:** every public request resolves `branchSlug` to an `ACTIVE` branch (and, for booking, one with online booking enabled). Every staff request checks branch assignment. A client-supplied branch identifier is never trusted without that lookup.
-- **Reserved slugs:** a branch slug may not equal a top-level route segment (`admin`, `api`, `media`, `reservations`, `book`, `sitemap.xml`, `robots.txt`) or a legacy path.
-- **Old URLs:** `/about`, `/contact`, `/rooms…`, `/facilities…`, and legacy `*.html` paths redirect permanently to the first branch.
+- **Reserved slugs:** a branch slug may not equal a top-level route segment (`admin`, `api`, `media`, `reservations`, `book`, `sitemap.xml`, `robots.txt`), an old public path that now redirects (`about`, `contact`, `rooms`, `facilities`; added in M5), or a legacy `*.html` path. The domain list and the database `Branch_slug_check` agree (a unit test compares them).
+- **Old URLs:** `/about`, `/contact`, `/rooms…`, `/facilities…`, and legacy `*.html` paths redirect permanently (`308`, one hop) to the default branch `new-cairo`. That branch therefore cannot be deactivated (owner decision, 2026-11-07); changing it needs a code change to the redirect constant.
 - **Maps:** the Contact page and home location section show the branch's interactive Google Map from `mapEmbedUrl`, with the address and a directions link as the fallback.
 - **Subdomains** were an example in the scope PDF and are not approved (Q-41).
 
@@ -98,7 +105,7 @@ A Receptionist or Manager with no assignment can sign in but sees no reservation
 
 ## Deactivation
 
-When an Admin sets a branch to `INACTIVE`:
+The default branch `new-cairo` cannot be deactivated (the old URLs redirect to it). When an Admin sets any other branch to `INACTIVE`:
 
 - It disappears from the chooser, the switcher, and the sitemap. Its branch site returns 404, and if it was the only other active branch, `/` goes back to redirecting to the remaining one.
 - Public availability and reservation creation for it return `404 BRANCH_NOT_FOUND`.

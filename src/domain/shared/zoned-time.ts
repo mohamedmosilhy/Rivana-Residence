@@ -1,5 +1,5 @@
 // Converts between UTC instants and wall-clock times in a named time zone,
-// using only Intl. Promotion schedules are entered in the property's zone
+// using only Intl. Local times are entered in a branch or property zone
 // (e.g. Africa/Cairo, which observes daylight saving time) and stored in UTC.
 
 const LOCAL_PATTERN = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})$/;

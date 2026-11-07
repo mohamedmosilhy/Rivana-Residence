@@ -200,13 +200,6 @@
 
 /* Keyframes used by animate-[…] utilities. Entrance animations always end
    fully visible, so content is never left hidden. */
-@keyframes promotion-in {
-  from {
-    opacity: 0;
-    transform: translateY(0.75rem);
-  }
-}
-
 @keyframes admin-pulse {
   50% {
     opacity: 0.3;

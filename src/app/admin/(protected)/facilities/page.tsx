@@ -6,6 +6,10 @@ import { getCurrentStaff, requireStaff } from "@/composition/auth";
 import { propertyTimeZone, facilityQueries } from "@/composition/content";
 import { CatalogTable } from "@/presentation/admin/content/catalog-table";
 import { catalogFilters } from "@/presentation/admin/content/catalog-filters";
+import {
+  BranchSelector,
+  branchQuery,
+} from "@/presentation/admin/content/branch-selector";
 import { DeniedPage } from "@/presentation/admin/denied-page";
 import { ListFilters, Pagination } from "@/presentation/admin/ui/list-controls";
 import { Notice, noticeFrom } from "@/presentation/admin/ui/notice";
@@ -33,14 +37,26 @@ export default async function FacilitiesPage({
     propertyTimeZone(),
   ]);
   if (!listing.ok) throw new Error("Facilities are unavailable.");
-  const { items, total, page, pageSize, query, reorderable, activeOrder } =
-    listing.value;
+  const {
+    items,
+    total,
+    page,
+    pageSize,
+    query,
+    reorderable,
+    activeOrder,
+    branchChoice,
+  } = listing.value;
+  const branch = branchQuery(branchChoice);
+  const withBranch = (path: string) =>
+    `${path}${branch ? `${path.includes("?") ? "&" : "?"}${branch}` : ""}` as Route;
   const filtered = Boolean(
     query.search || query.status || query.featured !== null,
   );
 
   const hrefFor = (target: number) => {
     const search = new URLSearchParams();
+    if (branchChoice.selected) search.set("branch", branchChoice.selected.slug);
     if (query.search) search.set("q", query.search);
     if (query.status) search.set("status", query.status);
     if (query.featured !== null)
@@ -61,17 +77,21 @@ export default async function FacilitiesPage({
           </p>
         }
         actions={
-          <Link href="/admin/facilities/new" className={button()}>
+          <Link href={withBranch("/admin/facilities/new")} className={button()}>
             Add facility
           </Link>
         }
       />
       <Notice code={noticeFrom(params.notice)} />
+      <BranchSelector action="/admin/facilities" choice={branchChoice} />
       <ListFilters
         action="/admin/facilities"
         searchLabel="Search name or web address"
         search={query.search}
         filters={catalogFilters(query)}
+        hidden={
+          branchChoice.selected ? { branch: branchChoice.selected.slug } : {}
+        }
       />
       {items.length > 0 ? (
         <>
@@ -104,7 +124,10 @@ export default async function FacilitiesPage({
         <EmptyState
           title="No facilities yet"
           action={
-            <Link href="/admin/facilities/new" className={button()}>
+            <Link
+              href={withBranch("/admin/facilities/new")}
+              className={button()}
+            >
               Add facility
             </Link>
           }

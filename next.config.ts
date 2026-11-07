@@ -1,5 +1,7 @@
 import type { NextConfig } from "next";
 
+import { DEFAULT_BRANCH_SLUG } from "./src/domain/branches/default-branch";
+import { legacyRedirects } from "./src/infrastructure/http/legacy-redirects";
 import { STATIC_SECURITY_HEADERS } from "./src/infrastructure/http/security-headers";
 
 const nextConfig: NextConfig = {
@@ -16,21 +18,10 @@ const nextConfig: NextConfig = {
     // The per-request CSP (with its script nonce) is set by src/proxy.ts.
     return [{ source: "/:path*", headers: [...STATIC_SECURITY_HEADERS] }];
   },
+  // Old public URLs move permanently to the default branch, in one hop
+  // each (spec 0002). That branch cannot be deactivated.
   async redirects() {
-    return [
-      ["/index.html", "/"],
-      ["/about.html", "/about"],
-      ["/contact.html", "/contact"],
-      ["/rooms.html", "/rooms"],
-      ["/room-studio-balcony.html", "/rooms/studio-with-balcony"],
-      ["/room-deluxe-double.html", "/rooms/deluxe-double"],
-      ["/gym.html", "/facilities/fitness-room"],
-      ["/swimming-pool.html", "/facilities/swimming-pool"],
-    ].map(([source, destination]) => ({
-      source: source!,
-      destination: destination!,
-      permanent: true,
-    }));
+    return legacyRedirects(DEFAULT_BRANCH_SLUG);
   },
 };
 

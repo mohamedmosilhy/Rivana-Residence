@@ -1,6 +1,11 @@
 import { authorize } from "@/application/auth/authorize";
 import type { StaffPrincipal } from "@/application/auth/ports";
-import type { BranchRepository, BranchSummary } from "@/application/branches";
+import {
+  chooseBranch,
+  type BranchChoice,
+  type BranchRecord,
+  type BranchRepository,
+} from "@/application/branches";
 import type {
   MediaOption,
   MediaRepository,
@@ -88,6 +93,8 @@ export function parseCatalogListQuery(
 
 export type CatalogListing<Dto> = PagedResult<Dto> &
   Readonly<{
+    /** The branch whose records are listed, and the others to pick from. */
+    branchChoice: BranchChoice;
     query: CatalogListQuery;
     /** True when the list shows the full active order, so moves make sense. */
     reorderable: boolean;
@@ -99,6 +106,7 @@ export type CatalogListing<Dto> = PagedResult<Dto> &
 export function filterCatalog<Dto extends Listable>(
   records: readonly Dto[],
   query: CatalogListQuery,
+  branchChoice: BranchChoice = { branches: [], selected: null },
 ): CatalogListing<Dto> {
   const needle = query.search?.toLocaleLowerCase("en") ?? null;
   const matches = records.filter(
@@ -113,6 +121,7 @@ export function filterCatalog<Dto extends Listable>(
   );
   const start = (query.page - 1) * query.pageSize;
   return {
+    branchChoice,
     items: matches.slice(start, start + query.pageSize),
     total: matches.length,
     page: query.page,
@@ -150,29 +159,36 @@ export class CatalogQueries<Dto extends Listable, Input> {
     private readonly noun = "room",
   ) {}
 
-  /** The default branch's records (the only branch until M5). */
+  /**
+   * The selected branch's records (`?branch=<slug>`, else the first branch
+   * by display order; spec 0002).
+   */
   async list(
     staff: StaffPrincipal | null,
     params: Readonly<Record<string, unknown>>,
   ): Promise<Result<CatalogListing<Dto>>> {
     const access = authorize(staff, "content:edit");
     if (!access.ok) return access;
-    const branch = await this.branches.findDefault();
+    const choice = await chooseBranch(this.branches, params.branch);
     return success(
       filterCatalog(
-        branch ? await this.repository.listAdmin(branch.id) : [],
+        choice.selected
+          ? await this.repository.listAdmin(choice.selected.id)
+          : [],
         parseCatalogListQuery(params),
+        choice,
       ),
     );
   }
 
-  /** The branch a new record will join, shown read only on the form. */
+  /** The branches a new record may join, with `?branch=` preselected. */
   async newRecordBranch(
     staff: StaffPrincipal | null,
-  ): Promise<Result<BranchSummary | null>> {
+    branchSlug: unknown,
+  ): Promise<Result<BranchChoice>> {
     const access = authorize(staff, "content:edit");
     if (!access.ok) return access;
-    return success(await this.branches.findDefault());
+    return success(await chooseBranch(this.branches, branchSlug));
   }
 
   async get(
@@ -183,7 +199,7 @@ export class CatalogQueries<Dto extends Listable, Input> {
       record: Dto;
       media: readonly MediaOption[];
       gaps: readonly string[];
-      branch: BranchSummary | null;
+      branch: BranchRecord | null;
     } | null>
   > {
     const access = authorize(staff, "content:edit");

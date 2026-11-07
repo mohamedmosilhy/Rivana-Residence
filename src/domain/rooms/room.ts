@@ -8,10 +8,12 @@ import {
 import { DomainValidationError } from "@/domain/shared/domain-error";
 import { richTextDocumentSchema } from "@/domain/shared/rich-text";
 import { slugSchema } from "@/domain/shared/slug";
-import type {
-  MediaStatus,
-  PublicationStatus,
-  RichTextDocument,
+import {
+  ACCOMMODATION_TYPES,
+  type AccommodationType,
+  type MediaStatus,
+  type PublicationStatus,
+  type RichTextDocument,
 } from "@/domain/shared/types";
 
 export const MAX_ROOM_FEATURES = 20;
@@ -20,11 +22,27 @@ export const roomFeatureSchema = z
   .object({ label: requiredText("a feature", 120) })
   .strict();
 
+function unitCount(label: string) {
+  return z
+    .number({ error: `Enter the number of ${label} as a whole number.` })
+    .int("Use a whole number.")
+    .min(0, `${label[0]!.toUpperCase()}${label.slice(1)} cannot be negative.`)
+    .max(20, `20 ${label} at most.`)
+    .nullable()
+    .default(null);
+}
+
 // Marketing facts only. There are deliberately no price, rate, or
 // availability fields; those belong to the external reservation system.
 export const roomDraftSchema = z.object({
   name: requiredText("the room name", 120),
   slug: slugSchema,
+  accommodationType: z
+    .enum(ACCOMMODATION_TYPES, { error: "Choose Room or Apartment." })
+    .default("ROOM"),
+  // Shown for apartments; kitchen and living facts go in the features.
+  bedroomCount: unitCount("bedrooms"),
+  bathroomCount: unitCount("bathrooms"),
   shortDescription: requiredText("a short description", 300),
   description: richTextDocumentSchema,
   sizeSqm: z
@@ -63,6 +81,9 @@ export type RoomPublicationCandidate = Readonly<{
   id: string;
   name: string;
   slug: string;
+  accommodationType?: AccommodationType;
+  bedroomCount?: number | null;
+  bathroomCount?: number | null;
   shortDescription: string;
   description: RichTextDocument;
   sizeSqm: number | null;

@@ -47,9 +47,15 @@ function usageHref(usage: MediaUsage): Route {
       return `/admin/facilities/${usage.ownerId}` as Route;
     case "PAGE_SECTION":
     case "PAGE_SHARING":
-      return `/admin/pages/${usage.ownerId.toLowerCase()}` as Route;
+      return `/admin/pages/${usage.ownerId.toLowerCase()}${
+        usage.branchSlug
+          ? `?branch=${encodeURIComponent(usage.branchSlug)}`
+          : ""
+      }` as Route;
     case "SITE_SETTINGS":
       return "/admin/settings";
+    case "BRANCH":
+      return `/admin/branches/${usage.ownerId}` as Route;
   }
 }
 

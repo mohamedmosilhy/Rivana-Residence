@@ -11,13 +11,20 @@ import { createFacilityAction } from "../actions";
 
 export const metadata: Metadata = { title: "Add facility" };
 
-export default async function NewFacilityPage() {
+export default async function NewFacilityPage({
+  searchParams,
+}: Readonly<{
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}>) {
   const { staff, allowed } = await requireStaff(
     "/admin/facilities/new",
     "content:edit",
   );
   if (!allowed) return <DeniedPage title="Add facility" />;
-  const branch = await facilityQueries().newRecordBranch(staff);
+  const choice = await facilityQueries().newRecordBranch(
+    staff,
+    (await searchParams).branch,
+  );
 
   return (
     <>
@@ -34,7 +41,14 @@ export default async function NewFacilityPage() {
           variant="facility"
           action={createFacilityAction}
           isNew
-          branchName={branch.ok ? (branch.value?.name ?? null) : null}
+          branchOptions={
+            choice.ok
+              ? {
+                  branches: choice.value.branches,
+                  selected: choice.value.selected?.slug ?? null,
+                }
+              : null
+          }
           submitLabel="Create draft"
           values={{
             name: "",

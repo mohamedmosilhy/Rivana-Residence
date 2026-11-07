@@ -40,7 +40,7 @@ Located under `src/presentation/design`:
 - `ContactCTA`
 - `PromotionPopup` with a small client controller for dismissal/copy behavior (implemented; removed in M5, Q-47)
 - `AccommodationBadge` (Room or Apartment; M5)
-- `LocationMap` (lazy Google Maps embed with address and directions fallback; per branch from M5)
+- `LocationMap` (lazy Google Maps embed with address and directions fallback; takes a branch place since M5), `BranchLocation` (home location block), `BranchChooser`, `BranchSwitcher` (client; native disclosure), `AccommodationBadge`
 - `SocialLinks`
 - `RichTextRenderer`
 - `Reveal` (progressive enhancement only)
@@ -149,7 +149,6 @@ Components never infer publication state, build storage URLs, query repositories
 - dialogs/sheets manage initial focus, focus trap, Escape, and focus return.
 - form fields bind label, description, and error IDs.
 - disabled booking controls expose why they are unavailable.
-- (until M5) the promotion popup is a labelled dialog, never steals focus before it is visible, closes by button/Escape, returns focus, announces copy success/failure, and leaves the code selectable when clipboard access fails.
 
 ## Error and loading states
 
@@ -157,7 +156,6 @@ Components never infer publication state, build storage URLs, query repositories
 - Route-level `loading.tsx` skeletons reserve final dimensions.
 - Admin mutations show pending state, preserve entered data on validation failure, and announce success/failure.
 - Uploads show per-file progress, validation failure, retry, and finalization state.
-- (until M5) Promotion copy failure keeps the code visible/selectable and never blocks the page; no active campaign means no popup markup or client island.
 - Empty admin lists include the next action; public empty featured grids are omitted rather than showing CMS language.
 
 ## Component tests

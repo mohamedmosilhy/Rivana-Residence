@@ -14,8 +14,6 @@ export const CAPABILITIES = [
   "media:upload",
   "media:delete",
   "media:rights",
-  // Retired with the promotion popup in M5 (Q-47).
-  "promotions:manage",
   "enquiries:read",
   "enquiries:manage",
   "settings:edit",
@@ -58,7 +56,6 @@ const EDITOR_CAPABILITIES: readonly Capability[] = [
   "content:publish",
   "content:archive",
   "media:upload",
-  "promotions:manage",
   "enquiries:read",
   "enquiries:manage",
   "sessions:manage-own",

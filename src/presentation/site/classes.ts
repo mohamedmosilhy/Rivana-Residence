@@ -29,7 +29,7 @@ export function button(tone: ButtonTone = "primary", extra = "") {
 }
 
 /** The header's Book now: transparent on the hero, plum once scrolled. */
-export const headerButton = `${BUTTON_BASE} min-h-11 border-[rgb(219_175_113/0.85)] bg-transparent px-5 py-2 text-surface hover:border-gold-400 hover:bg-gold-400 hover:text-plum-950 max-md:px-3 max-md:tracking-[0.12em] max-[24rem]:px-2 max-[24rem]:text-[0.75rem] max-[24rem]:tracking-[0.08em] header-scrolled:border-plum-700 header-scrolled:bg-plum-700 header-scrolled:text-surface header-scrolled:hover:border-plum-900 header-scrolled:hover:bg-plum-900 header-menu-open:border-[rgb(219_175_113/0.85)] header-menu-open:bg-transparent`;
+export const headerButton = `${BUTTON_BASE} min-h-11 whitespace-nowrap border-[rgb(219_175_113/0.85)] bg-transparent px-5 py-2 text-surface hover:border-gold-400 hover:bg-gold-400 hover:text-plum-950 max-md:px-3 max-md:tracking-[0.12em] max-[24rem]:px-2 max-[24rem]:text-[0.75rem] max-[24rem]:tracking-[0.08em] header-scrolled:border-plum-700 header-scrolled:bg-plum-700 header-scrolled:text-surface header-scrolled:hover:border-plum-900 header-scrolled:hover:bg-plum-900 header-menu-open:border-[rgb(219_175_113/0.85)] header-menu-open:bg-transparent`;
 
 // Buttons inside a row of actions fill the row on phones.
 export const actionFill = "max-md:w-full";

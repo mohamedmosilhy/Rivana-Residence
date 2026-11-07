@@ -95,13 +95,15 @@ const TOPICS = [
 export function ContactForm({
   action,
   formToken,
-}: Readonly<{ action: FormAction; formToken: string }>) {
+  branchSlug,
+}: Readonly<{ action: FormAction; formToken: string; branchSlug: string }>) {
   const [round, setRound] = useState(0);
   return (
     <EnquiryForm
       key={round}
       action={action}
       formToken={formToken}
+      branchSlug={branchSlug}
       focusOnMount={round > 0}
       onWriteAnother={() => setRound((value) => value + 1)}
     />
@@ -111,11 +113,14 @@ export function ContactForm({
 function EnquiryForm({
   action,
   formToken,
+  branchSlug,
   focusOnMount,
   onWriteAnother,
 }: Readonly<{
   action: FormAction;
   formToken: string;
+  /** The branch whose Contact page this is; the server re-resolves it. */
+  branchSlug: string;
   focusOnMount: boolean;
   onWriteAnother: () => void;
 }>) {
@@ -288,6 +293,7 @@ function EnquiryForm({
         </div>
       ) : null}
       <input type="hidden" name="formToken" value={formToken} />
+      <input type="hidden" name="branch" value={branchSlug} />
       {/* Hidden from people; bots that fill it are ignored. */}
       <div
         data-form-trap=""

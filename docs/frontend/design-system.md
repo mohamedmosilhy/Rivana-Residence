@@ -124,17 +124,15 @@ Minimum touch target: 44×44px. Every state includes hover (when available), foc
 - Required state is announced programmatically.
 - Destructive confirmation states name the affected record.
 
-## Promotion popup (implemented; retired by Q-47, removed in M5)
+## Promotion popup (removed in M5)
 
-Kept as the record of the implemented component until M5 deletes it. No new popup or interstitial is planned; offers reach guests through WhatsApp (ADR 028).
+The popup was retired by Q-47 and removed in M5. No new popup or interstitial is planned; offers reach guests through WhatsApp (ADR 028).
 
+## Branch chooser and switcher (M5)
 
-- Use one restrained dialog/card, not a full-screen takeover: warm-white surface, plum heading/action, thin neutral rule, and a small gold accent.
-- Keep the headline and message short; show the code in a high-contrast, selectable monospace-style row with an adjacent 44px-minimum “Copy code” button.
-- Terms are visible in the dialog or available through a clearly labelled disclosure; they are never hidden only in hover text.
-- Provide a prominent labelled close button, Escape dismissal, focus containment/return, and an `aria-live` copy result.
-- On small screens, use safe-area-aware side/bottom gutters and allow content to scroll without covering the close action.
-- Do not auto-cycle campaigns, play sound, use countdown pressure, or reopen repeatedly after dismissal. Default dismissal lasts for that promotion/version for seven days; an updated campaign version can display again.
+- The chooser (`/` with two or more active branches) uses the plum page hero with the brand name and tagline, then one card per branch: hero image (when set), city eyebrow, name, summary, and a "Visit" cue. The whole card is the link.
+- The header switcher appears only with two or more active branches: a native disclosure next to Book Now, showing the branch name from 1280 px and a gold pin icon below that (the name stays for screen readers). Header labels never wrap.
+- Listing cards and detail heroes carry a small outlined "Room" or "Apartment" badge above the title.
 
 ## Motion
 

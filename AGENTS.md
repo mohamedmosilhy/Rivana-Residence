@@ -62,6 +62,7 @@ npm run staff -- create --email … --name … --role ADMIN   # passwords via pr
 - **Follow [docs/architecture/dependency-rules.md](./docs/architecture/dependency-rules.md).** Prisma only in `src/infrastructure/db`; infrastructure is constructed only in `src/composition`; presentation never imports infrastructure; domain imports no framework.
 - **Server-only code stays out of client bundles** (`import "server-only"`; the lint rules).
 - **Enforce authentication, capabilities, and branch scope on the server**, inside use cases (`authorize`, `authorizeBranch`). Hidden buttons are not security.
+- **Public pages live under `src/app/(marketing)/[branch]/`** (spec 0002). Resolve the branch on the server with `requireBranch(params)` (active branches only, else 404) and pass its id to queries; never trust a client branch value. Every internal link carries `/{branch}`, every cache key and tag names the branch (`CACHE_TAGS` in `src/application/cache/cache-tags.ts`), and old URLs redirect through `src/infrastructure/http/legacy-redirects.ts` to the default branch `new-cairo`, which cannot be deactivated.
 - **Protect reservation consistency in PostgreSQL**: room-type row lock plus count in one transaction, and constraints (ADR 016). No in-memory locks, no frontend-only checks.
 - **Never fabricate an external hotel-system integration.** Synchronization with the hotel's system is manual and must never be described as real-time.
 - **Keep docs and tests in sync with the code.** Run the gates and report exact results; never claim a check passed without running it.

@@ -27,6 +27,8 @@ type ListFiltersProps = Readonly<{
   searchLabel: string;
   search: string | null;
   filters: readonly Filter[];
+  /** Kept on submit, e.g. the selected branch. */
+  hidden?: Readonly<Record<string, string>>;
 }>;
 
 // A plain GET form: filters live in the URL, work without JavaScript, and
@@ -36,6 +38,7 @@ export function ListFilters({
   searchLabel,
   search,
   filters,
+  hidden = {},
 }: ListFiltersProps) {
   const active = Boolean(search || filters.some((filter) => filter.value));
   return (
@@ -44,6 +47,9 @@ export function ListFilters({
       action={action}
       role="search"
     >
+      {Object.entries(hidden).map(([name, value]) => (
+        <input key={name} type="hidden" name={name} value={value} />
+      ))}
       <div className={`${FILTER_FIELD} flex-[1_1_14rem]`}>
         <label htmlFor="list-search" className={fieldLabel}>
           {searchLabel}
@@ -82,7 +88,14 @@ export function ListFilters({
           Apply filters
         </button>
         {active ? (
-          <Link href={action} className={link}>
+          <Link
+            href={
+              (Object.keys(hidden).length > 0
+                ? `${action}?${new URLSearchParams(hidden).toString()}`
+                : action) as Route
+            }
+            className={link}
+          >
             Clear
           </Link>
         ) : null}

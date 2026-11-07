@@ -1,6 +1,10 @@
-import { branchScope } from "@/application/auth/authorize-branch";
 import { authorize } from "@/application/auth/authorize";
 import type { StaffPrincipal } from "@/application/auth/ports";
+import {
+  branchScope,
+  inBranchScope,
+} from "@/application/auth/authorize-branch";
+import type { BranchRecord, BranchRepository } from "@/application/branches";
 import type {
   ContactEnquiryDto,
   EnquiryListQuery,
@@ -21,7 +25,7 @@ function isEnquiryStatus(value: unknown): value is EnquiryStatus {
 /** Normalizes untrusted URL search params into a safe list query. */
 export function parseEnquiryListQuery(
   params: Readonly<Record<string, unknown>>,
-): Omit<EnquiryListQuery, "branchScope"> {
+): Omit<EnquiryListQuery, "branchScope" | "branchId"> {
   const status = isEnquiryStatus(params.status) ? params.status : null;
   const search =
     typeof params.q === "string" ? params.q.trim().slice(0, 100) : "";
@@ -34,10 +38,18 @@ export function parseEnquiryListQuery(
 }
 
 export type EnquiryListing = PagedResult<ContactEnquiryDto> &
-  Readonly<{ query: Omit<EnquiryListQuery, "branchScope"> }>;
+  Readonly<{
+    query: Omit<EnquiryListQuery, "branchScope" | "branchId"> &
+      Readonly<{ branch: string | null }>;
+    /** Branches the caller may filter by. */
+    branches: readonly BranchRecord[];
+  }>;
 
 export class ListEnquiries {
-  constructor(private readonly enquiries: EnquiryRepository) {}
+  constructor(
+    private readonly enquiries: EnquiryRepository,
+    private readonly branches: BranchRepository,
+  ) {}
 
   async execute(
     staff: StaffPrincipal | null,
@@ -46,11 +58,25 @@ export class ListEnquiries {
     const access = authorize(staff, "enquiries:read");
     if (!access.ok) return access;
     // Receptionists and Managers see only their branches' enquiries (Q-26).
+    // The branch filter (spec 0002) narrows inside that scope, never beyond.
+    const scope = branchScope(access.value);
     const query = parseEnquiryListQuery(params);
+    const branches = (await this.branches.listAll()).filter((branch) =>
+      inBranchScope(scope, branch.id),
+    );
+    const selected =
+      typeof params.branch === "string"
+        ? (branches.find((branch) => branch.slug === params.branch) ?? null)
+        : null;
     const page = await this.enquiries.listAdminPage({
       ...query,
-      branchScope: branchScope(access.value),
+      branchScope: scope,
+      branchId: selected?.id ?? null,
     });
-    return success({ ...page, query });
+    return success({
+      ...page,
+      query: { ...query, branch: selected?.slug ?? null },
+      branches,
+    });
   }
 }

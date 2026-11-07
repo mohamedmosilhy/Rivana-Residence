@@ -13,6 +13,8 @@ import {
 import { failure, success } from "@/application/shared/result";
 import type { PublicationStatus } from "@/domain/shared/types";
 
+import { branchRow, fakeBranches } from "../../support/fake-branches";
+
 type Row = {
   id: string;
   branchId: string;
@@ -64,12 +66,9 @@ function setup(rows: Row[]) {
     replaceMedia: vi.fn(async (id: string) => success(byId.get(id)!)),
   };
   const cache = { invalidate: vi.fn(async () => undefined) };
-  const branches = {
-    findDefault: vi.fn(async () => BRANCH),
-    findDefaultActive: vi.fn(async () => BRANCH),
-    findById: vi.fn(async () => BRANCH),
-    findBySlug: vi.fn(async () => BRANCH),
-  };
+  const { repository: branches } = fakeBranches([
+    branchRow({ id: BRANCH.id, slug: BRANCH.slug }),
+  ]);
   const commands = new CatalogCommands<Row, { slug: string }>(
     repository as unknown as CatalogRepository<Row, { slug: string }>,
     cache,
@@ -116,12 +115,14 @@ describe("catalog cache invalidation", () => {
     expect(cache.invalidate).not.toHaveBeenCalled();
   });
 
-  it("refreshes the list, page, and sitemap lastmod for a published edit", async () => {
+  // T-SITE-4: a plain published edit expires only that branch's tags, not
+  // `branches`.
+  it("refreshes the branch list, page, and sitemap lastmod for a published edit", async () => {
     const { commands, cache } = setup([live]);
     await commands.update(editor, "p", { slug: "live-room" });
     expect(cache.invalidate).toHaveBeenCalledExactlyOnceWith([
-      "rooms",
-      "room:live-room",
+      "branch:new-cairo:stay",
+      "branch:new-cairo:stay:live-room",
       "sitemap",
     ]);
   });
@@ -130,22 +131,24 @@ describe("catalog cache invalidation", () => {
     const { commands, cache } = setup([live]);
     await commands.update(editor, "p", { slug: "river-room" });
     expect(cache.invalidate).toHaveBeenCalledWith([
-      "rooms",
-      "room:live-room",
-      "room:river-room",
+      "branch:new-cairo:stay",
+      "branch:new-cairo:stay:live-room",
+      "branch:new-cairo:stay:river-room",
       "sitemap",
     ]);
   });
 
+  // Publication changes the branch's published types, so `branches` too.
   it.each(["publish", "unpublish"] as const)(
-    "%s refreshes list, page, and sitemap",
+    "%s refreshes list, page, sitemap, and the branch list",
     async (operation) => {
       const { commands, cache } = setup([live, draft]);
       await commands[operation](editor, operation === "publish" ? "d" : "p");
       expect(cache.invalidate).toHaveBeenCalledWith([
-        "rooms",
-        `room:${operation === "publish" ? "draft-room" : "live-room"}`,
+        "branch:new-cairo:stay",
+        `branch:new-cairo:stay:${operation === "publish" ? "draft-room" : "live-room"}`,
         "sitemap",
+        "branches",
       ]);
     },
   );
@@ -154,9 +157,10 @@ describe("catalog cache invalidation", () => {
     const { commands, cache } = setup([live]);
     await commands.archive(editor, "p");
     expect(cache.invalidate).toHaveBeenCalledWith([
-      "rooms",
-      "room:live-room",
+      "branch:new-cairo:stay",
+      "branch:new-cairo:stay:live-room",
       "sitemap",
+      "branches",
     ]);
   });
 
@@ -206,17 +210,17 @@ describe("catalog authorization and conflicts", () => {
   it("explains a duplicate web address next to the slug field", async () => {
     const { commands, repository } = setup([draft]);
     repository.create.mockResolvedValueOnce(failure("CONFLICT", "Unique."));
-    expect(await commands.create(editor, { slug: "draft-room" })).toMatchObject(
-      {
-        ok: false,
-        error: {
-          code: "CONFLICT",
-          fieldErrors: {
-            slug: [expect.stringContaining("already uses this web address")],
-          },
+    expect(
+      await commands.create(editor, "new-cairo", { slug: "draft-room" }),
+    ).toMatchObject({
+      ok: false,
+      error: {
+        code: "CONFLICT",
+        fieldErrors: {
+          slug: [expect.stringContaining("already uses this web address")],
         },
       },
-    );
+    });
   });
 });
 
@@ -236,7 +240,10 @@ describe("catalog ordering", () => {
       ["2", "1", "3"],
       editor,
     );
-    expect(cache.invalidate).toHaveBeenCalledWith(["rooms", "sitemap"]);
+    expect(cache.invalidate).toHaveBeenCalledWith([
+      "branch:new-cairo:stay",
+      "sitemap",
+    ]);
   });
 
   it("does nothing at either end", async () => {
@@ -318,5 +325,47 @@ describe("content gaps", () => {
     expect(contentGaps(c, [a, b, c], "room")).toEqual([
       "This room has no gallery images yet.",
     ]);
+  });
+});
+
+// AC-13: a new record joins the branch named on the form, re-resolved on
+// the server; an unknown branch is a field error and nothing is written.
+describe("catalog creation per branch", () => {
+  it("creates in the chosen branch", async () => {
+    const { commands, repository } = setup([]);
+    await commands.create(editor, "new-cairo", { slug: "new-room" });
+    expect(repository.create).toHaveBeenCalledWith(
+      "branch-1",
+      { slug: "new-room" },
+      editor,
+    );
+  });
+
+  it.each([null, "luxor"])("refuses branch %s", async (slug) => {
+    const { commands, repository } = setup([]);
+    expect(
+      await commands.create(editor, slug, { slug: "new-room" }),
+    ).toMatchObject({
+      ok: false,
+      error: {
+        code: "VALIDATION",
+        fieldErrors: { branch: ["Choose a branch."] },
+      },
+    });
+    expect(repository.create).not.toHaveBeenCalled();
+  });
+
+  // A type change on a published listing changes the stay label.
+  it("expires the branch list when a published listing changes type", async () => {
+    const { commands, cache, repository } = setup([
+      { ...live, accommodationType: "ROOM" } as Row,
+    ]);
+    repository.update.mockResolvedValueOnce(
+      success({ ...live, accommodationType: "APARTMENT" } as Row),
+    );
+    await commands.update(editor, "p", { slug: "live-room" });
+    expect(cache.invalidate).toHaveBeenCalledWith(
+      expect.arrayContaining(["branches"]),
+    );
   });
 });

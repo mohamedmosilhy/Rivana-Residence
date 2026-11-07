@@ -4,7 +4,7 @@ Acceptance criteria (AC) are written so they can become tests. Stories for the w
 
 ## Visitor
 
-**US-V1 Explore the residence (implemented; per branch from M5).** As a visitor, I understand the property, compare rooms and apartments, inspect facilities, and contact the residence, on phone and desktop.
+**US-V1 Explore the residence (implemented; per branch since M5).** As a visitor, I understand the property, compare rooms and apartments, inspect facilities, and contact the residence, on phone and desktop.
 - AC1: Every public page renders at 320–1440 px without horizontal overflow, with correct headings and unique metadata.
 - AC2: Listing and facility pages show their facts and galleries. Unpublished items return 404 and are not in the sitemap.
 - AC3: The contact form validates, submits once, and gives accessible feedback.
@@ -29,7 +29,7 @@ Acceptance criteria (AC) are written so they can become tests. Stories for the w
 
 ## Content editor and administrator
 
-**US-E1 Update a listing (implemented; per branch from M5).** As an editor, I update a room or apartment, replace its hero image, and publish the change without developer help.
+**US-E1 Update a listing (implemented; per branch since M5).** As an editor, I update a room or apartment, replace its hero image, and publish the change without developer help.
 - AC1: Publishing invalidates only the affected public content of that branch.
 - AC2 (M5): I choose the branch whose content I edit; the listing form has an accommodation type.
 

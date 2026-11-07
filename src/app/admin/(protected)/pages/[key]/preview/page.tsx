@@ -12,8 +12,13 @@ export const metadata: Metadata = { title: "Preview page" };
 
 export default async function PagePreviewPage({
   params,
-}: Readonly<{ params: Promise<{ key: string }> }>) {
+  searchParams,
+}: Readonly<{
+  params: Promise<{ key: string }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}>) {
   const { key: segment } = await params;
+  const { branch: branchParam } = await searchParams;
   const key = pageKeyFromSegment(segment);
   if (!key) notFound();
   const { staff, allowed } = await requireStaff(
@@ -21,19 +26,23 @@ export default async function PagePreviewPage({
     "content:edit",
   );
   if (!allowed) return <DeniedPage title="Preview page" />;
-  const loaded = await pageCommands().get(staff, key);
+  const loaded = await pageCommands().get(staff, branchParam, key);
   if (!loaded.ok) throw new Error("The page is unavailable.");
   if (!loaded.value) notFound();
-  const { page } = loaded.value;
+  const { page, branch } = loaded.value;
+  const query = `?branch=${encodeURIComponent(branch.slug)}`;
 
   return (
     <>
       <PageHeader
-        title={`Preview: ${page.title}`}
+        title={`Preview: ${page.title} (${branch.name})`}
         breadcrumbs={[
           { label: "Overview", href: "/admin" },
-          { label: "Pages", href: "/admin/pages" },
-          { label: page.title, href: `/admin/pages/${segment}` as Route },
+          { label: "Pages", href: `/admin/pages${query}` as Route },
+          {
+            label: page.title,
+            href: `/admin/pages/${segment}${query}` as Route,
+          },
         ]}
       />
       <PagePreview page={page} />

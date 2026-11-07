@@ -46,8 +46,13 @@ const common = (values: FormValues) => ({
 
 /** Shapes room form values; the domain schema validates them. */
 export function roomInputFromForm(values: FormValues): RoomInput {
+  const apartment = stringValue(values, "accommodationType") === "APARTMENT";
   return {
     ...common(values),
+    accommodationType: apartment ? "APARTMENT" : "ROOM",
+    // Bedroom and bathroom counts describe apartments only.
+    bedroomCount: apartment ? optionalNumber(values, "bedroomCount") : null,
+    bathroomCount: apartment ? optionalNumber(values, "bathroomCount") : null,
     sizeSqm: optionalNumber(values, "sizeSqm"),
     maxAdults: requiredNumber(values, "maxAdults") as number,
     maxChildren: (requiredNumber(values, "maxChildren") ?? 0) as number,

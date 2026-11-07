@@ -31,11 +31,11 @@ type PublicationPanelProps = Readonly<{
   readiness: readonly string[];
   /** Non-blocking content gaps worth fixing, e.g. a shared gallery. */
   warnings?: readonly string[];
-  /** The public address; omitted for records without one (promotions). */
+  /** The public address; omitted for records without one. */
   publicPath?: string;
   previewHref?: Route;
   actions: PublicationActions;
-  /** Extra status, e.g. which promotion is showing. */
+  /** Extra status, e.g. a note about where it appears. */
   children?: ReactNode;
 }>;
 

@@ -14,6 +14,8 @@ type CatalogRecord = Readonly<{
   branchId: string;
   slug: string;
   status: PublicationStatus;
+  /** Rooms only: a change alters the branch's stay label. */
+  accommodationType?: string;
 }>;
 
 /** The shared shape of the room and facility repositories. */
@@ -47,14 +49,14 @@ export interface CatalogRepository<Dto extends CatalogRecord, Input> {
 export type CatalogKind = Readonly<{
   /** Lower-case noun for messages, e.g. "room". */
   noun: string;
-  listTag: string;
-  itemTag: (slug: string) => string;
+  listTag: (branchSlug: string) => string;
+  itemTag: (branchSlug: string, slug: string) => string;
 }>;
 
 export const ROOM_KIND: CatalogKind = {
   noun: "room",
-  listTag: CACHE_TAGS.rooms,
-  itemTag: CACHE_TAGS.room,
+  listTag: CACHE_TAGS.stay,
+  itemTag: CACHE_TAGS.stayItem,
 };
 
 export const FACILITY_KIND: CatalogKind = {
@@ -64,6 +66,7 @@ export const FACILITY_KIND: CatalogKind = {
 };
 
 export const NO_BRANCH_MESSAGE = "No branch exists. Run the seed.";
+export const CHOOSE_BRANCH_MESSAGE = "Choose a branch.";
 
 /**
  * Staff commands for rooms and facilities: authorization, friendly conflict
@@ -79,15 +82,25 @@ export class CatalogCommands<Dto extends CatalogRecord, Input> {
   ) {}
 
   /**
-   * New records join the default branch. While only one branch exists the
-   * CMS offers no choice, and a branch sent by the form is never trusted
-   * (spec 0001).
+   * New records join the branch chosen on the form. The posted slug is
+   * re-resolved here and never trusted as an id (spec 0002). A record's
+   * branch is fixed after creation.
    */
-  async create(staff: StaffPrincipal | null, input: Input) {
+  async create(
+    staff: StaffPrincipal | null,
+    branchSlug: string | null,
+    input: Input,
+  ) {
     const access = authorize(staff, "content:edit");
     if (!access.ok) return access;
-    const branch = await this.branches.findDefault();
-    if (!branch) return failure("NOT_FOUND", NO_BRANCH_MESSAGE);
+    const branch = branchSlug
+      ? await this.branches.findBySlug(branchSlug)
+      : null;
+    if (!branch) {
+      return failure("VALIDATION", CHOOSE_BRANCH_MESSAGE, {
+        branch: [CHOOSE_BRANCH_MESSAGE],
+      });
+    }
     return this.slugConflict(
       await this.repository.create(branch.id, input, access.value),
     );
@@ -99,7 +112,11 @@ export class CatalogCommands<Dto extends CatalogRecord, Input> {
         await this.repository.update(id, input, actor),
       );
       if (!result.ok || before.status !== "PUBLISHED") return result;
-      await this.invalidatePublic([before.slug, result.value.slug]);
+      await this.invalidatePublic(
+        before.branchId,
+        [before.slug, result.value.slug],
+        before.accommodationType !== result.value.accommodationType,
+      );
       return result;
     });
   }
@@ -107,7 +124,9 @@ export class CatalogCommands<Dto extends CatalogRecord, Input> {
   async publish(staff: StaffPrincipal | null, id: string) {
     return this.mutate(staff, "content:publish", id, async (actor, before) => {
       const result = await this.repository.publish(id, actor);
-      if (result.ok) await this.invalidatePublic([before.slug]);
+      if (result.ok) {
+        await this.invalidatePublic(before.branchId, [before.slug], true);
+      }
       return result;
     });
   }
@@ -115,7 +134,9 @@ export class CatalogCommands<Dto extends CatalogRecord, Input> {
   async unpublish(staff: StaffPrincipal | null, id: string) {
     return this.mutate(staff, "content:publish", id, async (actor, before) => {
       const result = await this.repository.unpublish(id, actor);
-      if (result.ok) await this.invalidatePublic([before.slug]);
+      if (result.ok) {
+        await this.invalidatePublic(before.branchId, [before.slug], true);
+      }
       return result;
     });
   }
@@ -124,7 +145,7 @@ export class CatalogCommands<Dto extends CatalogRecord, Input> {
     return this.mutate(staff, "content:archive", id, async (actor, before) => {
       const result = await this.repository.archive(id, actor);
       if (result.ok && before.status === "PUBLISHED") {
-        await this.invalidatePublic([before.slug]);
+        await this.invalidatePublic(before.branchId, [before.slug], true);
       }
       return result;
     });
@@ -172,7 +193,11 @@ export class CatalogCommands<Dto extends CatalogRecord, Input> {
       access.value,
     );
     if (result.ok) {
-      await this.cache.invalidate([this.kind.listTag, CACHE_TAGS.sitemap]);
+      const branchSlug = await this.branchSlug(record.branchId);
+      await this.cache.invalidate([
+        ...(branchSlug ? [this.kind.listTag(branchSlug)] : []),
+        CACHE_TAGS.sitemap,
+      ]);
     }
     return result;
   }
@@ -185,7 +210,7 @@ export class CatalogCommands<Dto extends CatalogRecord, Input> {
     return this.mutate(staff, "content:edit", id, async (actor, before) => {
       const result = await this.repository.replaceMedia(id, media, actor);
       if (result.ok && before.status === "PUBLISHED") {
-        await this.invalidatePublic([before.slug]);
+        await this.invalidatePublic(before.branchId, [before.slug]);
       }
       return result;
     });
@@ -210,7 +235,7 @@ export class CatalogCommands<Dto extends CatalogRecord, Input> {
         actor,
       );
       if (before.status === "PUBLISHED") {
-        await this.invalidatePublic([before.slug]);
+        await this.invalidatePublic(before.branchId, [before.slug]);
       }
       return result;
     });
@@ -231,12 +256,28 @@ export class CatalogCommands<Dto extends CatalogRecord, Input> {
     return operation(access.value, before);
   }
 
-  private async invalidatePublic(slugs: readonly string[]) {
+  private async branchSlug(branchId: string) {
+    return (await this.branches.findById(branchId))?.slug ?? null;
+  }
+
+  /**
+   * Expires the branch's list and item tags plus the sitemap. Publish-state
+   * and type changes also expire `branches`, whose view models carry each
+   * branch's published listing types and facility flag (spec 0002).
+   */
+  private async invalidatePublic(
+    branchId: string,
+    slugs: readonly string[],
+    catalogShapeChanged = false,
+  ) {
+    const branchSlug = await this.branchSlug(branchId);
+    if (!branchSlug) return;
     await this.cache.invalidate([
-      this.kind.listTag,
-      ...[...new Set(slugs)].map(this.kind.itemTag),
+      this.kind.listTag(branchSlug),
+      ...[...new Set(slugs)].map((slug) => this.kind.itemTag(branchSlug, slug)),
       // Public edits also change sitemap lastmod and possibly its image list.
       CACHE_TAGS.sitemap,
+      ...(catalogShapeChanged ? [CACHE_TAGS.branches] : []),
     ]);
   }
 

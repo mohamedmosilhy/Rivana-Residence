@@ -145,6 +145,7 @@ export async function createFacility(
     sortOrder: number;
     heroMediaId: string;
     branchId: string;
+    slug: string;
   }> = {},
 ) {
   const id = next("facility");
@@ -153,7 +154,7 @@ export async function createFacility(
       id,
       branchId: overrides.branchId ?? TEST_BRANCH_ID,
       name: `Facility ${id}`,
-      slug: id,
+      slug: overrides.slug ?? id,
       shortDescription: "An outdoor pool terrace.",
       description,
       sortOrder: overrides.sortOrder ?? sequence,

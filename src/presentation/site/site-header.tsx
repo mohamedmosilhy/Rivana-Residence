@@ -1,12 +1,23 @@
 import Link from "next/link";
 
-import type { PublicSettings } from "@/application/public/view-models";
+import type { Route } from "next";
+
+import type {
+  PublicBranch,
+  PublicSettings,
+} from "@/application/public/view-models";
+import { stayLabel } from "@/domain/catalog";
 import { BookNowButton } from "@/presentation/site/book-now-button";
 import { BrandLogo } from "@/presentation/site/brand-logo";
+import {
+  BranchSwitcher,
+  type SwitcherBranch,
+} from "@/presentation/site/branch-switcher";
 import { container } from "@/presentation/site/classes";
 import { HeaderState } from "@/presentation/site/header-state";
 import { Icon } from "@/presentation/site/icons";
 import { MobileMenu } from "@/presentation/site/mobile-menu";
+import { siteLinks } from "@/presentation/site/site-links";
 import { SiteNavLinks } from "@/presentation/site/site-nav-links";
 
 // Transparent over the opening hero; HeaderState marks it enhanced (fixed),
@@ -17,10 +28,27 @@ const HEADER =
 const LOGO =
   "[grid-area:1/1] h-[4.25rem] w-auto [transition:opacity_var(--motion-surface)_ease,height_var(--motion-surface)_ease] max-md:h-14 header-scrolled:h-[3.25rem] header-scrolled:max-md:h-[2.875rem]";
 
+/**
+ * With a branch: its navigation, Book Now, and (only when two or more
+ * branches are active) the branch name and switcher. Without one (the
+ * chooser and top-level 404): the logo only, linking to `/` (spec 0002).
+ */
 export function SiteHeader({
   settings,
   bookingMessage,
-}: Readonly<{ settings: PublicSettings | null; bookingMessage: string }>) {
+  branch = null,
+  branches = [],
+}: Readonly<{
+  settings: PublicSettings | null;
+  bookingMessage: string;
+  branch?: PublicBranch | null;
+  branches?: readonly SwitcherBranch[];
+}>) {
+  const home = (branch ? `/${branch.slug}` : "/") as Route;
+  const links = branch
+    ? siteLinks(branch.slug, stayLabel(branch.stayTypes), branch.hasFacilities)
+    : [];
+  const switcher = branch !== null && branches.length >= 2;
   return (
     <header data-site-header="" className={HEADER}>
       <HeaderState />
@@ -29,9 +57,15 @@ export function SiteHeader({
         aria-hidden="true"
       />
       <div
-        className={`${container} relative flex min-h-(--header-height) items-center justify-between gap-4 [transition:min-height_var(--motion-surface)_ease] lg:grid lg:grid-cols-[1fr_auto_1fr] header-scrolled:min-h-(--header-height-compact)`}
+        className={`${container} relative flex min-h-(--header-height) items-center justify-between gap-4 [transition:min-height_var(--motion-surface)_ease] lg:grid ${
+          // With the switcher the right side is wider: keep the logo's own
+          // width and centre the navigation in the space left.
+          switcher
+            ? "lg:grid-cols-[auto_minmax(0,1fr)_auto]"
+            : "lg:grid-cols-[1fr_auto_1fr]"
+        } header-scrolled:min-h-(--header-height-compact)`}
       >
-        <Link href="/" className="grid flex-none">
+        <Link href={home} className="grid flex-none">
           <BrandLogo
             tone="inverse"
             className={`${LOGO} header-scrolled:opacity-0 header-menu-open:opacity-100`}
@@ -43,39 +77,65 @@ export function SiteHeader({
             eager
           />
           <span className="visually-hidden">
-            {settings?.siteName ?? "Rivana Residence"} home
+            {branch && switcher
+              ? branch.name
+              : (settings?.siteName ?? "Rivana Residence")}{" "}
+            home
           </span>
         </Link>
-        <nav aria-label="Main" className="max-lg:hidden">
-          <SiteNavLinks variant="bar" />
-        </nav>
-        <div className="flex items-center gap-3 lg:justify-self-end">
-          <BookNowButton message={bookingMessage} placement="header" />
-          <MobileMenu>
-            <nav aria-label="Main (menu)">
-              <SiteNavLinks variant="menu" />
-            </nav>
-            {settings && (settings.phone || settings.email) ? (
-              <address className="grid gap-2 not-italic menu-open:animate-[site-fade_600ms_ease-out_520ms_both] menu-closing:animate-[site-fade-out_180ms_ease-in_both]">
-                {settings.phone ? (
-                  <a
-                    href={`tel:${settings.phone.replace(/[^+0-9]/g, "")}`}
-                    className={MENU_CONTACT}
-                  >
-                    <Icon name="phone" className={MENU_CONTACT_ICON} />
-                    {settings.phone}
-                  </a>
-                ) : null}
-                {settings.email ? (
-                  <a href={`mailto:${settings.email}`} className={MENU_CONTACT}>
-                    <Icon name="mail" className={MENU_CONTACT_ICON} />
-                    {settings.email}
-                  </a>
-                ) : null}
-              </address>
+        {branch ? (
+          <nav
+            aria-label="Main"
+            className={`max-lg:hidden ${switcher ? "justify-self-center" : ""}`.trim()}
+          >
+            <SiteNavLinks variant="bar" links={links} />
+          </nav>
+        ) : null}
+        {branch ? (
+          <div className="flex items-center gap-3 lg:justify-self-end">
+            {switcher ? (
+              <div className="max-lg:hidden">
+                <BranchSwitcher current={branch.slug} branches={branches} />
+              </div>
             ) : null}
-          </MobileMenu>
-        </div>
+            <BookNowButton
+              message={bookingMessage}
+              placement="header"
+              branchSlug={branch.slug}
+            />
+            <MobileMenu>
+              {switcher ? (
+                <BranchSwitcher
+                  current={branch.slug}
+                  branches={branches}
+                  variant="menu"
+                />
+              ) : null}
+              <nav aria-label="Main (menu)">
+                <SiteNavLinks variant="menu" links={links} />
+              </nav>
+              {branch.phone || branch.email ? (
+                <address className="grid gap-2 not-italic menu-open:animate-[site-fade_600ms_ease-out_520ms_both] menu-closing:animate-[site-fade-out_180ms_ease-in_both]">
+                  {branch.phone ? (
+                    <a
+                      href={`tel:${branch.phone.replace(/[^+0-9]/g, "")}`}
+                      className={MENU_CONTACT}
+                    >
+                      <Icon name="phone" className={MENU_CONTACT_ICON} />
+                      {branch.phone}
+                    </a>
+                  ) : null}
+                  {branch.email ? (
+                    <a href={`mailto:${branch.email}`} className={MENU_CONTACT}>
+                      <Icon name="mail" className={MENU_CONTACT_ICON} />
+                      {branch.email}
+                    </a>
+                  ) : null}
+                </address>
+              ) : null}
+            </MobileMenu>
+          </div>
+        ) : null}
       </div>
     </header>
   );

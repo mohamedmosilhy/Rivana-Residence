@@ -103,7 +103,7 @@ Visual snapshots cover major page templates and high-risk interactions, not ever
 - Lighthouse CI enforces accessibility ≥95, best practices ≥90, SEO ≥95, CLS ≤0.1, and a 260 KB script-transfer ceiling; performance, LCP, and TBT use warning budgets so regressions remain visible without concealing reviewed exceptions.
 - Browser tests assert route titles, canonicals, Open Graph URLs, sitemap/robots output, permanent redirects, and the absence of broken same-origin links/images.
 - Unit and browser tests validate JSON-LD shape and reject invented offers, prices, availability, ratings, and reviews.
-- `npm run audit:content` checks production facts, published content/media readiness, promotion validity (until M5), and truthful disabled-booking messaging; from M5 it checks each branch's contact, map, and content, and from M10 it flags placeholder legal, VAT, and cancellation wording as launch blockers. It exits 2 while launch inputs are blocked.
+- `npm run audit:content` checks production facts, published content/media readiness, and truthful disabled-booking messaging; since M5 it checks each active branch's contact, location, and published pages, and from M10 it flags placeholder legal, VAT, and cancellation wording as launch blockers. It exits 2 while launch inputs are blocked.
 
 The Phase 10 desktop/mobile scores and accepted exceptions are recorded in [phase-10-seo-performance.md](../delivery/reports/phase-10-seo-performance.md).
 
@@ -116,7 +116,7 @@ The Phase 10 desktop/mobile scores and accepted exceptions are recorded in [phas
 - upload MIME/extension/magic-byte/size/dimension mismatches;
 - media IDOR/reference deletion;
 - local path traversal, encoded separators, symlink escape, executable upload, and direct access to quarantined/non-ready files;
-- promotion stored-XSS, invalid schedule, unauthorized publish, and client-clock bypass attempts (until M5);
+- branch map URL injection (refused on write, dropped on render), cross-branch slug probing (404), and branch writes by non-Admins (refused) (M5);
 - payment callback forgery and replay, refund authorization, coupon guessing and limit races, marketing consent exclusions (M7–M13);
 - open redirect and unsafe return-path cases;
 - login/contact rate limiting;

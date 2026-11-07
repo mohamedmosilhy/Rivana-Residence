@@ -11,11 +11,9 @@ import {
   roomInputFromForm,
 } from "@/application/content/catalog-forms";
 import { PageCommands } from "@/application/content/page-commands";
-import { PromotionAdmin } from "@/application/promotions/promotion-admin";
 import { PrismaFacilityRepository } from "@/infrastructure/db/prisma/repositories/facility-repository";
 import { PrismaMediaRepository } from "@/infrastructure/db/prisma/repositories/media-repository";
 import { PrismaPageRepository } from "@/infrastructure/db/prisma/repositories/page-repository";
-import { PrismaPromotionRepository } from "@/infrastructure/db/prisma/repositories/promotion-repository";
 import { PrismaRoomRepository } from "@/infrastructure/db/prisma/repositories/room-repository";
 
 import { PrismaBranchRepository } from "@/infrastructure/db/prisma/repositories/branches/branch-repository";
@@ -40,7 +38,6 @@ const admin: StaffPrincipal = {
 };
 const editor: StaffPrincipal = { ...admin, role: "EDITOR" };
 const cache = { invalidate: vi.fn(async () => undefined) };
-const now = new Date("2026-09-25T12:00:00Z");
 
 const branches = new PrismaBranchRepository(client);
 const rooms = new CatalogCommands(
@@ -57,13 +54,6 @@ const facilities = new CatalogCommands(
 );
 const pageRepository = new PrismaPageRepository(client);
 const pages = new PageCommands(pageRepository, cache, branches);
-const promotions = new PromotionAdmin(
-  new PrismaPromotionRepository(client),
-  cache,
-  {
-    now: () => now,
-  },
-);
 
 const roomForm = {
   name: "Nile Suite",
@@ -86,7 +76,11 @@ beforeEach(async () => {
 });
 
 async function createRoom(form = roomForm) {
-  const result = await rooms.create(editor, roomInputFromForm(form));
+  const result = await rooms.create(
+    editor,
+    "new-cairo",
+    roomInputFromForm(form),
+  );
   if (!result.ok) throw new Error(result.error.message);
   return result.value;
 }
@@ -131,6 +125,7 @@ describe("room lifecycle", () => {
   it("returns field errors for invalid form input and writes nothing", async () => {
     const result = await rooms.create(
       editor,
+      "new-cairo",
       roomInputFromForm({
         ...roomForm,
         name: "",
@@ -149,7 +144,11 @@ describe("room lifecycle", () => {
 
   it("explains a duplicate web address instead of failing", async () => {
     await createRoom();
-    const result = await rooms.create(editor, roomInputFromForm(roomForm));
+    const result = await rooms.create(
+      editor,
+      "new-cairo",
+      roomInputFromForm(roomForm),
+    );
     expect(result).toMatchObject({
       ok: false,
       error: { code: "CONFLICT", fieldErrors: { slug: [expect.any(String)] } },
@@ -184,9 +183,10 @@ describe("room lifecycle", () => {
       value: { status: "PUBLISHED" },
     });
     expect(cache.invalidate).toHaveBeenLastCalledWith([
-      "rooms",
-      "room:nile-suite",
+      "branch:new-cairo:stay",
+      "branch:new-cairo:stay:nile-suite",
       "sitemap",
+      "branches",
     ]);
 
     expect(await rooms.unpublish(editor, room.id)).toMatchObject({
@@ -247,7 +247,10 @@ describe("room lifecycle", () => {
 
     const order = await client.room.findMany({ orderBy: { sortOrder: "asc" } });
     expect(order.map((room) => room.id)).toEqual([a.id, c.id, b.id]);
-    expect(cache.invalidate).toHaveBeenLastCalledWith(["rooms", "sitemap"]);
+    expect(cache.invalidate).toHaveBeenLastCalledWith([
+      "branch:new-cairo:stay",
+      "sitemap",
+    ]);
   });
 
   it("keeps a published room publishable when edited", async () => {
@@ -270,6 +273,7 @@ describe("facility lifecycle", () => {
   it("creates, renames, and archives a facility", async () => {
     const created = await facilities.create(
       editor,
+      "new-cairo",
       facilityInputFromForm({
         name: "Pool Terrace",
         slug: "pool-terrace",
@@ -319,10 +323,16 @@ describe("page management", () => {
       "CONTACT_CTA",
     ]);
 
-    await pages.saveSection(editor, "HOME", home!.sections[0]!.id, {
-      payload: JSON.stringify({ title: "Edited", summary: "Kept." }),
-      isVisible: "on",
-    });
+    await pages.saveSection(
+      editor,
+      "new-cairo",
+      "HOME",
+      home!.sections[0]!.id,
+      {
+        payload: JSON.stringify({ title: "Edited", summary: "Kept." }),
+        isVisible: "on",
+      },
+    );
     await seedDatabase(client);
 
     const reseeded = await pageRepository.findAdminByKey(
@@ -334,12 +344,12 @@ describe("page management", () => {
   });
 
   it("edits, reorders, publishes, and unpublishes the Home page", async () => {
-    const view = await pages.get(editor, "HOME");
+    const view = await pages.get(editor, "new-cairo", "HOME");
     if (!view.ok || !view.value) throw new Error("Home missing");
     const [, intro, , , lifestyle] = view.value.page.sections;
 
     expect(
-      await pages.saveSection(editor, "HOME", lifestyle!.id, {
+      await pages.saveSection(editor, "new-cairo", "HOME", lifestyle!.id, {
         heading: "Evenings",
         payload: JSON.stringify({
           bodyText: "Sunset on the terrace.",
@@ -349,28 +359,35 @@ describe("page management", () => {
       }),
     ).toMatchObject({ ok: true });
     expect(
-      (await pages.moveSection(editor, "HOME", lifestyle!.id, -1)).ok,
+      (await pages.moveSection(editor, "new-cairo", "HOME", lifestyle!.id, -1))
+        .ok,
     ).toBe(true);
     expect(cache.invalidate).not.toHaveBeenCalled();
 
-    expect(await pages.publish(editor, "HOME")).toMatchObject({
+    expect(await pages.publish(editor, "new-cairo", "HOME")).toMatchObject({
       ok: true,
       value: { isPublished: true },
     });
-    expect(cache.invalidate).toHaveBeenLastCalledWith(["page:home", "sitemap"]);
+    expect(cache.invalidate).toHaveBeenLastCalledWith([
+      "branch:new-cairo:page:home",
+      "sitemap",
+    ]);
 
     // While public, hiding the only visible intro would break the page.
-    await pages.saveSection(editor, "HOME", lifestyle!.id, {
+    await pages.saveSection(editor, "new-cairo", "HOME", lifestyle!.id, {
       payload: JSON.stringify({ bodyText: "Sunset.", imageSide: "LEFT" }),
     });
     expect(
-      await pages.saveSection(editor, "HOME", intro!.id, {
+      await pages.saveSection(editor, "new-cairo", "HOME", intro!.id, {
         payload: JSON.stringify({ documentText: "Welcome." }),
       }),
     ).toMatchObject({ ok: false, error: { code: "NOT_PUBLISHABLE" } });
-    expect(cache.invalidate).toHaveBeenCalledWith(["page:home", "sitemap"]);
+    expect(cache.invalidate).toHaveBeenCalledWith([
+      "branch:new-cairo:page:home",
+      "sitemap",
+    ]);
 
-    expect(await pages.unpublish(editor, "HOME")).toMatchObject({
+    expect(await pages.unpublish(editor, "new-cairo", "HOME")).toMatchObject({
       ok: true,
       value: { isPublished: false },
     });
@@ -380,24 +397,24 @@ describe("page management", () => {
   });
 
   it("never hides a required section or moves the Hero", async () => {
-    const view = await pages.get(editor, "ABOUT");
+    const view = await pages.get(editor, "new-cairo", "ABOUT");
     if (!view.ok || !view.value) throw new Error("About missing");
     const [hero, story, stats] = view.value.page.sections;
 
     expect(
-      await pages.saveSection(editor, "ABOUT", story!.id, {
+      await pages.saveSection(editor, "new-cairo", "ABOUT", story!.id, {
         payload: JSON.stringify({ bodyText: "Story.", imageSide: "LEFT" }),
       }),
     ).toMatchObject({ ok: false, error: { code: "VALIDATION" } });
     expect(
-      await pages.moveSection(editor, "ABOUT", story!.id, -1),
+      await pages.moveSection(editor, "new-cairo", "ABOUT", story!.id, -1),
     ).toMatchObject({
       ok: false,
       error: { code: "VALIDATION" },
     });
-    expect((await pages.moveSection(editor, "ABOUT", stats!.id, -1)).ok).toBe(
-      true,
-    );
+    expect(
+      (await pages.moveSection(editor, "new-cairo", "ABOUT", stats!.id, -1)).ok,
+    ).toBe(true);
     const reordered = await pageRepository.findAdminByKey(
       TEST_BRANCH_ID,
       "ABOUT",
@@ -407,11 +424,17 @@ describe("page management", () => {
   });
 
   it("rejects invalid section input with field paths", async () => {
-    const view = await pages.get(editor, "ABOUT");
+    const view = await pages.get(editor, "new-cairo", "ABOUT");
     const stats = view.ok ? view.value?.page.sections[2] : undefined;
-    const result = await pages.saveSection(editor, "ABOUT", stats!.id, {
-      payload: JSON.stringify({ items: [{ value: "", label: "Rooms" }] }),
-    });
+    const result = await pages.saveSection(
+      editor,
+      "new-cairo",
+      "ABOUT",
+      stats!.id,
+      {
+        payload: JSON.stringify({ items: [{ value: "", label: "Rooms" }] }),
+      },
+    );
     expect(result).toMatchObject({ ok: false, error: { code: "VALIDATION" } });
     expect(!result.ok && Object.keys(result.error.fieldErrors ?? {})).toContain(
       "items.0.value",
@@ -420,7 +443,7 @@ describe("page management", () => {
 
   it("saves search details", async () => {
     expect(
-      await pages.updateDetails(editor, "CONTACT", {
+      await pages.updateDetails(editor, "new-cairo", "CONTACT", {
         seoTitle: "Contact Rivana",
         seoDescription: "",
       }),
@@ -428,65 +451,6 @@ describe("page management", () => {
       ok: true,
       value: { seoTitle: "Contact Rivana", seoDescription: null },
     });
-  });
-});
-
-describe("promotion lifecycle", () => {
-  const input = {
-    internalName: "Autumn",
-    headline: "Autumn by the river",
-    body: "Stay longer.",
-    code: "AUTUMN26",
-    terms: null,
-    startsAt: null,
-    endsAt: null,
-    priority: 1,
-    showAsPopup: true,
-  };
-
-  it("publishes, explains, unpublishes, archives, restores, and deletes", async () => {
-    const created = await promotions.create(editor, input);
-    if (!created.ok) throw new Error(created.error.message);
-    const id = created.value.id;
-    expect(cache.invalidate).toHaveBeenCalledWith(["promotion:active"]);
-
-    await promotions.publish(editor, id);
-    const shown = await promotions.get(editor, id);
-    expect(shown.ok && shown.value?.display).toEqual({ state: "showing" });
-
-    const rival = await promotions.create(editor, {
-      ...input,
-      internalName: "Winter",
-      priority: 9,
-    });
-    if (!rival.ok) throw new Error(rival.error.message);
-    await promotions.publish(editor, rival.value.id);
-    const outranked = await promotions.get(editor, id);
-    expect(outranked.ok && outranked.value?.display).toMatchObject({
-      state: "outranked",
-      winner: { id: rival.value.id },
-    });
-
-    expect(await promotions.unpublish(editor, id)).toMatchObject({
-      ok: true,
-      value: { status: "DRAFT" },
-    });
-    expect((await promotions.archive(editor, id)).ok).toBe(true);
-    expect(await promotions.delete(editor, id)).toMatchObject({
-      ok: false,
-      error: { code: "FORBIDDEN" },
-    });
-    expect(await promotions.restore(editor, id)).toMatchObject({
-      ok: true,
-      value: { status: "DRAFT" },
-    });
-    expect(await promotions.delete(admin, id)).toMatchObject({
-      ok: false,
-      error: { code: "CONFLICT" },
-    });
-    await promotions.archive(editor, id);
-    expect((await promotions.delete(admin, id)).ok).toBe(true);
-    expect(await client.promotion.count()).toBe(1);
   });
 });
 
@@ -506,25 +470,26 @@ describe("media options", () => {
 
 describe("timestamp storage", () => {
   it("stores Prisma-written instants as true UTC regardless of the server zone", async () => {
-    const startsAt = new Date("2030-01-10T07:00:00.000Z");
-    const created = await promotions.create(editor, {
-      internalName: "Timing",
-      headline: "Headline",
-      body: "Body",
-      code: "TIMING",
-      terms: null,
-      startsAt,
-      endsAt: null,
-      priority: 0,
-      showAsPopup: true,
+    // The promotion table was retired in M5; the audit log is a timestamp
+    // written by Prisma through the same adapter.
+    const occurredAt = new Date("2030-01-10T07:00:00.000Z");
+    const created = await client.auditEvent.create({
+      data: {
+        id: "audit-utc",
+        occurredAt,
+        actorType: "SYSTEM",
+        action: "branch.updated",
+        entityType: "Branch",
+        entityId: TEST_BRANCH_ID,
+        changes: {},
+      },
     });
-    if (!created.ok) throw new Error(created.error.message);
 
     // Read through a separate connection in the database's default zone.
     const [row] = await client.$queryRaw<{ epoch: number }[]>`
-      SELECT extract(epoch FROM "startsAt")::float8 AS epoch
-      FROM "Promotion" WHERE id = ${created.value.id}`;
-    expect(row?.epoch).toBe(startsAt.getTime() / 1000);
-    expect(created.value.startsAt).toEqual(startsAt);
+      SELECT extract(epoch FROM "occurredAt")::float8 AS epoch
+      FROM "AuditEvent" WHERE id = ${created.id}`;
+    expect(row?.epoch).toBe(occurredAt.getTime() / 1000);
+    expect(created.occurredAt).toEqual(occurredAt);
   });
 });

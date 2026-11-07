@@ -4,14 +4,14 @@ import Link from "next/link";
 import type { CSSProperties } from "react";
 import { usePathname } from "next/navigation";
 
-import { SITE_LINKS } from "@/presentation/site/site-links";
+import { isCurrentLink, type SiteLink } from "@/presentation/site/site-links";
 
 const VARIANTS = {
   // The desktop bar: small caps with a gold rule under the current page.
   bar: {
-    list: "flex gap-[clamp(1.25rem,2.6vw,2.5rem)]",
+    list: "flex gap-[clamp(1rem,2.6vw,2.5rem)] max-xl:gap-[clamp(1rem,1.9vw,2.5rem)]",
     item: "",
-    link: "relative inline-flex min-h-11 items-center text-[0.8125rem] font-medium tracking-[0.18em] uppercase after:absolute after:right-0 after:bottom-2 after:left-0 after:h-px after:origin-left after:bg-gold-400 after:[transform:scaleX(0)] after:[transition:transform_var(--motion-surface)_var(--ease-out-soft)] hover:after:[transform:scaleX(1)] aria-[current=page]:after:[transform:scaleX(1)] header-scrolled:after:bg-gold-600",
+    link: "relative inline-flex min-h-11 items-center whitespace-nowrap text-[0.8125rem] font-medium tracking-[0.18em] uppercase after:absolute after:right-0 after:bottom-2 after:left-0 after:h-px after:origin-left after:bg-gold-400 after:[transform:scaleX(0)] after:[transition:transform_var(--motion-surface)_var(--ease-out-soft)] hover:after:[transform:scaleX(1)] aria-[current=page]:after:[transform:scaleX(1)] header-scrolled:after:bg-gold-600",
   },
   // The menu sheet: large display type, numbered, rising in one by one.
   menu: {
@@ -23,17 +23,15 @@ const VARIANTS = {
 
 export function SiteNavLinks({
   variant,
-}: Readonly<{ variant: keyof typeof VARIANTS }>) {
+  links,
+}: Readonly<{ variant: keyof typeof VARIANTS; links: readonly SiteLink[] }>) {
   const pathname = usePathname();
   const styles = VARIANTS[variant];
   const numbered = variant === "menu";
   return (
     <ul className={styles.list}>
-      {SITE_LINKS.map((link, index) => {
-        const current =
-          link.href === "/"
-            ? pathname === "/"
-            : pathname === link.href || pathname.startsWith(`${link.href}/`);
+      {links.map((link, index) => {
+        const current = isCurrentLink(link.href, pathname, links[0]!.href);
         return (
           <li
             key={link.href}

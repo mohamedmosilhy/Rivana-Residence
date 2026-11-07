@@ -5,18 +5,11 @@ import {
   socialLinksSchema,
 } from "@/domain/settings/site-settings";
 
+// Brand-wide fields only: contact, address, and map moved to branches in M5
+// (owner decision, spec 0002); their rules are tested with the branch schema.
 const blank = {
   siteName: "Rivana Residence",
   tagline: "",
-  phone: "",
-  email: "",
-  addressLine1: "",
-  addressLine2: "",
-  city: "",
-  country: "",
-  latitude: "",
-  longitude: "",
-  mapEmbedUrl: "",
   footerText: "",
   defaultSeoTitle: "",
   defaultSeoDescription: "",
@@ -37,36 +30,29 @@ function issues(input: unknown) {
 describe("site settings rules", () => {
   it("treats blank optional fields as not set and trims text", () => {
     expect(
-      siteSettingsSchema.parse({ ...blank, siteName: "  Rivana  ", city: " " }),
+      siteSettingsSchema.parse({
+        ...blank,
+        siteName: "  Rivana  ",
+        tagline: " ",
+      }),
     ).toEqual({
       siteName: "Rivana",
       tagline: null,
-      phone: null,
-      email: null,
-      addressLine1: null,
-      addressLine2: null,
-      city: null,
-      country: null,
-      latitude: null,
-      longitude: null,
-      mapEmbedUrl: null,
       footerText: null,
       defaultSeoTitle: null,
       defaultSeoDescription: null,
     });
   });
 
-  it("treats missing optional fields as not set", () => {
-    expect(siteSettingsSchema.parse({ siteName: "Rivana" }).email).toBeNull();
-  });
-
-  it("parses coordinates from form text", () => {
+  // AC-11: contact and map fields are no longer part of the settings form.
+  it("drops retired contact and map fields", () => {
     const parsed = siteSettingsSchema.parse({
       ...blank,
-      latitude: "30.0131",
-      longitude: "-31.49",
+      phone: "+20 2 1234 5678",
+      mapEmbedUrl: "https://www.google.com/maps/embed?pb=1",
     });
-    expect(parsed).toMatchObject({ latitude: 30.0131, longitude: -31.49 });
+    expect(parsed).not.toHaveProperty("phone");
+    expect(parsed).not.toHaveProperty("mapEmbedUrl");
   });
 
   it("requires the residence name", () => {
@@ -75,43 +61,11 @@ describe("site settings rules", () => {
   });
 
   it.each([
-    ["email", "not-an-email"],
-    ["phone", "call us"],
-    ["latitude", "91"],
-    ["longitude", "east"],
     ["defaultSeoTitle", "x".repeat(71)],
     ["defaultSeoDescription", "x".repeat(171)],
     ["footerText", "x".repeat(501)],
   ])("rejects an invalid %s", (field, value) => {
-    const input = { ...blank, [field]: value };
-    if (field === "latitude") input.longitude = "31";
-    if (field === "longitude") input.latitude = "30";
-    expect(issues(input)).toHaveProperty(field);
-  });
-
-  it("requires latitude and longitude together", () => {
-    expect(issues({ ...blank, latitude: "30" })).toEqual({
-      longitude: "Enter both latitude and longitude, or leave both empty.",
-    });
-  });
-
-  it("accepts only Google Maps embed links for the map", () => {
-    expect(
-      issues({
-        ...blank,
-        mapEmbedUrl: "https://www.google.com/maps/embed?pb=!1m18",
-      }),
-    ).toEqual({});
-    for (const url of [
-      "https://evil.example/maps/embed",
-      "http://www.google.com/maps/embed?pb=1",
-      "javascript:alert(1)",
-      "https://www.google.com.evil.example/maps/embed",
-    ]) {
-      expect(issues({ ...blank, mapEmbedUrl: url })).toHaveProperty(
-        "mapEmbedUrl",
-      );
-    }
+    expect(issues({ ...blank, [field]: value })).toHaveProperty(field);
   });
 
   it("rejects non-string values such as uploaded files", () => {

@@ -1,8 +1,13 @@
 import type { Metadata, Route } from "next";
 import Link from "next/link";
 
+import { pagePath } from "@/application/public/seo";
 import { getCurrentStaff, requireStaff } from "@/composition/auth";
 import { pageCommands, propertyTimeZone } from "@/composition/content";
+import {
+  BranchSelector,
+  branchQuery,
+} from "@/presentation/admin/content/branch-selector";
 import { DeniedPage } from "@/presentation/admin/denied-page";
 import { formatDateTime, plural } from "@/presentation/admin/format";
 import { Badge } from "@/presentation/admin/ui/badge";
@@ -16,15 +21,23 @@ import {
 
 export const metadata: Metadata = { title: "Pages" };
 
-export default async function PagesPage() {
+type PagesPageProps = Readonly<{
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}>;
+
+export default async function PagesPage({ searchParams }: PagesPageProps) {
   const { allowed } = await requireStaff("/admin/pages", "content:edit");
   if (!allowed) return <DeniedPage title="Pages" />;
 
-  const [pages, timeZone] = await Promise.all([
-    pageCommands().list(await getCurrentStaff()),
+  const params = await searchParams;
+  const [listing, timeZone] = await Promise.all([
+    pageCommands().list(await getCurrentStaff(), params.branch),
     propertyTimeZone(),
   ]);
-  if (!pages.ok) throw new Error("Pages are unavailable.");
+  if (!listing.ok) throw new Error("Pages are unavailable.");
+  const { branchChoice, pages } = listing.value;
+  const branch = branchChoice.selected;
+  const query = branchQuery(branchChoice);
 
   return (
     <>
@@ -32,14 +45,16 @@ export default async function PagesPage() {
         title="Pages"
         description={
           <p>
-            The Home, About, and Contact pages. Each has a fixed set of sections
-            that you can edit, hide when optional, and reorder.
+            Each branch has its own Home, About, and Contact pages. Each has a
+            fixed set of sections that you can edit, hide when optional, and
+            reorder.
           </p>
         }
       />
+      <BranchSelector action="/admin/pages" choice={branchChoice} />
       <DataTable
-        caption="Pages"
-        rows={pages.value}
+        caption={branch ? `Pages of ${branch.name}` : "Pages"}
+        rows={pages}
         rowKey={(page) => page.key}
         columns={[
           {
@@ -48,12 +63,18 @@ export default async function PagesPage() {
             cell: (page) => (
               <>
                 <Link
-                  href={`/admin/pages/${page.key.toLowerCase()}` as Route}
+                  href={
+                    `/admin/pages/${page.key.toLowerCase()}${query ? `?${query}` : ""}` as Route
+                  }
                   className={`${tablePrimary} ${link}`}
                 >
                   {page.title}
                 </Link>
-                <span className={tableSecondary}>{page.canonicalPath}</span>
+                <span className={tableSecondary}>
+                  {branch
+                    ? pagePath(branch.slug, page.key)
+                    : page.canonicalPath}
+                </span>
               </>
             ),
           },

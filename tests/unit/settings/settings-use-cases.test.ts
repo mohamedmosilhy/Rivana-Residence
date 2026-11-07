@@ -50,17 +50,24 @@ describe("UpdateSiteSettings", () => {
     const { update, repository, cache } = setup();
 
     const result = await update.execute(admin, {
-      values: { siteName: " Rivana ", email: "stay@rivana.example" },
+      values: {
+        siteName: " Rivana ",
+        tagline: "Calm",
+        // Retired from settings in M5 (spec 0002); never written.
+        email: "stay@rivana.example",
+      },
       expectedUpdatedAt: version,
     });
 
     expect(result.ok).toBe(true);
     expect(repository.update).toHaveBeenCalledWith(
-      expect.objectContaining({
+      {
         siteName: "Rivana",
-        email: "stay@rivana.example",
-        phone: null,
-      }),
+        tagline: "Calm",
+        footerText: null,
+        defaultSeoTitle: null,
+        defaultSeoDescription: null,
+      },
       new Date(version),
       admin,
     );
@@ -90,13 +97,13 @@ describe("UpdateSiteSettings", () => {
     const { update, repository, cache } = setup();
 
     const result = await update.execute(admin, {
-      values: { siteName: "", email: "nope" },
+      values: { siteName: "", defaultSeoTitle: "x".repeat(71) },
       expectedUpdatedAt: version,
     });
 
     expect(result).toMatchObject({ ok: false, error: { code: "VALIDATION" } });
     expect(!result.ok && Object.keys(result.error.fieldErrors ?? {})).toEqual(
-      expect.arrayContaining(["siteName", "email"]),
+      expect.arrayContaining(["siteName", "defaultSeoTitle"]),
     );
     expect(repository.update).not.toHaveBeenCalled();
     expect(cache.invalidate).not.toHaveBeenCalled();

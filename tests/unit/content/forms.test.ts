@@ -10,9 +10,7 @@ import {
   pageKeyFromSegment,
   sectionPayloadFromForm,
 } from "@/application/content/page-commands";
-import { promotionInputFromForm } from "@/application/promotions/promotion-admin";
 import { facilityDraftSchema } from "@/domain/facilities/facility";
-import { promotionDraftSchema } from "@/domain/promotions/promotion";
 import { roomDraftSchema } from "@/domain/rooms/room";
 
 const roomForm = {
@@ -54,6 +52,43 @@ describe("room and facility forms", () => {
     expect(result.error?.issues.map((issue) => issue.path[0])).toEqual(
       expect.arrayContaining(["sizeSqm", "maxAdults"]),
     );
+  });
+
+  // AC-5, T-CAT-1: the listing type and apartment facts come from the form;
+  // counts are dropped for rooms.
+  it("reads the accommodation type and apartment counts", () => {
+    expect(
+      roomInputFromForm({
+        ...roomForm,
+        accommodationType: "APARTMENT",
+        bedroomCount: "2",
+        bathroomCount: "1",
+      }),
+    ).toMatchObject({
+      accommodationType: "APARTMENT",
+      bedroomCount: 2,
+      bathroomCount: 1,
+    });
+    expect(
+      roomInputFromForm({ ...roomForm, bedroomCount: "3", bathroomCount: "2" }),
+    ).toMatchObject({
+      accommodationType: "ROOM",
+      bedroomCount: null,
+      bathroomCount: null,
+    });
+  });
+
+  it("rejects negative apartment counts next to their fields", () => {
+    const result = roomDraftSchema.safeParse(
+      roomInputFromForm({
+        ...roomForm,
+        accommodationType: "APARTMENT",
+        bedroomCount: "-1",
+      }),
+    );
+    expect(result.error?.issues.map((issue) => issue.path[0])).toEqual([
+      "bedroomCount",
+    ]);
   });
 
   it("treats a malformed feature list as no features", () => {
@@ -172,63 +207,6 @@ describe("room and facility forms", () => {
         media: JSON.stringify({ HERO: [{ mediaId: "a" }] }),
       }).ok,
     ).toBe(false);
-  });
-});
-
-describe("promotion form", () => {
-  const form = {
-    internalName: "Autumn",
-    headline: "Autumn by the river",
-    body: "Stay longer.",
-    code: "AUTUMN26",
-    terms: "",
-    startsAt: "2026-10-01T09:00",
-    endsAt: "",
-    priority: "5",
-    showAsPopup: "on",
-  };
-
-  it("reads schedule times in the property time zone", () => {
-    const result = promotionInputFromForm(form, "Africa/Cairo");
-    expect(result).toMatchObject({
-      ok: true,
-      value: {
-        terms: null,
-        startsAt: new Date("2026-10-01T06:00:00.000Z"),
-        endsAt: null,
-        priority: 5,
-        showAsPopup: true,
-      },
-    });
-    expect(
-      result.ok && promotionDraftSchema.safeParse(result.value).success,
-    ).toBe(true);
-  });
-
-  it("rejects a malformed time instead of treating it as no limit", () => {
-    expect(
-      promotionInputFromForm(
-        { ...form, endsAt: "2026-02-31T10:00" },
-        "Africa/Cairo",
-      ),
-    ).toMatchObject({
-      ok: false,
-      error: {
-        code: "VALIDATION",
-        fieldErrors: { endsAt: [expect.any(String)] },
-      },
-    });
-  });
-
-  it("has no discount, redemption, guest, or reservation fields", () => {
-    expect(Object.keys(promotionDraftSchema.shape)).toContain("code");
-    expect(
-      Object.keys(promotionDraftSchema.shape).filter((key) =>
-        /discount|amount|redeem|redemption|guest|reserv|payment|eligib/i.test(
-          key,
-        ),
-      ),
-    ).toEqual([]);
   });
 });
 

@@ -28,7 +28,7 @@ Each section states its status: **Implemented** (built and accepted in Phases 1�
 - **FR-SITE-7** Each branch's Contact page and home location section show its location as an interactive Google Map embed (allowlisted `google.com/maps/embed` URL), with the address and a directions link always available (Q-52).
 - **FR-SITE-8** Sitemap, canonical URLs, and structured data are generated per branch; inactive branches are excluded.
 
-## FR-CMS Content management — Implemented; branch selector planned (M5)
+## FR-CMS Content management — Implemented (branch selector since M5)
 
 - **FR-CMS-1** Closed staff authentication; no public sign-up.
 - **FR-CMS-2** Edit brand identity, logos, social links, footer text, and default SEO. Contact details and the map move to the branch (M5).

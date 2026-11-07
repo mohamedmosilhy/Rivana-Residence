@@ -6,6 +6,7 @@ import type {
   PublicRoomCard,
   PublicRoomFacts,
 } from "@/application/public/view-models";
+import type { AccommodationType } from "@/domain/shared/types";
 import { Icon } from "@/presentation/site/icons";
 import { Reveal, RevealItem } from "@/presentation/site/motion/reveal";
 import { SharedElement } from "@/presentation/site/motion/shared-element";
@@ -20,8 +21,41 @@ const PHOTO = "[transition:transform_var(--motion-image)_var(--ease-out-soft)]";
 const CARD_LINK =
   "after:absolute after:inset-0 after:z-1 after:content-[''] focus-visible:[outline:none]";
 
-/** Verified marketing facts only; never prices or availability. */
-export function roomFactList(facts: PublicRoomFacts) {
+const count = (value: number, noun: string) =>
+  `${value} ${noun}${value === 1 ? "" : "s"}`;
+
+/** "Room" or "Apartment" (Q-43): shown on every card and detail page. */
+export const ACCOMMODATION_LABELS: Record<AccommodationType, string> = {
+  ROOM: "Room",
+  APARTMENT: "Apartment",
+};
+
+export function AccommodationBadge({
+  type,
+  tone = "light",
+}: Readonly<{ type: AccommodationType; tone?: "light" | "dark" }>) {
+  return (
+    <p
+      data-accommodation={type}
+      className={`m-0 inline-flex min-h-6 items-center border px-2.5 text-[0.6875rem] font-medium tracking-[0.2em] uppercase ${
+        tone === "dark"
+          ? "border-gold-400 text-gold-400"
+          : "border-gold-600 text-plum-800"
+      }`}
+    >
+      {ACCOMMODATION_LABELS[type]}
+    </p>
+  );
+}
+
+/**
+ * Verified marketing facts only; never prices or availability. Apartments
+ * add their bedrooms and bathrooms when set.
+ */
+export function roomFactList(
+  facts: PublicRoomFacts,
+  type: AccommodationType = "ROOM",
+) {
   const guests = [
     `${facts.maxAdults} adult${facts.maxAdults === 1 ? "" : "s"}`,
     facts.maxChildren > 0
@@ -33,23 +67,31 @@ export function roomFactList(facts: PublicRoomFacts) {
   return [
     facts.sizeSqm ? { label: "Size", value: `${facts.sizeSqm} m²` } : null,
     { label: "Sleeps", value: guests },
+    type === "APARTMENT" && facts.bedroomCount !== null
+      ? { label: "Bedrooms", value: count(facts.bedroomCount, "bedroom") }
+      : null,
+    type === "APARTMENT" && facts.bathroomCount !== null
+      ? { label: "Bathrooms", value: count(facts.bathroomCount, "bathroom") }
+      : null,
     facts.bedSummary ? { label: "Beds", value: facts.bedSummary } : null,
     facts.viewSummary ? { label: "View", value: facts.viewSummary } : null,
   ].filter((fact): fact is { label: string; value: string } => fact !== null);
 }
 
 export function RoomCard({
+  branchSlug,
   room,
   headingLevel = 3,
   index,
 }: Readonly<{
+  branchSlug: string;
   room: PublicRoomCard;
   headingLevel?: 2 | 3;
   /** Position in an editorial list, shown as "01", "02"… */
   index?: number;
 }>) {
   const Heading = `h${headingLevel}` as const;
-  const facts = roomFactList(room.facts).slice(0, 3);
+  const facts = roomFactList(room.facts, room.accommodationType).slice(0, 3);
   return (
     <RevealItem
       as="article"
@@ -79,6 +121,7 @@ export function RoomCard({
             {String(index + 1).padStart(2, "0")}
           </p>
         ) : null}
+        <AccommodationBadge type={room.accommodationType} />
         <Heading
           className={
             headingLevel === 2
@@ -86,7 +129,10 @@ export function RoomCard({
               : "m-0 font-display text-heading-lg leading-[1.15] font-normal text-plum-900"
           }
         >
-          <Link href={`/rooms/${room.slug}` as Route} className={CARD_LINK}>
+          <Link
+            href={`/${branchSlug}/stay/${room.slug}` as Route}
+            className={CARD_LINK}
+          >
             {room.name}
           </Link>
         </Heading>
@@ -96,7 +142,7 @@ export function RoomCard({
         {facts.length > 0 ? (
           <ul
             className="m-0 flex flex-wrap items-center p-0 text-[0.875rem] text-neutral-800"
-            aria-label="Room facts"
+            aria-label={`${ACCOMMODATION_LABELS[room.accommodationType]} facts`}
           >
             {facts.map((fact) => (
               <li
@@ -124,9 +170,14 @@ export function RoomCard({
 }
 
 export function FacilityCard({
+  branchSlug,
   facility,
   headingLevel = 3,
-}: Readonly<{ facility: PublicFacilityCard; headingLevel?: 2 | 3 }>) {
+}: Readonly<{
+  branchSlug: string;
+  facility: PublicFacilityCard;
+  headingLevel?: 2 | 3;
+}>) {
   const Heading = `h${headingLevel}` as const;
   return (
     <RevealItem
@@ -157,7 +208,7 @@ export function FacilityCard({
           }`}
         >
           <Link
-            href={`/facilities/${facility.slug}` as Route}
+            href={`/${branchSlug}/facilities/${facility.slug}` as Route}
             className={CARD_LINK}
           >
             {facility.name}

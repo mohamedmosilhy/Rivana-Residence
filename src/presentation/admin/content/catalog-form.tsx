@@ -6,6 +6,7 @@ import { MAX_ROOM_FEATURES } from "@/domain/rooms/room";
 import { slugify } from "@/domain/shared/slug";
 import {
   ErrorSummary,
+  FieldShell,
   FormActions,
   SubmitButton,
   TextAreaField,
@@ -24,6 +25,7 @@ import { useUnsavedChanges } from "@/presentation/admin/ui/use-unsaved-changes";
 import {
   check,
   checkInput,
+  control,
   fieldset,
   fieldsetHint,
   form,
@@ -39,7 +41,10 @@ export type CatalogFormValues = Readonly<{
   featured: boolean;
   seoTitle: string;
   seoDescription: string;
-  // Rooms
+  // Rooms and apartments
+  accommodationType?: "ROOM" | "APARTMENT";
+  bedroomCount?: string;
+  bathroomCount?: string;
   sizeSqm?: string;
   maxAdults?: string;
   maxChildren?: string;
@@ -52,7 +57,11 @@ export type CatalogFormValues = Readonly<{
 
 const LABELS: Record<string, string> = {
   name: "Name",
+  branch: "Branch",
   slug: "Web address",
+  accommodationType: "Accommodation type",
+  bedroomCount: "Bedrooms",
+  bathroomCount: "Bathrooms",
   shortDescription: "Short description",
   description: "Description",
   sizeSqm: "Size",
@@ -103,11 +112,17 @@ type CatalogFormProps = Readonly<{
   submitLabel: string;
   meta?: string;
   /**
-   * The branch the record belongs to (or will join), shown read only. Every
-   * room and facility belongs to one branch; a choice appears with a second
-   * branch (M5). The server never takes the branch from this form.
+   * Edit pages: the record's branch, shown read only (fixed once created).
    */
   branchName?: string | null;
+  /**
+   * Create pages: the branches to choose from and the preselected slug
+   * (`?branch=`). The server re-resolves the posted slug (spec 0002).
+   */
+  branchOptions?: Readonly<{
+    branches: readonly Readonly<{ slug: string; name: string }>[];
+    selected: string | null;
+  }> | null;
 }>;
 
 export function CatalogForm({
@@ -118,6 +133,7 @@ export function CatalogForm({
   submitLabel,
   meta,
   branchName,
+  branchOptions,
 }: CatalogFormProps) {
   const [state, formAction] = useActionState(action, idleFormState);
   const toast = useToast();
@@ -125,6 +141,7 @@ export function CatalogForm({
   const [name, setName] = useState(values.name);
   const [slug, setSlug] = useState(values.slug);
   const slugEdited = useRef(!isNew);
+  const [type, setType] = useState(values.accommodationType ?? "ROOM");
   const id = (field: string) => `${variant}-${field}`;
 
   useEffect(() => {
@@ -156,11 +173,35 @@ export function CatalogForm({
 
       <fieldset className={fieldset}>
         <legend className={legend}>Basics</legend>
-        {branchName ? (
+        {branchOptions ? (
+          <FieldShell
+            id={id("branch")}
+            label="Branch"
+            hint="The branch whose website shows it. It cannot change later."
+            errors={errors("branch")}
+          >
+            {(describedBy, invalid) => (
+              <select
+                id={id("branch")}
+                name="branch"
+                className={control}
+                defaultValue={branchOptions.selected ?? undefined}
+                aria-invalid={invalid || undefined}
+                aria-describedby={describedBy}
+              >
+                {branchOptions.branches.map((branch) => (
+                  <option key={branch.slug} value={branch.slug}>
+                    {branch.name}
+                  </option>
+                ))}
+              </select>
+            )}
+          </FieldShell>
+        ) : branchName ? (
           <TextField
             id={id("branch")}
             label="Branch"
-            hint="Set by the website while there is one branch."
+            hint="Fixed once created."
             value={branchName}
             readOnly
           />
@@ -182,7 +223,7 @@ export function CatalogForm({
           id={id("slug")}
           name="slug"
           label="Web address"
-          hint={`Lowercase words joined by hyphens, used in the page address /${variant === "room" ? "rooms" : "facilities"}/${slug || "…"}. Changing it on a published ${variant} changes its public address.`}
+          hint={`Lowercase words joined by hyphens, used in the page address /{branch}/${variant === "room" ? "stay" : "facilities"}/${slug || "…"}. Changing it on a published ${variant} changes its public address.`}
           value={slug}
           onChange={(event) => {
             slugEdited.current = true;
@@ -229,7 +270,55 @@ export function CatalogForm({
       {variant === "room" ? (
         <>
           <fieldset className={fieldset}>
-            <legend className={legend}>Room facts</legend>
+            <legend className={legend}>Accommodation type</legend>
+            <p className={fieldsetHint} id={id("accommodationType-hint")}>
+              Guests see a Room or Apartment badge. Put kitchen and living room
+              facts in Features.
+            </p>
+            <div
+              className="flex flex-wrap gap-6"
+              role="radiogroup"
+              aria-describedby={id("accommodationType-hint")}
+            >
+              {(["ROOM", "APARTMENT"] as const).map((option) => (
+                <label key={option} className={check}>
+                  <input
+                    type="radio"
+                    name="accommodationType"
+                    value={option}
+                    checked={type === option}
+                    onChange={() => setType(option)}
+                    className={checkInput}
+                  />
+                  {option === "ROOM" ? "Room" : "Apartment"}
+                </label>
+              ))}
+            </div>
+            <div className={formGrid} hidden={type !== "APARTMENT"}>
+              <TextField
+                id={id("bedroomCount")}
+                name="bedroomCount"
+                label="Bedrooms"
+                optional
+                inputMode="numeric"
+                defaultValue={valueOf("bedroomCount")}
+                errors={errors("bedroomCount")}
+              />
+              <TextField
+                id={id("bathroomCount")}
+                name="bathroomCount"
+                label="Bathrooms"
+                optional
+                inputMode="numeric"
+                defaultValue={valueOf("bathroomCount")}
+                errors={errors("bathroomCount")}
+              />
+            </div>
+          </fieldset>
+          <fieldset className={fieldset}>
+            <legend className={legend}>
+              {type === "APARTMENT" ? "Apartment facts" : "Room facts"}
+            </legend>
             <p className={fieldsetHint}>
               Marketing facts only. Prices and availability come from the
               reservation system, not this website.

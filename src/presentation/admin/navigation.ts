@@ -22,14 +22,14 @@ export const ADMIN_DESTINATIONS = [
   },
   { href: "/admin/media", label: "Media", capability: "media:upload" },
   {
-    href: "/admin/promotions",
-    label: "Promotions",
-    capability: "promotions:manage",
-  },
-  {
     href: "/admin/enquiries",
     label: "Enquiries",
     capability: "enquiries:read",
+  },
+  {
+    href: "/admin/branches",
+    label: "Branches",
+    capability: "branches:manage",
   },
   { href: "/admin/settings", label: "Settings", capability: "settings:edit" },
   { href: "/admin/staff", label: "Staff", capability: "users:manage" },

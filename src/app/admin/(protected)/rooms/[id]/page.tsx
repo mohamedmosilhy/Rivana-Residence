@@ -75,7 +75,7 @@ export default async function EditRoomPage({
         status={room.status}
         warnings={gaps}
         readiness={readinessIssues(() => assertRoomPublishable(room))}
-        publicPath={`/rooms/${room.slug}`}
+        {...(branch ? { publicPath: `/${branch.slug}/stay/${room.slug}` } : {})}
         previewHref={`/admin/rooms/${room.id}/preview` as Route}
         actions={{
           publish: publishRoomAction.bind(null, room.id),
@@ -103,6 +103,9 @@ export default async function EditRoomPage({
             featured: room.featured,
             seoTitle: room.seoTitle ?? "",
             seoDescription: room.seoDescription ?? "",
+            accommodationType: room.accommodationType,
+            bedroomCount: room.bedroomCount?.toString() ?? "",
+            bathroomCount: room.bathroomCount?.toString() ?? "",
             sizeSqm: room.sizeSqm?.toString() ?? "",
             maxAdults: String(room.maxAdults),
             maxChildren: String(room.maxChildren),

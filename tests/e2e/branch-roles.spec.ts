@@ -15,8 +15,8 @@ const CMS_ROUTES = [
   "/admin/facilities",
   "/admin/facilities/new",
   "/admin/media",
-  "/admin/promotions",
-  "/admin/promotions/new",
+  "/admin/branches",
+  "/admin/branches/new",
   "/admin/settings",
   "/admin/staff",
 ];
@@ -57,7 +57,7 @@ for (const role of ["receptionist", "manager"] as const) {
         "Rooms",
         "Facilities",
         "Media",
-        "Promotions",
+        "Branches",
         "Settings",
         "Staff",
       ]) {

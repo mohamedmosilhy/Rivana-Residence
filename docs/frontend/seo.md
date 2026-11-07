@@ -4,7 +4,7 @@
 
 Help prospective guests discover Rivana Residence and each of its branches, and understand each branch's location, rooms and apartments, and facilities, without publishing unsupported price or availability claims.
 
-From M5 (ADR 026) every branch has its own indexable pages under `/{branchSlug}/…`; implemented URLs redirect permanently to the first branch, and canonicals move with them.
+Since M5 (ADR 026, spec [0002](../specs/0002-m5-branch-websites.md)) every branch has its own indexable pages under `/{branchSlug}/…`. The earlier URLs redirect permanently (`308`, a single hop to the final URL) to the default branch `new-cairo`, and canonicals are branch URLs. With one active branch `/` answers `307` to it; with two or more `/` is the indexable chooser (canonical `/`); with none it is a `noindex` holding page. With two or more active branches the Stay and Facilities index titles add " at {branch name}" so titles stay distinct; with one branch titles are unchanged.
 
 ## Metadata model
 
@@ -29,7 +29,7 @@ Use Next.js Metadata APIs and `generateMetadata` in server routes. Metadata quer
 
 ## Sitemap and robots
 
-`app/sitemap.ts` emits Home, About, Rooms, published room details, Facilities, published facility details, and Contact with accurate `lastModified` values (implemented). From M5 it emits, per active branch, the branch home, About, Stay, published listings, Facilities, published facilities, and Contact, plus `/` when it is the chooser; booking pages are not indexed. Detail entries include the approved hero image. Empty listings and unpublished records are omitted. `app/robots.ts` allows the marketing site, disallows `/admin` and `/api`, and links the sitemap. Both use the server-validated `APP_URL` origin.
+`app/sitemap.ts` emits, per active branch (implemented in M5), the branch home, About, Stay, published listings, Facilities, published facilities, and Contact, plus `/` when it is the chooser; booking pages are not indexed. Detail entries include the approved hero image. Empty listings and unpublished records are omitted. `app/robots.ts` allows the marketing site, disallows `/admin` and `/api`, and links the sitemap. Both use the server-validated `APP_URL` origin.
 
 Robots is not an access-control mechanism; protected routes remain authenticated.
 
@@ -37,8 +37,8 @@ Robots is not an access-control mechanism; protected routes remain authenticated
 
 Use JSON-LD built from validated server data:
 
-- one `Hotel`/`LodgingBusiness` entity with name, description, URL, logo, telephone, email, postal address, coordinates when confirmed, images, and social `sameAs` URLs (implemented as one site-wide entity; from M5 one entity per branch on that branch's pages, with its own address and contact);
-- apartments use an accommodation type appropriate to apartments (checked at implementation) rather than `HotelRoom`;
+- one `Hotel`/`LodgingBusiness` entity with name, description, URL, logo, telephone, email, postal address, coordinates when confirmed, images, and social `sameAs` URLs (implemented: one entity per branch on that branch's pages, `@id` `/{slug}#hotel`, with its own address and contact; the chooser has none);
+- apartments use the general `Accommodation` type with `numberOfBedrooms` and `numberOfBathroomsTotal` when set (implemented in M5; chosen over `Apartment` as the safe general type), rather than `HotelRoom`;
 - room detail may reference `HotelRoom`/`Room`-appropriate accommodation data only when schema semantics are verified during implementation;
 - facility details may be expressed through amenity features on the hotel rather than invented standalone business types;
 - breadcrumb structured data on nested routes;
@@ -46,7 +46,7 @@ Use JSON-LD built from validated server data:
 
 Do not publish `Offer`, price range, aggregate rating, availability, or review markup unless sourced from real authoritative data and visible on the page.
 
-Phase 10 implements one site-wide `Hotel`, `HotelRoom` on room details, and `BreadcrumbList` on listing/detail routes. Facilities stay represented by the hotel identity and visible page content rather than invented standalone business types. Unit and browser tests assert the positive types and the absence of commercial fields.
+Phase 10 implemented `Hotel`, `HotelRoom` on room details, and `BreadcrumbList` on listing/detail routes; M5 made them per branch (breadcrumbs start with the branch name and its home). Facilities stay represented by the hotel identity and visible page content rather than invented standalone business types. Unit and browser tests assert the positive types and the absence of commercial fields.
 
 ## On-page requirements
 

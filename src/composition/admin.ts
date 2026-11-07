@@ -17,6 +17,7 @@ import { getCurrentStaff } from "@/composition/auth";
 import { DisabledBookingProvider } from "@/infrastructure/booking/disabled-booking-provider";
 import { NextCacheInvalidator } from "@/infrastructure/cache/next-cache-invalidator";
 import { PrismaAdminOverviewReader } from "@/infrastructure/db/prisma/repositories/admin-overview-reader";
+import { PrismaBranchRepository } from "@/infrastructure/db/prisma/repositories/branches/branch-repository";
 import { PrismaEnquiryRepository } from "@/infrastructure/db/prisma/repositories/enquiry-repository";
 import { PrismaSettingsRepository } from "@/infrastructure/db/prisma/repositories/settings-repository";
 
@@ -29,10 +30,10 @@ export async function getAdminOverview() {
 }
 
 export async function listEnquiries(params: Readonly<Record<string, unknown>>) {
-  return new ListEnquiries(new PrismaEnquiryRepository()).execute(
-    await getCurrentStaff(),
-    params,
-  );
+  return new ListEnquiries(
+    new PrismaEnquiryRepository(),
+    new PrismaBranchRepository(),
+  ).execute(await getCurrentStaff(), params);
 }
 
 export async function getAdminSiteSettings() {

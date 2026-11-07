@@ -13,6 +13,11 @@ import {
 import { richTextFromEditorText } from "../../../src/domain/shared/rich-text.ts";
 import type { PrismaClient } from "../../../src/generated/prisma/client.ts";
 import { DEFAULT_BRANCH_ID as BRANCH_ID } from "../../../prisma/seed-data.ts";
+import { PrismaBranchRepository } from "../../../src/infrastructure/db/prisma/repositories/branches/branch-repository.ts";
+import {
+  REQUIRED_PAGES,
+  defaultPageSections,
+} from "../../../src/domain/content/default-sections.ts";
 import { PrismaFacilityRepository } from "../../../src/infrastructure/db/prisma/repositories/facility-repository.ts";
 import { PrismaMediaRepository } from "../../../src/infrastructure/db/prisma/repositories/media-repository.ts";
 import { PrismaPageRepository } from "../../../src/infrastructure/db/prisma/repositories/page-repository.ts";
@@ -22,7 +27,7 @@ import { LocalMediaStorage } from "../../../src/infrastructure/media/local-media
 import { NodeHasher } from "../../../src/infrastructure/media/node-hasher.ts";
 import { SharpImageProcessor } from "../../../src/infrastructure/media/sharp-image-processor.ts";
 
-const IMAGES = [
+export const DEMO_IMAGES = [
   "home-hero.jpg",
   "about-exterior.jpg",
   "about-exterior-wide.jpg",
@@ -63,7 +68,7 @@ export async function seedPublicContent(
     await readFile("media-import/reference-manifest.json", "utf8"),
   ) as { entries: ManifestEntry[] };
   const wanted = entries.filter((entry) =>
-    IMAGES.includes(path.basename(entry.source)),
+    DEMO_IMAGES.includes(path.basename(entry.source)),
   );
   const outcomes = await importReferenceAssets(
     {
@@ -96,6 +101,15 @@ export async function seedPublicContent(
     where: { id: "default" },
     data: {
       tagline: "Luxury is a state of mind, and here, it's our reality.",
+      footerText: "© Rivana Residence. Test site.",
+      defaultSeoDescription: "Rivana Residence test site.",
+    },
+  });
+  // Contact details belong to the branch since M5 (spec 0002).
+  await client.branch.update({
+    where: { id: BRANCH_ID },
+    data: {
+      summary: "Serviced rooms and suites in New Cairo.",
       phone: "+20 2 1234 5678",
       email: "stay@example.test",
       addressLine1: "Opposite the American University in Cairo",
@@ -103,8 +117,7 @@ export async function seedPublicContent(
       country: "Egypt",
       latitude: 30.0131,
       longitude: 31.4913,
-      footerText: "© Rivana Residence. Test site.",
-      defaultSeoDescription: "Rivana Residence test site.",
+      heroMediaId: image["home-hero.jpg"]!,
     },
   });
 
@@ -524,4 +537,225 @@ export async function seedPublicContent(
       },
     },
   });
+  return image;
+}
+
+/**
+ * A second, fictional branch (`demo-giza`, spec 0002) with its own pages,
+ * two facilities, one room, and one apartment, reusing the fixture images.
+ * Inactive unless `active` is set, so the one-branch site stays the default.
+ */
+export async function seedSecondBranch(
+  client: PrismaClient,
+  actor: Actor,
+  image: Readonly<Record<string, string>>,
+  { active = false }: Readonly<{ active?: boolean }> = {},
+) {
+  const created = ok(
+    await new PrismaBranchRepository(client).create(
+      {
+        slug: "demo-giza",
+        name: "Rivana Giza (demo)",
+        summary: "A fictional second branch for local review and tests.",
+        status: active ? "ACTIVE" : "INACTIVE",
+        timeZone: "Africa/Cairo",
+        phone: "+20 2 9876 5432",
+        email: "giza@example.test",
+        addressLine1: "Demo Street 1",
+        addressLine2: null,
+        city: "Sheikh Zayed, Giza",
+        country: "Egypt",
+        latitude: 30.0444,
+        longitude: 30.98,
+        mapEmbedUrl: "https://www.google.com/maps/embed?pb=demo-giza",
+        checkInTime: "14:00",
+        checkOutTime: "12:00",
+        syncReminderIntervalMinutes: 30,
+        syncFollowUpMinutes: 10,
+        heroMediaId: image["about-exterior-wide.jpg"]!,
+        onlineBookingEnabled: false,
+        sortOrder: 1,
+      },
+      REQUIRED_PAGES.map((page) => ({
+        ...page,
+        sections: defaultPageSections(page.key, "Rivana Giza (demo)"),
+      })),
+      (branchId) => ({
+        occurredAt: new Date(),
+        actorType: "SYSTEM",
+        actorId: null,
+        action: "branch.created",
+        entityType: "Branch",
+        entityId: branchId,
+        branchId,
+        reason: null,
+        changes: {
+          slug: "demo-giza",
+          name: "Rivana Giza (demo)",
+          status: active ? "ACTIVE" : "INACTIVE",
+        },
+      }),
+    ),
+  );
+  const branchId = created.id;
+  const description = (text: string) => richTextFromEditorText(text);
+  const withImages = async (
+    repository: PrismaRoomRepository | PrismaFacilityRepository,
+    id: string,
+    hero: string,
+    gallery: readonly string[],
+  ) => {
+    ok<unknown>(
+      await repository.replaceMedia(
+        id,
+        [
+          {
+            mediaId: image[hero]!,
+            role: "HERO",
+            sortOrder: 0,
+            altOverride: null,
+          },
+          ...gallery.map((file, index) => ({
+            mediaId: image[file]!,
+            role: "GALLERY" as const,
+            sortOrder: index,
+            altOverride: null,
+          })),
+        ],
+        actor,
+      ),
+    );
+    ok<unknown>(await repository.publish(id, actor));
+  };
+
+  const rooms = new PrismaRoomRepository(client);
+  const room = ok(
+    await rooms.create(
+      branchId,
+      {
+        name: "Giza Garden Room",
+        slug: "giza-garden-room",
+        shortDescription: "A quiet double room over the garden.",
+        description: description("A demo room at the fictional Giza branch."),
+        sizeSqm: 30,
+        maxAdults: 2,
+        maxChildren: 0,
+        bedSummary: "One double bed",
+        viewSummary: "Garden view",
+        features: [{ label: "Garden view" }],
+        featured: true,
+      },
+      actor,
+    ),
+  );
+  await withImages(rooms, room.id, "room-superior-8.jpg", [
+    "room-gallery-02.jpg",
+  ]);
+  const apartment = ok(
+    await rooms.create(
+      branchId,
+      {
+        name: "Giza Family Apartment",
+        slug: "giza-family-apartment",
+        accommodationType: "APARTMENT",
+        bedroomCount: 2,
+        bathroomCount: 2,
+        shortDescription: "Two bedrooms, a kitchen, and a living room.",
+        description: description(
+          "A demo hotel apartment for families, with a full kitchen and a living room.",
+        ),
+        sizeSqm: 85,
+        maxAdults: 4,
+        maxChildren: 2,
+        bedSummary: "One king bed and two singles",
+        viewSummary: null,
+        features: [{ label: "Full kitchen" }, { label: "Living room" }],
+        featured: true,
+      },
+      actor,
+    ),
+  );
+  await withImages(rooms, apartment.id, "room-gallery-06.jpg", [
+    "room-gallery-01.jpg",
+  ]);
+
+  const facilities = new PrismaFacilityRepository(client);
+  for (const [name, slug, hero] of [
+    ["Giza Pool", "giza-pool", "pool-gallery-01.jpg"],
+    ["Giza Gym", "giza-gym", "gym-gallery-02.jpg"],
+  ] as const) {
+    const facility = ok(
+      await facilities.create(
+        branchId,
+        {
+          name,
+          slug,
+          shortDescription: `The demo ${name.toLowerCase()}.`,
+          description: description(`A demo facility at the Giza branch.`),
+          openingHoursText: null,
+          featured: true,
+        },
+        actor,
+      ),
+    );
+    await withImages(facilities, facility.id, hero, []);
+  }
+
+  const pages = new PrismaPageRepository(client);
+  const copy: Record<string, { title: string; summary: string }> = {
+    HOME: {
+      title: "Rivana Giza (demo)",
+      summary: "Welcome to the demo Giza branch.",
+    },
+    ABOUT: {
+      title: "About Rivana Giza",
+      summary: "The story of the demo branch.",
+    },
+    CONTACT: {
+      title: "Contact Rivana Giza",
+      summary: "Write to the demo branch.",
+    },
+  };
+  for (const { key } of REQUIRED_PAGES) {
+    const page = (await pages.findAdminByKey(branchId, key))!;
+    for (const section of page.sections) {
+      if (section.type === "HERO") {
+        ok(
+          await pages.saveSection(
+            branchId,
+            key,
+            {
+              id: section.id,
+              type: section.type,
+              heading: section.heading,
+              eyebrow: section.eyebrow,
+              payload: { schemaVersion: 1, ...copy[key] },
+              isVisible: true,
+            },
+            actor,
+          ),
+        );
+      }
+      if (section.type === "IMAGE_TEXT_SPLIT" && section.isVisible) {
+        ok(
+          await pages.replaceSectionMedia(
+            branchId,
+            key,
+            section.id,
+            [
+              {
+                mediaId: image["about-exterior.jpg"]!,
+                role: "PRIMARY",
+                sortOrder: 0,
+                altOverride: null,
+              },
+            ],
+            actor,
+          ),
+        );
+      }
+    }
+    ok(await pages.publish(branchId, key, actor));
+  }
+  return branchId;
 }

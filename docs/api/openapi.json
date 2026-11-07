@@ -42,6 +42,320 @@
           }
         }
       }
+    },
+    "/api/v1/branches": {
+      "get": {
+        "operationId": "listBranches",
+        "summary": "API-P1. Active branches by display order (the chooser).",
+        "tags": [
+          "Branches"
+        ],
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "Active branches.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BranchList"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Problem details. Codes: INTERNAL.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/branches/{branchSlug}": {
+      "get": {
+        "operationId": "getBranch",
+        "summary": "API-P2. One active branch with contact, address, and map.",
+        "tags": [
+          "Branches"
+        ],
+        "security": [],
+        "parameters": [
+          {
+            "name": "branchSlug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The branch.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BranchDetail"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Problem details. Codes: INTERNAL, NOT_FOUND.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/branches/{branchSlug}/room-types": {
+      "get": {
+        "operationId": "listRoomTypes",
+        "summary": "API-P3. Published rooms and apartments of a branch; `?type=ROOM|APARTMENT` filters.",
+        "tags": [
+          "Branches"
+        ],
+        "security": [],
+        "parameters": [
+          {
+            "name": "branchSlug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "type",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "ROOM",
+                "APARTMENT"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Published listings.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RoomTypeList"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Problem details. Codes: INTERNAL, NOT_FOUND, INVALID_QUERY.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/branches/{branchSlug}/room-types/{roomSlug}": {
+      "get": {
+        "operationId": "getRoomType",
+        "summary": "API-P4. One published listing of the branch.",
+        "tags": [
+          "Branches"
+        ],
+        "security": [],
+        "parameters": [
+          {
+            "name": "branchSlug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "roomSlug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The listing.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RoomTypeDetail"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Problem details. Codes: INTERNAL, NOT_FOUND.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/staff/branches": {
+      "get": {
+        "operationId": "listStaffBranches",
+        "summary": "API-A1. The caller's branches (Admin: all). Needs inventory:read.",
+        "tags": [
+          "Branches"
+        ],
+        "security": [
+          {
+            "staffSession": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The caller's branches.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StaffBranchList"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Problem details. Codes: INTERNAL, UNAUTHENTICATED, FORBIDDEN.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "operationId": "createBranch",
+        "summary": "API-A2. Create a branch with its three unpublished pages (Admin, branches:manage). Audited.",
+        "tags": [
+          "Branches"
+        ],
+        "security": [
+          {
+            "staffSession": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BranchInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "The new branch.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StaffBranch"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Problem details. Codes: INTERNAL, UNAUTHENTICATED, FORBIDDEN, CROSS_SITE_REQUEST, CONFLICT, VALIDATION.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/staff/branches/{id}": {
+      "patch": {
+        "operationId": "updateBranch",
+        "summary": "API-A3. Change a branch (Admin, branches:manage). Online booking stays off until its prerequisites exist. Audited.",
+        "tags": [
+          "Branches"
+        ],
+        "security": [
+          {
+            "staffSession": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BranchPatch"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The updated branch.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StaffBranch"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Problem details. Codes: INTERNAL, UNAUTHENTICATED, FORBIDDEN, CROSS_SITE_REQUEST, NOT_FOUND, VALIDATION.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -174,6 +488,711 @@
           "status",
           "database"
         ],
+        "additionalProperties": false
+      },
+      "Image": {
+        "type": "object",
+        "properties": {
+          "src": {
+            "type": "string"
+          },
+          "alt": {
+            "type": "string"
+          },
+          "width": {
+            "type": "integer",
+            "exclusiveMinimum": 0,
+            "maximum": 9007199254740991
+          },
+          "height": {
+            "type": "integer",
+            "exclusiveMinimum": 0,
+            "maximum": 9007199254740991
+          }
+        },
+        "required": [
+          "src",
+          "alt",
+          "width",
+          "height"
+        ],
+        "additionalProperties": false,
+        "description": "A ready, rights-confirmed image served by /media."
+      },
+      "BranchSummary": {
+        "type": "object",
+        "properties": {
+          "slug": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "summary": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "city": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "heroImage": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Image"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "onlineBookingEnabled": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "slug",
+          "name",
+          "summary",
+          "city",
+          "heroImage",
+          "onlineBookingEnabled"
+        ],
+        "additionalProperties": false
+      },
+      "BranchDetail": {
+        "type": "object",
+        "properties": {
+          "slug": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "summary": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "city": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "heroImage": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Image"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "onlineBookingEnabled": {
+            "type": "boolean"
+          },
+          "phone": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "email": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "addressLine1": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "addressLine2": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "country": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "latitude": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "longitude": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "checkInTime": {
+            "description": "HH:MM in the branch time zone",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "checkOutTime": {
+            "description": "HH:MM in the branch time zone",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "mapEmbedUrl": {
+            "description": "A https://www.google.com/maps/embed… URL",
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "slug",
+          "name",
+          "summary",
+          "city",
+          "heroImage",
+          "onlineBookingEnabled",
+          "phone",
+          "email",
+          "addressLine1",
+          "addressLine2",
+          "country",
+          "latitude",
+          "longitude",
+          "checkInTime",
+          "checkOutTime",
+          "mapEmbedUrl"
+        ],
+        "additionalProperties": false
+      },
+      "BranchList": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BranchSummary"
+            }
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "additionalProperties": false
+      },
+      "RoomTypeSummary": {
+        "type": "object",
+        "properties": {
+          "slug": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "accommodationType": {
+            "type": "string",
+            "enum": [
+              "ROOM",
+              "APARTMENT"
+            ]
+          },
+          "shortDescription": {
+            "type": "string"
+          },
+          "maxAdults": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "maxChildren": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "bedroomCount": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "bathroomCount": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "heroImage": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Image"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "detailUrl": {
+            "type": "string",
+            "description": "/{branch}/stay/{slug}"
+          }
+        },
+        "required": [
+          "slug",
+          "name",
+          "accommodationType",
+          "shortDescription",
+          "maxAdults",
+          "maxChildren",
+          "bedroomCount",
+          "bathroomCount",
+          "heroImage",
+          "detailUrl"
+        ],
+        "additionalProperties": false
+      },
+      "RoomTypeDetail": {
+        "type": "object",
+        "properties": {
+          "slug": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "accommodationType": {
+            "type": "string",
+            "enum": [
+              "ROOM",
+              "APARTMENT"
+            ]
+          },
+          "shortDescription": {
+            "type": "string"
+          },
+          "maxAdults": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "maxChildren": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "bedroomCount": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "bathroomCount": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "heroImage": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Image"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "detailUrl": {
+            "type": "string",
+            "description": "/{branch}/stay/{slug}"
+          },
+          "sizeSqm": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "bedSummary": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "viewSummary": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "features": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "gallery": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Image"
+            }
+          }
+        },
+        "required": [
+          "slug",
+          "name",
+          "accommodationType",
+          "shortDescription",
+          "maxAdults",
+          "maxChildren",
+          "bedroomCount",
+          "bathroomCount",
+          "heroImage",
+          "detailUrl",
+          "sizeSqm",
+          "bedSummary",
+          "viewSummary",
+          "features",
+          "gallery"
+        ],
+        "additionalProperties": false
+      },
+      "RoomTypeList": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RoomTypeSummary"
+            }
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "additionalProperties": false
+      },
+      "StaffBranch": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "slug": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "ACTIVE",
+              "INACTIVE"
+            ]
+          },
+          "sortOrder": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "onlineBookingEnabled": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id",
+          "slug",
+          "name",
+          "status",
+          "sortOrder",
+          "onlineBookingEnabled"
+        ],
+        "additionalProperties": false
+      },
+      "StaffBranchList": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/StaffBranch"
+            }
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "additionalProperties": false
+      },
+      "BranchInput": {
+        "type": "object",
+        "properties": {
+          "slug": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "summary": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "ACTIVE",
+              "INACTIVE"
+            ]
+          },
+          "phone": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "email": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "addressLine1": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "addressLine2": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "city": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "country": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "latitude": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "longitude": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "mapEmbedUrl": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "checkInTime": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "checkOutTime": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "heroMediaId": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "onlineBookingEnabled": {
+            "type": "boolean"
+          },
+          "syncReminderIntervalMinutes": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "syncFollowUpMinutes": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "sortOrder": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          }
+        },
+        "required": [
+          "slug",
+          "name"
+        ],
+        "additionalProperties": false
+      },
+      "BranchPatch": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "summary": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "ACTIVE",
+              "INACTIVE"
+            ]
+          },
+          "phone": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "email": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "addressLine1": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "addressLine2": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "city": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "country": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "latitude": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "longitude": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "mapEmbedUrl": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "checkInTime": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "checkOutTime": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "heroMediaId": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "onlineBookingEnabled": {
+            "type": "boolean"
+          },
+          "syncReminderIntervalMinutes": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "syncFollowUpMinutes": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "sortOrder": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          }
+        },
         "additionalProperties": false
       }
     },

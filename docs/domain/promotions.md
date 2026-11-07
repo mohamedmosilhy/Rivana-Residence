@@ -1,16 +1,18 @@
 # Promotions and coupons
 
-Status: the **promotion popup** described in the first section is **implemented** (Phases 5 and 7) and **retired by the client on 2026-11-06 (Q-47)**; its removal is scheduled for M5. **Coupons** are **planned** (M7 quote, M8 redemption, M10 and M12 screens), and offers reach guests through WhatsApp broadcasts (M13). See [ADR 027](../adr/027-booking-price-composition.md) and [ADR 028](../adr/028-whatsapp-guest-messaging.md).
+Status: the **promotion popup** described in the first section was built in Phases 5 and 7, **retired by the client on 2026-11-06 (Q-47)**, and **removed in M5** (2026-11-07). **Coupons** are **planned** (M7 quote, M8 redemption, M10 and M12 screens), and offers reach guests through WhatsApp broadcasts (M13). See [ADR 027](../adr/027-booking-price-composition.md) and [ADR 028](../adr/028-whatsapp-guest-messaging.md).
 
-## Promotion popup (implemented; removal planned in M5)
+## Promotion popup (removed in M5)
 
-What exists today, kept here so the running system is described accurately until M5 removes it:
+What it was, for the record: staff created, scheduled, previewed, published, prioritized, and archived campaigns in `/admin/promotions`, and the public site showed at most one active campaign in an accessible popup with a code to copy. Rivana never validated the code or calculated a discount.
 
-- Staff create, schedule, preview, publish, unpublish, prioritize, and archive campaigns in `/admin/promotions` (internal name, headline, body, code, optional terms, optional active window, popup flag, priority).
-- The public site shows at most one active campaign in an accessible popup (published, popup enabled, inside its window; highest priority, then most recently published) and lets the visitor copy the code. Dismissal is stored in the browser for seven days per campaign version.
-- Rivana does not validate the code, calculate a discount, or count redemptions. The popup says that terms apply.
+What M5 removed (spec [0002](../specs/0002-m5-branch-websites.md)):
 
-M5 removes the popup from the public layout and retires the CMS area (no create, edit, or publish). The `Promotion` table stays read-only for one release and is dropped later by an expand-and-contract migration. The accepted Phase 5 and Phase 7 reports and screenshots keep showing the popup as it was built.
+- The popup and its client controller from the public layout, and its styles.
+- `/admin/promotions` (navigation and every route), the overview widgets, and the `promotions:manage` capability.
+- The promotion use cases, repository, domain rules, `promotion:active` cache tag, and their tests. A unit test guards that no public route or site component imports promotion code again.
+
+What stays: the `Promotion` table and its rows, unused, until a later expand-and-contract migration drops it. The accepted Phase 5 and Phase 7 reports and screenshots keep showing the popup as it was built.
 
 ## Coupons (planned)
 

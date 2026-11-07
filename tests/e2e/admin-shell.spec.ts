@@ -14,7 +14,6 @@ const CONTENT_DESTINATIONS = [
   "Rooms",
   "Facilities",
   "Media",
-  "Promotions",
   "Enquiries",
 ];
 
@@ -77,6 +76,9 @@ test("editors navigate every content destination from the shell", async ({
   );
   await expect(nav.getByRole("link", { name: "Settings" })).toHaveCount(0);
   await expect(nav.getByRole("link", { name: "Staff" })).toHaveCount(0);
+  // AC-7, AC-12: no promotions area; branches are for administrators only.
+  await expect(nav.getByRole("link", { name: "Promotions" })).toHaveCount(0);
+  await expect(nav.getByRole("link", { name: "Branches" })).toHaveCount(0);
 });
 
 test("editors cannot open settings directly", async ({ page }, testInfo) => {
@@ -242,7 +244,6 @@ test.describe("settings", () => {
     await expectNoAxeViolations(page);
 
     await page.getByLabel("Tagline").fill("Quiet luxury in New Cairo");
-    await page.getByLabel("Email").fill("stay@rivana.example");
     await page.getByLabel("Footer text").fill("© Rivana Residence");
     const save = page.getByRole("button", { name: "Save site details" });
     await save.click();
@@ -276,27 +277,29 @@ test.describe("settings", () => {
       "/admin/settings",
     );
 
+    // Contact fields moved to branches in M5; the residence name is the
+    // required field left here.
     await page.getByLabel("Residence name").fill("");
-    await page.getByLabel("Email").fill("not-an-email");
-    await page.getByLabel("Latitude").fill("120");
+    await page.getByLabel("Tagline").fill("Typed before the error");
     await page.getByRole("button", { name: "Save site details" }).click();
 
     const summary = page.getByRole("alert").filter({
       hasText: "Some settings need attention.",
     });
     await expect(summary).toBeFocused();
-    // Name, email, and latitude (the fixture site already has a longitude).
-    await expect(summary.getByRole("link")).toHaveCount(3);
-    await expect(page.getByLabel("Email")).toHaveAttribute(
+    await expect(summary.getByRole("link")).toHaveCount(1);
+    await expect(page.getByLabel("Residence name")).toHaveAttribute(
       "aria-invalid",
       "true",
     );
     // What was typed survives the failed attempt.
-    await expect(page.getByLabel("Email")).toHaveValue("not-an-email");
+    await expect(page.getByLabel("Tagline")).toHaveValue(
+      "Typed before the error",
+    );
     await expectNoAxeViolations(page);
 
-    await summary.getByRole("link", { name: /^Email:/ }).click();
-    await expect(page.getByLabel("Email")).toBeFocused();
+    await summary.getByRole("link", { name: /^Residence name:/ }).click();
+    await expect(page.getByLabel("Residence name")).toBeFocused();
 
     const [row] = (
       await sql(`SELECT "siteName" FROM "SiteSettings" WHERE id = 'default'`)

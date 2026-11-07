@@ -13,23 +13,36 @@ describe("admin navigation", () => {
       "Rooms",
       "Facilities",
       "Media",
-      "Promotions",
       "Enquiries",
     ]);
   });
 
-  it("adds Settings and Staff for administrators", () => {
+  // AC-7, AC-12: Promotions is gone; Branches is for administrators only.
+  it("adds Branches, Settings, and Staff for administrators", () => {
     expect(navigationFor("ADMIN").map((item) => item.label)).toEqual([
       "Overview",
       "Pages",
       "Rooms",
       "Facilities",
       "Media",
-      "Promotions",
       "Enquiries",
+      "Branches",
       "Settings",
       "Staff",
     ]);
+  });
+
+  it("never offers the retired promotions area", () => {
+    for (const role of [
+      "EDITOR",
+      "ADMIN",
+      "RECEPTIONIST",
+      "MANAGER",
+    ] as const) {
+      expect(navigationFor(role).map((item) => item.href)).not.toContain(
+        "/admin/promotions",
+      );
+    }
   });
 
   // AC-4: no CMS destination for branch-scoped roles; Enquiries stays (Q-26).

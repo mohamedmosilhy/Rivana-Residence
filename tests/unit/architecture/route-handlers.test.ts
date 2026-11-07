@@ -57,3 +57,35 @@ describe("D-10: /api/v1 Route Handlers", () => {
     expect(source.trimEnd().split("\n").length).toBeLessThanOrEqual(60);
   });
 });
+
+// AC-7: the retired promotion popup leaves no code on the public site.
+describe("promotion retirement (spec 0002)", () => {
+  function sourceFiles(directory: string): string[] {
+    return readdirSync(directory).flatMap((entry) => {
+      const path = join(directory, entry);
+      if (statSync(path).isDirectory()) return sourceFiles(path);
+      return /\.(ts|tsx)$/.test(entry) ? [path] : [];
+    });
+  }
+
+  it("no public route or site component imports or renders promotions", () => {
+    const files = [
+      ...sourceFiles(join(root, "src/app/(marketing)")),
+      ...sourceFiles(join(root, "src/presentation/site")),
+    ];
+    expect(files.length).toBeGreaterThan(10);
+    for (const file of files) {
+      const source = readFileSync(file, "utf8");
+      expect(source).not.toMatch(/from\s+["'][^"']*promotion/i);
+      expect(source).not.toMatch(
+        /PromotionPopup|ActivePromotion|getActivePromotion/,
+      );
+    }
+  });
+
+  it("has no promotions admin routes", () => {
+    expect(() =>
+      statSync(join(root, "src/app/admin/(protected)/promotions")),
+    ).toThrow();
+  });
+});

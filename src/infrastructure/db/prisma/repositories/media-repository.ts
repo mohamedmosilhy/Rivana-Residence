@@ -41,6 +41,7 @@ const usageCounts = {
   siteStickyFor: true,
   siteFaviconFor: true,
   siteDefaultOgFor: true,
+  branchHeroFor: true,
 } as const;
 
 type UsageCountRow = Record<keyof typeof usageCounts, number>;
@@ -67,60 +68,110 @@ async function usageOf(
   client: DatabaseClient,
   id: string,
 ): Promise<MediaUsage[]> {
-  const [rooms, facilities, sections, pages, roomOg, facilityOg, settings] =
-    await Promise.all([
-      client.roomMedia.findMany({
-        where: { mediaId: id },
-        select: {
-          role: true,
-          room: { select: { id: true, name: true, slug: true, status: true } },
-        },
-      }),
-      client.facilityMedia.findMany({
-        where: { mediaId: id },
-        select: {
-          role: true,
-          facility: {
-            select: { id: true, name: true, slug: true, status: true },
+  const [
+    rooms,
+    facilities,
+    sections,
+    pages,
+    roomOg,
+    facilityOg,
+    settings,
+    branches,
+  ] = await Promise.all([
+    client.roomMedia.findMany({
+      where: { mediaId: id },
+      select: {
+        role: true,
+        room: {
+          select: {
+            id: true,
+            name: true,
+            slug: true,
+            status: true,
+            branch: { select: { slug: true } },
           },
         },
-      }),
-      client.pageSectionMedia.findMany({
-        where: { mediaId: id },
-        select: {
-          section: {
-            select: {
-              type: true,
-              isVisible: true,
-              page: { select: { key: true, title: true, isPublished: true } },
+      },
+    }),
+    client.facilityMedia.findMany({
+      where: { mediaId: id },
+      select: {
+        role: true,
+        facility: {
+          select: {
+            id: true,
+            name: true,
+            slug: true,
+            status: true,
+            branch: { select: { slug: true } },
+          },
+        },
+      },
+    }),
+    client.pageSectionMedia.findMany({
+      where: { mediaId: id },
+      select: {
+        section: {
+          select: {
+            type: true,
+            isVisible: true,
+            page: {
+              select: {
+                key: true,
+                title: true,
+                isPublished: true,
+                branch: { select: { slug: true } },
+              },
             },
           },
         },
-      }),
-      client.page.findMany({
-        where: { ogMediaId: id },
-        select: { key: true, title: true, isPublished: true },
-      }),
-      client.room.findMany({
-        where: { ogMediaId: id },
-        select: { id: true, name: true, slug: true, status: true },
-      }),
-      client.facility.findMany({
-        where: { ogMediaId: id },
-        select: { id: true, name: true, slug: true, status: true },
-      }),
-      client.siteSettings.findMany({
-        where: {
-          OR: Object.keys(SETTINGS_ROLES).map((field) => ({ [field]: id })),
-        },
-        select: {
-          logoMediaId: true,
-          stickyLogoMediaId: true,
-          faviconMediaId: true,
-          defaultOgMediaId: true,
-        },
-      }),
-    ]);
+      },
+    }),
+    client.page.findMany({
+      where: { ogMediaId: id },
+      select: {
+        key: true,
+        title: true,
+        isPublished: true,
+        branch: { select: { slug: true } },
+      },
+    }),
+    client.room.findMany({
+      where: { ogMediaId: id },
+      select: {
+        id: true,
+        name: true,
+        slug: true,
+        status: true,
+        branch: { select: { slug: true } },
+      },
+    }),
+    client.facility.findMany({
+      where: { ogMediaId: id },
+      select: {
+        id: true,
+        name: true,
+        slug: true,
+        status: true,
+        branch: { select: { slug: true } },
+      },
+    }),
+    client.siteSettings.findMany({
+      where: {
+        OR: Object.keys(SETTINGS_ROLES).map((field) => ({ [field]: id })),
+      },
+      select: {
+        logoMediaId: true,
+        stickyLogoMediaId: true,
+        faviconMediaId: true,
+        defaultOgMediaId: true,
+      },
+    }),
+    client.branch.findMany({
+      where: { heroMediaId: id },
+      select: { id: true, name: true, slug: true, status: true },
+    }),
+  ]);
 
   const role = (value: "HERO" | "GALLERY") =>
     value === "HERO" ? "Hero image" : "Gallery";
@@ -133,6 +184,7 @@ async function usageOf(
       role: role(usageRole),
       isPublic: room.status === "PUBLISHED",
       slug: room.slug,
+      branchSlug: room.branch.slug,
     })),
     ...facilities.map(({ role: usageRole, facility }) => ({
       kind: "FACILITY" as const,
@@ -141,6 +193,7 @@ async function usageOf(
       role: role(usageRole),
       isPublic: facility.status === "PUBLISHED",
       slug: facility.slug,
+      branchSlug: facility.branch.slug,
     })),
     ...sections.map(({ section }) => ({
       kind: "PAGE_SECTION" as const,
@@ -149,6 +202,7 @@ async function usageOf(
       role: `${PAGE_SECTION_LABELS[section.type]} section`,
       isPublic: section.page.isPublished && section.isVisible,
       slug: null,
+      branchSlug: section.page.branch.slug,
     })),
     ...pages.map((page) => ({
       kind: "PAGE_SHARING" as const,
@@ -157,6 +211,7 @@ async function usageOf(
       role: "Sharing image",
       isPublic: page.isPublished,
       slug: null,
+      branchSlug: page.branch.slug,
     })),
     ...roomOg.map((room) => ({
       kind: "ROOM_SHARING" as const,
@@ -165,6 +220,7 @@ async function usageOf(
       role: "Sharing image",
       isPublic: room.status === "PUBLISHED",
       slug: room.slug,
+      branchSlug: room.branch.slug,
     })),
     ...facilityOg.map((facility) => ({
       kind: "FACILITY_SHARING" as const,
@@ -173,6 +229,7 @@ async function usageOf(
       role: "Sharing image",
       isPublic: facility.status === "PUBLISHED",
       slug: facility.slug,
+      branchSlug: facility.branch.slug,
     })),
     ...settings.flatMap((row) =>
       (Object.keys(SETTINGS_ROLES) as (keyof typeof SETTINGS_ROLES)[])
@@ -184,8 +241,18 @@ async function usageOf(
           role: SETTINGS_ROLES[field],
           isPublic: true,
           slug: null,
+          branchSlug: null,
         })),
     ),
+    ...branches.map((branch) => ({
+      kind: "BRANCH" as const,
+      ownerId: branch.id,
+      ownerName: branch.name,
+      role: "Hero image",
+      isPublic: branch.status === "ACTIVE",
+      slug: null,
+      branchSlug: branch.slug,
+    })),
   ];
 }
 
@@ -477,6 +544,10 @@ export class PrismaMediaRepository implements MediaRepository {
               data: { [field]: toId, updatedById: actor.id },
             }),
           ),
+          transaction.branch.updateMany({
+            where: { heroMediaId: fromId },
+            data: { heroMediaId: toId, updatedById: actor.id },
+          }),
         ]);
 
         // Carry over descriptive details the new upload does not have yet.

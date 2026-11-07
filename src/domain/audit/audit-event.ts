@@ -7,12 +7,17 @@ export type AuditActorType = (typeof AUDIT_ACTOR_TYPES)[number];
 
 type RoleChange = Readonly<{ role: Readonly<{ from: string; to: string }> }>;
 type BranchChange = Readonly<{ branchId: string }>;
+type FieldChange = Readonly<{ from: unknown; to: unknown }>;
 
 /** Each action and the exact shape of its `changes`. */
 export type AuditChanges = {
   "staff.role-changed": RoleChange;
   "staff.branch-assigned": BranchChange;
   "staff.branch-unassigned": BranchChange;
+  /** A new branch (spec 0002). */
+  "branch.created": Readonly<{ slug: string; name: string; status: string }>;
+  /** Only the fields that changed, by attribute name. */
+  "branch.updated": Readonly<Record<string, FieldChange>>;
 };
 
 export type AuditAction = keyof AuditChanges;
@@ -23,7 +28,7 @@ export type AuditEvent<A extends AuditAction = AuditAction> = Readonly<{
   /** Staff user id or guest id; null for SYSTEM (the CLI, scheduled jobs). */
   actorId: string | null;
   action: A;
-  entityType: "User";
+  entityType: "User" | "Branch";
   entityId: string;
   branchId: string | null;
   reason: string | null;

@@ -64,13 +64,16 @@ Controls:
 - upload operations remain same-origin, authenticated, CSRF/origin checked, and tied to the session/user;
 - Content-Type, `nosniff`, cache, range, and content-disposition headers are set intentionally.
 
-## Promotion safety (implemented; retired by Q-47, removed in M5)
+## Promotion popup (removed in M5)
 
-- Promotion fields use strict length limits and plain text; no arbitrary HTML, script, URL, or style input.
-- Codes use a conservative printable allowlist and are rendered as text.
-- Active scheduling is evaluated server-side; client clocks never decide whether unpublished content is visible.
-- Copy-to-clipboard is triggered only by a user action, reports success/failure accessibly, and has a selectable-text fallback.
-- Dismissal state stores only promotion ID/version and expiry in the browser; it is not tracking or reservation data.
+The popup, its CMS area, and their controls were removed in M5 (Q-47). A unit test keeps promotion code out of the public routes and site components. The unused `Promotion` table is dropped by a later contract migration.
+
+## Branch sites (M5)
+
+- Every public request resolves the branch slug on the server to an `ACTIVE` branch; content queries take that branch's id, never a client value. A listing or facility of another branch is not found.
+- Map embed URLs are checked against the Google allowlist when saved (form and API) and again when the branch view model is built; the CSP keeps `frame-src https://www.google.com`.
+- Branch writes (`/admin/branches` Server Actions and API-A2/A3) require `branches:manage`, are audited, and the staff API uses the `staffRoute` origin check. The default branch cannot be deactivated.
+- Branch lookups come from the cached active-branch list, and malformed slugs never reach the cache, so URL scanning cannot grow it.
 
 ## Contact form
 
@@ -131,7 +134,7 @@ The future booking integration gets explicit `script-src`, `frame-src`, `connect
 
 ## Security release gate
 
-- threat-model admin auth, uploads and local path handling, promotions (until M5), contact form, the reservation API, payments and refunds, coupons, and marketing consent ([threat-model.md](./threat-model.md));
+- threat-model admin auth, uploads and local path handling, contact form, branch sites, the reservation API, payments and refunds, coupons, and marketing consent ([threat-model.md](./threat-model.md));
 - dependency audit and supported versions;
 - authorization tests for every command;
 - CSP enforced and verified with zero violations across public and admin pages (Phase 11);

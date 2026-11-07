@@ -6,20 +6,22 @@ Use structured entities for rooms, facilities, site settings, social links, medi
 
 The React component registry owns layout. The database owns content and ordering.
 
-## Branch ownership (planned, ADR 026)
+## Branch ownership (ADR 026; implemented in M4 for data and M5 for the site)
 
-Implemented today as one global site. From M4 (data) and M5 (site), content belongs to branches:
+Content belongs to branches (spec [0002](../specs/0002-m5-branch-websites.md)):
 
 | Content | Owner | Notes |
 | --- | --- | --- |
-| Pages (Home, About, Contact) and their sections | Branch | Unique `(branchId, key)`; the same section registry and page policies for every branch |
+| Pages (Home, About, Contact) and their sections | Branch | Unique `(branchId, key)`; the same section registry and page policies for every branch. A new branch starts with the three pages unpublished, from the draft skeleton in `src/domain/content/default-sections.ts` (Home hero titled with the branch name). `Page.canonicalPath` stays a path inside the branch; the public path is `pagePath(slug, key)` |
 | Facilities | Branch | Rendered at `/{branch}/facilities` |
-| Accommodation listings (`Room`) | Branch | `accommodationType` `ROOM` or `APARTMENT`; rendered at `/{branch}/stay` |
-| Contact details, address, coordinates, map embed, check-in and check-out times, hero image | Branch | Moved from site settings to `Branch` |
+| Accommodation listings (`Room`) | Branch | `accommodationType` `ROOM` or `APARTMENT`, with optional `bedroomCount` and `bathroomCount` for apartments; rendered at `/{branch}/stay`. The listing label is "Rooms & Apartments", "Rooms", or "Apartments" by what the branch has published (`stayLabel`), and the link is hidden when it has none |
+| Contact details, address, coordinates, map embed, check-in and check-out times, hero image | Branch | Edited on the branch form since M5; the settings columns stay unused until a later contract migration |
 | Logo variants, brand name, social links, footer and legal text, default SEO, chooser introduction | Brand (`SiteSettings`) | Shared by every branch |
 | Media assets | Shared library | Any branch's content may reference any asset |
 
-Every branch uses the same templates and design; there is no per-branch component, layout, or theme. Editors and Admins pick the branch they edit (FR-CMS-11).
+Every branch uses the same templates and design; there is no per-branch component, layout, or theme. Editors and Admins pick the branch they edit with the CMS branch selector (`?branch=<slug>`, FR-CMS-11). A listing's or facility's branch is fixed once created.
+
+The branch home adds a fixed location block (address, map, link to Contact) after the managed sections; it is a template block, not a section type.
 
 ## Page sections
 

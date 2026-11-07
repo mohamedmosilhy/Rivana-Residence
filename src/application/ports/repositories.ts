@@ -2,7 +2,6 @@ import type { PageKey, PageSectionType } from "@/domain/content/page-sections";
 import type { z } from "zod";
 
 import type { facilityDraftSchema } from "@/domain/facilities/facility";
-import type { PromotionDraft } from "@/domain/promotions/promotion";
 import type { roomDraftSchema } from "@/domain/rooms/room";
 import type {
   SiteSettingsInput,
@@ -13,6 +12,7 @@ import type {
   PageSectionMediaRole,
 } from "@/domain/media/media-asset";
 import type {
+  AccommodationType,
   EnquiryStatus,
   MediaStatus,
   PublicationStatus,
@@ -65,7 +65,6 @@ export type RoomInput = z.input<typeof roomDraftSchema> &
   Readonly<{ featured: boolean }>;
 export type FacilityInput = z.input<typeof facilityDraftSchema> &
   Readonly<{ featured: boolean }>;
-export type PromotionInput = PromotionDraft;
 
 export type PageSectionInput = Readonly<{
   id: string | null;
@@ -81,6 +80,9 @@ export type RoomDto = Readonly<{
   branchId: string;
   name: string;
   slug: string;
+  accommodationType: AccommodationType;
+  bedroomCount: number | null;
+  bathroomCount: number | null;
   shortDescription: string;
   description: RichTextDocument;
   sizeSqm: number | null;
@@ -209,7 +211,8 @@ export type MediaUsageKind =
   | "PAGE_SHARING"
   | "ROOM_SHARING"
   | "FACILITY_SHARING"
-  | "SITE_SETTINGS";
+  | "SITE_SETTINGS"
+  | "BRANCH";
 
 /** One place an image is used, with enough context to link to it. */
 export type MediaUsage = Readonly<{
@@ -223,6 +226,8 @@ export type MediaUsage = Readonly<{
   isPublic: boolean;
   /** Public slug for rooms/facilities (cache tags). */
   slug: string | null;
+  /** Slug of the owning branch (cache tags); null for site settings. */
+  branchSlug: string | null;
 }>;
 
 export type MediaDetailsDto = MediaAssetDto &
@@ -279,23 +284,6 @@ export type MediaCleanupCandidates = Readonly<{
   failed: readonly Readonly<{ id: string }>[];
 }>;
 
-export type PromotionDto = Readonly<{
-  id: string;
-  internalName: string;
-  headline: string;
-  body: string;
-  code: string;
-  terms: string | null;
-  status: PublicationStatus;
-  startsAt: Date | null;
-  endsAt: Date | null;
-  priority: number;
-  showAsPopup: boolean;
-  version: number;
-  publishedAt: Date | null;
-  updatedAt: Date;
-}>;
-
 /** A ready image that content may reference (Phase 5 selection only). */
 export type MediaOption = Readonly<{
   id: string;
@@ -309,6 +297,10 @@ export type MediaOption = Readonly<{
 
 export type ContactEnquiryDto = Readonly<{
   id: string;
+  /** The branch whose Contact page sent it; null for enquiries before M5. */
+  branchId: string | null;
+  /** That branch's name, for the staff list; null when none. */
+  branchName?: string | null;
   name: string;
   email: string;
   phone: string | null;
@@ -512,26 +504,6 @@ export interface MediaRepository {
   ): Promise<MediaCleanupCandidates>;
 }
 
-export interface PromotionRepository {
-  getCurrent(now: Date): Promise<PromotionDto | null>;
-  /** Published pop-up promotions that have not ended by `now`. */
-  listPublishedPopups(now: Date): Promise<readonly PromotionDto[]>;
-  listAdmin(): Promise<readonly PromotionDto[]>;
-  findAdminById(id: string): Promise<PromotionDto | null>;
-  create(input: PromotionInput, actor: Actor): Promise<Result<PromotionDto>>;
-  update(
-    id: string,
-    input: PromotionInput,
-    actor: Actor,
-  ): Promise<Result<PromotionDto>>;
-  publish(id: string, actor: Actor, now: Date): Promise<Result<PromotionDto>>;
-  unpublish(id: string, actor: Actor): Promise<Result<PromotionDto>>;
-  archive(id: string, actor: Actor): Promise<Result<void>>;
-  restore(id: string, actor: Actor): Promise<Result<PromotionDto>>;
-  /** Permanently removes an archived promotion; CONFLICT otherwise. */
-  delete(id: string, actor: Actor): Promise<Result<void>>;
-}
-
 export type PageRequest = Readonly<{
   /** 1-based. */
   page: number;
@@ -555,6 +527,8 @@ export type EnquiryListQuery = PageRequest &
      * with no branch are never in a list of ids (Q-26).
      */
     branchScope: "ALL" | readonly string[];
+    /** Narrows to one branch (the list filter), inside the scope. */
+    branchId: string | null;
   }>;
 
 export interface EnquiryRepository {
@@ -563,7 +537,10 @@ export interface EnquiryRepository {
     query: EnquiryListQuery,
   ): Promise<PagedResult<ContactEnquiryDto>>;
   create(
-    input: Omit<ContactEnquiryDto, "id" | "status" | "createdAt">,
+    input: Omit<
+      ContactEnquiryDto,
+      "id" | "status" | "createdAt" | "branchName"
+    >,
   ): Promise<Result<ContactEnquiryDto>>;
   archive(id: string, actor: Actor, now: Date): Promise<Result<void>>;
   /** Records successful delivery; the enquiry stays NEW for staff. */
@@ -573,12 +550,7 @@ export interface EnquiryRepository {
 
 export type PublicationCounts = Readonly<Record<PublicationStatus, number>>;
 
-export type RecentContentKind =
-  | "PAGE"
-  | "ROOM"
-  | "FACILITY"
-  | "PROMOTION"
-  | "SETTINGS";
+export type RecentContentKind = "PAGE" | "ROOM" | "FACILITY" | "SETTINGS";
 
 export type RecentContentItem = Readonly<{
   kind: RecentContentKind;
@@ -594,20 +566,6 @@ export type AdminOverviewDto = Readonly<{
   rooms: PublicationCounts;
   facilities: PublicationCounts;
   media: Readonly<{ ready: number; missingAltText: number; failed: number }>;
-  promotions: Readonly<{
-    active: Readonly<{
-      id: string;
-      internalName: string;
-      headline: string;
-      endsAt: Date | null;
-    }> | null;
-    scheduledCount: number;
-    nextScheduled: Readonly<{
-      id: string;
-      internalName: string;
-      startsAt: Date;
-    }> | null;
-  }>;
   enquiries: Readonly<{ new: number; deliveryFailed: number }>;
   recent: readonly RecentContentItem[];
 }>;

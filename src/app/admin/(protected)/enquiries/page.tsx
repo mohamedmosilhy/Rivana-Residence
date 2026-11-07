@@ -30,13 +30,14 @@ export default async function EnquiriesPage({
     getPublicSiteSettings(),
   ]);
   if (!listing.ok) throw new Error("Enquiries are unavailable.");
-  const { items, total, page, pageSize, query } = listing.value;
-  const filtered = Boolean(query.search || query.status);
+  const { items, total, page, pageSize, query, branches } = listing.value;
+  const filtered = Boolean(query.search || query.status || query.branch);
 
   const hrefFor = (target: number) => {
     const params = new URLSearchParams();
     if (query.search) params.set("q", query.search);
     if (query.status) params.set("status", query.status);
+    if (query.branch) params.set("branch", query.branch);
     if (target > 1) params.set("page", String(target));
     const search = params.toString();
     return `/admin/enquiries${search ? `?${search}` : ""}` as Route;
@@ -64,6 +65,20 @@ export default async function EnquiriesPage({
               label: ENQUIRY_STATUS_LABELS[status],
             })),
           },
+          // Narrows within the branches you may see (spec 0002, Q-26).
+          ...(branches.length > 1
+            ? [
+                {
+                  name: "branch",
+                  label: "Branch",
+                  value: query.branch,
+                  options: branches.map((branch) => ({
+                    value: branch.slug,
+                    label: branch.name,
+                  })),
+                },
+              ]
+            : []),
         ]}
       />
       {items.length > 0 ? (

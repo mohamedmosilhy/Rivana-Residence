@@ -18,21 +18,6 @@ function optionalText(max: number) {
   );
 }
 
-function optionalCoordinate(limit: number, label: string) {
-  return z.preprocess(
-    (value) => {
-      const normalized = blankToNull(value);
-      return typeof normalized === "string" ? Number(normalized) : normalized;
-    },
-    z
-      .number({ error: `Enter the ${label} as a number.` })
-      .min(-limit, `${label} must be between -${limit} and ${limit}.`)
-      .max(limit, `${label} must be between -${limit} and ${limit}.`)
-      .nullable()
-      .default(null),
-  );
-}
-
 // Only Google Maps embed URLs are accepted. The value becomes an iframe
 // source on the public contact page, so arbitrary origins are refused.
 const MAP_EMBED_PREFIX = "https://www.google.com/maps/embed";
@@ -52,69 +37,25 @@ export function isMapEmbedUrl(value: string) {
 
 export const MAP_EMBED_MESSAGE = `Paste a Google Maps embed link starting with ${MAP_EMBED_PREFIX}.`;
 
-export const siteSettingsSchema = z
-  .object({
-    siteName: z
-      .string({ error: "Enter the residence name." })
-      .trim()
-      .min(1, "Enter the residence name.")
-      .max(120, "Use 120 characters or fewer."),
-    tagline: optionalText(240),
-    phone: z.preprocess(
-      blankToNull,
-      z
-        .string()
-        .trim()
-        .regex(
-          /^\+?[0-9][0-9 ()-]{5,38}$/,
-          "Enter a phone number using digits, spaces, brackets, or dashes.",
-        )
-        .nullable()
-        .default(null),
-    ),
-    email: z.preprocess(
-      blankToNull,
-      z
-        .string()
-        .trim()
-        .pipe(
-          z
-            .email("Enter a valid email address.")
-            .max(320, "Use 320 characters or fewer."),
-        )
-        .nullable()
-        .default(null),
-    ),
-    addressLine1: optionalText(180),
-    addressLine2: optionalText(180),
-    city: optionalText(100),
-    country: optionalText(100),
-    latitude: optionalCoordinate(90, "Latitude"),
-    longitude: optionalCoordinate(180, "Longitude"),
-    mapEmbedUrl: z.preprocess(
-      blankToNull,
-      z
-        .string()
-        .trim()
-        .max(2048, "Use 2048 characters or fewer.")
-        .refine(isMapEmbedUrl, MAP_EMBED_MESSAGE)
-        .nullable()
-        .default(null),
-    ),
-    footerText: optionalText(500),
-    defaultSeoTitle: optionalText(70),
-    defaultSeoDescription: optionalText(170),
-  })
-  .superRefine((settings, context) => {
-    if ((settings.latitude === null) !== (settings.longitude === null)) {
-      const missing = settings.latitude === null ? "latitude" : "longitude";
-      context.addIssue({
-        code: "custom",
-        path: [missing],
-        message: "Enter both latitude and longitude, or leave both empty.",
-      });
-    }
-  });
+/** Phone numbers as staff type them (shared with branch contact details). */
+export const PHONE_PATTERN = /^\+?[0-9][0-9 ()-]{5,38}$/;
+export const PHONE_MESSAGE =
+  "Enter a phone number using digits, spaces, brackets, or dashes.";
+
+// Brand-wide identity only. Contact details, address, coordinates, and the
+// map belong to each branch since M5 (owner decision, spec 0002); their
+// columns stay until a later contract migration and are no longer written.
+export const siteSettingsSchema = z.object({
+  siteName: z
+    .string({ error: "Enter the residence name." })
+    .trim()
+    .min(1, "Enter the residence name.")
+    .max(120, "Use 120 characters or fewer."),
+  tagline: optionalText(240),
+  footerText: optionalText(500),
+  defaultSeoTitle: optionalText(70),
+  defaultSeoDescription: optionalText(170),
+});
 
 export type SiteSettingsInput = z.infer<typeof siteSettingsSchema>;
 

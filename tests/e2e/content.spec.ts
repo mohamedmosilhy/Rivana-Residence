@@ -95,7 +95,7 @@ test("editors take a room from draft to published and back to archived", async (
   ).toBeVisible();
   await expect(
     page.getByRole("link", { name: "View public page" }),
-  ).toHaveAttribute("href", `/rooms/${slug}`);
+  ).toHaveAttribute("href", `/new-cairo/stay/${slug}`);
 
   await page.getByRole("link", { name: "Preview" }).click();
   await expect(
@@ -174,60 +174,6 @@ test("editors create and update a facility", async ({ page }, testInfo) => {
   );
 });
 
-test("staff schedule, preview, and publish a promotion in the property time zone", async ({
-  page,
-}, testInfo) => {
-  const project = testInfo.project.name;
-  const code = `E2E-${project.slice(0, 6).toUpperCase()}`;
-  await signInAs(page, accountsFor(project).editor, "/admin/promotions/new");
-
-  await page.getByLabel("Internal name").fill(`Winter ${project}`);
-  await page.getByLabel("Headline").fill("Winter by the pool");
-  await page.getByLabel("Message").fill("Warm evenings on the terrace.");
-  await page.getByLabel("Code", { exact: true }).fill(code);
-  const preview = page.getByRole("complementary", { name: "Preview" });
-  await expect(
-    preview.getByRole("heading", { name: "Winter by the pool" }),
-  ).toBeVisible();
-  await expect(preview.getByText(code)).toBeVisible();
-
-  await page
-    .getByLabel(/Starts \(Africa\/Cairo time\)/)
-    .fill("2030-01-10T09:00");
-  await page.getByLabel(/Ends \(Africa\/Cairo time\)/).fill("2030-01-01T09:00");
-  await page.getByRole("button", { name: "Create draft" }).click();
-  await expect(
-    page.getByRole("alert").filter({ hasText: "Ends:" }),
-  ).toBeFocused();
-  await expectNoAxeViolations(page);
-
-  await page.getByLabel(/Ends \(Africa\/Cairo time\)/).fill("2030-02-01T09:00");
-  await page.getByRole("button", { name: "Create draft" }).click();
-  await expect(page).toHaveURL(
-    /\/admin\/promotions\/[a-z0-9]+\?notice=created$/,
-  );
-
-  await confirm(page, "Publish");
-  await expect(
-    page.getByRole("note").filter({
-      hasText: /Scheduled: it can start showing at 10 Jan 2030, 09:00/,
-    }),
-  ).toBeVisible();
-
-  // 09:00 in Cairo (UTC+2 in January) is stored as 07:00 UTC.
-  const { rows } = await sql(
-    `SELECT to_char("startsAt" AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI') AS starts
-     FROM "Promotion" WHERE code = $1`,
-    [code],
-  );
-  expect(rows[0]).toEqual({ starts: "2030-01-10T07:00" });
-
-  await page.goto("/admin/promotions?timing=scheduled");
-  await expect(
-    page.getByRole("link", { name: `Winter ${project}` }),
-  ).toBeVisible();
-});
-
 test.describe("page editing", () => {
   // Pages are shared by both projects, so these run once, in order.
   test.describe.configure({ mode: "serial" });
@@ -296,9 +242,10 @@ test.describe("page editing", () => {
     ).toBeVisible();
     await expect(
       page.getByRole("link", { name: "View public page" }),
-    ).toHaveAttribute("href", "/about");
+    ).toHaveAttribute("href", "/new-cairo/about");
     const { rows } = await sql(
-      `SELECT "isPublished" FROM "Page" WHERE key = 'ABOUT'`,
+      `SELECT "isPublished" FROM "Page" p JOIN "Branch" b ON b.id = p."branchId"
+       WHERE p.key = 'ABOUT' AND b.slug = 'new-cairo'`,
     );
     expect(rows[0]).toEqual({ isPublished: true });
   });

@@ -501,7 +501,11 @@ describe("references, replacement, and deletion", () => {
     });
     expect(await media.countUsage(old.id)).toBe(0);
     expect(cache.invalidate).toHaveBeenCalledWith(
-      expect.arrayContaining(["rooms", `room:${room.slug}`, "site-settings"]),
+      expect.arrayContaining([
+        "branch:new-cairo:stay",
+        `branch:new-cairo:stay:${room.slug}`,
+        "site-settings",
+      ]),
     );
   });
 

@@ -9,14 +9,16 @@ test.skip(
 // viewport is compared: it holds the hero, header state, and typography that
 // define each template, and stays stable as catalogue content grows.
 const TEMPLATES = [
-  { name: "home", path: "/" },
-  { name: "about", path: "/about" },
-  { name: "rooms", path: "/rooms" },
-  { name: "room-detail", path: "/rooms/studio-with-balcony" },
-  { name: "facilities", path: "/facilities" },
-  { name: "facility-detail", path: "/facilities/swimming-pool" },
-  { name: "contact", path: "/contact" },
-  { name: "not-found", path: "/not-a-page" },
+  // Branch URLs since M5 (spec 0002); one active branch, so the header has
+  // no switcher and matches the earlier design.
+  { name: "home", path: "/new-cairo" },
+  { name: "about", path: "/new-cairo/about" },
+  { name: "rooms", path: "/new-cairo/stay" },
+  { name: "room-detail", path: "/new-cairo/stay/studio-with-balcony" },
+  { name: "facilities", path: "/new-cairo/facilities" },
+  { name: "facility-detail", path: "/new-cairo/facilities/swimming-pool" },
+  { name: "contact", path: "/new-cairo/contact" },
+  { name: "not-found", path: "/new-cairo/not-a-page" },
 ] as const;
 
 for (const template of TEMPLATES) {

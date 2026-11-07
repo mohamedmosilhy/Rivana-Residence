@@ -73,6 +73,7 @@ export function DetailHero({
   lede,
   image,
   morphName,
+  badge,
   children,
 }: Readonly<{
   parent: Readonly<{ href: Route; label: string }>;
@@ -81,6 +82,8 @@ export function DetailHero({
   image: PublicImage | null;
   /** Shared with the listing card's photo, so navigating morphs it here. */
   morphName: string;
+  /** A small label above the title, e.g. Room or Apartment (M5). */
+  badge?: ReactNode;
   children?: ReactNode;
 }>) {
   const wide = image !== null && image.width >= FULL_BLEED_MIN_WIDTH;
@@ -127,6 +130,7 @@ export function DetailHero({
               </li>
             </ol>
           </nav>
+          {badge ? <div className="mb-4">{badge}</div> : null}
           <h1 className={heroTitle}>{title}</h1>
           <p className={heroLede}>{lede}</p>
           {children ? <div className={actions}>{children}</div> : null}

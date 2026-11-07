@@ -5,7 +5,8 @@ The versioned REST API (`/api/v1/**`). Conventions: [docs/api/rest-api-conventio
 ## Layout
 
 - `v1/_http/`: the shared HTTP layer. `routes.ts` (`createRoutes`, `json`, `toHttp`), `problem.ts` (RFC 9457 bodies and the one code to status table), `body.ts` (`parseJson`, `validate`), `logger.ts` (one redacted line per request). `index.ts` wires the wrappers to `@/composition/api`.
-- `v1/<resource>/route.ts`: one file per endpoint. `v1/health/route.ts` is the reference example.
+- `v1/<resource>/route.ts`: one file per endpoint. `v1/health/route.ts` is the reference example; `v1/branches/**` and `v1/staff/branches/**` show public and staff resources (M5).
+- `v1/_dto/`: view model → contract DTO mappers (e.g. `branches.ts`). DTOs are built from public view models, never from Prisma rows, so the API shows exactly what the pages show.
 
 ## Rules
 

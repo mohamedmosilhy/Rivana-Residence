@@ -1,6 +1,6 @@
 # M5 — Branch websites and the rooms-and-apartments catalog
 
-Status: **Not started.** Branch: `m5-branch-websites`. Follow the [milestone loop](./README.md#the-loop-every-milestone-follows).
+Status: **Accepted** (2026-11-07). Build spec: [0002](../../specs/0002-m5-branch-websites.md). Evidence: [report](../reports/m5-branch-websites.md). Branch: `m5-branch-websites`. Follow the [milestone loop](./README.md#the-loop-every-milestone-follows).
 
 ## Objective
 

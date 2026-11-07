@@ -19,7 +19,6 @@ const KIND: Record<RecentContentKind, { label: string; href: Route }> = {
   PAGE: { label: "Page", href: "/admin/pages" },
   ROOM: { label: "Room", href: "/admin/rooms" },
   FACILITY: { label: "Facility", href: "/admin/facilities" },
-  PROMOTION: { label: "Promotion", href: "/admin/promotions" },
   SETTINGS: { label: "Settings", href: "/admin/settings" },
 };
 
@@ -60,8 +59,7 @@ export function OverviewDashboard({
   overview,
   canEditSettings,
 }: OverviewDashboardProps) {
-  const { rooms, facilities, media, promotions, enquiries, timeZone } =
-    overview;
+  const { rooms, facilities, media, enquiries, timeZone } = overview;
   const when = (date: Date) => formatDateTime(date, timeZone);
 
   const attention = [
@@ -82,14 +80,6 @@ export function OverviewDashboard({
       text: `${plural(media.failed, "upload")} failed`,
     },
   ].filter((item): item is { href: Route; text: string } => Boolean(item));
-
-  const activeDetail = promotions.active
-    ? `“${promotions.active.headline}”${
-        promotions.active.endsAt
-          ? ` until ${when(promotions.active.endsAt)}`
-          : ", no end date"
-      }`
-    : "No promotion is showing on the website";
 
   return (
     <>
@@ -145,16 +135,6 @@ export function OverviewDashboard({
             detail={`ready images · ${media.missingAltText} missing alt text`}
           />
           <StatCard
-            href="/admin/promotions"
-            title="Promotions"
-            value={promotions.active ? "Showing" : "None showing"}
-            detail={`${activeDetail}. ${plural(promotions.scheduledCount, "scheduled promotion")}${
-              promotions.nextScheduled
-                ? `; next starts ${when(promotions.nextScheduled.startsAt)}`
-                : ""
-            }.`}
-          />
-          <StatCard
             href="/admin/enquiries"
             title="Enquiries"
             value={String(enquiries.new)}
@@ -169,9 +149,7 @@ export function OverviewDashboard({
         </h2>
         {overview.recent.length === 0 ? (
           <EmptyState title="Nothing has been edited yet">
-            <p>
-              Changes to pages, rooms, facilities, and promotions show here.
-            </p>
+            <p>Changes to pages, rooms, and facilities show here.</p>
           </EmptyState>
         ) : (
           <ul className="rounded-panel border border-neutral-300 bg-surface">

@@ -7,7 +7,6 @@ import type {
   PublicImage,
   PublicRoomCard,
   PublicSection,
-  PublicSettings,
 } from "@/application/public/view-models";
 import { RichTextView } from "@/presentation/design/rich-text-view";
 import { CardGrid, FacilityCard, RoomCard } from "@/presentation/site/cards";
@@ -60,14 +59,21 @@ const CONTACT_LINK =
 const CONTACT_ICON = "size-5 flex-none text-gold-400";
 const text = (value: unknown) => (typeof value === "string" ? value : "");
 
+/** Phone and email beside a Contact block (the branch's, since M5). */
+type ContactDetails = Readonly<{ phone: string | null; email: string | null }>;
+
 type SectionContext = Readonly<{
+  /** Every internal link carries the current branch (spec 0002). */
+  branchSlug: string;
+  /** "Rooms", "Apartments", "Rooms & Apartments", or null (no listings). */
+  stayLabel: string | null;
   rooms: readonly PublicRoomCard[];
   facilities: readonly PublicFacilityCard[];
   bookingMessage: string;
   /** The contact form, rendered where a Contact block enables it. */
   contactForm: ReactNode;
   /** Phone and email shown beside a Contact block; null to omit them. */
-  contactDetails: PublicSettings | null;
+  contactDetails: ContactDetails | null;
   /** The home hero fills the screen; other page heroes are shorter. */
   heroSize: "full" | "page";
   /** The first hero is the page's LCP image and its only h1. */
@@ -211,6 +217,7 @@ export function PageSection({
             >
               <CtaLink
                 cta={payload.cta}
+                branchSlug={context.branchSlug}
                 bookingMessage={context.bookingMessage}
                 dark
               />
@@ -307,6 +314,7 @@ export function PageSection({
             <RevealItem className={actions}>
               <CtaLink
                 cta={payload.cta}
+                branchSlug={context.branchSlug}
                 bookingMessage={context.bookingMessage}
               />
             </RevealItem>
@@ -406,12 +414,16 @@ export function PageSection({
           <SectionHeading
             section={section}
             id={labelledBy}
-            link={{ href: "/rooms", label: "View all rooms" }}
+            link={{
+              href: `/${context.branchSlug}/stay` as Route,
+              label: `View all ${(context.stayLabel ?? "Rooms").toLowerCase()}`,
+            }}
           />
           <CardGrid>
             {rooms.map((room, index) => (
               <RoomCard
                 key={room.slug}
+                branchSlug={context.branchSlug}
                 room={room}
                 index={index}
                 headingLevel={section.heading ? 3 : 2}
@@ -434,13 +446,17 @@ export function PageSection({
             <SectionHeading
               section={section}
               id={labelledBy}
-              link={{ href: "/facilities", label: "View all amenities" }}
+              link={{
+                href: `/${context.branchSlug}/facilities` as Route,
+                label: "View all amenities",
+              }}
               onPlum
             />
             <CardGrid variant="tiles">
               {facilities.map((facility) => (
                 <FacilityCard
                   key={facility.slug}
+                  branchSlug={context.branchSlug}
                   facility={facility}
                   headingLevel={section.heading ? 3 : 2}
                 />
@@ -514,7 +530,7 @@ export function PageSection({
               {form ? null : (
                 <div className={actions}>
                   <Link
-                    href="/contact"
+                    href={`/${context.branchSlug}/contact` as Route}
                     className={button("primary-dark", actionFill)}
                   >
                     Get in touch

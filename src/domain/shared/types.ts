@@ -12,6 +12,10 @@ export type StaffRole = (typeof STAFF_ROLES)[number];
 export const PUBLICATION_STATUSES = ["DRAFT", "PUBLISHED", "ARCHIVED"] as const;
 export type PublicationStatus = (typeof PUBLICATION_STATUSES)[number];
 
+// A listing is a room type or an apartment type (Q-43, ADR 026).
+export const ACCOMMODATION_TYPES = ["ROOM", "APARTMENT"] as const;
+export type AccommodationType = (typeof ACCOMMODATION_TYPES)[number];
+
 export const MEDIA_STATUSES = [
   "PENDING",
   "READY",

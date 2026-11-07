@@ -6,6 +6,10 @@ import { getCurrentStaff, requireStaff } from "@/composition/auth";
 import { propertyTimeZone, roomQueries } from "@/composition/content";
 import { CatalogTable } from "@/presentation/admin/content/catalog-table";
 import { catalogFilters } from "@/presentation/admin/content/catalog-filters";
+import {
+  BranchSelector,
+  branchQuery,
+} from "@/presentation/admin/content/branch-selector";
 import { DeniedPage } from "@/presentation/admin/denied-page";
 import { ListFilters, Pagination } from "@/presentation/admin/ui/list-controls";
 import { Notice, noticeFrom } from "@/presentation/admin/ui/notice";
@@ -31,14 +35,26 @@ export default async function RoomsPage({ searchParams }: RoomsPageProps) {
     propertyTimeZone(),
   ]);
   if (!listing.ok) throw new Error("Rooms are unavailable.");
-  const { items, total, page, pageSize, query, reorderable, activeOrder } =
-    listing.value;
+  const {
+    items,
+    total,
+    page,
+    pageSize,
+    query,
+    reorderable,
+    activeOrder,
+    branchChoice,
+  } = listing.value;
+  const branch = branchQuery(branchChoice);
+  const withBranch = (path: string) =>
+    `${path}${branch ? `${path.includes("?") ? "&" : "?"}${branch}` : ""}` as Route;
   const filtered = Boolean(
     query.search || query.status || query.featured !== null,
   );
 
   const hrefFor = (target: number) => {
     const search = new URLSearchParams();
+    if (branchChoice.selected) search.set("branch", branchChoice.selected.slug);
     if (query.search) search.set("q", query.search);
     if (query.status) search.set("status", query.status);
     if (query.featured !== null)
@@ -59,17 +75,21 @@ export default async function RoomsPage({ searchParams }: RoomsPageProps) {
           </p>
         }
         actions={
-          <Link href="/admin/rooms/new" className={button()}>
+          <Link href={withBranch("/admin/rooms/new")} className={button()}>
             Add room
           </Link>
         }
       />
       <Notice code={noticeFrom(params.notice)} />
+      <BranchSelector action="/admin/rooms" choice={branchChoice} />
       <ListFilters
         action="/admin/rooms"
         searchLabel="Search name or web address"
         search={query.search}
         filters={catalogFilters(query)}
+        hidden={
+          branchChoice.selected ? { branch: branchChoice.selected.slug } : {}
+        }
       />
       {items.length > 0 ? (
         <>
@@ -102,7 +122,7 @@ export default async function RoomsPage({ searchParams }: RoomsPageProps) {
         <EmptyState
           title="No rooms yet"
           action={
-            <Link href="/admin/rooms/new" className={button()}>
+            <Link href={withBranch("/admin/rooms/new")} className={button()}>
               Add room
             </Link>
           }

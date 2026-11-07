@@ -11,13 +11,20 @@ import { createRoomAction } from "../actions";
 
 export const metadata: Metadata = { title: "Add room" };
 
-export default async function NewRoomPage() {
+export default async function NewRoomPage({
+  searchParams,
+}: Readonly<{
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}>) {
   const { staff, allowed } = await requireStaff(
     "/admin/rooms/new",
     "content:edit",
   );
   if (!allowed) return <DeniedPage title="Add room" />;
-  const branch = await roomQueries().newRecordBranch(staff);
+  const choice = await roomQueries().newRecordBranch(
+    staff,
+    (await searchParams).branch,
+  );
 
   return (
     <>
@@ -34,7 +41,14 @@ export default async function NewRoomPage() {
           variant="room"
           action={createRoomAction}
           isNew
-          branchName={branch.ok ? (branch.value?.name ?? null) : null}
+          branchOptions={
+            choice.ok
+              ? {
+                  branches: choice.value.branches,
+                  selected: choice.value.selected?.slug ?? null,
+                }
+              : null
+          }
           submitLabel="Create draft"
           values={{
             name: "",
@@ -44,6 +58,9 @@ export default async function NewRoomPage() {
             featured: false,
             seoTitle: "",
             seoDescription: "",
+            accommodationType: "ROOM",
+            bedroomCount: "",
+            bathroomCount: "",
             sizeSqm: "",
             maxAdults: "2",
             maxChildren: "0",

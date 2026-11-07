@@ -1,6 +1,6 @@
 # User roles and permissions
 
-All four staff roles and the full capability matrix are implemented (`src/domain/auth/capabilities.ts`, M4). Branch scope is implemented too: `authorizeBranch` and `branchScope` in `src/application/auth/authorize-branch.ts`, and assignments loaded with the session. The table test `tests/unit/auth/authorization.test.ts` (T-AUTHZ-1) mirrors this matrix. The reservation capabilities exist, but nothing uses them until M6+. Cells marked † are recommendations awaiting approval; Q-26 (enquiries) was accepted as recommended, and in M4 Receptionists and Managers see only enquiries from their branches, which is none until M5 records the branch on new enquiries.
+All four staff roles and the full capability matrix are implemented (`src/domain/auth/capabilities.ts`, M4). Branch scope is implemented too: `authorizeBranch` and `branchScope` in `src/application/auth/authorize-branch.ts`, and assignments loaded with the session. The table test `tests/unit/auth/authorization.test.ts` (T-AUTHZ-1) mirrors this matrix. The reservation capabilities exist, but nothing uses them until M6+. Cells marked † are recommendations awaiting approval; Q-26 (enquiries) was accepted as recommended, and Receptionists and Managers see only enquiries from their branches; since M5 the contact form records the branch, and older enquiries (no branch) stay visible to Admin and Editor only.
 
 ## Roles
 
@@ -16,7 +16,7 @@ Accounts are provisioned by an Admin (`npm run staff`, and the Staff screen). Th
 
 ## Capability matrix
 
-Updated for the client decisions of 2026-11-06 (Q-36…Q-50). `reservations:decide` (confirm or decline pending requests) is removed with the `PENDING` status; `promotions:manage` is retired with the popup in M5.
+Updated for the client decisions of 2026-11-06 (Q-36…Q-50). `reservations:decide` (confirm or decline pending requests) is removed with the `PENDING` status; `promotions:manage` was removed with the popup in M5.
 
 | Capability | Editor | Receptionist | Manager | Admin |
 | --- | :-: | :-: | :-: | :-: |
@@ -24,7 +24,6 @@ Updated for the client decisions of 2026-11-06 (Q-36…Q-50). `reservations:deci
 | `content:edit`, `content:publish`, `content:archive` (every branch's pages, listings, facilities) | ✓ | – | – | ✓ |
 | `content:delete`, `media:delete`, `media:rights` | – | – | – | ✓ |
 | `media:upload` | ✓ | – | – | ✓ |
-| ~~`promotions:manage`~~ (implemented; retired in M5) | ✓ | – | – | ✓ |
 | `enquiries:read`, `enquiries:manage` | ✓ | ✓† | ✓† | ✓ |
 | `settings:edit` (brand settings, WhatsApp number, templates, test message), `users:manage`, `sessions:revoke-any` | – | – | – | ✓ |
 | `sessions:manage-own` | ✓ | ✓ | ✓ | ✓ |
@@ -45,7 +44,7 @@ Updated for the client decisions of 2026-11-06 (Q-36…Q-50). `reservations:deci
 | `marketing:broadcast` (WhatsApp offers to opted-in guests) | – | – | ✓ | ✓ |
 | `guests:block` (block or unblock a phone number, all branches) | – | – | ✓ | ✓ |
 | `reports:read`, `audit:read` | – | – | ✓ | ✓ |
-| `branches:manage` | – | – | – | ✓ |
+| `branches:manage` (used since M5: `/admin/branches`, API-A2/A3) | – | – | – | ✓ |
 
 Every reservation, inventory, pricing, service, coupon, cancellation, marketing, and report capability is additionally checked against branch scope. A coupon valid at all branches can be created or edited only by an Admin.
 
@@ -76,7 +75,7 @@ Every reservation, inventory, pricing, service, coupon, cancellation, marketing,
 | Reports and audit (S40–S43) | — | — | assigned | all |
 | Broadcasts (S60–S62) | — | — | assigned | all |
 | Branches and staff assignment (A2–A4) | — | — | — | ✓ |
-| CMS (existing `/admin/pages`, `/rooms`, `/facilities`, `/media`, `/settings`; per branch from M5) | — | — | — | ✓ (+Editor) |
+| CMS (`/admin/pages`, `/rooms`, `/facilities`, `/media`, `/settings`; per branch with the branch selector since M5) | — | — | — | ✓ (+Editor) |
 
 ## Rules
 

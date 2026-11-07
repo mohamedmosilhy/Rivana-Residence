@@ -1,16 +1,22 @@
+import type { BranchCatalogFlags, BranchRow } from "@/application/branches";
 import type {
   FacilityDto,
   MediaReference,
   PageDto,
-  PromotionDto,
   RoomDto,
   SectionMediaReference,
   SiteSettingsDto,
 } from "@/application/ports/repositories";
 import type { PageKey, PageSectionType } from "@/domain/content/page-sections";
 import { publicMediaPath } from "@/domain/media/media-asset";
-import type { SocialPlatform } from "@/domain/settings/site-settings";
-import type { RichTextDocument } from "@/domain/shared/types";
+import {
+  isMapEmbedUrl,
+  type SocialPlatform,
+} from "@/domain/settings/site-settings";
+import type {
+  AccommodationType,
+  RichTextDocument,
+} from "@/domain/shared/types";
 
 // Everything here is plain, JSON-serializable data: it crosses the cache and
 // the server/client boundary, and it never carries drafts, internal ids that
@@ -78,19 +84,10 @@ export type PublicSocialLink = Readonly<{
   url: string;
 }>;
 
+/** Brand-wide identity. Contact details and maps belong to branches (M5). */
 export type PublicSettings = Readonly<{
   siteName: string;
   tagline: string | null;
-  phone: string | null;
-  email: string | null;
-  addressLine1: string | null;
-  addressLine2: string | null;
-  city: string | null;
-  country: string | null;
-  addressLines: readonly string[];
-  latitude: number | null;
-  longitude: number | null;
-  mapEmbedUrl: string | null;
   footerText: string | null;
   defaultSeoTitle: string | null;
   defaultSeoDescription: string | null;
@@ -109,20 +106,6 @@ export function publicSettings(
   return {
     siteName: settings.siteName,
     tagline: settings.tagline,
-    phone: settings.phone,
-    email: settings.email,
-    addressLine1: settings.addressLine1,
-    addressLine2: settings.addressLine2,
-    city: settings.city,
-    country: settings.country,
-    addressLines: [
-      settings.addressLine1,
-      settings.addressLine2,
-      [settings.city, settings.country].filter(Boolean).join(", ") || null,
-    ].filter((line): line is string => Boolean(line)),
-    latitude: settings.latitude,
-    longitude: settings.longitude,
-    mapEmbedUrl: settings.mapEmbedUrl,
     footerText: settings.footerText,
     defaultSeoTitle: settings.defaultSeoTitle,
     defaultSeoDescription: settings.defaultSeoDescription,
@@ -135,17 +118,95 @@ export function publicSettings(
   };
 }
 
+/** A branch as visitors see it (spec 0002): identity, contact, map, flags. */
+export type PublicBranch = Readonly<{
+  id: string;
+  slug: string;
+  name: string;
+  summary: string | null;
+  city: string | null;
+  country: string | null;
+  addressLine1: string | null;
+  addressLine2: string | null;
+  addressLines: readonly string[];
+  phone: string | null;
+  email: string | null;
+  latitude: number | null;
+  longitude: number | null;
+  /** Null unless it passes the Google embed allowlist again (defense in depth). */
+  mapEmbedUrl: string | null;
+  checkInTime: string | null;
+  checkOutTime: string | null;
+  onlineBookingEnabled: boolean;
+  hero: PublicImage | null;
+  /** Published listing types, for the stay label and the switcher. */
+  stayTypes: readonly AccommodationType[];
+  hasFacilities: boolean;
+  updatedAt: string;
+}>;
+
+export function addressLinesOf(
+  place: Readonly<{
+    addressLine1: string | null;
+    addressLine2: string | null;
+    city: string | null;
+    country: string | null;
+  }>,
+) {
+  return [
+    place.addressLine1,
+    place.addressLine2,
+    [place.city, place.country].filter(Boolean).join(", ") || null,
+  ].filter((line): line is string => Boolean(line));
+}
+
+export function publicBranch(
+  row: BranchRow,
+  flags: BranchCatalogFlags | undefined,
+  hero: PublicImage | null,
+): PublicBranch {
+  return {
+    id: row.id,
+    slug: row.slug,
+    name: row.name,
+    summary: row.summary,
+    city: row.city,
+    country: row.country,
+    addressLine1: row.addressLine1,
+    addressLine2: row.addressLine2,
+    addressLines: addressLinesOf(row),
+    phone: row.phone,
+    email: row.email,
+    latitude: row.latitude,
+    longitude: row.longitude,
+    mapEmbedUrl:
+      row.mapEmbedUrl && isMapEmbedUrl(row.mapEmbedUrl)
+        ? row.mapEmbedUrl
+        : null,
+    checkInTime: row.checkInTime,
+    checkOutTime: row.checkOutTime,
+    onlineBookingEnabled: row.onlineBookingEnabled,
+    hero,
+    stayTypes: flags?.stayTypes ?? [],
+    hasFacilities: flags?.hasFacilities ?? false,
+    updatedAt: row.updatedAt.toISOString(),
+  };
+}
+
 export type PublicRoomFacts = Readonly<{
   sizeSqm: number | null;
   maxAdults: number;
   maxChildren: number;
   bedSummary: string | null;
   viewSummary: string | null;
+  bedroomCount: number | null;
+  bathroomCount: number | null;
 }>;
 
 export type PublicRoomCard = Readonly<{
   slug: string;
   name: string;
+  accommodationType: AccommodationType;
   shortDescription: string;
   featured: boolean;
   updatedAt: string;
@@ -171,6 +232,7 @@ export function publicRoom(
   return {
     slug: room.slug,
     name: room.name,
+    accommodationType: room.accommodationType,
     shortDescription: room.shortDescription,
     featured: room.featured,
     updatedAt: room.updatedAt.toISOString(),
@@ -180,6 +242,8 @@ export function publicRoom(
       maxChildren: room.maxChildren,
       bedSummary: room.bedSummary,
       viewSummary: room.viewSummary,
+      bedroomCount: room.bedroomCount,
+      bathroomCount: room.bathroomCount,
     },
     hero,
     description: room.description,
@@ -281,41 +345,5 @@ export function publicPage(
       payload: section.payload,
       images: sectionImages(section.media),
     })),
-  };
-}
-
-/** A published pop-up campaign, with its window as ISO strings. */
-export type PublicPromotionCandidate = Readonly<{
-  id: string;
-  version: number;
-  headline: string;
-  body: string;
-  code: string;
-  terms: string | null;
-  priority: number;
-  startsAt: string | null;
-  endsAt: string | null;
-  publishedAt: string | null;
-}>;
-
-export type PublicPromotion = Pick<
-  PublicPromotionCandidate,
-  "id" | "version" | "headline" | "body" | "code" | "terms"
->;
-
-export function publicPromotionCandidate(
-  promotion: PromotionDto,
-): PublicPromotionCandidate {
-  return {
-    id: promotion.id,
-    version: promotion.version,
-    headline: promotion.headline,
-    body: promotion.body,
-    code: promotion.code,
-    terms: promotion.terms,
-    priority: promotion.priority,
-    startsAt: promotion.startsAt?.toISOString() ?? null,
-    endsAt: promotion.endsAt?.toISOString() ?? null,
-    publishedAt: promotion.publishedAt?.toISOString() ?? null,
   };
 }

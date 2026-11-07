@@ -23,22 +23,12 @@ import {
   fieldset,
   fieldsetHint,
   form,
-  formGrid,
   legend,
 } from "@/presentation/admin/ui/classes";
 
 const LABELS: Record<SiteSettingsField, string> = {
   siteName: "Residence name",
   tagline: "Tagline",
-  phone: "Phone",
-  email: "Email",
-  addressLine1: "Address line 1",
-  addressLine2: "Address line 2",
-  city: "City",
-  country: "Country",
-  latitude: "Latitude",
-  longitude: "Longitude",
-  mapEmbedUrl: "Google Maps embed link",
   footerText: "Footer text",
   defaultSeoTitle: "Default page title",
   defaultSeoDescription: "Default description",
@@ -132,38 +122,9 @@ export function SiteSettingsForm({
         })}
       </fieldset>
 
-      <fieldset className={fieldset}>
-        <legend className={legend}>Contact and location</legend>
-        <div className={formGrid}>
-          {field("phone", {
-            type: "tel",
-            inputMode: "tel",
-            hint: "Include the country code, for example +20 2 1234 5678.",
-          })}
-          {field("email", { type: "email", inputMode: "email" })}
-        </div>
-        {field("addressLine1", { maxLength: 180 })}
-        {field("addressLine2", { maxLength: 180 })}
-        <div className={formGrid}>
-          {field("city", { maxLength: 100 })}
-          {field("country", { maxLength: 100 })}
-        </div>
-        <div className={formGrid}>
-          {field("latitude", {
-            inputMode: "decimal",
-            hint: "Between -90 and 90, for example 30.0131.",
-          })}
-          {field("longitude", {
-            inputMode: "decimal",
-            hint: "Between -180 and 180, for example 31.4913.",
-          })}
-        </div>
-        {field("mapEmbedUrl", {
-          type: "url",
-          inputMode: "url",
-          hint: 'In Google Maps choose Share → Embed a map, then paste only the link inside src="…". It must start with https://www.google.com/maps/embed.',
-        })}
-      </fieldset>
+      <p className={fieldsetHint} data-settings-branch-note="">
+        Contact details, address, and map are set on each branch.
+      </p>
 
       <fieldset className={fieldset}>
         <legend className={legend}>Footer</legend>

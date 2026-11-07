@@ -5,19 +5,14 @@ import {
   SubmitEnquiry,
   type FormTokens,
 } from "@/application/enquiries/submit-enquiry";
-import { activePromotion } from "@/application/public/public-site";
-import {
-  publicImage,
-  publicPromotionCandidate,
-} from "@/application/public/view-models";
-import type {
-  EnquiryRepository,
-  PromotionDto,
-} from "@/application/ports/repositories";
+import { publicBranch, publicImage } from "@/application/public/view-models";
+import type { EnquiryRepository } from "@/application/ports/repositories";
 import { success } from "@/application/shared/result";
 import { HmacFormTokens } from "@/infrastructure/email/hmac-form-tokens";
 import { headerText } from "@/infrastructure/email/smtp-contact-delivery";
 import { parseServerEnv } from "@/lib/env/schema";
+
+import { branchRow, fakeBranches } from "../../support/fake-branches";
 
 const image = {
   storageKey: "images/2026/09/pool.webp",
@@ -55,60 +50,38 @@ describe("public images", () => {
   });
 });
 
-describe("public promotion selection", () => {
-  const now = new Date("2026-09-25T12:00:00Z");
-  const promotion = (overrides: Partial<PromotionDto>): PromotionDto => ({
-    id: "p",
-    internalName: "Internal",
-    headline: "Headline",
-    body: "Body",
-    code: "CODE",
-    terms: null,
-    status: "PUBLISHED",
-    startsAt: null,
-    endsAt: null,
-    priority: 0,
-    showAsPopup: true,
-    version: 3,
-    publishedAt: new Date("2026-09-01T00:00:00Z"),
-    updatedAt: now,
-    ...overrides,
-  });
-
-  it("honours start and end times exactly, from cached ISO strings", () => {
-    const candidates = [
-      publicPromotionCandidate(
-        promotion({ id: "ends", endsAt: now, priority: 9 }),
-      ),
-      publicPromotionCandidate(
-        promotion({
-          id: "starts",
-          startsAt: new Date(now.getTime() + 1),
-          priority: 8,
-        }),
-      ),
-      publicPromotionCandidate(promotion({ id: "live", priority: 1 })),
-    ];
-    // Round-trip through JSON, as the data cache does.
-    const cached = JSON.parse(JSON.stringify(candidates));
-    expect(activePromotion(cached, now)?.id).toBe("live");
-    expect(activePromotion(cached, new Date(now.getTime() + 1))?.id).toBe(
-      "starts",
-    );
-  });
-
-  it("exposes only what the popup needs", () => {
+// AC-6: the map URL is re-checked when the view model is built, so a value
+// written outside the form never reaches the iframe.
+describe("public branch view model", () => {
+  it("keeps a Google embed URL and drops anything else", () => {
+    const google = "https://www.google.com/maps/embed?pb=abc";
     expect(
-      activePromotion([publicPromotionCandidate(promotion({ id: "a" }))], now),
-    ).toEqual({
-      id: "a",
-      version: 3,
-      headline: "Headline",
-      body: "Body",
-      code: "CODE",
-      terms: null,
+      publicBranch(branchRow({ mapEmbedUrl: google }), undefined, null)
+        .mapEmbedUrl,
+    ).toBe(google);
+    for (const url of [
+      "https://evil.example/maps/embed",
+      "javascript:alert(1)",
+      "http://www.google.com/maps/embed?pb=abc",
+    ]) {
+      expect(
+        publicBranch(branchRow({ mapEmbedUrl: url }), undefined, null)
+          .mapEmbedUrl,
+      ).toBeNull();
+    }
+  });
+
+  it("carries published types and address lines", () => {
+    const view = publicBranch(
+      branchRow({ addressLine1: "Street 1", city: "Giza", country: "Egypt" }),
+      { branchId: "branch-1", stayTypes: ["APARTMENT"], hasFacilities: true },
+      null,
+    );
+    expect(view).toMatchObject({
+      addressLines: ["Street 1", "Giza, Egypt"],
+      stayTypes: ["APARTMENT"],
+      hasFacilities: true,
     });
-    expect(activePromotion([], now)).toBeNull();
   });
 });
 
@@ -160,6 +133,7 @@ describe("SubmitEnquiry", () => {
   };
   const values = {
     formToken: "valid",
+    branch: "new-cairo",
     name: "Layla Hassan",
     email: "layla@example.test",
     message: "Is the pool heated?",
@@ -195,6 +169,15 @@ describe("SubmitEnquiry", () => {
     };
     const useCase = new SubmitEnquiry({
       enquiries: enquiries as unknown as EnquiryRepository,
+      branches: fakeBranches([
+        branchRow(),
+        branchRow({
+          id: "branch-off",
+          slug: "closed",
+          name: "Closed",
+          status: "INACTIVE",
+        }),
+      ]).repository,
       throttle,
       tokens,
       delivery: delivery as never,
@@ -209,18 +192,21 @@ describe("SubmitEnquiry", () => {
     expect(
       await useCase.execute({ values, clientAddress: "203.0.113.9" }),
     ).toEqual(success("accepted"));
+    // AC-14: the enquiry records the branch whose Contact page sent it.
     expect(enquiries.create).toHaveBeenCalledWith({
       name: "Layla Hassan",
       email: "layla@example.test",
       phone: null,
       subject: null,
       message: "Is the pool heated?",
+      branchId: "branch-1",
     });
     expect(deliver).toHaveBeenCalledWith(
       expect.objectContaining({
         enquiryId: "e1",
         replyTo: "layla@example.test",
-        subject: "Website enquiry",
+        subject: "[Rivana Residence] Website enquiry",
+        text: expect.stringContaining("Branch: Rivana Residence"),
       }),
     );
     expect(enquiries.markDelivered).toHaveBeenCalledWith("e1", "m1");
@@ -284,6 +270,21 @@ describe("SubmitEnquiry", () => {
       });
     },
   );
+
+  it.each([
+    ["missing", undefined],
+    ["unknown", "luxor"],
+    ["inactive", "closed"],
+  ])("stores nothing when the branch is %s", async (_, branch) => {
+    const { useCase, enquiries } = setup();
+    expect(
+      await useCase.execute({
+        values: { ...values, branch },
+        clientAddress: null,
+      }),
+    ).toMatchObject({ ok: false, error: { code: "VALIDATION" } });
+    expect(enquiries.create).not.toHaveBeenCalled();
+  });
 
   it("rate-limits per client, or globally when the client is unknown", async () => {
     const { useCase, enquiries } = setup(null, true);

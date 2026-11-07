@@ -10,6 +10,8 @@ import {
   PAGE_SECTION_LABELS,
   isSectionPinned,
 } from "@/domain/content/page-sections";
+import { pagePath } from "@/application/public/seo";
+import { BranchSelector } from "@/presentation/admin/content/branch-selector";
 import { OrderControls } from "@/presentation/admin/content/order-controls";
 import { PublicationPanel } from "@/presentation/admin/content/publication-panel";
 import { DeniedPage } from "@/presentation/admin/denied-page";
@@ -37,8 +39,13 @@ export const metadata: Metadata = { title: "Edit page" };
 
 export default async function EditPagePage({
   params,
-}: Readonly<{ params: Promise<{ key: string }> }>) {
+  searchParams,
+}: Readonly<{
+  params: Promise<{ key: string }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}>) {
   const { key: segment } = await params;
+  const { branch: branchParam } = await searchParams;
   const key = pageKeyFromSegment(segment);
   if (!key) notFound();
   const { staff, allowed } = await requireStaff(
@@ -48,13 +55,14 @@ export default async function EditPagePage({
   if (!allowed) return <DeniedPage title="Edit page" />;
 
   const [loaded, media] = await Promise.all([
-    pageCommands().get(staff, key),
+    pageCommands().get(staff, branchParam, key),
     mediaLibrary().then((library) => library.options(staff)),
   ]);
   if (!loaded.ok) throw new Error("The page is unavailable.");
   const options = media.ok ? media.value : [];
   if (!loaded.value) notFound();
-  const { page, readiness, lockedTypes } = loaded.value;
+  const { branch, branchChoice, page, readiness, lockedTypes } = loaded.value;
+  const query = `?branch=${encodeURIComponent(branch.slug)}`;
   const sections = page.sections;
   const firstMovable = sections[0]?.type === "HERO" ? 1 : 0;
   const lastMovable =
@@ -66,21 +74,26 @@ export default async function EditPagePage({
     <>
       <PageHeader
         title={`${page.title} page`}
+        description={<p>{branch.name}</p>}
         breadcrumbs={[
           { label: "Overview", href: "/admin" },
-          { label: "Pages", href: "/admin/pages" },
+          { label: "Pages", href: `/admin/pages${query}` as Route },
         ]}
+      />
+      <BranchSelector
+        action={`/admin/pages/${segment}` as Route}
+        choice={branchChoice}
       />
       <PublicationPanel
         name={`the ${page.title} page`}
         noun="page"
         status={page.isPublished ? "PUBLISHED" : "DRAFT"}
         readiness={readiness}
-        publicPath={page.canonicalPath}
-        previewHref={`/admin/pages/${segment}/preview` as Route}
+        publicPath={pagePath(branch.slug, key)}
+        previewHref={`/admin/pages/${segment}/preview${query}` as Route}
         actions={{
-          publish: publishPageAction.bind(null, key),
-          unpublish: unpublishPageAction.bind(null, key),
+          publish: publishPageAction.bind(null, branch.slug, key),
+          unpublish: unpublishPageAction.bind(null, branch.slug, key),
         }}
       />
 
@@ -123,7 +136,12 @@ export default async function EditPagePage({
                       isVisible={section.isVisible}
                       locked={locked}
                       payload={section.payload}
-                      action={saveSectionAction.bind(null, key, section.id)}
+                      action={saveSectionAction.bind(
+                        null,
+                        branch.slug,
+                        key,
+                        section.id,
+                      )}
                     />
                     {SECTION_MEDIA_SLOTS[section.type] ? (
                       <SectionImagesForm
@@ -143,6 +161,7 @@ export default async function EditPagePage({
                         )}
                         action={saveSectionMediaAction.bind(
                           null,
+                          branch.slug,
                           key,
                           section.id,
                         )}
@@ -160,8 +179,20 @@ export default async function EditPagePage({
                     name={name}
                     isFirst={index <= firstMovable}
                     isLast={index >= lastMovable}
-                    moveUp={moveSectionAction.bind(null, key, section.id, -1)}
-                    moveDown={moveSectionAction.bind(null, key, section.id, 1)}
+                    moveUp={moveSectionAction.bind(
+                      null,
+                      branch.slug,
+                      key,
+                      section.id,
+                      -1,
+                    )}
+                    moveDown={moveSectionAction.bind(
+                      null,
+                      branch.slug,
+                      key,
+                      section.id,
+                      1,
+                    )}
                     className="pt-2 max-[30rem]:pt-0"
                   />
                 )}
@@ -173,7 +204,7 @@ export default async function EditPagePage({
 
       <Panel title="Search appearance" titleId="page-details-title" wide>
         <PageDetailsForm
-          action={savePageDetailsAction.bind(null, key)}
+          action={savePageDetailsAction.bind(null, branch.slug, key)}
           seoTitle={page.seoTitle ?? ""}
           seoDescription={page.seoDescription ?? ""}
           ogMediaId={page.ogMediaId}

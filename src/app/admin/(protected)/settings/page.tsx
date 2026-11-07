@@ -118,8 +118,8 @@ export default async function SettingsPage() {
 
       <Panel title="Property time zone" titleId="timezone-title" wide>
         <p>
-          <strong>{current.timeZone}</strong>. Promotion schedules and admin
-          times use this zone. Changing it requires a developer.
+          <strong>{current.timeZone}</strong>. Admin times use this zone.
+          Changing it requires a developer.
         </p>
       </Panel>
 

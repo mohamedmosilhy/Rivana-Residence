@@ -12,6 +12,13 @@ import type {
 } from "@/application/ports/repositories";
 import { pageCount, parsePageNumber } from "@/application/shared/pagination";
 
+import { branchRow, fakeBranches } from "../../support/fake-branches";
+
+const BRANCHES = fakeBranches([
+  branchRow({ id: "branch-a", slug: "a" }),
+  branchRow({ id: "branch-b", slug: "b", sortOrder: 1 }),
+]).repository;
+
 const editor: StaffPrincipal = {
   id: "editor-1",
   name: "Omar Editor",
@@ -59,6 +66,7 @@ describe("enquiry list query", () => {
     const repository = { listAdminPage: vi.fn() };
     const useCase = new ListEnquiries(
       repository as unknown as EnquiryRepository,
+      BRANCHES,
     );
 
     expect(await useCase.execute(null, {})).toMatchObject({
@@ -73,6 +81,7 @@ describe("enquiry list query", () => {
     const repository = { listAdminPage: vi.fn(async () => page) };
     const useCase = new ListEnquiries(
       repository as unknown as EnquiryRepository,
+      BRANCHES,
     );
 
     const result = await useCase.execute(editor, { page: "2" });
@@ -83,6 +92,7 @@ describe("enquiry list query", () => {
       page: 2,
       pageSize: 20,
       branchScope: "ALL",
+      branchId: null,
     });
     expect(result).toMatchObject({ ok: true, value: { total: 0, page: 2 } });
   });
@@ -100,12 +110,50 @@ describe("enquiry list query", () => {
       const repository = { listAdminPage: vi.fn(async () => page) };
       await new ListEnquiries(
         repository as unknown as EnquiryRepository,
+        BRANCHES,
       ).execute({ ...editor, role, branchIds }, {});
       expect(repository.listAdminPage).toHaveBeenCalledWith(
         expect.objectContaining({ branchScope: scope }),
       );
     },
   );
+});
+
+// AC-14: the branch filter narrows inside the caller's scope, never beyond.
+describe("enquiry branch filter", () => {
+  const page = { items: [], total: 0, page: 1, pageSize: 20 };
+
+  it("filters by a branch slug resolved on the server", async () => {
+    const repository = { listAdminPage: vi.fn(async () => page) };
+    const result = await new ListEnquiries(
+      repository as unknown as EnquiryRepository,
+      BRANCHES,
+    ).execute(editor, { branch: "b" });
+    expect(repository.listAdminPage).toHaveBeenCalledWith(
+      expect.objectContaining({ branchScope: "ALL", branchId: "branch-b" }),
+    );
+    expect(result).toMatchObject({
+      ok: true,
+      value: { query: { branch: "b" } },
+    });
+  });
+
+  it("ignores a branch outside a receptionist's scope", async () => {
+    const repository = { listAdminPage: vi.fn(async () => page) };
+    const result = await new ListEnquiries(
+      repository as unknown as EnquiryRepository,
+      BRANCHES,
+    ).execute(
+      { ...editor, role: "RECEPTIONIST", branchIds: ["branch-a"] },
+      { branch: "b" },
+    );
+    expect(repository.listAdminPage).toHaveBeenCalledWith(
+      expect.objectContaining({ branchScope: ["branch-a"], branchId: null }),
+    );
+    expect(result.ok && result.value.branches.map((b) => b.slug)).toEqual([
+      "a",
+    ]);
+  });
 });
 
 describe("GetAdminOverview", () => {

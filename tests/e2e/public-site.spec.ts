@@ -14,28 +14,32 @@ const OUTBOX = "/tmp/rivana-e2e-outbox";
 
 // Every public template, with the entity it renders.
 const ROUTES = [
-  { path: "/", heading: "Rivana Residence", source: "Page HOME" },
-  { path: "/about", heading: /About Rivana/, source: "Page ABOUT" },
-  { path: "/contact", heading: "Contact us", source: "Page CONTACT" },
-  { path: "/rooms", heading: "Rooms", source: "Published rooms" },
+  { path: "/new-cairo", heading: "Rivana Residence", source: "Page HOME" },
+  { path: "/new-cairo/about", heading: /About Rivana/, source: "Page ABOUT" },
+  { path: "/new-cairo/contact", heading: "Contact us", source: "Page CONTACT" },
+  { path: "/new-cairo/stay", heading: "Rooms", source: "Published rooms" },
   {
-    path: "/rooms/studio-with-balcony",
+    path: "/new-cairo/stay/studio-with-balcony",
     heading: "Studio with Balcony",
     source: "Room",
   },
-  { path: "/rooms/deluxe-double", heading: "Deluxe Double", source: "Room" },
   {
-    path: "/facilities",
+    path: "/new-cairo/stay/deluxe-double",
+    heading: "Deluxe Double",
+    source: "Room",
+  },
+  {
+    path: "/new-cairo/facilities",
     heading: "Facilities",
     source: "Published facilities",
   },
   {
-    path: "/facilities/swimming-pool",
+    path: "/new-cairo/facilities/swimming-pool",
     heading: "Swimming Pool",
     source: "Facility",
   },
   {
-    path: "/facilities/fitness-room",
+    path: "/new-cairo/facilities/fitness-room",
     heading: "Fitness Room",
     source: "Facility",
   },
@@ -96,10 +100,8 @@ test("publishes unique metadata, canonicals, crawl files, and safe structured da
   const titles = new Set<string>();
   for (const route of ROUTES) {
     await page.goto(route.path);
-    const canonical =
-      route.path === "/"
-        ? "http://127.0.0.1:3100"
-        : `http://127.0.0.1:3100${route.path}`;
+    // AC-8: canonicals are branch URLs.
+    const canonical = `http://127.0.0.1:3100${route.path}`;
     const title = await page.title();
     expect(titles.has(title), `duplicate title: ${title}`).toBe(false);
     titles.add(title);
@@ -113,7 +115,7 @@ test("publishes unique metadata, canonicals, crawl files, and safe structured da
     );
   }
 
-  await page.goto("/rooms/studio-with-balcony");
+  await page.goto("/new-cairo/stay/studio-with-balcony");
   const jsonLd = await page
     .locator('script[type="application/ld+json"]')
     .allTextContents();
@@ -134,29 +136,48 @@ test("publishes unique metadata, canonicals, crawl files, and safe structured da
   expect(sitemap).not.toContain("private-draft-room");
   expect(sitemap).not.toContain("retired-room");
   expect(sitemap).not.toContain("/admin");
+  // AC-8: only active branches; `/` only while it is the chooser.
+  expect(sitemap).not.toContain("demo-giza");
+  expect(sitemap).not.toContain("<loc>http://127.0.0.1:3100/</loc>");
 
   const robots = await (await request.get("/robots.txt")).text();
   expect(robots).toContain("Disallow: /admin/");
   expect(robots).toContain("Sitemap: http://127.0.0.1:3100/sitemap.xml");
 });
 
-test("legacy public URLs redirect permanently to canonical routes", async ({
+// AC-2, E2E-S-4: every old URL reaches its branch page in one permanent
+// hop, and `/` sends a one-branch site to that branch with a 307.
+test("old public URLs redirect once, permanently, to the branch", async ({
   request,
   isMobile,
 }) => {
   test.skip(isMobile, "Redirect responses are identical across viewports.");
   const redirects = {
-    "/about.html": "/about",
-    "/rooms.html": "/rooms",
-    "/room-studio-balcony.html": "/rooms/studio-with-balcony",
-    "/gym.html": "/facilities/fitness-room",
-    "/swimming-pool.html": "/facilities/swimming-pool",
+    "/about": "/new-cairo/about",
+    "/contact": "/new-cairo/contact",
+    "/rooms": "/new-cairo/stay",
+    "/rooms/studio-with-balcony": "/new-cairo/stay/studio-with-balcony",
+    "/facilities": "/new-cairo/facilities",
+    "/facilities/swimming-pool": "/new-cairo/facilities/swimming-pool",
+    "/index.html": "/new-cairo",
+    "/about.html": "/new-cairo/about",
+    "/contact.html": "/new-cairo/contact",
+    "/rooms.html": "/new-cairo/stay",
+    "/room-studio-balcony.html": "/new-cairo/stay/studio-with-balcony",
+    "/room-deluxe-double.html": "/new-cairo/stay/deluxe-double",
+    "/gym.html": "/new-cairo/facilities/fitness-room",
+    "/swimming-pool.html": "/new-cairo/facilities/swimming-pool",
   } as const;
   for (const [source, destination] of Object.entries(redirects)) {
     const response = await request.get(source, { maxRedirects: 0 });
-    expect(response.status()).toBe(308);
+    expect(response.status(), source).toBe(308);
     expect(response.headers().location).toBe(destination);
+    const final = await request.get(destination, { maxRedirects: 0 });
+    expect(final.status(), destination).toBe(200);
   }
+  const root = await request.get("/", { maxRedirects: 0 });
+  expect(root.status()).toBe(307);
+  expect(root.headers().location).toBe("/new-cairo");
 });
 
 test("published pages contain no broken internal links or images", async ({
@@ -195,15 +216,15 @@ test("unpublished, archived, and unknown content returns 404", async ({
   request,
 }) => {
   for (const path of [
-    "/rooms/private-draft-room",
-    "/rooms/retired-room",
-    "/facilities/spa",
-    "/rooms/does-not-exist",
+    "/new-cairo/stay/private-draft-room",
+    "/new-cairo/stay/retired-room",
+    "/new-cairo/facilities/spa",
+    "/new-cairo/stay/does-not-exist",
     "/not-a-page",
   ]) {
     expect((await request.get(path)).status(), path).toBe(404);
   }
-  await page.goto("/rooms/private-draft-room");
+  await page.goto("/new-cairo/stay/private-draft-room");
   await expect(
     page.getByRole("heading", {
       level: 1,
@@ -211,14 +232,14 @@ test("unpublished, archived, and unknown content returns 404", async ({
     }),
   ).toBeVisible();
 
-  await page.goto("/rooms");
+  await page.goto("/new-cairo/stay");
   const list = page.locator("main");
   await expect(
     list.getByRole("link", { name: "Studio with Balcony" }),
   ).toBeVisible();
   await expect(list.getByText("Private Draft Room")).toHaveCount(0);
   await expect(list.getByText("Retired Room")).toHaveCount(0);
-  await page.goto("/facilities");
+  await page.goto("/new-cairo/facilities");
   await expect(
     page.locator("main").getByText("Spa", { exact: true }),
   ).toHaveCount(0);
@@ -228,7 +249,7 @@ test("visitors can navigate every route from the header", async ({
   page,
   isMobile,
 }) => {
-  await page.goto("/");
+  await page.goto("/new-cairo");
   for (const [label, heading] of [
     ["Rooms", "Rooms"],
     ["Facilities", "Facilities"],
@@ -253,9 +274,9 @@ test("visitors can navigate every route from the header", async ({
     ).toBeVisible();
   }
   // Cards lead to details.
-  await page.goto("/rooms");
+  await page.goto("/new-cairo/stay");
   await page.getByRole("link", { name: "Deluxe Double" }).click();
-  await expect(page).toHaveURL(/\/rooms\/deluxe-double$/);
+  await expect(page).toHaveURL(/\/new-cairo\/stay\/deluxe-double$/);
 });
 
 test("keyboard users can skip to content and reach the navigation", async ({
@@ -265,14 +286,14 @@ test("keyboard users can skip to content and reach the navigation", async ({
 }) => {
   test.skip(isMobile, "Keyboard flow is exercised on desktop.");
   const tab = tabKey(browserName);
-  await page.goto("/");
+  await page.goto("/new-cairo");
   await page.keyboard.press(tab);
   await expect(
     page.getByRole("link", { name: "Skip to content" }),
   ).toBeFocused();
   await page.keyboard.press("Enter");
   await expect(page.locator("#main-content")).toBeFocused();
-  await page.goto("/");
+  await page.goto("/new-cairo");
   await page.keyboard.press(tab);
   await page.keyboard.press(tab);
   await expect(
@@ -301,7 +322,11 @@ test("controls meet the touch-target minimum on phones", async ({
   isMobile,
 }) => {
   test.skip(!isMobile, "Touch targets are measured on the phone viewport.");
-  for (const path of ["/", "/rooms/studio-with-balcony", "/contact"]) {
+  for (const path of [
+    "/new-cairo",
+    "/new-cairo/stay/studio-with-balcony",
+    "/new-cairo/contact",
+  ]) {
     await page.goto(path);
     const small = await page
       .locator(
@@ -338,7 +363,7 @@ test("forced colours keep text, controls, and edges legible", async ({
   test.skip(isMobile, "The high-contrast pass runs once on desktop.");
   test.skip(browserName !== "chromium", "Forced colours emulate in Chromium.");
   await page.emulateMedia({ forcedColors: "active" });
-  await page.goto("/rooms/studio-with-balcony");
+  await page.goto("/new-cairo/stay/studio-with-balcony");
   const result = await page.evaluate(() => {
     const colour = (selector: string, property: "color" | "borderTopColor") =>
       getComputedStyle(document.querySelector(selector)!)[property];
@@ -364,7 +389,7 @@ test("reduced-motion preference removes non-essential motion", async ({
 }) => {
   test.skip(isMobile, "The reduced-motion pass runs once on desktop.");
   await page.emulateMedia({ reducedMotion: "reduce" });
-  await page.goto("/");
+  await page.goto("/new-cairo");
   const motion = await page
     .locator("[data-book-now] button")
     .first()
@@ -392,7 +417,7 @@ test("reduced-motion preference removes non-essential motion", async ({
 test("rooms show verified facts only: no prices, dates, or availability", async ({
   page,
 }) => {
-  await page.goto("/rooms/studio-with-balcony");
+  await page.goto("/new-cairo/stay/studio-with-balcony");
   const facts = page.getByRole("definition");
   await expect(facts.filter({ hasText: "38 m²" })).toBeVisible();
   await expect(facts.filter({ hasText: "2 adults + 1 child" })).toBeVisible();
@@ -426,7 +451,7 @@ test("rooms show verified facts only: no prices, dates, or availability", async 
 test("every Book Now control is inert, goes nowhere, and explains itself", async ({
   page,
 }) => {
-  for (const path of ["/", "/rooms/studio-with-balcony"]) {
+  for (const path of ["/new-cairo", "/new-cairo/stay/studio-with-balcony"]) {
     await page.goto(path);
     const controls = page.locator("[data-booking]");
     const count = await controls.count();
@@ -470,18 +495,18 @@ test("every Book Now control is inert, goes nowhere, and explains itself", async
 test("pages work without JavaScript", async ({ browser }) => {
   const context = await browser.newContext({ javaScriptEnabled: false });
   const page = await context.newPage();
-  await page.goto("/");
+  await page.goto("/new-cairo");
   await expect(
     page.getByRole("heading", { level: 1, name: "Rivana Residence" }),
   ).toBeVisible();
   await expect(
     page.getByRole("link", { name: "Studio with Balcony" }).first(),
   ).toBeVisible();
-  await page.goto("/rooms/studio-with-balcony");
+  await page.goto("/new-cairo/stay/studio-with-balcony");
   await expect(
     page.getByRole("heading", { level: 1, name: "Studio with Balcony" }),
   ).toBeVisible();
-  await page.goto("/contact");
+  await page.goto("/new-cairo/contact");
   await expect(page.getByLabel("Message")).toBeVisible();
   await context.close();
 });
@@ -489,7 +514,7 @@ test("pages work without JavaScript", async ({ browser }) => {
 test("the hero image is the preloaded LCP candidate with meaningful alt text", async ({
   page,
 }) => {
-  await page.goto("/");
+  await page.goto("/new-cairo");
   const hero = page.locator("main img").first();
   await expect(hero).toHaveAttribute("alt", /lobby/i);
   expect(await hero.getAttribute("loading")).not.toBe("lazy");
@@ -502,7 +527,7 @@ test.describe("interaction and motion", () => {
   test("the photo viewer fits the screen and shows the whole photo", async ({
     page,
   }) => {
-    await page.goto("/rooms/studio-with-balcony");
+    await page.goto("/new-cairo/stay/studio-with-balcony");
     // Portrait (the project's own viewport) and a phone turned sideways.
     for (const viewport of [
       page.viewportSize()!,
@@ -570,7 +595,7 @@ test.describe("interaction and motion", () => {
     browserName,
   }) => {
     test.skip(isMobile, "Keyboard flow is exercised on desktop.");
-    await page.goto("/rooms/studio-with-balcony");
+    await page.goto("/new-cairo/stay/studio-with-balcony");
     const gallery = page.getByRole("list", {
       name: "Photos of Studio with Balcony",
     });
@@ -581,7 +606,7 @@ test.describe("interaction and motion", () => {
       name: "Photos of Studio with Balcony",
     });
     await expect(viewer).toBeVisible();
-    await expect(page).toHaveURL(/\/rooms\/studio-with-balcony$/);
+    await expect(page).toHaveURL(/\/new-cairo\/stay\/studio-with-balcony$/);
     const status = viewer.getByRole("status");
     await expect(status).toContainText("Photo 1 of 3");
     await expect(
@@ -613,7 +638,7 @@ test.describe("interaction and motion", () => {
 
   test("the photo viewer responds to swipes", async ({ page, isMobile }) => {
     test.skip(!isMobile, "Swipe is exercised on the phone viewport.");
-    await page.goto("/rooms/studio-with-balcony");
+    await page.goto("/new-cairo/stay/studio-with-balcony");
     await page
       .getByRole("list", { name: "Photos of Studio with Balcony" })
       .getByRole("link")
@@ -639,7 +664,7 @@ test.describe("interaction and motion", () => {
 
   test("the mobile menu is a modal sheet", async ({ page, isMobile }) => {
     test.skip(!isMobile, "The menu sheet is the phone navigation.");
-    await page.goto("/");
+    await page.goto("/new-cairo");
     const toggle = page.locator("[data-site-menu] > summary");
     await toggle.click();
     const menu = page.getByRole("navigation", { name: "Main (menu)" });
@@ -683,7 +708,7 @@ test.describe("interaction and motion", () => {
   });
 
   test("content below the fold is revealed on scroll", async ({ page }) => {
-    await page.goto("/");
+    await page.goto("/new-cairo");
     const cards = page.locator("main article");
     await expect(cards.first()).toBeAttached();
     await cards.first().scrollIntoViewIfNeeded();
@@ -696,7 +721,7 @@ test.describe("interaction and motion", () => {
     isMobile,
   }) => {
     test.skip(isMobile, "Scroll direction is exercised on desktop.");
-    await page.goto("/");
+    await page.goto("/new-cairo");
     const header = page.locator("[data-site-header]");
     // Scroll only once the enhancement is listening; a scroll that lands
     // before hydration is (correctly) treated as the starting position.
@@ -721,7 +746,7 @@ test.describe("interaction and motion", () => {
   }) => {
     test.skip(isMobile, "The reduced-motion pass runs once on desktop.");
     await page.emulateMedia({ reducedMotion: "reduce" });
-    await page.goto("/");
+    await page.goto("/new-cairo");
     await page.waitForLoadState("networkidle");
     await expect(page.locator('[data-reveal-state="hidden"]')).toHaveCount(0);
     await page.mouse.wheel(0, 1400);
@@ -757,7 +782,7 @@ test.describe("contact form", () => {
   }
 
   test("explains invalid input and keeps what was typed", async ({ page }) => {
-    await page.goto("/contact");
+    await page.goto("/new-cairo/contact");
     await page.waitForTimeout(3100);
     await fill(page, { email: "not-an-email", message: "Hi <b>there</b>" });
     await page.getByRole("button", { name: "Send message" }).click();
@@ -776,7 +801,7 @@ test.describe("contact form", () => {
   });
 
   test("saves and delivers an enquiry", async ({ page }) => {
-    await page.goto("/contact");
+    await page.goto("/new-cairo/contact");
     await page.waitForTimeout(3100);
     await fill(page, { name: "Delivery Check" });
     await page.getByRole("button", { name: "Send message" }).click();
@@ -804,7 +829,7 @@ test.describe("contact form", () => {
     await rename(OUTBOX, `${OUTBOX}-saved`).catch(() => undefined);
     await writeFile(OUTBOX, "not a directory");
     try {
-      await page.goto("/contact");
+      await page.goto("/new-cairo/contact");
       await page.waitForTimeout(3100);
       await fill(page, { name: "Failure Check" });
       await page.getByRole("button", { name: "Send message" }).click();
@@ -827,7 +852,7 @@ test.describe("contact form", () => {
   });
 
   test("silently ignores bots", async ({ page }) => {
-    await page.goto("/contact");
+    await page.goto("/new-cairo/contact");
     // Submitted immediately, like a script: accepted-looking but discarded.
     await fill(page, { name: "Fast Bot" });
     await page.getByRole("button", { name: "Send message" }).click();
@@ -837,7 +862,7 @@ test.describe("contact form", () => {
         .filter({ hasText: "Your message has been sent" }),
     ).toBeVisible();
 
-    await page.goto("/contact");
+    await page.goto("/new-cairo/contact");
     await page.waitForTimeout(3100);
     await fill(page, { name: "Honeypot Bot" });
     await page

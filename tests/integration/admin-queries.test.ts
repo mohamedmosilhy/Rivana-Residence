@@ -47,39 +47,13 @@ async function enquiry(
   });
 }
 
-async function promotion(
-  id: string,
-  overrides: Partial<{
-    status: "DRAFT" | "PUBLISHED" | "ARCHIVED";
-    startsAt: Date | null;
-    endsAt: Date | null;
-    priority: number;
-    showAsPopup: boolean;
-  }> = {},
-) {
-  return client.promotion.create({
-    data: {
-      id,
-      internalName: `Campaign ${id}`,
-      headline: `Headline ${id}`,
-      body: "Stay longer.",
-      code: id.toUpperCase(),
-      status: overrides.status ?? "PUBLISHED",
-      startsAt: overrides.startsAt ?? null,
-      endsAt: overrides.endsAt ?? null,
-      priority: overrides.priority ?? 0,
-      showAsPopup: overrides.showAsPopup ?? true,
-      publishedAt: overrides.status === "DRAFT" ? null : hours(-48),
-    },
-  });
-}
-
 describe("enquiry listing", () => {
   it("pages newest first with an exact total", async () => {
     for (let index = 1; index <= 25; index += 1) await enquiry(index);
 
     const second = await enquiries.listAdminPage({
       branchScope: "ALL",
+      branchId: null,
       status: null,
       search: null,
       page: 2,
@@ -104,6 +78,7 @@ describe("enquiry listing", () => {
     const search = (text: string, status: "NEW" | "READ" | null = null) =>
       enquiries.listAdminPage({
         branchScope: "ALL",
+        branchId: null,
         status,
         search: text,
         page: 1,
@@ -128,6 +103,7 @@ describe("enquiry listing", () => {
     await enquiry(1);
     const page = await enquiries.listAdminPage({
       branchScope: "ALL",
+      branchId: null,
       status: null,
       search: null,
       page: 5,
@@ -186,31 +162,11 @@ describe("admin overview", () => {
     expect(times).toEqual([...times].sort((a, b) => b - a));
   });
 
-  it("reports the promotion the public site shows and the next scheduled one", async () => {
-    await promotion("low", { priority: 1 });
-    await promotion("high", { priority: 5, endsAt: hours(24) });
-    await promotion("draft", { status: "DRAFT", priority: 99 });
-    await promotion("expired", { priority: 99, endsAt: hours(-1) });
-    await promotion("hidden", { priority: 99, showAsPopup: false });
-    await promotion("later", { startsAt: hours(48) });
-    await promotion("soon", { startsAt: hours(2) });
-
-    const { promotions } = await overview.read(now, 6);
-
-    expect(promotions.active).toMatchObject({ id: "high", endsAt: hours(24) });
-    expect(promotions.scheduledCount).toBe(2);
-    expect(promotions.nextScheduled).toMatchObject({
-      id: "soon",
-      startsAt: hours(2),
-    });
-  });
-
   it("works on an empty database", async () => {
     const result = await overview.read(now, 6);
     expect(result).toMatchObject({
       timeZone: "Africa/Cairo",
       pages: { published: 0, total: 0 },
-      promotions: { active: null, scheduledCount: 0, nextScheduled: null },
       recent: [],
     });
   });

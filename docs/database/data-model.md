@@ -23,8 +23,8 @@ The implemented schema is `prisma/schema.prisma` (5 migrations; M4 added `…_st
 | Site and pages | `SiteSettings`, `SocialLink`, `Page`, `PageSection`, `PageSectionMedia` | Implemented; `Page.branchId` with unique `(branchId, key)` and `(branchId, canonicalPath)` (M4) |
 | Rooms and facilities | `Room`, `RoomFeature`, `RoomMedia`, `Facility`, `FacilityMedia` | Implemented; `Room.branchId`, `Room.accommodationType`, `bedroomCount`, `bathroomCount`, `Facility.branchId`, and per-branch display order (M4) |
 | Media | `MediaAsset` | Implemented |
-| Marketing and enquiries | `Promotion` (retired, Q-47; unused from M5, dropped later), `ContactEnquiry` | Implemented; `ContactEnquiry.branchId` nullable (M4; recorded from M5) |
-| Branches | `Branch`, `StaffBranchAssignment` | Implemented (M4) |
+| Marketing and enquiries | `Promotion` (retired, Q-47; unused since M5, dropped later), `ContactEnquiry` | Implemented; `ContactEnquiry.branchId` nullable (M4), recorded by the contact form since M5 |
+| Branches | `Branch`, `StaffBranchAssignment` | Implemented (M4); edited through the branch admin and API since M5; reserved slugs extended by migration `20261107120000_reserve_legacy_branch_slugs` (M5) |
 | Inventory | `PhysicalRoom`, `InventoryBlock` | Planned (M6) |
 | Pricing | `RoomBaseRate`, `RatePeriod` (M6); `ServiceOffering`, `Coupon`, `CouponBranch`, `CommercialSettings` (M7) | Planned |
 | Reservations | `Reservation`, `ReservationRoom`, `ReservationNight`, `ReservationService`, `CouponRedemption`, `BranchSyncCheckpoint` | Planned (M8) |
@@ -43,9 +43,9 @@ Purpose: one record for global identity and defaults.
 Important fields:
 
 - `id` fixed to `default` or protected by a singleton unique key;
-- `timeZone` as a required IANA identifier (initially `Africa/Cairo`) for promotion scheduling and editorial date display;
-- `siteName`, `tagline`, `phone`, `email`, `addressLine1`, `addressLine2`, `city`, `country`;
-- `latitude`, `longitude`, `mapEmbedUrl` (optional, allowlisted/validated);
+- `timeZone` as a required IANA identifier (initially `Africa/Cairo`) for editorial date display;
+- `siteName`, `tagline`;
+- `phone`, `email`, `addressLine1`, `addressLine2`, `city`, `country`, `latitude`, `longitude`, `mapEmbedUrl`: **retired in M5** (contact and map live on each `Branch`); the columns stay, unused and no longer written, until a later contract migration;
 - `footerText`, `defaultSeoTitle`, `defaultSeoDescription`;
 - `logoMediaId`, `stickyLogoMediaId`, `faviconMediaId` nullable until setup;
 - `updatedAt`, `updatedById`.
@@ -70,7 +70,7 @@ Fields: `id`, `key` (`HOME|ABOUT|CONTACT`), `title`, `seoTitle`, `seoDescription
 
 Relationships: many `PageSection`; optional OG media.
 
-Constraints/indexes: unique `key`; unique `canonicalPath`; index `isPublished` is not important at this scale but may be combined with key by the unique constraint.
+Constraints/indexes: unique `(branchId, key)` and `(branchId, canonicalPath)` since M4. `canonicalPath` is a path inside the branch (`/`, `/about`, `/contact`); the public path is `/{branch.slug}` plus it.
 
 ### `PageSection`
 
@@ -157,7 +157,7 @@ Constraints/indexes: unique `(storageProvider, storageContainer, storageKey)`; o
 
 ### `Promotion`
 
-Status: **implemented; retired by Q-47.** From M5 nothing reads or writes it; it is dropped by a later expand-and-contract migration after launch. Coupons (`Coupon`, below) replace it.
+Status: **retired by Q-47.** Since M5 nothing reads or writes it; it is dropped by a later expand-and-contract migration after launch. Coupons (`Coupon`, below) replace it.
 
 Purpose: scheduled public promotion-code campaign managed by staff.
 
@@ -615,7 +615,8 @@ ALTER TABLE "CommercialSettings" ADD CHECK ("vatRateBasisPoints" IS NULL OR "vat
 ALTER TABLE "Reservation"     ADD CHECK ("status" <> 'AWAITING_PAYMENT' OR ("paymentMethod" = 'PAYMOB' AND "holdExpiresAt" IS NOT NULL));
 ALTER TABLE "Reservation"     ADD CHECK ("totalMinor" IS NULL OR ("totalMinor" = "taxableMinor" + "vatMinor" AND "taxableMinor" = "subtotalMinor" - "discountMinor" AND "discountMinor" >= 0 AND "taxableMinor" >= 0));
 CREATE UNIQUE INDEX "CancellationRequest_one_open" ON "CancellationRequest" ("reservationId") WHERE "status" = 'OPEN';
-ALTER TABLE "Branch"          ADD CHECK ("slug" NOT IN ('admin','api','media','reservations','book'));
+-- Implemented as "Branch_slug_check" (M4, extended in M5): format, the reserved list, and no *.html.
+ALTER TABLE "Branch"          ADD CHECK ("slug" NOT IN ('admin','api','media','reservations','book','sitemap.xml','robots.txt','about','contact','rooms','facilities') AND "slug" NOT LIKE '%.html');
 ALTER TABLE "RoomBaseRate"    ADD CHECK ("amountMinor" > 0);
 ALTER TABLE "ReservationNight" ADD CHECK ("amountMinor" IS NULL OR "amountMinor" >= 0);
 ALTER TABLE "Reservation"     ADD CHECK ("source" <> 'EXTERNAL' OR "externalReference" IS NOT NULL);

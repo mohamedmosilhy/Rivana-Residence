@@ -33,15 +33,22 @@ export function catalogActions<Dto extends CatalogRecord, Input>(
 
   return {
     async create(formData: FormData): Promise<FormState> {
+      const values = formDataValues(formData);
       const result = await commands().create(
         await getCurrentStaff(),
-        toInput(formDataValues(formData)),
+        typeof values.branch === "string" ? values.branch : null,
+        toInput(values),
       );
       if (result.ok) {
         revalidatePath(basePath);
         redirect(`${editPath(result.value.id)}?notice=created` as Route);
       }
-      return actionResult(result, `${basePath}/new`, "", typedValues(formData));
+      return actionResult(
+        result,
+        `${basePath}/new${typeof values.branch === "string" ? `?branch=${encodeURIComponent(values.branch)}` : ""}`,
+        "",
+        typedValues(formData),
+      );
     },
 
     async update(id: string, formData: FormData): Promise<FormState> {

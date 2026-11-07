@@ -4,7 +4,7 @@ Planned tests for branch websites, reservations, payments, and messaging, by lay
 
 ## Implemented so far
 
-M4 (2026-11-06) implemented these ids; everything else below is still planned.
+M4 (2026-11-06) and M5 (2026-11-07) implemented these ids; everything else below is still planned.
 
 | Id | Where |
 | --- | --- |
@@ -14,7 +14,14 @@ M4 (2026-11-06) implemented these ids; everything else below is still planned.
 | T-DB-1, T-DB-2 | `tests/integration/branches-migration.test.ts` (M3 data → M4 migrations, no drift), `branches.test.ts` (per-branch keys and order, branch checks) |
 | T-AUD-1 | `tests/integration/branches.test.ts` (rollback leaves no row); CLI audit rows in `staff-branches.test.ts` |
 | T-SITE-7 (reserved slugs) | `tests/unit/domain/branches-audit.test.ts`, plus the `Branch_slug_check` constraint in `branches.test.ts` |
-| E2E-A-2 (first part) | `tests/e2e/branch-roles.spec.ts` (Receptionist and Manager: staff home, denied CMS routes, refused CMS action) |
+| E2E-A-2 (first part) | `tests/e2e/branch-roles.spec.ts` (Receptionist and Manager: staff home, denied CMS routes including `/admin/branches`, refused CMS action) |
+| T-SITE-1, T-SITE-2 (M5) | `tests/integration/public-site.test.ts` "branch isolation" (listings, facilities, flags, inactive branch hidden, map re-check) |
+| T-SITE-3 (M5) | `tests/integration/branch-api.test.ts` (API-A2 seeds three unpublished pages and an audit row), `branches.test.ts` (atomic creation rolls back) |
+| T-SITE-4 (M5) | `tests/unit/domain/branch-websites.test.ts` (ManageBranches tag sets), `tests/unit/content/catalog-commands.test.ts`, `page-commands.test.ts`, `tests/unit/media/media-policy.test.ts`; `branch-api.test.ts` (no other branch's tag expires) |
+| T-SITE-5…8 (M5) | `tests/unit/domain/branch-websites.test.ts` (stay label, switch target, reserved slugs incl. `about`/`contact`/`rooms`/`facilities`, map allowlist, branch schemas, redirect table, default-branch guard), `tests/unit/public/components.test.tsx` (switcher, links, badge, map), `public-site.test.ts` (map URL re-check), `sitemap.test.ts` |
+| T-BR-1…4 (M5) | `tests/integration/branch-api.test.ts` (P1–P4, A1–A3: 200/201/400/401/403/404/409/422, online booking refused, audit, tags) |
+| T-CAT-1, T-CAT-2 (M5) | `tests/integration/content-writes.test.ts` "accommodation type", `public-site.test.ts`, `tests/unit/content/forms.test.ts` |
+| E2E-S-1…5 (M5) | `tests/e2e/public-site.spec.ts` (one branch: `/` 307, redirect table, canonicals, sitemap) and `tests/e2e/branch-websites.spec.ts` (activates `demo-giza` through the admin: chooser, switcher, isolation, distinct titles, apartment, map and blocked frames, no popup, CMS selector, settings, default-branch guard) |
 
 ## Unit (domain/application; no database)
 
