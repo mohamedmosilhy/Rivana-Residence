@@ -1,6 +1,6 @@
 # Milestone briefs (M4–M15)
 
-One brief per forward milestone. Each brief is the contract for one reviewable, tested slice: what to build, in which order, which files and tables it touches, how to prove it, and which agent skills to run at each step. The [roadmap](../roadmap.md#reservation-milestones) holds the sequence and status; these briefs hold the detail. The plan was approved by the project owner on 2026-11-06. None of these milestones has started.
+One brief per forward milestone. Each brief is the contract for one reviewable, tested slice: what to build, in which order, which files and tables it touches, how to prove it, and which agent skills to run at each step. The [roadmap](../roadmap.md#reservation-milestones) holds the sequence and status; these briefs hold the detail. The plan was approved by the project owner on 2026-11-06. Each milestone's status is in the roadmap.
 
 | Brief | Scope |
 | --- | --- |
@@ -21,7 +21,7 @@ One brief per forward milestone. Each brief is the contract for one reviewable, 
 
 A short request such as "Start milestone 4 using docs/delivery/milestones/README.md" means all of this, even when the request does not repeat it:
 
-1. Open the brief for that milestone from the table above and use the branch named for it in [Extra lines per milestone](#2-extra-lines-per-milestone). Create the branch from the previous milestone's branch if it does not exist (from `main` only once earlier milestones are merged there).
+1. Open the brief for that milestone from the table above and use the branch named for it in [Extra lines per milestone](#2-extra-lines-per-milestone). Create the branch from `main` if it does not exist (every accepted milestone is merged into `main`).
 2. Follow [the loop](#the-loop-every-milestone-follows) below from step 0, including the full prompt in [Start a milestone](#1-start-a-milestone): check the blocking questions, read first, plan mode with the plan shown before code, `/architect` spec, `/develop`, `/test`, gates, `/check verify`, `/check review`, docs, evidence report.
 3. Apply the milestone's line in [Extra lines per milestone](#2-extra-lines-per-milestone). If it names something the owner must provide (keys, wording, templates) and it is not there, stop and ask.
 4. Never commit, push, merge, or start the next milestone without the owner's explicit approval. Stop and report at the end.
@@ -33,7 +33,7 @@ Follow [../../engineering/agent-workflow.md](../../engineering/agent-workflow.md
 | Step | What | Skill | Output |
 | --- | --- | --- | --- |
 | 0 | Check approval: the previous milestone is accepted and this one is approved to start. Check that every question listed under **Blocking questions** in the brief is answered in [assumptions-and-open-questions.md](../../requirements/assumptions-and-open-questions.md). If a ★ question is open, stop and ask | — | — |
-| 1 | Work on branch `m<N>-<short-name>`, created from the previous milestone's branch (from `main` only once earlier milestones are merged there). `git status` must be clean of unrelated work, or that work is left untouched | — | branch |
+| 1 | Work on branch `m<N>-<short-name>`, created from `main` (every accepted milestone is merged there). `git status` must be clean of unrelated work, or that work is left untouched | — | branch |
 | 2 | Read: `AGENTS.md`, this brief, every document in its **Read first** list, and the matching Next.js guide in `node_modules/next/dist/docs/` for any framework API you touch. In Claude Code, enter plan mode | — | plan |
 | 3 | Turn the brief into a build spec `docs/specs/NNNN-m<N>-<name>.md`. The spec cites the ADRs and the brief and must not contradict them. It records only local implementation choices; business decisions come from the question register, never from the spec | `/architect` (mode `ENHANCEMENT`; `FEATURE` for wholly new modules) | spec |
 | 4 | Optional: enroll the milestone as a scope feature so `/develop` and `/check` can track it (tier `Beta`, so verification and tests close it) | `/scope` | `docs/scope/` row |
@@ -45,11 +45,11 @@ Follow [../../engineering/agent-workflow.md](../../engineering/agent-workflow.md
 | 10 | Fresh-model code review of the diff, then fix or answer each finding | `/check review` | `docs/reviews/…` |
 | 11 | Update every document whose status changed (**Implemented** vs **Planned**), the roadmap overview row, and the test matrix | — | docs |
 | 12 | Write the evidence report `docs/delivery/reports/m<N>-<name>.md` (template below) | — | report |
-| 13 | After the user approves and asks for the merge: update `AGENTS.md` and the scope from what changed | `/sync` | `AGENTS.md` lines |
+| 13 | After the user accepts the milestone, before the merge into `main`: update `AGENTS.md` and the scope from what changed | `/sync` | `AGENTS.md` lines |
 | 14 | When the user asks for a PR or release text | `/document pr` | PR description |
 | 15 | **Stop.** Report and wait. Do not start the next milestone | — | — |
 
-Commit only when the user asks, merge to `main` only when asked, and never push without being asked (`AGENTS.md`, Git).
+Commit only when the user asks. Every accepted milestone is merged into `main` and `main` is pushed; otherwise never push without being asked (`AGENTS.md`, Git).
 
 Personal or editor-level skills (for example a UI design review skill) are optional extras. The project skills above (`.claude/skills/`, `.agents/skills/`) are the required set, so Claude Code and Codex follow the same loop.
 
@@ -64,7 +64,7 @@ Change `<N>`, the name, the branch, and the brief file name.
 ```text
 Start milestone M<N> — <name>.
 
-Work on branch m<N>-<branch-name> (create it from the previous milestone's branch if it doesn't exist).
+Work on branch m<N>-<branch-name> (create it from main if it doesn't exist).
 
 Follow docs/delivery/milestones/m<N>-<file>.md exactly, using the loop in
 docs/delivery/milestones/README.md:
@@ -108,8 +108,8 @@ Accept and move on:
 
 ```text
 M<N> is accepted. Mark it accepted in the roadmap and its evidence report, commit on
-m<N>-<branch-name>, push it, then create branch m<N+1>-<next-branch-name> from it.
-Don't start M<N+1> yet.
+m<N>-<branch-name>, push it, merge it into main and push main, then create branch
+m<N+1>-<next-branch-name> from main. Don't start M<N+1> yet.
 ```
 
 Ask for fixes:
@@ -119,7 +119,7 @@ M<N> needs changes: <list>. Fix only these, rerun the gates, update the evidence
 report, and report again. Don't commit yet.
 ```
 
-Merge into `main` (whenever you choose, for example after launch):
+Merge a branch into `main` by itself (the accept prompt above already does this for milestones):
 
 ```text
 Merge <branch> into main and push main.

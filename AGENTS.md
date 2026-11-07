@@ -93,8 +93,10 @@ Claude Code loads the same skills from `.claude/skills/`. Project rules above ov
 
 - integration: on
 - branch prefix: `m<N>-` for reservation milestones (existing phases used `phase-<N>-`)
-- commit: per milestone, only when the user asks; merge to `main` when asked; never push without being asked
+- commit: per milestone, only when the user asks; every accepted milestone is merged into `main` and `main` is pushed (owner rule, 2026-11-07); the next milestone branches from `main`; otherwise never push without being asked
 
 ## Context files
 
 <!-- Nested AGENTS.md files are listed here as they are created -->
+
+- [src/app/api/AGENTS.md](src/app/api/AGENTS.md): Route Handler rules for `/api/v1` (wrappers, thin handlers, contracts and OpenAPI)
