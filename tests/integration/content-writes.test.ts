@@ -16,6 +16,7 @@ import {
   createRoom,
   createTestClient,
   resetDatabase,
+  TEST_BRANCH_ID,
 } from "./support/database";
 
 const client = createTestClient();
@@ -48,18 +49,19 @@ describe("room writes", () => {
     await createRoom(client, { sortOrder: 4 });
     await createRoom(client, { sortOrder: 9, status: "ARCHIVED" });
 
-    const result = await rooms.create(roomInput, actor);
+    const result = await rooms.create(TEST_BRANCH_ID, roomInput, actor);
 
     expect(result).toMatchObject({
       ok: true,
       value: { status: "DRAFT", sortOrder: 5, sizeSqm: 48.5, featured: true },
     });
-    expect(await rooms.listPublished()).toEqual([]);
-    expect(await rooms.listAdmin()).toHaveLength(3);
+    expect(await rooms.listPublished(TEST_BRANCH_ID)).toEqual([]);
+    expect(await rooms.listAdmin(TEST_BRANCH_ID)).toHaveLength(3);
   });
 
   it("returns field errors for invalid input", async () => {
     const result = await rooms.create(
+      TEST_BRANCH_ID,
       { ...roomInput, slug: "Nile Suite", maxAdults: 0 },
       actor,
     );
@@ -72,8 +74,8 @@ describe("room writes", () => {
   });
 
   it("reports duplicate slugs as conflicts", async () => {
-    await rooms.create(roomInput, actor);
-    expect(await rooms.create(roomInput, actor)).toMatchObject({
+    await rooms.create(TEST_BRANCH_ID, roomInput, actor);
+    expect(await rooms.create(TEST_BRANCH_ID, roomInput, actor)).toMatchObject({
       ok: false,
       error: { code: "CONFLICT" },
     });
@@ -109,6 +111,7 @@ describe("room writes", () => {
 describe("facility writes", () => {
   it("creates and updates facilities", async () => {
     const created = await facilities.create(
+      TEST_BRANCH_ID,
       {
         name: "Spa",
         slug: "spa",
@@ -163,6 +166,7 @@ describe("page section writes", () => {
     await client.page.create({
       data: {
         id: "contact",
+        branchId: TEST_BRANCH_ID,
         key: "CONTACT",
         title: "Contact",
         canonicalPath: "/contact",
@@ -171,8 +175,13 @@ describe("page section writes", () => {
   });
 
   it("appends validated sections in order", async () => {
-    await pages.saveSection("CONTACT", hero, actor);
-    const result = await pages.saveSection("CONTACT", cta, actor);
+    await pages.saveSection(TEST_BRANCH_ID, "CONTACT", hero, actor);
+    const result = await pages.saveSection(
+      TEST_BRANCH_ID,
+      "CONTACT",
+      cta,
+      actor,
+    );
 
     expect(result).toMatchObject({ ok: true });
     if (!result.ok) return;
@@ -187,6 +196,7 @@ describe("page section writes", () => {
   it("rejects disallowed types and invalid payloads", async () => {
     expect(
       await pages.saveSection(
+        TEST_BRANCH_ID,
         "CONTACT",
         {
           ...hero,
@@ -197,10 +207,16 @@ describe("page section writes", () => {
       ),
     ).toMatchObject({ ok: false, error: { code: "VALIDATION" } });
     expect(
-      await pages.saveSection("CONTACT", { ...hero, payload: {} }, actor),
+      await pages.saveSection(
+        TEST_BRANCH_ID,
+        "CONTACT",
+        { ...hero, payload: {} },
+        actor,
+      ),
     ).toMatchObject({ ok: false, error: { code: "VALIDATION" } });
     expect(
       await pages.saveSection(
+        TEST_BRANCH_ID,
         "CONTACT",
         { ...hero, heading: "x".repeat(161) },
         actor,
@@ -209,14 +225,22 @@ describe("page section writes", () => {
   });
 
   it("never lets a required section be hidden", async () => {
-    await pages.saveSection("CONTACT", hero, actor);
-    const saved = await pages.saveSection("CONTACT", cta, actor);
-    expect((await pages.publish("CONTACT", actor)).ok).toBe(true);
+    await pages.saveSection(TEST_BRANCH_ID, "CONTACT", hero, actor);
+    const saved = await pages.saveSection(
+      TEST_BRANCH_ID,
+      "CONTACT",
+      cta,
+      actor,
+    );
+    expect((await pages.publish(TEST_BRANCH_ID, "CONTACT", actor)).ok).toBe(
+      true,
+    );
     if (!saved.ok) throw new Error(saved.error.message);
     const ctaId = saved.value.sections[1]!.id;
 
     expect(
       await pages.saveSection(
+        TEST_BRANCH_ID,
         "CONTACT",
         { ...cta, id: ctaId, isVisible: false },
         actor,
@@ -229,13 +253,20 @@ describe("page section writes", () => {
       },
     });
     expect(
-      (await pages.findPublishedByKey("CONTACT"))?.sections.map((s) => s.type),
+      (await pages.findPublishedByKey(TEST_BRANCH_ID, "CONTACT"))?.sections.map(
+        (s) => s.type,
+      ),
     ).toEqual(["HERO", "CONTACT_CTA"]);
   });
 
   it("rejects section ids from another page", async () => {
     expect(
-      await pages.saveSection("CONTACT", { ...hero, id: "unknown" }, actor),
+      await pages.saveSection(
+        TEST_BRANCH_ID,
+        "CONTACT",
+        { ...hero, id: "unknown" },
+        actor,
+      ),
     ).toMatchObject({ ok: false, error: { code: "NOT_FOUND" } });
   });
 });

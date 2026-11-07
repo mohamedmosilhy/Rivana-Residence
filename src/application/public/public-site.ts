@@ -1,3 +1,4 @@
+import type { BranchRepository } from "@/application/branches";
 import type {
   FacilityRepository,
   MediaRepository,
@@ -23,7 +24,10 @@ import {
 /**
  * Read-only queries for visitors. Every method returns published content
  * only, as serializable view models, so results can be cached under content
- * tags and passed to client components.
+ * tags and passed to client components. Content comes from the default
+ * active branch (the only branch until branch websites arrive in M5); with
+ * no active branch every query returns the same empty result as unpublished
+ * content.
  */
 export class PublicSite {
   constructor(
@@ -34,8 +38,13 @@ export class PublicSite {
       rooms: RoomRepository;
       facilities: FacilityRepository;
       promotions: PromotionRepository;
+      branches: BranchRepository;
     }>,
   ) {}
+
+  private async branchId() {
+    return (await this.deps.branches.findDefaultActive())?.id ?? null;
+  }
 
   private async image(id: string | null) {
     if (!id) return null;
@@ -61,29 +70,42 @@ export class PublicSite {
   }
 
   async page(key: PageKey) {
-    const page = await this.deps.pages.findPublishedByKey(key);
+    const branchId = await this.branchId();
+    if (!branchId) return null;
+    const page = await this.deps.pages.findPublishedByKey(branchId, key);
     return page ? publicPage(page, await this.image(page.ogMediaId)) : null;
   }
 
   async rooms() {
-    return (await this.deps.rooms.listPublished()).map((room) =>
+    const branchId = await this.branchId();
+    if (!branchId) return [];
+    return (await this.deps.rooms.listPublished(branchId)).map((room) =>
       publicRoom(room),
     );
   }
 
   async room(slug: string) {
-    const room = await this.deps.rooms.findPublishedBySlug(slug);
+    const branchId = await this.branchId();
+    if (!branchId) return null;
+    const room = await this.deps.rooms.findPublishedBySlug(branchId, slug);
     return room ? publicRoom(room, await this.image(room.ogMediaId)) : null;
   }
 
   async facilities() {
-    return (await this.deps.facilities.listPublished()).map((facility) =>
-      publicFacility(facility),
+    const branchId = await this.branchId();
+    if (!branchId) return [];
+    return (await this.deps.facilities.listPublished(branchId)).map(
+      (facility) => publicFacility(facility),
     );
   }
 
   async facility(slug: string) {
-    const facility = await this.deps.facilities.findPublishedBySlug(slug);
+    const branchId = await this.branchId();
+    if (!branchId) return null;
+    const facility = await this.deps.facilities.findPublishedBySlug(
+      branchId,
+      slug,
+    );
     return facility
       ? publicFacility(facility, await this.image(facility.ogMediaId))
       : null;

@@ -38,6 +38,10 @@ export class PrismaEnquiryRepository implements EnquiryRepository {
         }
       : undefined;
     const where = {
+      // A list of ids never matches enquiries without a branch (Q-26).
+      ...(query.branchScope === "ALL"
+        ? {}
+        : { branchId: { in: [...query.branchScope] } }),
       ...(query.status ? { status: query.status } : {}),
       ...(contains
         ? {

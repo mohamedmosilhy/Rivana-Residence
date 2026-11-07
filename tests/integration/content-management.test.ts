@@ -18,6 +18,8 @@ import { PrismaPageRepository } from "@/infrastructure/db/prisma/repositories/pa
 import { PrismaPromotionRepository } from "@/infrastructure/db/prisma/repositories/promotion-repository";
 import { PrismaRoomRepository } from "@/infrastructure/db/prisma/repositories/room-repository";
 
+import { PrismaBranchRepository } from "@/infrastructure/db/prisma/repositories/branches/branch-repository";
+
 import { seedDatabase } from "../../prisma/seed-data";
 import {
   actor,
@@ -25,6 +27,7 @@ import {
   createMedia,
   createTestClient,
   resetDatabase,
+  TEST_BRANCH_ID,
 } from "./support/database";
 
 const client = createTestClient();
@@ -33,23 +36,27 @@ const admin: StaffPrincipal = {
   name: "Test Administrator",
   email: "admin@example.test",
   sessionId: "s",
+  branchIds: [],
 };
 const editor: StaffPrincipal = { ...admin, role: "EDITOR" };
 const cache = { invalidate: vi.fn(async () => undefined) };
 const now = new Date("2026-09-25T12:00:00Z");
 
+const branches = new PrismaBranchRepository(client);
 const rooms = new CatalogCommands(
   new PrismaRoomRepository(client),
   cache,
   ROOM_KIND,
+  branches,
 );
 const facilities = new CatalogCommands(
   new PrismaFacilityRepository(client),
   cache,
   FACILITY_KIND,
+  branches,
 );
 const pageRepository = new PrismaPageRepository(client);
-const pages = new PageCommands(pageRepository, cache);
+const pages = new PageCommands(pageRepository, cache, branches);
 const promotions = new PromotionAdmin(
   new PrismaPromotionRepository(client),
   cache,
@@ -302,7 +309,7 @@ describe("page management", () => {
   beforeEach(() => seedDatabase(client));
 
   it("seeds each page with its approved sections, idempotently", async () => {
-    const home = await pageRepository.findAdminByKey("HOME");
+    const home = await pageRepository.findAdminByKey(TEST_BRANCH_ID, "HOME");
     expect(home?.sections.map((section) => section.type)).toEqual([
       "HERO",
       "RICH_TEXT",
@@ -318,7 +325,10 @@ describe("page management", () => {
     });
     await seedDatabase(client);
 
-    const reseeded = await pageRepository.findAdminByKey("HOME");
+    const reseeded = await pageRepository.findAdminByKey(
+      TEST_BRANCH_ID,
+      "HOME",
+    );
     expect(reseeded?.sections).toHaveLength(6);
     expect(reseeded?.sections[0]?.payload).toMatchObject({ title: "Edited" });
   });
@@ -364,7 +374,9 @@ describe("page management", () => {
       ok: true,
       value: { isPublished: false },
     });
-    expect(await pageRepository.findPublishedByKey("HOME")).toBeNull();
+    expect(
+      await pageRepository.findPublishedByKey(TEST_BRANCH_ID, "HOME"),
+    ).toBeNull();
   });
 
   it("never hides a required section or moves the Hero", async () => {
@@ -386,7 +398,10 @@ describe("page management", () => {
     expect((await pages.moveSection(editor, "ABOUT", stats!.id, -1)).ok).toBe(
       true,
     );
-    const reordered = await pageRepository.findAdminByKey("ABOUT");
+    const reordered = await pageRepository.findAdminByKey(
+      TEST_BRANCH_ID,
+      "ABOUT",
+    );
     expect(reordered?.sections[0]?.id).toBe(hero!.id);
     expect(reordered?.sections[1]?.id).toBe(stats!.id);
   });

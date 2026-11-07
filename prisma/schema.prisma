@@ -9,9 +9,23 @@ datasource db {
   provider = "postgresql"
 }
 
+// The TypeScript name is StaffRole; the database enum keeps its original name
+// (ADR 018). RECEPTIONIST and MANAGER are branch scoped.
 enum AdminRole {
   EDITOR
   ADMIN
+  RECEPTIONIST
+  MANAGER
+}
+
+enum BranchStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum AccommodationType {
+  ROOM
+  APARTMENT
 }
 
 enum PublicationStatus {
@@ -92,6 +106,9 @@ model User {
   createdMedia        MediaAsset[]   @relation("MediaCreatedBy")
   createdPromotions   Promotion[]    @relation("PromotionCreatedBy")
   updatedPromotions   Promotion[]    @relation("PromotionUpdatedBy")
+  updatedBranches     Branch[]       @relation("BranchUpdatedBy")
+
+  branchAssignments StaffBranchAssignment[]
 }
 
 // Better Auth 1.7 core tables. Field names follow the library schema; the app
@@ -206,20 +223,25 @@ model SocialLink {
 
 model Page {
   id             String   @id @db.VarChar(32)
-  key            PageKey  @unique
+  branchId       String   @db.VarChar(32)
+  key            PageKey
   title          String   @db.VarChar(120)
   seoTitle       String?  @db.VarChar(70)
   seoDescription String?  @db.VarChar(170)
   ogMediaId      String?  @db.VarChar(32)
-  canonicalPath  String   @unique @db.VarChar(255)
+  canonicalPath  String   @db.VarChar(255)
   isPublished    Boolean  @default(false)
   createdAt      DateTime @default(now()) @db.Timestamptz(3)
   updatedAt      DateTime @updatedAt @db.Timestamptz(3)
   updatedById    String?  @db.VarChar(32)
 
+  branch    Branch        @relation(fields: [branchId], references: [id], onDelete: Restrict)
   ogMedia   MediaAsset?   @relation("PageOgMedia", fields: [ogMediaId], references: [id], onDelete: Restrict)
   updatedBy User?         @relation("PageUpdatedBy", fields: [updatedById], references: [id], onDelete: Restrict)
   sections  PageSection[]
+
+  @@unique([branchId, key])
+  @@unique([branchId, canonicalPath])
 }
 
 model PageSection {
@@ -256,31 +278,40 @@ model PageSectionMedia {
 }
 
 model Room {
-  id               String            @id @db.VarChar(32)
-  name             String            @db.VarChar(120)
-  slug             String            @unique @db.VarChar(120)
-  shortDescription String            @db.VarChar(300)
-  description      Json
-  sizeSqm          Decimal?          @db.Decimal(6, 2)
-  maxAdults        Int
-  maxChildren      Int               @default(0)
-  bedSummary       String?           @db.VarChar(160)
-  viewSummary      String?           @db.VarChar(160)
-  featured         Boolean           @default(false)
-  sortOrder        Int
-  status           PublicationStatus @default(DRAFT)
-  seoTitle         String?           @db.VarChar(70)
-  seoDescription   String?           @db.VarChar(170)
-  ogMediaId        String?           @db.VarChar(32)
-  createdAt        DateTime          @default(now()) @db.Timestamptz(3)
-  updatedAt        DateTime          @updatedAt @db.Timestamptz(3)
-  updatedById      String?           @db.VarChar(32)
+  id                String            @id @db.VarChar(32)
+  branchId          String            @db.VarChar(32)
+  accommodationType AccommodationType @default(ROOM)
+  bedroomCount      Int?              @db.SmallInt
+  bathroomCount     Int?              @db.SmallInt
+  name              String            @db.VarChar(120)
+  slug              String            @unique @db.VarChar(120)
+  shortDescription  String            @db.VarChar(300)
+  description       Json
+  sizeSqm           Decimal?          @db.Decimal(6, 2)
+  maxAdults         Int
+  maxChildren       Int               @default(0)
+  bedSummary        String?           @db.VarChar(160)
+  viewSummary       String?           @db.VarChar(160)
+  featured          Boolean           @default(false)
+  sortOrder         Int
+  status            PublicationStatus @default(DRAFT)
+  seoTitle          String?           @db.VarChar(70)
+  seoDescription    String?           @db.VarChar(170)
+  ogMediaId         String?           @db.VarChar(32)
+  createdAt         DateTime          @default(now()) @db.Timestamptz(3)
+  updatedAt         DateTime          @updatedAt @db.Timestamptz(3)
+  updatedById       String?           @db.VarChar(32)
 
+  branch    Branch        @relation(fields: [branchId], references: [id], onDelete: Restrict)
   ogMedia   MediaAsset?   @relation("RoomOgMedia", fields: [ogMediaId], references: [id], onDelete: Restrict)
   updatedBy User?         @relation("RoomUpdatedBy", fields: [updatedById], references: [id], onDelete: Restrict)
   features  RoomFeature[]
   media     RoomMedia[]
 
+  // Composite target for same-branch foreign keys from inventory and
+  // reservations (ADR 017).
+  @@unique([id, branchId])
+  @@index([branchId, status, sortOrder])
   @@index([status, sortOrder])
   @@index([featured, status, sortOrder])
 }
@@ -314,6 +345,7 @@ model RoomMedia {
 
 model Facility {
   id               String            @id @db.VarChar(32)
+  branchId         String            @db.VarChar(32)
   name             String            @db.VarChar(120)
   slug             String            @unique @db.VarChar(120)
   shortDescription String            @db.VarChar(300)
@@ -329,10 +361,12 @@ model Facility {
   updatedAt        DateTime          @updatedAt @db.Timestamptz(3)
   updatedById      String?           @db.VarChar(32)
 
+  branch    Branch          @relation(fields: [branchId], references: [id], onDelete: Restrict)
   ogMedia   MediaAsset?     @relation("FacilityOgMedia", fields: [ogMediaId], references: [id], onDelete: Restrict)
   updatedBy User?           @relation("FacilityUpdatedBy", fields: [updatedById], references: [id], onDelete: Restrict)
   media     FacilityMedia[]
 
+  @@index([branchId, status, sortOrder])
   @@index([status, sortOrder])
   @@index([featured, status, sortOrder])
 }
@@ -389,6 +423,7 @@ model MediaAsset {
   pageSectionUsage PageSectionMedia[]
   roomUsage        RoomMedia[]
   facilityUsage    FacilityMedia[]
+  branchHeroFor    Branch[]           @relation("BranchHeroMedia")
 
   @@unique([storageProvider, storageContainer, storageKey])
   @@index([status, createdAt])
@@ -423,6 +458,9 @@ model Promotion {
 
 model ContactEnquiry {
   id                String        @id @db.VarChar(32)
+  // The branch whose contact page sent it; null for enquiries received
+  // before branch sites existed (M4).
+  branchId          String?       @db.VarChar(32)
   name              String        @db.VarChar(120)
   email             String        @db.VarChar(320)
   phone             String?       @db.VarChar(40)
@@ -434,6 +472,86 @@ model ContactEnquiry {
   readAt            DateTime?     @db.Timestamptz(3)
   archivedAt        DateTime?     @db.Timestamptz(3)
 
+  branch Branch? @relation(fields: [branchId], references: [id], onDelete: Restrict)
+
   @@index([status, createdAt])
   @@index([createdAt])
+  @@index([branchId, createdAt])
+}
+
+// A hotel location. Owns its pages, facilities, and accommodation listings
+// (ADR 017, ADR 026). Branches are deactivated, never deleted. Slug, time,
+// and sync-interval rules are CHECK constraints in the migration.
+model Branch {
+  id                          String       @id @db.VarChar(32)
+  slug                        String       @unique @db.VarChar(80)
+  name                        String       @db.VarChar(120)
+  summary                     String?      @db.VarChar(300)
+  status                      BranchStatus @default(ACTIVE)
+  onlineBookingEnabled        Boolean      @default(false)
+  timeZone                    String       @default("Africa/Cairo") @db.VarChar(100)
+  currency                    String       @default("USD") @db.Char(3)
+  phone                       String?      @db.VarChar(40)
+  email                       String?      @db.VarChar(320)
+  addressLine1                String?      @db.VarChar(180)
+  addressLine2                String?      @db.VarChar(180)
+  city                        String?      @db.VarChar(100)
+  country                     String?      @db.VarChar(100)
+  latitude                    Decimal?     @db.Decimal(9, 6)
+  longitude                   Decimal?     @db.Decimal(9, 6)
+  mapEmbedUrl                 String?      @db.VarChar(2048)
+  checkInTime                 String?      @db.VarChar(5)
+  checkOutTime                String?      @db.VarChar(5)
+  heroMediaId                 String?      @db.VarChar(32)
+  syncReminderIntervalMinutes Int          @default(30)
+  syncFollowUpMinutes         Int          @default(10)
+  sortOrder                   Int
+  createdAt                   DateTime     @default(now()) @db.Timestamptz(3)
+  updatedAt                   DateTime     @updatedAt @db.Timestamptz(3)
+  updatedById                 String?      @db.VarChar(32)
+
+  heroMedia   MediaAsset?             @relation("BranchHeroMedia", fields: [heroMediaId], references: [id], onDelete: Restrict)
+  updatedBy   User?                   @relation("BranchUpdatedBy", fields: [updatedById], references: [id], onDelete: Restrict)
+  pages       Page[]
+  rooms       Room[]
+  facilities  Facility[]
+  enquiries   ContactEnquiry[]
+  assignments StaffBranchAssignment[]
+
+  @@index([status, sortOrder])
+}
+
+// Which branches a Receptionist or Manager may work on (ADR 018). Admins are
+// implicitly all-branch and Editors have no branch scope, so neither has rows.
+model StaffBranchAssignment {
+  userId      String   @db.VarChar(32)
+  branchId    String   @db.VarChar(32)
+  createdAt   DateTime @default(now()) @db.Timestamptz(3)
+  // Not a foreign key, so the record survives the creator's removal.
+  createdById String?  @db.VarChar(32)
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  branch Branch @relation(fields: [branchId], references: [id], onDelete: Restrict)
+
+  @@id([userId, branchId])
+  @@index([branchId])
+}
+
+// Append-only history of sensitive changes. actorId and branchId are plain
+// text, not foreign keys, so history survives user and branch changes. The
+// runtime role's UPDATE/DELETE revocation is a Phase 12 deployment task.
+model AuditEvent {
+  id         String   @id @db.VarChar(32)
+  occurredAt DateTime @default(now()) @db.Timestamptz(3)
+  actorType  String   @db.VarChar(16)
+  actorId    String?  @db.VarChar(32)
+  action     String   @db.VarChar(80)
+  entityType String   @db.VarChar(40)
+  entityId   String   @db.VarChar(32)
+  branchId   String?  @db.VarChar(32)
+  reason     String?  @db.VarChar(500)
+  changes    Json?
+
+  @@index([entityType, entityId, occurredAt])
+  @@index([branchId, occurredAt])
 }

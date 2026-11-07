@@ -68,6 +68,22 @@ export const getCurrentStaff = cache(
   },
 );
 
+/**
+ * The same authoritative check for Route Handlers, from the request's own
+ * headers (the `/api/v1` wrappers do not depend on `next/headers`).
+ */
+export function resolveStaffFromHeaders(
+  requestHeaders: Headers,
+): Promise<StaffPrincipal | null> {
+  const { auth, directory } = getRuntime();
+  return resolveStaffSession(auth, directory, requestHeaders);
+}
+
+/** Keyed hashes for throttle and rate-limit counters (no raw addresses). */
+export function throttleKeys() {
+  return new HmacThrottleKeys(getRuntime().secret);
+}
+
 export type PageAccess = Readonly<{ staff: StaffPrincipal; allowed: boolean }>;
 
 /**

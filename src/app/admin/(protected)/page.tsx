@@ -7,6 +7,7 @@ import { roleHasCapability } from "@/domain/auth/capabilities";
 import { OverviewDashboard } from "@/presentation/admin/overview/overview-dashboard";
 import { PageHeader } from "@/presentation/admin/ui/page-header";
 import { button } from "@/presentation/admin/ui/classes";
+import { Panel } from "@/presentation/admin/ui/states";
 
 export const metadata: Metadata = {
   title: "Overview",
@@ -14,6 +15,24 @@ export const metadata: Metadata = {
 
 export default async function AdminOverviewPage() {
   const { staff } = await requireStaff("/admin");
+  // Receptionists and Managers have no CMS capability: they get a staff home
+  // without content counts, and the content overview is never read for them.
+  if (!roleHasCapability(staff.role, "content:edit")) {
+    return (
+      <>
+        <PageHeader
+          title="Overview"
+          breadcrumbs={[]}
+          description={<p>Welcome back, {staff.name}.</p>}
+        />
+        <Panel title="Front desk" titleId="front-desk-title">
+          <p data-testid="staff-home">
+            Front desk tools will appear here in a later release.
+          </p>
+        </Panel>
+      </>
+    );
+  }
   const overview = await getAdminOverview();
   if (!overview.ok) throw new Error("Overview is unavailable.");
 

@@ -16,5 +16,7 @@ export function accountsFor(project: string) {
     inactive: `inactive-${project}@example.test`,
     lockout: `lockout-${project}@example.test`,
     account: `account-${project}@example.test`,
+    receptionist: `receptionist-${project}@example.test`,
+    manager: `manager-${project}@example.test`,
   };
 }

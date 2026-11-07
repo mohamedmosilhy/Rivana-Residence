@@ -2,7 +2,11 @@ import { PrismaPg } from "@prisma/adapter-pg";
 
 import { PrismaClient } from "@/generated/prisma/client";
 
+import { DEFAULT_BRANCH_ID } from "../../../prisma/seed-data";
 import { testDatabaseUrl } from "./test-database";
+
+/** The first branch, as the M4 migration and the seed create it. */
+export const TEST_BRANCH_ID = DEFAULT_BRANCH_ID;
 
 export function createTestClient() {
   return new PrismaClient({
@@ -21,6 +25,30 @@ export async function resetDatabase(client: PrismaClient) {
   if (tables.length === 0) return;
   const list = tables.map(({ tablename }) => `"${tablename}"`).join(", ");
   await client.$executeRawUnsafe(`TRUNCATE ${list} CASCADE`);
+  // Every room, facility, and page needs a branch; a migrated database
+  // always has the first one, so a reset database has it too.
+  await createBranch(client, { id: TEST_BRANCH_ID, slug: "new-cairo" });
+}
+
+export function createBranch(
+  client: PrismaClient,
+  values: Readonly<{
+    id: string;
+    slug: string;
+    name?: string;
+    status?: "ACTIVE" | "INACTIVE";
+    sortOrder?: number;
+  }>,
+) {
+  return client.branch.create({
+    data: {
+      id: values.id,
+      slug: values.slug,
+      name: values.name ?? "Rivana Residence",
+      status: values.status ?? "ACTIVE",
+      sortOrder: values.sortOrder ?? 0,
+    },
+  });
 }
 
 export const actor = { id: "actor-admin", role: "ADMIN" } as const;
@@ -80,12 +108,14 @@ export async function createRoom(
     status: "DRAFT" | "PUBLISHED" | "ARCHIVED";
     sortOrder: number;
     heroMediaId: string;
+    branchId: string;
   }> = {},
 ) {
   const id = next("room");
   return client.room.create({
     data: {
       id,
+      branchId: overrides.branchId ?? TEST_BRANCH_ID,
       name: `Room ${id}`,
       slug: overrides.slug ?? id,
       shortDescription: "A calm room above the river.",
@@ -114,12 +144,14 @@ export async function createFacility(
     status: "DRAFT" | "PUBLISHED" | "ARCHIVED";
     sortOrder: number;
     heroMediaId: string;
+    branchId: string;
   }> = {},
 ) {
   const id = next("facility");
   return client.facility.create({
     data: {
       id,
+      branchId: overrides.branchId ?? TEST_BRANCH_ID,
       name: `Facility ${id}`,
       slug: id,
       shortDescription: "An outdoor pool terrace.",

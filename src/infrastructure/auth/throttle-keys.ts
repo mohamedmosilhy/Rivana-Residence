@@ -17,6 +17,14 @@ export class HmacThrottleKeys implements ThrottleKeyDeriver {
     return `c:${this.digest(`client:${address.trim()}`)}`;
   }
 
+  /**
+   * A per-client key for a named public rate limit, e.g. `rl:health:…`. The
+   * namespace keeps its counter apart from the sign-in throttle.
+   */
+  namespaced(namespace: string, address: string) {
+    return `rl:${namespace}:${this.digest(`${namespace}:${address.trim()}`)}`;
+  }
+
   private digest(value: string) {
     return createHmac("sha256", this.secret).update(value).digest("base64url");
   }

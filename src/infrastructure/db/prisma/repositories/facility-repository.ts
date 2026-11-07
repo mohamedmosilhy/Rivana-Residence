@@ -39,9 +39,13 @@ function parse(input: FacilityInput) {
     : invalid("Facility is invalid.", issuesFromZod(parsed.error.issues));
 }
 
-async function nextSortOrder(transaction: Prisma.TransactionClient) {
+// Display order is per branch among non-archived listings.
+async function nextSortOrder(
+  transaction: Prisma.TransactionClient,
+  branchId: string,
+) {
   const last = await transaction.facility.aggregate({
-    where: { status: { not: "ARCHIVED" } },
+    where: { branchId, status: { not: "ARCHIVED" } },
     _max: { sortOrder: true },
   });
   return (last._max.sortOrder ?? -1) + 1;
@@ -50,18 +54,18 @@ async function nextSortOrder(transaction: Prisma.TransactionClient) {
 export class PrismaFacilityRepository implements FacilityRepository {
   constructor(private readonly client: DatabaseClient = getPrisma()) {}
 
-  async listPublished() {
+  async listPublished(branchId: string) {
     const rows = await this.client.facility.findMany({
-      where: { status: "PUBLISHED" },
+      where: { branchId, status: "PUBLISHED" },
       include: facilityGraph,
       orderBy: [{ sortOrder: "asc" }, { id: "asc" }],
     });
     return rows.map(mapFacility);
   }
 
-  async findPublishedBySlug(slug: string) {
+  async findPublishedBySlug(branchId: string, slug: string) {
     const row = await this.client.facility.findFirst({
-      where: { slug, status: "PUBLISHED" },
+      where: { branchId, slug, status: "PUBLISHED" },
       include: facilityGraph,
     });
     return row ? mapFacility(row) : null;
@@ -75,15 +79,16 @@ export class PrismaFacilityRepository implements FacilityRepository {
     return row ? mapFacility(row) : null;
   }
 
-  async listAdmin() {
+  async listAdmin(branchId: string) {
     const rows = await this.client.facility.findMany({
+      where: { branchId },
       include: facilityGraph,
       orderBy: [{ sortOrder: "asc" }, { id: "asc" }],
     });
     return rows.map(mapFacility);
   }
 
-  async create(input: FacilityInput, actor: Actor) {
+  async create(branchId: string, input: FacilityInput, actor: Actor) {
     const parsed = parse(input);
     if (!parsed.ok) return parsed;
     const fields = parsed.value;
@@ -93,9 +98,10 @@ export class PrismaFacilityRepository implements FacilityRepository {
           data: {
             ...fields,
             id: createId(),
+            branchId,
             description: fields.description as Prisma.InputJsonObject,
             featured: input.featured,
-            sortOrder: await nextSortOrder(transaction),
+            sortOrder: await nextSortOrder(transaction, branchId),
             status: "DRAFT",
             updatedById: actor.id,
           },
@@ -221,7 +227,7 @@ export class PrismaFacilityRepository implements FacilityRepository {
       return await withTransaction(this.client, async (transaction) => {
         const row = await transaction.facility.findUnique({
           where: { id },
-          select: { status: true },
+          select: { status: true, branchId: true },
         });
         if (!row) return failure("NOT_FOUND", "Facility not found.");
         if (row.status !== from) {
@@ -239,7 +245,7 @@ export class PrismaFacilityRepository implements FacilityRepository {
             updatedById: actor.id,
             // A restored facility rejoins the active order at the end.
             ...(from === "ARCHIVED"
-              ? { sortOrder: await nextSortOrder(transaction) }
+              ? { sortOrder: await nextSortOrder(transaction, row.branchId) }
               : {}),
           },
           include: facilityGraph,
@@ -251,11 +257,11 @@ export class PrismaFacilityRepository implements FacilityRepository {
     }
   }
 
-  async reorder(orderedIds: readonly string[], actor: Actor) {
+  async reorder(branchId: string, orderedIds: readonly string[], actor: Actor) {
     try {
       return await withTransaction(this.client, async (transaction) => {
         const active = await transaction.facility.findMany({
-          where: { status: { not: "ARCHIVED" } },
+          where: { branchId, status: { not: "ARCHIVED" } },
           select: { id: true },
         });
         if (!isCompleteOrder(orderedIds, active)) {

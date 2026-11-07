@@ -63,17 +63,8 @@ export async function mediaLibrary() {
   return new MediaLibrary(await dependencies(), new NextCacheInvalidator());
 }
 
-/**
- * CSRF defence for the upload route: the browser must say the request comes
- * from this site's own origin. Server Actions get the same check from Next.
- */
-export function isSameOriginRequest(request: Request) {
-  const origin = request.headers.get("origin");
-  const site = request.headers.get("sec-fetch-site");
-  if (site && site !== "same-origin") return false;
-  if (!origin) return false;
-  return origin === new URL(getServerEnv().APP_URL).origin;
-}
+// The upload route's CSRF check now lives with the API's (spec 0001).
+export { isSameOriginRequest } from "@/composition/http";
 
 export type PublicMediaResponse =
   | Readonly<{ status: 404 }>

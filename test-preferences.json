@@ -1,0 +1,9 @@
+{
+  "tool": "vitest",
+  "gate": null,
+  "additionalTools": ["@testing-library/react", "@axe-core/playwright"],
+  "e2eTool": "playwright",
+  "testDir": "tests/unit, tests/integration, tests/e2e",
+  "filePattern": "*.test.ts (unit and integration), *.spec.ts (e2e)",
+  "packageManager": "npm"
+}

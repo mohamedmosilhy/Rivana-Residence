@@ -72,6 +72,7 @@ describe("sessions", () => {
       email: "admin@example.test",
       role: "ADMIN",
       sessionId: expect.any(String),
+      branchIds: [],
     });
     expect(await client.session.count({ where: { userId: staff.id } })).toBe(1);
   });

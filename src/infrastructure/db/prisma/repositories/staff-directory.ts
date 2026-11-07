@@ -47,6 +47,15 @@ export class PrismaStaffDirectory implements StaffDirectory {
     return row ? mapAccount(row) : null;
   }
 
+  async listBranchIds(userId: string) {
+    const rows = await this.client.staffBranchAssignment.findMany({
+      where: { userId },
+      select: { branchId: true },
+      orderBy: { branchId: "asc" },
+    });
+    return rows.map((row) => row.branchId);
+  }
+
   async findByEmail(email: string) {
     const row = await this.client.user.findUnique({
       where: { email: email.trim().toLowerCase() },

@@ -57,7 +57,7 @@ export default async function EditRoomPage({
   ]);
   if (!loaded.ok) throw new Error("The room is unavailable.");
   if (!loaded.value) notFound();
-  const { record: room, media, gaps } = loaded.value;
+  const { record: room, media, gaps, branch } = loaded.value;
 
   return (
     <>
@@ -93,6 +93,7 @@ export default async function EditRoomPage({
           action={updateRoomAction.bind(null, room.id)}
           isNew={false}
           submitLabel="Save changes"
+          branchName={branch?.name ?? null}
           meta={`Last saved ${formatDateTime(room.updatedAt, timeZone)}.`}
           values={{
             name: room.name,

@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import { authorize } from "@/application/auth/authorize";
+import type { BranchRepository } from "@/application/branches";
 import type { StaffPrincipal } from "@/application/auth/ports";
 import { CACHE_TAGS } from "@/application/cache/cache-tags";
 import type { CacheInvalidator } from "@/application/ports/providers";
@@ -123,19 +124,30 @@ const detailsSchema = z.object({
   ogMediaId: z.string().nullable(),
 });
 
+/**
+ * Staff commands for the default branch's pages (the only branch until M5,
+ * when the CMS gains a branch selector).
+ */
 export class PageCommands {
   constructor(
     private readonly pages: PageRepository,
     private readonly cache: CacheInvalidator,
+    private readonly branches: BranchRepository,
   ) {}
+
+  private async branchId() {
+    return (await this.branches.findDefault())?.id ?? null;
+  }
 
   async list(
     staff: StaffPrincipal | null,
   ): Promise<Result<readonly PageSummary[]>> {
     const access = authorize(staff, "content:edit");
     if (!access.ok) return access;
+    const branchId = await this.branchId();
+    if (!branchId) return success([]);
     const pages = await Promise.all(
-      PAGE_KEYS.map((key) => this.pages.findAdminByKey(key)),
+      PAGE_KEYS.map((key) => this.pages.findAdminByKey(branchId, key)),
     );
     return success(
       pages.flatMap((page) =>
@@ -161,7 +173,10 @@ export class PageCommands {
   ): Promise<Result<PageEditorView | null>> {
     const access = authorize(staff, "content:edit");
     if (!access.ok) return access;
-    const page = await this.pages.findAdminByKey(key);
+    const branchId = await this.branchId();
+    const page = branchId
+      ? await this.pages.findAdminByKey(branchId, key)
+      : null;
     if (!page) return success(null);
     return success({
       page,
@@ -184,6 +199,7 @@ export class PageCommands {
         return failure("NOT_FOUND", "This section no longer exists.");
       }
       return this.pages.saveSection(
+        page.branchId,
         key,
         {
           id: section.id,
@@ -206,7 +222,7 @@ export class PageCommands {
     key: PageKey,
     values: FormValues,
   ): Promise<Result<PageDto>> {
-    return this.edit(staff, "content:edit", key, (actor) => {
+    return this.edit(staff, "content:edit", key, (actor, page) => {
       const parsed = detailsSchema.safeParse({
         seoTitle: optionalString(values, "seoTitle"),
         seoDescription: optionalString(values, "seoDescription"),
@@ -220,7 +236,7 @@ export class PageCommands {
           ),
         );
       }
-      return this.pages.updateDetails(key, parsed.data, actor);
+      return this.pages.updateDetails(page.branchId, key, parsed.data, actor);
     });
   }
 
@@ -230,10 +246,16 @@ export class PageCommands {
     sectionId: string,
     values: FormValues,
   ): Promise<Result<PageDto>> {
-    return this.edit(staff, "content:edit", key, async (actor) => {
+    return this.edit(staff, "content:edit", key, async (actor, page) => {
       const media = sectionMediaFromForm(values);
       if (!media.ok) return media;
-      return this.pages.replaceSectionMedia(key, sectionId, media.value, actor);
+      return this.pages.replaceSectionMedia(
+        page.branchId,
+        key,
+        sectionId,
+        media.value,
+        actor,
+      );
     });
   }
 
@@ -256,12 +278,14 @@ export class PageCommands {
   }
 
   async publish(staff: StaffPrincipal | null, key: PageKey) {
-    return this.release(staff, key, (actor) => this.pages.publish(key, actor));
+    return this.release(staff, key, (actor, branchId) =>
+      this.pages.publish(branchId, key, actor),
+    );
   }
 
   async unpublish(staff: StaffPrincipal | null, key: PageKey) {
-    return this.release(staff, key, (actor) =>
-      this.pages.unpublish(key, actor),
+    return this.release(staff, key, (actor, branchId) =>
+      this.pages.unpublish(branchId, key, actor),
     );
   }
 
@@ -274,7 +298,10 @@ export class PageCommands {
   ): Promise<Result<T>> {
     const access = authorize(staff, capability);
     if (!access.ok) return access;
-    const page = await this.pages.findAdminByKey(key);
+    const branchId = await this.branchId();
+    const page = branchId
+      ? await this.pages.findAdminByKey(branchId, key)
+      : null;
     if (!page) return failure("NOT_FOUND", "Page not found.");
     const result = await operation(access.value, page);
     if (result.ok && page.isPublished) {
@@ -287,11 +314,16 @@ export class PageCommands {
   private async release(
     staff: StaffPrincipal | null,
     key: PageKey,
-    operation: (actor: StaffPrincipal) => Promise<Result<PageDto>>,
+    operation: (
+      actor: StaffPrincipal,
+      branchId: string,
+    ) => Promise<Result<PageDto>>,
   ) {
     const access = authorize(staff, "content:publish");
     if (!access.ok) return access;
-    const result = await operation(access.value);
+    const branchId = await this.branchId();
+    if (!branchId) return failure("NOT_FOUND", "Page not found.");
+    const result = await operation(access.value, branchId);
     if (result.ok) {
       await this.cache.invalidate([CACHE_TAGS.page(key), CACHE_TAGS.sitemap]);
     }

@@ -17,6 +17,7 @@ const admin: StaffPrincipal = {
   email: "amira@example.test",
   role: "ADMIN",
   sessionId: "session-1",
+  branchIds: [],
 };
 const editor: StaffPrincipal = { ...admin, id: "editor-1", role: "EDITOR" };
 const version = "2026-09-25T10:00:00.000Z";

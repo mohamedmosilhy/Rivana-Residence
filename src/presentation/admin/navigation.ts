@@ -1,7 +1,7 @@
 import type { Route } from "next";
 
 import { roleHasCapability, type Capability } from "@/domain/auth/capabilities";
-import type { AdminRole } from "@/domain/shared/types";
+import type { StaffRole } from "@/domain/shared/types";
 
 export type AdminDestination = Readonly<{
   href: Route;
@@ -37,7 +37,7 @@ export const ADMIN_DESTINATIONS = [
 
 export type NavItem = Readonly<{ href: Route; label: string }>;
 
-export function navigationFor(role: AdminRole): readonly NavItem[] {
+export function navigationFor(role: StaffRole): readonly NavItem[] {
   return ADMIN_DESTINATIONS.filter((destination) =>
     roleHasCapability(role, destination.capability),
   ).map(({ href, label }) => ({ href, label }));

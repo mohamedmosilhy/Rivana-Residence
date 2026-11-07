@@ -15,6 +15,7 @@ import type { PublicationStatus } from "@/domain/shared/types";
 
 type Row = {
   id: string;
+  branchId: string;
   name: string;
   slug: string;
   status: PublicationStatus;
@@ -28,8 +29,16 @@ const admin: StaffPrincipal = {
   email: "a@example.test",
   role: "ADMIN",
   sessionId: "s",
+  branchIds: [],
 };
 const editor: StaffPrincipal = { ...admin, id: "editor-1", role: "EDITOR" };
+const BRANCH = {
+  id: "branch-1",
+  slug: "new-cairo",
+  name: "Rivana Residence",
+  status: "ACTIVE" as const,
+  sortOrder: 0,
+};
 
 function setup(rows: Row[]) {
   const byId = new Map(rows.map((row) => [row.id, row]));
@@ -55,16 +64,24 @@ function setup(rows: Row[]) {
     replaceMedia: vi.fn(async (id: string) => success(byId.get(id)!)),
   };
   const cache = { invalidate: vi.fn(async () => undefined) };
+  const branches = {
+    findDefault: vi.fn(async () => BRANCH),
+    findDefaultActive: vi.fn(async () => BRANCH),
+    findById: vi.fn(async () => BRANCH),
+    findBySlug: vi.fn(async () => BRANCH),
+  };
   const commands = new CatalogCommands<Row, { slug: string }>(
     repository as unknown as CatalogRepository<Row, { slug: string }>,
     cache,
     ROOM_KIND,
+    branches,
   );
-  return { repository, cache, commands };
+  return { repository, cache, commands, branches };
 }
 
 const draft: Row = {
   id: "d",
+  branchId: "branch-1",
   name: "Draft",
   slug: "draft-room",
   status: "DRAFT",
@@ -73,6 +90,7 @@ const draft: Row = {
 };
 const live: Row = {
   id: "p",
+  branchId: "branch-1",
   name: "Live",
   slug: "live-room",
   status: "PUBLISHED",
@@ -81,6 +99,7 @@ const live: Row = {
 };
 const old: Row = {
   id: "a",
+  branchId: "branch-1",
   name: "Old",
   slug: "old-room",
   status: "ARCHIVED",
@@ -212,7 +231,11 @@ describe("catalog ordering", () => {
   it("swaps with the active neighbour, skipping archived records", async () => {
     const { commands, repository, cache } = setup(rows);
     await commands.move(editor, "2", -1);
-    expect(repository.reorder).toHaveBeenCalledWith(["2", "1", "3"], editor);
+    expect(repository.reorder).toHaveBeenCalledWith(
+      "branch-1",
+      ["2", "1", "3"],
+      editor,
+    );
     expect(cache.invalidate).toHaveBeenCalledWith(["rooms", "sitemap"]);
   });
 

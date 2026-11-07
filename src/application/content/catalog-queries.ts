@@ -1,5 +1,6 @@
 import { authorize } from "@/application/auth/authorize";
 import type { StaffPrincipal } from "@/application/auth/ports";
+import type { BranchRepository, BranchSummary } from "@/application/branches";
 import type {
   MediaOption,
   MediaRepository,
@@ -20,6 +21,7 @@ import type { CatalogRepository } from "./catalog-commands";
 
 type Listable = Readonly<{
   id: string;
+  branchId: string;
   name: string;
   slug: string;
   status: PublicationStatus;
@@ -144,21 +146,33 @@ export class CatalogQueries<Dto extends Listable, Input> {
   constructor(
     private readonly repository: CatalogRepository<Dto, Input>,
     private readonly media: MediaRepository,
+    private readonly branches: BranchRepository,
     private readonly noun = "room",
   ) {}
 
+  /** The default branch's records (the only branch until M5). */
   async list(
     staff: StaffPrincipal | null,
     params: Readonly<Record<string, unknown>>,
   ): Promise<Result<CatalogListing<Dto>>> {
     const access = authorize(staff, "content:edit");
     if (!access.ok) return access;
+    const branch = await this.branches.findDefault();
     return success(
       filterCatalog(
-        await this.repository.listAdmin(),
+        branch ? await this.repository.listAdmin(branch.id) : [],
         parseCatalogListQuery(params),
       ),
     );
+  }
+
+  /** The branch a new record will join, shown read only on the form. */
+  async newRecordBranch(
+    staff: StaffPrincipal | null,
+  ): Promise<Result<BranchSummary | null>> {
+    const access = authorize(staff, "content:edit");
+    if (!access.ok) return access;
+    return success(await this.branches.findDefault());
   }
 
   async get(
@@ -169,19 +183,24 @@ export class CatalogQueries<Dto extends Listable, Input> {
       record: Dto;
       media: readonly MediaOption[];
       gaps: readonly string[];
+      branch: BranchSummary | null;
     } | null>
   > {
     const access = authorize(staff, "content:edit");
     if (!access.ok) return access;
-    const [all, media] = await Promise.all([
-      this.repository.listAdmin(),
+    const found = await this.repository.findAdminById(id);
+    if (!found) return success(null);
+    const [all, media, branch] = await Promise.all([
+      this.repository.listAdmin(found.branchId),
       this.media.listReady(),
+      this.branches.findById(found.branchId),
     ]);
-    const record = all.find((item) => item.id === id);
-    return success(
-      record
-        ? { record, media, gaps: contentGaps(record, all, this.noun) }
-        : null,
-    );
+    const record = all.find((item) => item.id === id) ?? found;
+    return success({
+      record,
+      media,
+      gaps: contentGaps(record, all, this.noun),
+      branch,
+    });
   }
 }

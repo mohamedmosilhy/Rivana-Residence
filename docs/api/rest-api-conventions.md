@@ -1,6 +1,6 @@
 # REST API conventions
 
-Status: **Planned**, design accepted 2026-10-24 (ADR 014). No `/api/v1` endpoint exists yet. The only Route Handlers today are `/admin/(protected)/media/upload` and `/media/[...key]`.
+Status: **Implemented in M4** (2026-11-06): the shared HTTP layer (`src/app/api/v1/_http/`), the contracts (`src/contracts/api/v1/`), the generated OpenAPI document, and `GET /api/v1/health`. Reservation endpoints are **planned** and arrive with M6–M9. The build spec is [0001](../specs/0001-m4-backend-foundations.md). The other Route Handlers, `/admin/(protected)/media/upload` and `/media/[...key]`, predate `/api/v1` and keep their own shape.
 
 ## Shape
 
@@ -56,19 +56,19 @@ Status: **Planned**, design accepted 2026-10-24 (ADR 014). No `/api/v1` endpoint
 ```ts
 // src/app/api/v1/staff/reservations/[id]/pms-entry/route.ts  (illustrative)
 export const POST = staffRoute(
-  { body: markPmsEntryBody, capability: "reservations:pms-entry" },
-  async ({ staff, body, params, requestId }) =>
+  { route: "/api/v1/staff/reservations/[id]/pms-entry", body: markPmsEntryBody },
+  async ({ staff, body, params, setBranch }) =>
     toHttp(await reservations().markEnteredInHotelSystem(staff, { id: params.id, ...body }), {
       ok: (value) => json(200, toReservationDto(value)),
     }),
 );
 ```
 
-The wrappers in `src/app/api/v1/_http/` own body parsing, size and content-type checks, Zod validation, CSRF, principal resolution, problem mapping, request ids, and logging. The use case owns authorization (it calls `authorize` and `authorizeBranch` itself, so the authorization sweep covers it), business rules, and transactions. The handler maps fields and nothing else.
+The wrappers in `src/app/api/v1/_http/` (`publicRoute`, `staffRoute`, `webhookRoute`) own body parsing, size and content-type checks, Zod validation, CSRF, principal resolution, problem mapping, request ids, and logging. The wrapper has no `capability` option. The use case owns authorization (it calls `authorize` and `authorizeBranch` itself, so the authorization sweep covers it), business rules, and transactions. The handler maps fields, and calls `setBranch` for the log line, and nothing else. Refusals (`413`, `415`, `400`, CSRF `403`, `401`) never reach the handler. A thrown error becomes `500 INTERNAL` with only the request id; the log gets the error name and stack frames, never its message. The exact rules (body cap, request-id format, log fields) are in the spec's standard definition. Every `route.ts` is checked by `tests/unit/architecture/route-handlers.test.ts` (D-10).
 
 ## OpenAPI
 
-- `npm run openapi` (to be added in M4) builds `docs/api/openapi.json` (OpenAPI 3.1) from the contract schemas using Zod 4's `z.toJSONSchema()`, plus a small route registry that lists method, path, security, request schema, response schemas, and error codes.
+- `npm run openapi` builds `docs/api/openapi.json` (OpenAPI 3.1) from the contract schemas using Zod 4's `z.toJSONSchema()`, plus a small route registry that lists method, path, security, request schema, response schemas, and error codes.
 - A unit test regenerates it in memory and fails if the committed file differs.
 - Optionally served at `GET /api/v1/openapi.json` (public, read only) once approved.
 

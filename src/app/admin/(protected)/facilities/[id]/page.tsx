@@ -57,7 +57,7 @@ export default async function EditFacilityPage({
   ]);
   if (!loaded.ok) throw new Error("The facility is unavailable.");
   if (!loaded.value) notFound();
-  const { record: facility, media, gaps } = loaded.value;
+  const { record: facility, media, gaps, branch } = loaded.value;
 
   return (
     <>
@@ -93,6 +93,7 @@ export default async function EditFacilityPage({
           action={updateFacilityAction.bind(null, facility.id)}
           isNew={false}
           submitLabel="Save changes"
+          branchName={branch?.name ?? null}
           meta={`Last saved ${formatDateTime(facility.updatedAt, timeZone)}.`}
           values={{
             name: facility.name,

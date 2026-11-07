@@ -22,7 +22,8 @@ The single delivery plan for Rivana Residence. Work is delivered as a sequence o
 | M1 | Requirements and business rules | Accepted 2026-10-24; client answers pending (scope v2.0) | [../requirements/](../requirements/business-requirements.md) |
 | M2 | Domain, architecture, database, API design | Accepted 2026-10-24; ADRs 014–022 accepted | [../domain/](../domain/domain-model.md), [../architecture/](../architecture/overview.md), [../database/](../database/data-model.md), [../api/](../api/api-contracts.md), [../security/](../security/threat-model.md) |
 | M3 | Agent setup and engineering foundation | Accepted 2026-10-24 | [../engineering/](../engineering/engineering-standards.md), `AGENTS.md`, `CLAUDE.md` |
-| M4–M14 | Branch websites, catalog, quote, reservations, payments, booking journey, staff tools, messaging, hardening (replanned 2026-11-06; [briefs](./milestones/README.md)) | Not started; plan approved by the project owner 2026-11-06 | — |
+| M4 | Backend foundations and branch data ownership | Accepted 2026-11-07 | [reports/m4-backend-foundations.md](./reports/m4-backend-foundations.md) |
+| M5–M14 | Branch websites, catalog, quote, reservations, payments, booking journey, staff tools, messaging, hardening (replanned 2026-11-06; [briefs](./milestones/README.md)) | Not started; plan approved by the project owner 2026-11-06 | — |
 | Phase 12 + M15 | Joint deployment and launch | Not started | — |
 
 The external reservation module integration once planned as Phase 13 never started. The provider supplied no module or API, and the reservation system replaces it (ADR 013).
@@ -30,7 +31,7 @@ The external reservation module integration once planned as Phase 13 never start
 ```mermaid
 flowchart LR
   P0["Phases 0–10 ✓"] --> P11["Phase 11 ✓"]
-  P11 --> M0["M0–M3 ✓"] --> M4 --> M5 --> M6 --> M7 --> M8 --> M9
+  P11 --> M0["M0–M3 ✓"] --> M4["M4 ✓"] --> M5 --> M6 --> M7 --> M8 --> M9
   M9 --> M10
   M9 --> M11
   M8 --> M12

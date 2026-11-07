@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 
 import { requireStaff } from "@/composition/auth";
+import { facilityQueries } from "@/composition/content";
 import { CatalogForm } from "@/presentation/admin/content/catalog-form";
 import { DeniedPage } from "@/presentation/admin/denied-page";
 import { PageHeader } from "@/presentation/admin/ui/page-header";
@@ -11,11 +12,12 @@ import { createFacilityAction } from "../actions";
 export const metadata: Metadata = { title: "Add facility" };
 
 export default async function NewFacilityPage() {
-  const { allowed } = await requireStaff(
+  const { staff, allowed } = await requireStaff(
     "/admin/facilities/new",
     "content:edit",
   );
   if (!allowed) return <DeniedPage title="Add facility" />;
+  const branch = await facilityQueries().newRecordBranch(staff);
 
   return (
     <>
@@ -32,6 +34,7 @@ export default async function NewFacilityPage() {
           variant="facility"
           action={createFacilityAction}
           isNew
+          branchName={branch.ok ? (branch.value?.name ?? null) : null}
           submitLabel="Create draft"
           values={{
             name: "",

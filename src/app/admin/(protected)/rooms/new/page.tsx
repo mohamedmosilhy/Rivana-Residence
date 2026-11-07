@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 
 import { requireStaff } from "@/composition/auth";
+import { roomQueries } from "@/composition/content";
 import { CatalogForm } from "@/presentation/admin/content/catalog-form";
 import { DeniedPage } from "@/presentation/admin/denied-page";
 import { PageHeader } from "@/presentation/admin/ui/page-header";
@@ -11,8 +12,12 @@ import { createRoomAction } from "../actions";
 export const metadata: Metadata = { title: "Add room" };
 
 export default async function NewRoomPage() {
-  const { allowed } = await requireStaff("/admin/rooms/new", "content:edit");
+  const { staff, allowed } = await requireStaff(
+    "/admin/rooms/new",
+    "content:edit",
+  );
   if (!allowed) return <DeniedPage title="Add room" />;
+  const branch = await roomQueries().newRecordBranch(staff);
 
   return (
     <>
@@ -29,6 +34,7 @@ export default async function NewRoomPage() {
           variant="room"
           action={createRoomAction}
           isNew
+          branchName={branch.ok ? (branch.value?.name ?? null) : null}
           submitLabel="Create draft"
           values={{
             name: "",

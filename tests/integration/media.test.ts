@@ -24,6 +24,7 @@ import {
   createRoom,
   createTestClient,
   resetDatabase,
+  TEST_BRANCH_ID,
 } from "./support/database";
 import {
   animatedWebp,
@@ -42,6 +43,7 @@ const editor: StaffPrincipal = {
   name: "Test Administrator",
   email: "admin@example.test",
   sessionId: "s",
+  branchIds: [],
 };
 const admin: StaffPrincipal = { ...editor, role: "ADMIN" };
 let root: string;
@@ -720,7 +722,7 @@ describe("placing images", () => {
     );
     await seedDatabase(client);
     const pages = new PrismaPageRepository(client);
-    const home = await pages.findAdminByKey("HOME");
+    const home = await pages.findAdminByKey(TEST_BRANCH_ID, "HOME");
     const hero = home!.sections.find((section) => section.type === "HERO")!;
     const roomGrid = home!.sections.find(
       (section) => section.type === "ROOM_GRID",
@@ -730,6 +732,7 @@ describe("placing images", () => {
 
     expect(
       await pages.replaceSectionMedia(
+        TEST_BRANCH_ID,
         "HOME",
         hero.id,
         [
@@ -751,6 +754,7 @@ describe("placing images", () => {
     ).toMatchObject({ ok: false, error: { code: "VALIDATION" } });
     expect(
       await pages.replaceSectionMedia(
+        TEST_BRANCH_ID,
         "HOME",
         roomGrid.id,
         [{ mediaId: one.id, role: "GALLERY", sortOrder: 0, altOverride: null }],
@@ -759,7 +763,7 @@ describe("placing images", () => {
     ).toMatchObject({ ok: false, error: { code: "VALIDATION" } });
 
     await client.page.update({
-      where: { key: "HOME" },
+      where: { branchId_key: { branchId: TEST_BRANCH_ID, key: "HOME" } },
       data: { isPublished: true },
     });
     // One image has no alt text, which a published page cannot show.
@@ -769,6 +773,7 @@ describe("placing images", () => {
     });
     expect(
       await pages.replaceSectionMedia(
+        TEST_BRANCH_ID,
         "HOME",
         hero.id,
         [
@@ -785,6 +790,7 @@ describe("placing images", () => {
     expect(await client.pageSectionMedia.count()).toBe(0);
 
     const saved = await pages.replaceSectionMedia(
+      TEST_BRANCH_ID,
       "HOME",
       hero.id,
       [

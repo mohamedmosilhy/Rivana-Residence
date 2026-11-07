@@ -1,10 +1,13 @@
 import "server-only";
 
 import type { StaffDirectory, StaffPrincipal } from "@/application/auth/ports";
+import { isBranchScopedRole } from "@/domain/auth/capabilities";
 import type { Auth } from "@/infrastructure/auth/better-auth";
 
 // The authoritative session check: a valid, unexpired database session whose
 // user still exists and is active. Deactivated users lose every session.
+// Role and branch assignments are read on every request, so a change takes
+// effect on the next request (ADR 018).
 export async function resolveStaffSession(
   auth: Auth,
   directory: StaffDirectory,
@@ -26,5 +29,8 @@ export async function resolveStaffSession(
     email: account.email,
     role: account.role,
     sessionId: result.session.id,
+    branchIds: isBranchScopedRole(account.role)
+      ? await directory.listBranchIds(account.id)
+      : [],
   };
 }

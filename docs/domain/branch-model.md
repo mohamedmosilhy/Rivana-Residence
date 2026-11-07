@@ -1,6 +1,14 @@
 # Branch model
 
-Status: **Planned**, design accepted 2026-10-24 (ADR 017) and extended on 2026-11-06 (ADR 026: branch-owned websites, path-based branch URLs, per-branch maps; Q-41, Q-42, Q-52). Nothing in this document is implemented yet.
+Status: design accepted 2026-10-24 (ADR 017) and extended on 2026-11-06 (ADR 026: branch-owned websites, path-based branch URLs, per-branch maps; Q-41, Q-42, Q-52). **Implemented in M4:**
+
+- The `Branch` table, with every attribute below and its checks.
+- The domain schema with the reserved-slug rule (`src/domain/branches`).
+- The first branch, `new-cairo`, created from `SiteSettings`.
+- Branch ownership of rooms, facilities, and pages.
+- `StaffBranchAssignment` and branch-scoped staff access.
+
+**Planned:** branch sites, the chooser and switcher, redirects, and per-branch maps and contact (M5); the sync reminders (M11); branch admin screens (M12). Until M5, the public site still reads contact and map details from `SiteSettings`, so editing those settings does not update the branch copy.
 
 ## Identity and attributes
 

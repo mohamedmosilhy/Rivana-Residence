@@ -16,6 +16,7 @@ import { actionResult, typedValues } from "./action-results";
 
 type CatalogRecord = Readonly<{
   id: string;
+  branchId: string;
   slug: string;
   status: PublicationStatus;
 }>;

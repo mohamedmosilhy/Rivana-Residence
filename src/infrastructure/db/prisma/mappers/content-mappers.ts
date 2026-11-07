@@ -94,6 +94,7 @@ function richText(value: Prisma.JsonValue) {
 export function mapRoom(row: RoomRow): RoomDto {
   return {
     id: row.id,
+    branchId: row.branchId,
     name: row.name,
     slug: row.slug,
     shortDescription: row.shortDescription,
@@ -118,6 +119,7 @@ export function mapRoom(row: RoomRow): RoomDto {
 export function mapFacility(row: FacilityRow): FacilityDto {
   return {
     id: row.id,
+    branchId: row.branchId,
     name: row.name,
     slug: row.slug,
     shortDescription: row.shortDescription,
@@ -137,6 +139,7 @@ export function mapFacility(row: FacilityRow): FacilityDto {
 export function mapPage(row: PageRow): PageDto {
   return {
     id: row.id,
+    branchId: row.branchId,
     key: row.key,
     title: row.title,
     canonicalPath: row.canonicalPath,

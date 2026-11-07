@@ -18,7 +18,10 @@ export class GetAdminOverview {
   async execute(
     staff: StaffPrincipal | null,
   ): Promise<Result<AdminOverviewDto>> {
-    const access = authorize(staff, "admin:access");
+    // CMS counts, draft names, and every branch's enquiry totals: only roles
+    // that edit content may read them. Receptionists and Managers hold
+    // `admin:access` but get a staff home instead (review of M4, Q-26).
+    const access = authorize(staff, "content:edit");
     if (!access.ok) return access;
     return success(await this.reader.read(this.clock.now(), RECENT_LIMIT));
   }

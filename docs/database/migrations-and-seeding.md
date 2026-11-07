@@ -12,7 +12,8 @@ How the schema evolves and how databases are filled. The production deployment f
 
 ## Current state (verified 2026-10-24)
 
-- 3 committed migrations: `20260925134806_initial_content`, `20260925141030_auth`, `20260925170034_media_library`. All are additive.
+- 5 migrations: `20260925134806_initial_content`, `20260925141030_auth`, `20260925170034_media_library`, and from M4 `20261106120000_staff_roles_enum` and `20261106120100_branches_and_staff_roles`. All are additive.
+- The seed (`prisma/seed-data.ts`) upserts the first branch (`new-cairo`, id `DEFAULT_BRANCH_ID`, the same id the migration inserts) and keys the required pages on `(branchId, key)`.
 - `npm run db:migrate` (dev), `npm run db:deploy` (production), `npm run db:seed` (required pages and settings), `npm run db:seed:demo`, `npm run db:seed:initial` (old website content, three rooms, admin account).
 - The integration and E2E harnesses drop, recreate, and migrate `*_test` databases on each run.
 
@@ -22,7 +23,7 @@ Replanned 2026-11-06 ([roadmap](../delivery/roadmap.md#reservation-milestones)).
 
 | Migration | Milestone | Contents | Data handling |
 | --- | --- | --- | --- |
-| `…_branches_and_staff_roles` (plus a separate enum migration if needed) | M4 | `Branch` (contact, address, map embed, check-in and check-out times, sync settings); `StaffBranchAssignment`; role enum values; `AuditEvent`; `Room.branchId`, `accommodationType`, `bedroomCount`, `bathroomCount`; `Facility.branchId`; `Page.branchId` with unique `(branchId, key)`; `ContactEnquiry.branchId` | Inserts one branch from `SiteSettings` (name, contact, address, coordinates, map, time zone) and sets every room, facility, and page to it, then `SET NOT NULL`. Existing `ADMIN` users need no assignment; `EDITOR`s are untouched (Q-01) |
+| `…_branches_and_staff_roles` plus `…_staff_roles_enum` (**applied in M4**; rehearsed on a copy of the development data with no row lost and no drift) | M4 | `Branch` (contact, address, map embed, check-in and check-out times, sync settings); `StaffBranchAssignment`; role enum values; `AuditEvent`; `Room.branchId`, `accommodationType`, `bedroomCount`, `bathroomCount`; `Facility.branchId`; `Page.branchId` with unique `(branchId, key)`; `ContactEnquiry.branchId` | Inserts one branch from `SiteSettings` (name, contact, address, coordinates, map, time zone) and sets every room, facility, and page to it, then `SET NOT NULL`. Existing `ADMIN` users need no assignment; `EDITOR`s are untouched (Q-01) |
 | none | M5 | Uses M4 columns; `Promotion` left unused | Demo seed adds a second fictional branch with its own pages, facilities, a room, and an apartment |
 | `…_inventory_and_rates` | M6 | `PhysicalRoom`, `InventoryBlock`, `RoomBaseRate`, `RatePeriod` (one kind); `btree_gist`; exclusion constraints | No data. Units and rates are entered by staff, or by a reviewed seed of approved real data (Q-23) |
 | `…_commercial_rules` | M7 | `ServiceOffering`, `Coupon`, `CouponBranch`, `CommercialSettings` (VAT nullable) | No production data; the Admin enters the VAT rate in the dashboard (Q-05) |
@@ -34,7 +35,7 @@ Replanned 2026-11-06 ([roadmap](../delivery/roadmap.md#reservation-milestones)).
 Rules for these migrations (in addition to the policy above):
 
 - No renames or drops of existing columns.
-- `ALTER TYPE … ADD VALUE` cannot run inside a transaction block on older PostgreSQL versions and cannot be used in the same transaction that adds it. Keep it in its own migration if Prisma's generated SQL requires that. Verify in M4.
+- `ALTER TYPE … ADD VALUE` cannot run inside a transaction block on older PostgreSQL versions and cannot be used in the same transaction that adds it. M4 keeps it in its own migration (`…_staff_roles_enum`), and nothing in that migration uses the new values; verified on PostgreSQL 18.
 - After each migration: `prisma migrate diff --from-config-datasource --to-schema` must report no difference on a scratch database (the Phase 11 drift check).
 - Production backups run before `db:deploy` ([../deployment.md](../operations/deployment.md#backups-and-recovery)).
 

@@ -1,6 +1,6 @@
 # User roles and permissions
 
-Editor and Admin are implemented (`src/domain/auth/capabilities.ts`). Receptionist, Manager, branch scope, and the new capabilities are planned (ADR 018, M4). Cells marked † are recommendations awaiting approval.
+All four staff roles and the full capability matrix are implemented (`src/domain/auth/capabilities.ts`, M4). Branch scope is implemented too: `authorizeBranch` and `branchScope` in `src/application/auth/authorize-branch.ts`, and assignments loaded with the session. The table test `tests/unit/auth/authorization.test.ts` (T-AUTHZ-1) mirrors this matrix. The reservation capabilities exist, but nothing uses them until M6+. Cells marked † are recommendations awaiting approval; Q-26 (enquiries) was accepted as recommended, and in M4 Receptionists and Managers see only enquiries from their branches, which is none until M5 records the branch on new enquiries.
 
 ## Roles
 
@@ -82,5 +82,11 @@ Every reservation, inventory, pricing, service, coupon, cancellation, marketing,
 
 - Permissions are enforced in application use cases. Menus and hidden buttons are conveniences, not controls.
 - A Receptionist or Manager with no branch assignment sees no reservation data.
-- Only an Admin can assign roles or branches. The last active Admin cannot be demoted or deactivated. This is enforced today by the staff CLI (`scripts/staff-admin.ts`); the in-app Staff screen must keep the same rule when it gains role editing.
+- Only an Admin can assign roles or branches. The last active Admin cannot be demoted or deactivated. This is enforced today by the staff CLI (`scripts/staff-admin.ts`), which also does the following (M4):
+  - It takes `--role RECEPTIONIST|MANAGER` and `--branch <slug>` (repeatable) on `create`, and has the `assign-branch` and `unassign-branch` commands.
+  - It refuses branches for Admins and Editors.
+  - It clears a user's assignments when their role becomes Admin or Editor.
+  - It writes an `AuditEvent` (actor `SYSTEM`) for every role and assignment change.
+
+  The in-app Staff screen must keep the same rules when it gains role editing.
 - Role or assignment changes take effect on the next request. Deactivating a user revokes their sessions (existing behavior).

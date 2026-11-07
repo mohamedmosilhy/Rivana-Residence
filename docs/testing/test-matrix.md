@@ -2,6 +2,20 @@
 
 Planned tests for branch websites, reservations, payments, and messaging, by layer, with the ids used in the [traceability matrix](../requirements/scope-traceability-matrix.md) and the [milestone briefs](../delivery/milestones/README.md). Revised 2026-11-06 for the client decisions (Q-36…Q-53). Existing website and CMS tests are described in [testing-strategy.md](./testing-strategy.md) and live under `tests/`; the promotion popup tests are deleted in M5 with the popup.
 
+## Implemented so far
+
+M4 (2026-11-06) implemented these ids; everything else below is still planned.
+
+| Id | Where |
+| --- | --- |
+| T-AUTHZ-1 | `tests/unit/auth/authorization.test.ts` (four roles × every capability), `authorize-branch.test.ts`, and the sweep extended to Receptionist and Manager in `authorization-sweep.test.ts` |
+| T-ARCH-1…4 | `tests/unit/architecture/module-boundaries.test.ts` (D-7, D-8, D-11), `persistence-boundaries.test.ts` (D-9, D-12), `route-handlers.test.ts` (D-10), `openapi.test.ts` (freshness) |
+| T-HTTP-1…6 | `tests/unit/api/http-layer.test.ts` (415, 413 declared and streamed, 400, 422, 403 cross-site, 401; webhook raw body; 500 without leakage; log redaction); `tests/integration/health-route.test.ts` |
+| T-DB-1, T-DB-2 | `tests/integration/branches-migration.test.ts` (M3 data → M4 migrations, no drift), `branches.test.ts` (per-branch keys and order, branch checks) |
+| T-AUD-1 | `tests/integration/branches.test.ts` (rollback leaves no row); CLI audit rows in `staff-branches.test.ts` |
+| T-SITE-7 (reserved slugs) | `tests/unit/domain/branches-audit.test.ts`, plus the `Branch_slug_check` constraint in `branches.test.ts` |
+| E2E-A-2 (first part) | `tests/e2e/branch-roles.spec.ts` (Receptionist and Manager: staff home, denied CMS routes, refused CMS action) |
+
 ## Unit (domain/application; no database)
 
 | Id | Subject | Cases |

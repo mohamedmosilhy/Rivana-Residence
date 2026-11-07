@@ -12,6 +12,7 @@ export type ApplicationErrorCode =
   | "NOT_FOUND"
   | "NOT_PUBLISHABLE"
   | "REFERENCED"
+  | "TRY_AGAIN"
   | "VALIDATION";
 
 export type ApplicationError = Readonly<{

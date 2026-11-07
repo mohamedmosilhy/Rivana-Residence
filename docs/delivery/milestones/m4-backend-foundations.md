@@ -1,6 +1,6 @@
 # M4 — Backend foundations and branch data ownership
 
-Status: **Not started.** Branch: `m4-backend-foundations`. Follow the [milestone loop](./README.md#the-loop-every-milestone-follows).
+Status: **Accepted** (2026-11-07). Build spec: [0001](../../specs/0001-m4-backend-foundations.md). Evidence: [report](../reports/m4-backend-foundations.md). Branch: `m4-backend-foundations`. Follow the [milestone loop](./README.md#the-loop-every-milestone-follows).
 
 ## Objective
 

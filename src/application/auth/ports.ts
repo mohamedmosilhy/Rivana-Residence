@@ -1,19 +1,25 @@
 import type { ThrottleRule, ThrottleState } from "@/domain/auth/login-throttle";
-import type { AdminRole } from "@/domain/shared/types";
+import type { StaffRole } from "@/domain/shared/types";
 
 export type StaffPrincipal = Readonly<{
   id: string;
   name: string;
   email: string;
-  role: AdminRole;
+  role: StaffRole;
   sessionId: string;
+  /**
+   * Branches a Receptionist or Manager is assigned to, reloaded with the
+   * session on every request (ADR 018). Always empty for Admin (implicitly
+   * every branch) and Editor (no branch scope).
+   */
+  branchIds: readonly string[];
 }>;
 
 export type StaffAccount = Readonly<{
   id: string;
   name: string;
   email: string;
-  role: AdminRole;
+  role: StaffRole;
   active: boolean;
 }>;
 
@@ -51,6 +57,8 @@ export type StaffListing = StaffAccount & Readonly<{ activeSessions: number }>;
 export interface StaffDirectory {
   listAccounts(now: Date): Promise<readonly StaffListing[]>;
   findById(id: string): Promise<StaffAccount | null>;
+  /** Branch ids from the user's assignment rows. */
+  listBranchIds(userId: string): Promise<readonly string[]>;
   findByEmail(email: string): Promise<StaffAccount | null>;
   listSessions(
     userId: string,

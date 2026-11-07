@@ -127,9 +127,9 @@ test("administrators permanently delete an archived room", async ({
   const project = testInfo.project.name;
   const id = `e2e-archived-${project}`.slice(0, 32);
   await sql(
-    `INSERT INTO "Room" (id, name, slug, "shortDescription", description, "maxAdults",
+    `INSERT INTO "Room" (id, "branchId", name, slug, "shortDescription", description, "maxAdults",
        "sortOrder", status, "updatedAt")
-     VALUES ($1, $2, $3, 'Old room.', '{"type":"doc","content":[]}', 2, 999, 'ARCHIVED', now())
+     VALUES ($1, (SELECT id FROM "Branch" WHERE slug = 'new-cairo'), $2, $3, 'Old room.', '{"type":"doc","content":[]}', 2, 999, 'ARCHIVED', now())
      ON CONFLICT (id) DO NOTHING`,
     [id, `Old room ${project}`, `old-room-${project}`],
   );

@@ -52,10 +52,20 @@ type Call = Readonly<{
 }>;
 
 const catalog = () =>
-  new CatalogCommands(tripwire("repository"), tripwire("cache"), kind);
+  new CatalogCommands(
+    tripwire("repository"),
+    tripwire("cache"),
+    kind,
+    tripwire("branches"),
+  );
 const queries = () =>
-  new CatalogQueries(tripwire("repository"), tripwire("media"));
-const pages = () => new PageCommands(tripwire("pages"), tripwire("cache"));
+  new CatalogQueries(
+    tripwire("repository"),
+    tripwire("media"),
+    tripwire("branches"),
+  );
+const pages = () =>
+  new PageCommands(tripwire("pages"), tripwire("cache"), tripwire("branches"));
 const media = () => new MediaLibrary(tripwire("deps"), tripwire("cache"));
 const promotions = () =>
   new PromotionAdmin(tripwire("promotions"), tripwire("cache"), {
@@ -296,7 +306,7 @@ const CALLS: readonly Call[] = [
   },
   {
     name: "overview.read",
-    capability: "admin:access",
+    capability: "content:edit",
     run: (s) =>
       new GetAdminOverview(tripwire("reader"), tripwire("clock")).execute(s),
   },
@@ -308,6 +318,7 @@ const editor: StaffPrincipal = {
   email: "editor@rivana.test",
   role: "EDITOR",
   sessionId: "session",
+  branchIds: [],
 };
 
 async function failureCode(call: Call, staff: StaffPrincipal | null) {
@@ -359,6 +370,37 @@ describe("authorization sweep across protected commands", () => {
     },
   );
 });
+
+// AC-4: Receptionists and Managers hold no CMS capability, so every content,
+// media, promotion, and settings command refuses them before touching data,
+// even with a branch assignment.
+describe.each(["RECEPTIONIST", "MANAGER"] as const)(
+  "authorization sweep for %s",
+  (role) => {
+    const staff: StaffPrincipal = { ...editor, role, branchIds: ["branch-1"] };
+    const denied = CALLS.filter(
+      (call) => !roleHasCapability(role, call.capability),
+    );
+
+    it("covers every command except the branch-scoped enquiry list", () => {
+      expect(
+        CALLS.filter((call) => !denied.includes(call)).map((call) => call.name),
+      ).toEqual(["enquiries.list"]);
+    });
+
+    it.each(denied.map((call) => [call.name, call] as const))(
+      "%s forbids the role before any data access",
+      async (_name, call) => {
+        const { result, touched } = await failureCode(call, staff);
+        expect(touched).toEqual([]);
+        expect(result).toMatchObject({
+          ok: false,
+          error: { code: "FORBIDDEN" },
+        });
+      },
+    );
+  },
+);
 
 describe("authorization sweep tripwire", () => {
   it("detects dependency access once a caller is authorized", async () => {

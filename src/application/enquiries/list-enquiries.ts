@@ -1,3 +1,4 @@
+import { branchScope } from "@/application/auth/authorize-branch";
 import { authorize } from "@/application/auth/authorize";
 import type { StaffPrincipal } from "@/application/auth/ports";
 import type {
@@ -20,7 +21,7 @@ function isEnquiryStatus(value: unknown): value is EnquiryStatus {
 /** Normalizes untrusted URL search params into a safe list query. */
 export function parseEnquiryListQuery(
   params: Readonly<Record<string, unknown>>,
-): EnquiryListQuery {
+): Omit<EnquiryListQuery, "branchScope"> {
   const status = isEnquiryStatus(params.status) ? params.status : null;
   const search =
     typeof params.q === "string" ? params.q.trim().slice(0, 100) : "";
@@ -33,7 +34,7 @@ export function parseEnquiryListQuery(
 }
 
 export type EnquiryListing = PagedResult<ContactEnquiryDto> &
-  Readonly<{ query: EnquiryListQuery }>;
+  Readonly<{ query: Omit<EnquiryListQuery, "branchScope"> }>;
 
 export class ListEnquiries {
   constructor(private readonly enquiries: EnquiryRepository) {}
@@ -44,7 +45,12 @@ export class ListEnquiries {
   ): Promise<Result<EnquiryListing>> {
     const access = authorize(staff, "enquiries:read");
     if (!access.ok) return access;
+    // Receptionists and Managers see only their branches' enquiries (Q-26).
     const query = parseEnquiryListQuery(params);
-    return success({ ...(await this.enquiries.listAdminPage(query)), query });
+    const page = await this.enquiries.listAdminPage({
+      ...query,
+      branchScope: branchScope(access.value),
+    });
+    return success({ ...page, query });
   }
 }

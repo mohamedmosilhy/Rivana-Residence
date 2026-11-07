@@ -1,3 +1,4 @@
+import type { StaffRole } from "@/domain/shared/types";
 import type { PrismaClient } from "@/generated/prisma/client";
 import { createAuth, type Auth } from "@/infrastructure/auth/better-auth";
 import { PrismaStaffDirectory } from "@/infrastructure/db/prisma/repositories/staff-directory";
@@ -23,16 +24,25 @@ export function createTestAuth(
   return { auth, directory };
 }
 
+const NAMES: Record<StaffRole, string> = {
+  ADMIN: "Amira Admin",
+  EDITOR: "Omar Editor",
+  RECEPTIONIST: "Rana Receptionist",
+  MANAGER: "Mona Manager",
+};
+
 export function provision(
   client: PrismaClient,
   email: string,
-  role: "ADMIN" | "EDITOR" = "EDITOR",
+  role: StaffRole = "EDITOR",
+  options: Readonly<{ branches?: readonly string[] }> = {},
 ) {
   return createStaff(client, {
     email,
-    name: role === "ADMIN" ? "Amira Admin" : "Omar Editor",
+    name: NAMES[role],
     role,
     password: STAFF_PASSWORD,
+    ...(options.branches ? { branches: options.branches } : {}),
   });
 }
 

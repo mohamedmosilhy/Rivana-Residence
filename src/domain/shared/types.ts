@@ -1,5 +1,13 @@
-export const ADMIN_ROLES = ["EDITOR", "ADMIN"] as const;
-export type AdminRole = (typeof ADMIN_ROLES)[number];
+// Staff roles (ADR 018). The database enum keeps its original name,
+// `AdminRole`. Receptionists and Managers are branch scoped; Admins are
+// implicitly all-branch; Editors are CMS-only with no branch scope (Q-01).
+export const STAFF_ROLES = [
+  "EDITOR",
+  "ADMIN",
+  "RECEPTIONIST",
+  "MANAGER",
+] as const;
+export type StaffRole = (typeof STAFF_ROLES)[number];
 
 export const PUBLICATION_STATUSES = ["DRAFT", "PUBLISHED", "ARCHIVED"] as const;
 export type PublicationStatus = (typeof PUBLICATION_STATUSES)[number];

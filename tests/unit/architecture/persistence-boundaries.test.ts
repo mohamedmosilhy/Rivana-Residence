@@ -3,6 +3,11 @@ import { join, relative } from "node:path";
 
 import { describe, expect, it } from "vitest";
 
+import {
+  RESERVATION_MODELS,
+  RESERVATION_SQL_FOLDERS,
+} from "../../support/reservation-models";
+
 const root = join(__dirname, "../../..");
 
 function sourceFiles(directory: string): string[] {
@@ -50,35 +55,38 @@ describe("persistence boundaries", () => {
   });
 });
 
-describe("booking scope", () => {
-  it("keeps booking, pricing, guest, and redemption data out of the schema", () => {
-    const schema = readFileSync(join(root, "prisma/schema.prisma"), "utf8");
-    const declarations = [
-      ...schema.matchAll(/^\s*(?:model|enum)\s+(\w+)|^\s{2}(\w+)\s+\S/gm),
-    ].map((match) => match[1] ?? match[2] ?? "");
-    const forbidden = new Set([
-      "availability",
-      "booking",
-      "discount",
-      "guest",
-      "payment",
-      "price",
-      "rate",
-      "redemption",
-      "reservation",
-      "stay",
-    ]);
-    const words = (name: string) =>
-      name
-        .replace(/([a-z0-9])([A-Z])/g, "$1 $2")
-        .toLowerCase()
-        .split(/[\s_]+/)
-        .map((word) => word.replace(/s$/, ""));
+// D-9 and D-12: reservation-module tables are reached only from the
+// reservation and reporting repositories. Replaces the Phase 2 "booking
+// scope" word check now that the reservation design is accepted (ADR 015).
+describe("reservation data boundaries", () => {
+  const lowerFirst = (name: string) => name[0]!.toLowerCase() + name.slice(1);
+  const references = (source: string, model: string) =>
+    new RegExp(`\\.${lowerFirst(model)}\\b|"${model}"`).test(source);
 
+  it("keeps reservation tables out of every other folder", () => {
+    const offenders = sourceFiles(join(root, "src"))
+      .map((file) => relative(root, file))
+      .filter(
+        (file) =>
+          !file.startsWith("src/generated/") &&
+          !RESERVATION_SQL_FOLDERS.some((folder) => file.startsWith(folder)),
+      )
+      .flatMap((file) => {
+        const source = readFileSync(join(root, file), "utf8");
+        return RESERVATION_MODELS.filter((model) =>
+          references(source, model),
+        ).map((model) => `${file}: ${model}`);
+      });
+    expect(offenders).toEqual([]);
+  });
+
+  it("declares every reservation model it guards in the data model", () => {
+    const dataModel = readFileSync(
+      join(root, "docs/database/data-model.md"),
+      "utf8",
+    );
     expect(
-      declarations.filter((name) =>
-        words(name).some((word) => forbidden.has(word)),
-      ),
+      RESERVATION_MODELS.filter((model) => !dataModel.includes(model)),
     ).toEqual([]);
   });
 });

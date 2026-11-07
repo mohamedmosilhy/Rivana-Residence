@@ -13,6 +13,7 @@ import { PrismaSettingsRepository } from "@/infrastructure/db/prisma/repositorie
 import { HmacFormTokens } from "@/infrastructure/email/hmac-form-tokens";
 
 import { seedDatabase } from "../../prisma/seed-data";
+import { PrismaBranchRepository } from "@/infrastructure/db/prisma/repositories/branches/branch-repository";
 import {
   actor,
   createActor,
@@ -21,6 +22,7 @@ import {
   createRoom,
   createTestClient,
   resetDatabase,
+  TEST_BRANCH_ID,
 } from "./support/database";
 
 const client = createTestClient();
@@ -29,6 +31,7 @@ const site = new PublicSite({
   media: new PrismaMediaRepository(client),
   pages: new PrismaPageRepository(client),
   rooms: new PrismaRoomRepository(client),
+  branches: new PrismaBranchRepository(client),
   facilities: new PrismaFacilityRepository(client),
   promotions: new PrismaPromotionRepository(client),
 });
@@ -86,7 +89,7 @@ describe("public queries", () => {
   it("return a page only when published, with visible sections only", async () => {
     expect(await site.page("CONTACT")).toBeNull();
     await client.page.update({
-      where: { key: "CONTACT" },
+      where: { branchId_key: { branchId: TEST_BRANCH_ID, key: "CONTACT" } },
       data: { isPublished: true },
     });
 

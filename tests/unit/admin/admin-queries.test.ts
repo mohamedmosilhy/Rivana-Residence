@@ -18,6 +18,7 @@ const editor: StaffPrincipal = {
   email: "omar@example.test",
   role: "EDITOR",
   sessionId: "session-1",
+  branchIds: [],
 };
 
 describe("enquiry list query", () => {
@@ -81,9 +82,30 @@ describe("enquiry list query", () => {
       search: null,
       page: 2,
       pageSize: 20,
+      branchScope: "ALL",
     });
     expect(result).toMatchObject({ ok: true, value: { total: 0, page: 2 } });
   });
+
+  // Q-26: Receptionists and Managers see only their branches' enquiries; an
+  // unassigned one sees none.
+  it.each([
+    ["RECEPTIONIST", ["branch-a"], ["branch-a"]],
+    ["MANAGER", ["branch-a", "branch-b"], ["branch-a", "branch-b"]],
+    ["RECEPTIONIST", [], []],
+  ] as const)(
+    "limits a %s to assigned branches %j",
+    async (role, branchIds, scope) => {
+      const page = { items: [], total: 0, page: 1, pageSize: 20 };
+      const repository = { listAdminPage: vi.fn(async () => page) };
+      await new ListEnquiries(
+        repository as unknown as EnquiryRepository,
+      ).execute({ ...editor, role, branchIds }, {});
+      expect(repository.listAdminPage).toHaveBeenCalledWith(
+        expect.objectContaining({ branchScope: scope }),
+      );
+    },
+  );
 });
 
 describe("GetAdminOverview", () => {

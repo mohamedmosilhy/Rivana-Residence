@@ -2,6 +2,12 @@ import { createId } from "@paralleldrive/cuid2";
 
 import type { Prisma, PrismaClient } from "../src/generated/prisma/client.ts";
 
+// The first branch. The branches migration inserts it with this id (SQL
+// cannot generate CUID2), and the seed upserts the same row so a fresh or
+// truncated database always has it (spec 0001).
+export const DEFAULT_BRANCH_ID = "cwiuqp6uf1q5i1ic4vhawnmw";
+export const DEFAULT_BRANCH_SLUG = "new-cairo";
+
 const paragraph = (text: string) => ({
   type: "doc",
   content: [{ type: "paragraph", content: [{ type: "text", text }] }],
@@ -176,9 +182,10 @@ const requiredPages = [
 
 // Creates only structural records. Staff accounts are provisioned with
 // `npm run staff -- create`, which never takes a password from the environment.
+// Returns the default branch id.
 export async function seedDatabase(client: PrismaClient) {
-  await client.$transaction(async (transaction) => {
-    await transaction.siteSettings.upsert({
+  return client.$transaction(async (transaction) => {
+    const settings = await transaction.siteSettings.upsert({
       where: { id: "default" },
       update: {},
       create: {
@@ -188,12 +195,37 @@ export async function seedDatabase(client: PrismaClient) {
       },
     });
 
+    // Same values the migration copies from SiteSettings; never overwrites
+    // an existing branch.
+    const branch = await transaction.branch.upsert({
+      where: { slug: DEFAULT_BRANCH_SLUG },
+      update: {},
+      create: {
+        id: DEFAULT_BRANCH_ID,
+        slug: DEFAULT_BRANCH_SLUG,
+        name: settings.siteName,
+        summary: settings.tagline?.slice(0, 300) ?? null,
+        timeZone: settings.timeZone,
+        phone: settings.phone,
+        email: settings.email,
+        addressLine1: settings.addressLine1,
+        addressLine2: settings.addressLine2,
+        city: settings.city,
+        country: settings.country,
+        latitude: settings.latitude,
+        longitude: settings.longitude,
+        mapEmbedUrl: settings.mapEmbedUrl,
+        sortOrder: 0,
+      },
+    });
+
     for (const page of requiredPages) {
       const row = await transaction.page.upsert({
-        where: { key: page.key },
+        where: { branchId_key: { branchId: branch.id, key: page.key } },
         update: {},
         create: {
           id: createId(),
+          branchId: branch.id,
           key: page.key,
           title: page.title,
           canonicalPath: page.canonicalPath,
@@ -218,5 +250,6 @@ export async function seedDatabase(client: PrismaClient) {
         });
       }
     }
+    return branch.id;
   });
 }

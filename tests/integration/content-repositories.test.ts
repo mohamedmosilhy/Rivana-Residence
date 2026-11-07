@@ -13,6 +13,7 @@ import {
   createRoom,
   createTestClient,
   resetDatabase,
+  TEST_BRANCH_ID,
 } from "./support/database";
 
 const client = createTestClient();
@@ -42,12 +43,15 @@ describe("room repository", () => {
     const draft = await createRoom(client, { status: "DRAFT" });
     const archived = await createRoom(client, { status: "ARCHIVED" });
 
-    expect((await rooms.listPublished()).map((room) => room.id)).toEqual([
-      first.id,
-      second.id,
-    ]);
-    expect(await rooms.findPublishedBySlug(draft.slug)).toBeNull();
-    expect(await rooms.findPublishedBySlug(archived.slug)).toBeNull();
+    expect(
+      (await rooms.listPublished(TEST_BRANCH_ID)).map((room) => room.id),
+    ).toEqual([first.id, second.id]);
+    expect(
+      await rooms.findPublishedBySlug(TEST_BRANCH_ID, draft.slug),
+    ).toBeNull();
+    expect(
+      await rooms.findPublishedBySlug(TEST_BRANCH_ID, archived.slug),
+    ).toBeNull();
     expect((await rooms.findAdminById(draft.id))?.status).toBe("DRAFT");
   });
 
@@ -58,10 +62,11 @@ describe("room repository", () => {
       heroMediaId: hero.id,
     });
 
-    const result = await rooms.findPublishedBySlug(room.slug);
+    const result = await rooms.findPublishedBySlug(TEST_BRANCH_ID, room.slug);
 
     expect(result).toEqual({
       id: room.id,
+      branchId: TEST_BRANCH_ID,
       name: room.name,
       slug: room.slug,
       shortDescription: "A calm room above the river.",
@@ -141,7 +146,9 @@ describe("room repository", () => {
     const c = await createRoom(client, { sortOrder: 2 });
     await createRoom(client, { status: "ARCHIVED", sortOrder: 0 });
 
-    expect(await rooms.reorder([c.id, a.id, b.id], actor)).toEqual({
+    expect(
+      await rooms.reorder(TEST_BRANCH_ID, [c.id, a.id, b.id], actor),
+    ).toEqual({
       ok: true,
       value: undefined,
     });
@@ -166,7 +173,11 @@ describe("room repository", () => {
     const b = await createRoom(client, { sortOrder: 1 });
     const c = await createRoom(client, { sortOrder: 2 });
 
-    const result = await rooms.reorder(pick([a.id, b.id, c.id]), actor);
+    const result = await rooms.reorder(
+      TEST_BRANCH_ID,
+      pick([a.id, b.id, c.id]),
+      actor,
+    );
 
     // A stale or partial order means the list changed underneath the editor.
     expect(result).toMatchObject({ ok: false, error: { code: "CONFLICT" } });
@@ -279,7 +290,7 @@ describe("room repository", () => {
     });
 
     expect((await rooms.archive(room.id, actor)).ok).toBe(true);
-    expect(await rooms.listPublished()).toEqual([]);
+    expect(await rooms.listPublished(TEST_BRANCH_ID)).toEqual([]);
   });
 });
 
@@ -293,10 +304,12 @@ describe("facility repository", () => {
     await createFacility(client, { status: "DRAFT" });
     const archived = await createFacility(client, { status: "ARCHIVED" });
 
-    expect((await facilities.listPublished()).map((item) => item.id)).toEqual([
-      published.id,
-    ]);
-    expect(await facilities.findPublishedBySlug(archived.slug)).toBeNull();
+    expect(
+      (await facilities.listPublished(TEST_BRANCH_ID)).map((item) => item.id),
+    ).toEqual([published.id]);
+    expect(
+      await facilities.findPublishedBySlug(TEST_BRANCH_ID, archived.slug),
+    ).toBeNull();
   });
 
   it("publishes only facilities with a ready hero", async () => {
@@ -326,7 +339,9 @@ describe("facility repository", () => {
     const a = await createFacility(client, { sortOrder: 0 });
     const b = await createFacility(client, { sortOrder: 1 });
 
-    expect((await facilities.reorder([b.id, a.id], actor)).ok).toBe(true);
+    expect(
+      (await facilities.reorder(TEST_BRANCH_ID, [b.id, a.id], actor)).ok,
+    ).toBe(true);
     const ordered = await client.facility.findMany({
       orderBy: { sortOrder: "asc" },
     });
@@ -345,6 +360,7 @@ describe("page repository", () => {
     return client.page.create({
       data: {
         id: "contact",
+        branchId: TEST_BRANCH_ID,
         key: "CONTACT",
         title: "Contact",
         canonicalPath: "/contact",
@@ -377,30 +393,40 @@ describe("page repository", () => {
       { type: "RICH_TEXT", payload: {}, isVisible: false },
     ]);
 
-    expect(await pages.findPublishedByKey("CONTACT")).toBeNull();
-    expect((await pages.publish("CONTACT", actor)).ok).toBe(true);
+    expect(
+      await pages.findPublishedByKey(TEST_BRANCH_ID, "CONTACT"),
+    ).toBeNull();
+    expect((await pages.publish(TEST_BRANCH_ID, "CONTACT", actor)).ok).toBe(
+      true,
+    );
 
-    const page = await pages.findPublishedByKey("CONTACT");
+    const page = await pages.findPublishedByKey(TEST_BRANCH_ID, "CONTACT");
     expect(page?.sections.map((section) => section.type)).toEqual([
       "HERO",
       "CONTACT_CTA",
     ]);
-    expect((await pages.findAdminByKey("CONTACT"))?.sections).toHaveLength(3);
+    expect(
+      (await pages.findAdminByKey(TEST_BRANCH_ID, "CONTACT"))?.sections,
+    ).toHaveLength(3);
   });
 
   it("refuses to publish a page missing required sections", async () => {
     await createContactPage([hero]);
 
-    expect(await pages.publish("CONTACT", actor)).toMatchObject({
-      ok: false,
-      error: {
-        code: "NOT_PUBLISHABLE",
-        fieldErrors: {
-          sections: ["A visible Contact block section is required."],
+    expect(await pages.publish(TEST_BRANCH_ID, "CONTACT", actor)).toMatchObject(
+      {
+        ok: false,
+        error: {
+          code: "NOT_PUBLISHABLE",
+          fieldErrors: {
+            sections: ["A visible Contact block section is required."],
+          },
         },
       },
-    });
-    expect((await pages.findAdminByKey("CONTACT"))?.isPublished).toBe(false);
+    );
+    expect(
+      (await pages.findAdminByKey(TEST_BRANCH_ID, "CONTACT"))?.isPublished,
+    ).toBe(false);
   });
 
   it("reorders sections atomically within the page policy", async () => {
@@ -426,7 +452,9 @@ describe("page repository", () => {
       },
     });
     expect(
-      (await pages.findAdminByKey("CONTACT"))?.sections.map((s) => s.id),
+      (await pages.findAdminByKey(TEST_BRANCH_ID, "CONTACT"))?.sections.map(
+        (s) => s.id,
+      ),
     ).toEqual(["section-0", "section-1"]);
 
     expect(

@@ -102,6 +102,12 @@ type CatalogFormProps = Readonly<{
   isNew: boolean;
   submitLabel: string;
   meta?: string;
+  /**
+   * The branch the record belongs to (or will join), shown read only. Every
+   * room and facility belongs to one branch; a choice appears with a second
+   * branch (M5). The server never takes the branch from this form.
+   */
+  branchName?: string | null;
 }>;
 
 export function CatalogForm({
@@ -111,6 +117,7 @@ export function CatalogForm({
   isNew,
   submitLabel,
   meta,
+  branchName,
 }: CatalogFormProps) {
   const [state, formAction] = useActionState(action, idleFormState);
   const toast = useToast();
@@ -149,6 +156,15 @@ export function CatalogForm({
 
       <fieldset className={fieldset}>
         <legend className={legend}>Basics</legend>
+        {branchName ? (
+          <TextField
+            id={id("branch")}
+            label="Branch"
+            hint="Set by the website while there is one branch."
+            value={branchName}
+            readOnly
+          />
+        ) : null}
         <TextField
           id={id("name")}
           name="name"

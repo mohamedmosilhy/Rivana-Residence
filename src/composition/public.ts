@@ -12,6 +12,7 @@ import type { ContactDelivery } from "@/application/ports/providers";
 import { PublicSite, activePromotion } from "@/application/public/public-site";
 import type { PageKey } from "@/domain/content/page-sections";
 import { getPrisma } from "@/infrastructure/db/prisma/client";
+import { PrismaBranchRepository } from "@/infrastructure/db/prisma/repositories/branches/branch-repository";
 import { PrismaLoginThrottleStore } from "@/infrastructure/db/prisma/repositories/login-throttle-store";
 import { PrismaEnquiryRepository } from "@/infrastructure/db/prisma/repositories/enquiry-repository";
 import { PrismaFacilityRepository } from "@/infrastructure/db/prisma/repositories/facility-repository";
@@ -35,6 +36,7 @@ function site() {
     rooms: new PrismaRoomRepository(),
     facilities: new PrismaFacilityRepository(),
     promotions: new PrismaPromotionRepository(),
+    branches: new PrismaBranchRepository(),
   });
 }
 

@@ -1,5 +1,6 @@
 import { authorize } from "@/application/auth/authorize";
 import type { StaffPrincipal } from "@/application/auth/ports";
+import type { BranchRepository } from "@/application/branches";
 import { CACHE_TAGS } from "@/application/cache/cache-tags";
 import type { CacheInvalidator } from "@/application/ports/providers";
 import type { EntityMediaSelection } from "@/application/content/catalog-forms";
@@ -10,22 +11,27 @@ import type { PublicationStatus } from "@/domain/shared/types";
 
 type CatalogRecord = Readonly<{
   id: string;
+  branchId: string;
   slug: string;
   status: PublicationStatus;
 }>;
 
 /** The shared shape of the room and facility repositories. */
 export interface CatalogRepository<Dto extends CatalogRecord, Input> {
-  listAdmin(): Promise<readonly Dto[]>;
+  listAdmin(branchId: string): Promise<readonly Dto[]>;
   findAdminById(id: string): Promise<Dto | null>;
-  create(input: Input, actor: Actor): Promise<Result<Dto>>;
+  create(branchId: string, input: Input, actor: Actor): Promise<Result<Dto>>;
   update(id: string, input: Input, actor: Actor): Promise<Result<Dto>>;
   publish(id: string, actor: Actor): Promise<Result<Dto>>;
   unpublish(id: string, actor: Actor): Promise<Result<Dto>>;
   archive(id: string, actor: Actor): Promise<Result<void>>;
   restore(id: string, actor: Actor): Promise<Result<Dto>>;
   delete(id: string, actor: Actor): Promise<Result<void>>;
-  reorder(orderedIds: readonly string[], actor: Actor): Promise<Result<void>>;
+  reorder(
+    branchId: string,
+    orderedIds: readonly string[],
+    actor: Actor,
+  ): Promise<Result<void>>;
   replaceMedia(
     id: string,
     media: readonly MediaAssignment[],
@@ -57,6 +63,8 @@ export const FACILITY_KIND: CatalogKind = {
   itemTag: CACHE_TAGS.facility,
 };
 
+export const NO_BRANCH_MESSAGE = "No branch exists. Run the seed.";
+
 /**
  * Staff commands for rooms and facilities: authorization, friendly conflict
  * messages, and precise cache invalidation. Drafts never invalidate public
@@ -67,12 +75,22 @@ export class CatalogCommands<Dto extends CatalogRecord, Input> {
     private readonly repository: CatalogRepository<Dto, Input>,
     private readonly cache: CacheInvalidator,
     private readonly kind: CatalogKind,
+    private readonly branches: BranchRepository,
   ) {}
 
+  /**
+   * New records join the default branch. While only one branch exists the
+   * CMS offers no choice, and a branch sent by the form is never trusted
+   * (spec 0001).
+   */
   async create(staff: StaffPrincipal | null, input: Input) {
     const access = authorize(staff, "content:edit");
     if (!access.ok) return access;
-    return this.slugConflict(await this.repository.create(input, access.value));
+    const branch = await this.branches.findDefault();
+    if (!branch) return failure("NOT_FOUND", NO_BRANCH_MESSAGE);
+    return this.slugConflict(
+      await this.repository.create(branch.id, input, access.value),
+    );
   }
 
   async update(staff: StaffPrincipal | null, id: string, input: Input) {
@@ -125,12 +143,19 @@ export class CatalogCommands<Dto extends CatalogRecord, Input> {
     );
   }
 
-  /** Swaps a record with its neighbour in the active (non-archived) order. */
+  /**
+   * Swaps a record with its neighbour in its branch's active (non-archived)
+   * order.
+   */
   async move(staff: StaffPrincipal | null, id: string, offset: -1 | 1) {
     const access = authorize(staff, "content:edit");
     if (!access.ok) return access;
-    const active = (await this.repository.listAdmin()).filter(
-      (record) => record.status !== "ARCHIVED",
+    const record = await this.repository.findAdminById(id);
+    if (!record) {
+      return failure("NOT_FOUND", `This ${this.kind.noun} cannot be moved.`);
+    }
+    const active = (await this.repository.listAdmin(record.branchId)).filter(
+      (item) => item.status !== "ARCHIVED",
     );
     const index = active.findIndex((record) => record.id === id);
     const target = index + offset;
@@ -141,7 +166,11 @@ export class CatalogCommands<Dto extends CatalogRecord, Input> {
 
     const order = active.map((record) => record.id);
     [order[index], order[target]] = [order[target]!, order[index]!];
-    const result = await this.repository.reorder(order, access.value);
+    const result = await this.repository.reorder(
+      record.branchId,
+      order,
+      access.value,
+    );
     if (result.ok) {
       await this.cache.invalidate([this.kind.listTag, CACHE_TAGS.sitemap]);
     }

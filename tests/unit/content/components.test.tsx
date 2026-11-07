@@ -159,6 +159,39 @@ describe("CatalogForm", () => {
       names.filter((name) => /price|rate|avail|reserv|book/i.test(name ?? "")),
     ).toEqual([]);
   });
+
+  // Spec 0001: the branch is shown read only and never submitted, because
+  // the server assigns it.
+  it("shows the branch read only and does not submit it", () => {
+    const { container } = withToasts(
+      <CatalogForm
+        variant="room"
+        action={idle}
+        values={values}
+        isNew
+        submitLabel="Create draft"
+        branchName="Rivana Residence"
+      />,
+    );
+    const branch = screen.getByLabelText("Branch");
+    expect(branch).toHaveValue("Rivana Residence");
+    expect(branch).toHaveAttribute("readonly");
+    expect(branch).not.toHaveAttribute("name");
+    expect(container.querySelector('[name="branchId"]')).toBeNull();
+  });
+
+  it("shows no branch field when no branch is known", () => {
+    withToasts(
+      <CatalogForm
+        variant="facility"
+        action={idle}
+        values={values}
+        isNew
+        submitLabel="Create draft"
+      />,
+    );
+    expect(screen.queryByLabelText("Branch")).not.toBeInTheDocument();
+  });
 });
 
 describe("SectionEditor", () => {

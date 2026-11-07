@@ -126,8 +126,8 @@ test("editors upload, describe, place, reorder, and replace images", async ({
   // Place images on a room through the keyboard-friendly picker.
   const roomId = `e2e-media-room-${project}`.slice(0, 32);
   await sql(
-    `INSERT INTO "Room" (id, name, slug, "shortDescription", description, "maxAdults", "sortOrder", status, "updatedAt")
-     VALUES ($1, $2, $3, 'A room for images.', '{"type":"doc","content":[]}', 2, $4, 'DRAFT', now())
+    `INSERT INTO "Room" (id, "branchId", name, slug, "shortDescription", description, "maxAdults", "sortOrder", status, "updatedAt")
+     VALUES ($1, (SELECT id FROM "Branch" WHERE slug = 'new-cairo'), $2, $3, 'A room for images.', '{"type":"doc","content":[]}', 2, $4, 'DRAFT', now())
      ON CONFLICT (id) DO NOTHING`,
     // Active rooms need distinct positions, so each project gets its own.
     [

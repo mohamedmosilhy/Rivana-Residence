@@ -161,7 +161,7 @@ async function uploadImages(staff: StaffPrincipal) {
   return ids;
 }
 
-async function seedContent(staff: StaffPrincipal) {
+async function seedContent(staff: StaffPrincipal, branchId: string) {
   const image = await uploadImages(staff);
   const actor = { id: staff.id, role: staff.role };
   const text = (value: string) => richTextFromEditorText(value);
@@ -218,6 +218,7 @@ async function seedContent(staff: StaffPrincipal) {
   for (const room of ROOMS) {
     const created = ok(
       await rooms.create(
+        branchId,
         {
           name: room.name,
           slug: room.slug,
@@ -250,6 +251,7 @@ async function seedContent(staff: StaffPrincipal) {
   for (const facility of FACILITIES) {
     const created = ok(
       await facilities.create(
+        branchId,
         {
           name: facility.name,
           slug: facility.slug,
@@ -277,7 +279,7 @@ async function seedContent(staff: StaffPrincipal) {
   const pages = new PrismaPageRepository(client);
   for (const key of ["HOME", "ABOUT", "CONTACT"] as const) {
     const edits: PageSeed = PAGES[key];
-    const page = (await pages.findAdminByKey(key))!;
+    const page = (await pages.findAdminByKey(branchId, key))!;
     for (const section of page.sections) {
       const edit = edits[section.type];
       if (!edit) continue;
@@ -290,6 +292,7 @@ async function seedContent(staff: StaffPrincipal) {
       };
       ok(
         await pages.saveSection(
+          branchId,
           key,
           {
             id: section.id,
@@ -308,6 +311,7 @@ async function seedContent(staff: StaffPrincipal) {
       if (edit.image) {
         ok(
           await pages.replaceSectionMedia(
+            branchId,
             key,
             section.id,
             edit.image.keys.map((imageKey, index) => ({
@@ -322,13 +326,13 @@ async function seedContent(staff: StaffPrincipal) {
         );
       }
     }
-    ok(await pages.publish(key, actor), `Publish ${key}`);
+    ok(await pages.publish(branchId, key, actor), `Publish ${key}`);
   }
 }
 
 try {
   // Settings, the three managed pages, and their default sections.
-  await seedDatabase(client);
+  const branchId = await seedDatabase(client);
   const admin = await ensureAdmin();
   const staff: StaffPrincipal = {
     id: admin.id,
@@ -336,6 +340,7 @@ try {
     email: admin.email,
     role: "ADMIN",
     sessionId: "seed",
+    branchIds: [],
   };
 
   const [rooms, facilities, media] = await Promise.all([
@@ -348,7 +353,7 @@ try {
       `Content skipped: the database already has ${rooms} rooms, ${facilities} facilities, and ${media} images.`,
     );
   } else {
-    await seedContent(staff);
+    await seedContent(staff, branchId);
     console.log(
       `Seeded ${ROOMS.length} rooms, ${FACILITIES.length} facilities (the Café stays a draft until it has a photo), ${Object.keys(IMAGES).length} images, and the Home, About, and Contact pages.`,
     );

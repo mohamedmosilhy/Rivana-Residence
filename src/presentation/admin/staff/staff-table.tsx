@@ -1,3 +1,4 @@
+import type { StaffRole } from "@/domain/shared/types";
 import { ROLE_LABELS } from "@/presentation/admin/format";
 import { Badge } from "@/presentation/admin/ui/badge";
 import { DataTable } from "@/presentation/admin/ui/data-table";
@@ -6,7 +7,7 @@ type StaffRow = Readonly<{
   id: string;
   name: string;
   email: string;
-  role: "EDITOR" | "ADMIN";
+  role: StaffRole;
   active: boolean;
   activeSessions: number;
 }>;

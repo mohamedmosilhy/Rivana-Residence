@@ -25,6 +25,7 @@ const editor: StaffPrincipal = {
   email: "o@example.test",
   role: "EDITOR",
   sessionId: "s",
+  branchIds: [],
 };
 const admin: StaffPrincipal = { ...editor, id: "a", role: "ADMIN" };
 
@@ -194,6 +195,7 @@ describe("page commands", () => {
   function page(isPublished: boolean): PageDto {
     return {
       id: "page-1",
+      branchId: "branch-1",
       key: "ABOUT",
       title: "About",
       canonicalPath: "/about",
@@ -238,6 +240,18 @@ describe("page commands", () => {
       commands: new PageCommands(
         repository as unknown as PageRepository,
         cache,
+        {
+          findDefault: async () => ({
+            id: "branch-1",
+            slug: "new-cairo",
+            name: "Rivana Residence",
+            status: "ACTIVE" as const,
+            sortOrder: 0,
+          }),
+          findDefaultActive: async () => null,
+          findById: async () => null,
+          findBySlug: async () => null,
+        },
       ),
     };
   }
@@ -289,6 +303,7 @@ describe("page commands", () => {
       heading: "",
     });
     expect(repository.saveSection).toHaveBeenCalledWith(
+      "branch-1",
       "ABOUT",
       expect.objectContaining({
         id: "s0",

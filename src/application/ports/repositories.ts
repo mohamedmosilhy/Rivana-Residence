@@ -13,17 +13,17 @@ import type {
   PageSectionMediaRole,
 } from "@/domain/media/media-asset";
 import type {
-  AdminRole,
   EnquiryStatus,
   MediaStatus,
   PublicationStatus,
   RichTextDocument,
+  StaffRole,
 } from "@/domain/shared/types";
 import type { Result } from "@/application/shared/result";
 
 export type Actor = Readonly<{
   id: string;
-  role: AdminRole;
+  role: StaffRole;
 }>;
 
 export type MediaReference = Readonly<{
@@ -78,6 +78,7 @@ export type PageSectionInput = Readonly<{
 
 export type RoomDto = Readonly<{
   id: string;
+  branchId: string;
   name: string;
   slug: string;
   shortDescription: string;
@@ -100,6 +101,7 @@ export type RoomDto = Readonly<{
 
 export type FacilityDto = Readonly<{
   id: string;
+  branchId: string;
   name: string;
   slug: string;
   shortDescription: string;
@@ -128,6 +130,7 @@ export type PageSectionDto = Readonly<{
 
 export type PageDto = Readonly<{
   id: string;
+  branchId: string;
   key: PageKey;
   title: string;
   canonicalPath: string;
@@ -315,12 +318,18 @@ export type ContactEnquiryDto = Readonly<{
   createdAt: Date;
 }>;
 
+// Rooms and facilities belong to one branch (ADR 017, ADR 026). Lists, slug
+// lookups, creation, and ordering are per branch; slugs stay globally unique.
 export interface RoomRepository {
-  listPublished(): Promise<readonly RoomDto[]>;
-  findPublishedBySlug(slug: string): Promise<RoomDto | null>;
-  listAdmin(): Promise<readonly RoomDto[]>;
+  listPublished(branchId: string): Promise<readonly RoomDto[]>;
+  findPublishedBySlug(branchId: string, slug: string): Promise<RoomDto | null>;
+  listAdmin(branchId: string): Promise<readonly RoomDto[]>;
   findAdminById(id: string): Promise<RoomDto | null>;
-  create(input: RoomInput, actor: Actor): Promise<Result<RoomDto>>;
+  create(
+    branchId: string,
+    input: RoomInput,
+    actor: Actor,
+  ): Promise<Result<RoomDto>>;
   update(id: string, input: RoomInput, actor: Actor): Promise<Result<RoomDto>>;
   publish(id: string, actor: Actor): Promise<Result<RoomDto>>;
   /** PUBLISHED → DRAFT. */
@@ -330,7 +339,12 @@ export interface RoomRepository {
   restore(id: string, actor: Actor): Promise<Result<RoomDto>>;
   /** Permanently removes an archived record; CONFLICT otherwise. */
   delete(id: string, actor: Actor): Promise<Result<void>>;
-  reorder(orderedIds: readonly string[], actor: Actor): Promise<Result<void>>;
+  /** Exactly the branch's non-archived ids, in the new order. */
+  reorder(
+    branchId: string,
+    orderedIds: readonly string[],
+    actor: Actor,
+  ): Promise<Result<void>>;
   replaceMedia(
     id: string,
     media: readonly MediaAssignment[],
@@ -345,11 +359,18 @@ export interface RoomRepository {
 }
 
 export interface FacilityRepository {
-  listPublished(): Promise<readonly FacilityDto[]>;
-  findPublishedBySlug(slug: string): Promise<FacilityDto | null>;
-  listAdmin(): Promise<readonly FacilityDto[]>;
+  listPublished(branchId: string): Promise<readonly FacilityDto[]>;
+  findPublishedBySlug(
+    branchId: string,
+    slug: string,
+  ): Promise<FacilityDto | null>;
+  listAdmin(branchId: string): Promise<readonly FacilityDto[]>;
   findAdminById(id: string): Promise<FacilityDto | null>;
-  create(input: FacilityInput, actor: Actor): Promise<Result<FacilityDto>>;
+  create(
+    branchId: string,
+    input: FacilityInput,
+    actor: Actor,
+  ): Promise<Result<FacilityDto>>;
   update(
     id: string,
     input: FacilityInput,
@@ -363,7 +384,12 @@ export interface FacilityRepository {
   restore(id: string, actor: Actor): Promise<Result<FacilityDto>>;
   /** Permanently removes an archived record; CONFLICT otherwise. */
   delete(id: string, actor: Actor): Promise<Result<void>>;
-  reorder(orderedIds: readonly string[], actor: Actor): Promise<Result<void>>;
+  /** Exactly the branch's non-archived ids, in the new order. */
+  reorder(
+    branchId: string,
+    orderedIds: readonly string[],
+    actor: Actor,
+  ): Promise<Result<void>>;
   replaceMedia(
     id: string,
     media: readonly MediaAssignment[],
@@ -377,17 +403,29 @@ export interface FacilityRepository {
   ): Promise<Result<FacilityDto>>;
 }
 
+// Each branch has its own Home, About, and Contact page; a page is addressed
+// by (branchId, key) (ADR 026).
 export interface PageRepository {
-  findPublishedByKey(key: PageKey): Promise<PageDto | null>;
-  findAdminByKey(key: PageKey): Promise<PageDto | null>;
-  publish(key: PageKey, actor: Actor): Promise<Result<PageDto>>;
-  unpublish(key: PageKey, actor: Actor): Promise<Result<PageDto>>;
+  findPublishedByKey(branchId: string, key: PageKey): Promise<PageDto | null>;
+  findAdminByKey(branchId: string, key: PageKey): Promise<PageDto | null>;
+  publish(
+    branchId: string,
+    key: PageKey,
+    actor: Actor,
+  ): Promise<Result<PageDto>>;
+  unpublish(
+    branchId: string,
+    key: PageKey,
+    actor: Actor,
+  ): Promise<Result<PageDto>>;
   updateDetails(
+    branchId: string,
     key: PageKey,
     input: PageDetailsInput,
     actor: Actor,
   ): Promise<Result<PageDto>>;
   saveSection(
+    branchId: string,
     key: PageKey,
     section: PageSectionInput,
     actor: Actor,
@@ -398,6 +436,7 @@ export interface PageRepository {
     actor: Actor,
   ): Promise<Result<void>>;
   replaceSectionMedia(
+    branchId: string,
     key: PageKey,
     sectionId: string,
     media: readonly SectionMediaAssignment[],
@@ -511,6 +550,11 @@ export type EnquiryListQuery = PageRequest &
     status: EnquiryStatus | null;
     /** Matches sender name, email, or subject, case-insensitively. */
     search: string | null;
+    /**
+     * "ALL", or the only branches whose enquiries may be listed. Enquiries
+     * with no branch are never in a list of ids (Q-26).
+     */
+    branchScope: "ALL" | readonly string[];
   }>;
 
 export interface EnquiryRepository {

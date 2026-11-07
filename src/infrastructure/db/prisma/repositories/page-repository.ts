@@ -50,9 +50,9 @@ import {
 export class PrismaPageRepository implements PageRepository {
   constructor(private readonly client: DatabaseClient = getPrisma()) {}
 
-  async findPublishedByKey(key: PageKey) {
+  async findPublishedByKey(branchId: string, key: PageKey) {
     const row = await this.client.page.findFirst({
-      where: { key, isPublished: true },
+      where: { branchId, key, isPublished: true },
       include: {
         sections: {
           where: { isVisible: true },
@@ -64,19 +64,19 @@ export class PrismaPageRepository implements PageRepository {
     return row ? mapPage(row) : null;
   }
 
-  async findAdminByKey(key: PageKey) {
+  async findAdminByKey(branchId: string, key: PageKey) {
     const row = await this.client.page.findUnique({
-      where: { key },
+      where: { branchId_key: { branchId, key } },
       include: pageGraph,
     });
     return row ? mapPage(row) : null;
   }
 
-  async publish(key: PageKey, actor: Actor) {
+  async publish(branchId: string, key: PageKey, actor: Actor) {
     try {
       return await withTransaction(this.client, async (transaction) => {
         const row = await transaction.page.findUnique({
-          where: { key },
+          where: { branchId_key: { branchId, key } },
           include: pageGraph,
         });
         if (!row) return failure("NOT_FOUND", "Page not found.");
@@ -91,7 +91,7 @@ export class PrismaPageRepository implements PageRepository {
         }
 
         const updated = await transaction.page.update({
-          where: { key },
+          where: { branchId_key: { branchId, key } },
           data: { isPublished: true, updatedById: actor.id },
           include: pageGraph,
         });
@@ -102,10 +102,10 @@ export class PrismaPageRepository implements PageRepository {
     }
   }
 
-  async unpublish(key: PageKey, actor: Actor) {
+  async unpublish(branchId: string, key: PageKey, actor: Actor) {
     try {
       const row = await this.client.page.update({
-        where: { key },
+        where: { branchId_key: { branchId, key } },
         data: { isPublished: false, updatedById: actor.id },
         include: pageGraph,
       });
@@ -115,7 +115,12 @@ export class PrismaPageRepository implements PageRepository {
     }
   }
 
-  async updateDetails(key: PageKey, input: PageDetailsInput, actor: Actor) {
+  async updateDetails(
+    branchId: string,
+    key: PageKey,
+    input: PageDetailsInput,
+    actor: Actor,
+  ) {
     try {
       return await withTransaction(this.client, async (transaction) => {
         if (input.ogMediaId) {
@@ -123,7 +128,7 @@ export class PrismaPageRepository implements PageRepository {
           if (!ready.ok) return ready;
         }
         const row = await transaction.page.update({
-          where: { key },
+          where: { branchId_key: { branchId, key } },
           data: {
             seoTitle: input.seoTitle,
             seoDescription: input.seoDescription,
@@ -140,6 +145,7 @@ export class PrismaPageRepository implements PageRepository {
   }
 
   async replaceSectionMedia(
+    branchId: string,
     key: PageKey,
     sectionId: string,
     media: readonly SectionMediaAssignment[],
@@ -148,7 +154,7 @@ export class PrismaPageRepository implements PageRepository {
     try {
       return await withTransaction(this.client, async (transaction) => {
         const page = await transaction.page.findUnique({
-          where: { key },
+          where: { branchId_key: { branchId, key } },
           include: pageGraph,
         });
         if (!page) return failure("NOT_FOUND", "Page not found.");
@@ -215,7 +221,12 @@ export class PrismaPageRepository implements PageRepository {
     }
   }
 
-  async saveSection(key: PageKey, section: PageSectionInput, actor: Actor) {
+  async saveSection(
+    branchId: string,
+    key: PageKey,
+    section: PageSectionInput,
+    actor: Actor,
+  ) {
     const meta = pageSectionMetaSchema.safeParse(section);
     if (!meta.success) {
       return invalid("Section is invalid.", issuesFromZod(meta.error.issues));
@@ -234,7 +245,7 @@ export class PrismaPageRepository implements PageRepository {
     try {
       return await withTransaction(this.client, async (transaction) => {
         const page = await transaction.page.findUnique({
-          where: { key },
+          where: { branchId_key: { branchId, key } },
           include: pageGraph,
         });
         if (!page) return failure("NOT_FOUND", "Page not found.");

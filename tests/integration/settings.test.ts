@@ -23,6 +23,7 @@ const admin: StaffPrincipal = {
   name: "Test Administrator",
   email: "admin@example.test",
   sessionId: "session-1",
+  branchIds: [],
 };
 const editor: StaffPrincipal = { ...admin, role: "EDITOR" };
 

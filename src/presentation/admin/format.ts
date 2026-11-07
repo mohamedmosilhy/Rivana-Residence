@@ -1,7 +1,11 @@
+import type { StaffRole } from "@/domain/shared/types";
+
 export const ROLE_LABELS = {
   ADMIN: "Administrator",
   EDITOR: "Editor",
-} as const;
+  RECEPTIONIST: "Receptionist",
+  MANAGER: "Manager",
+} as const satisfies Record<StaffRole, string>;
 
 const formatters = new Map<string, Intl.DateTimeFormat>();
 

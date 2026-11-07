@@ -8,6 +8,7 @@ import {
   createRoom,
   createTestClient,
   resetDatabase,
+  TEST_BRANCH_ID,
 } from "./support/database";
 
 const client = createTestClient();
@@ -38,7 +39,13 @@ describe("database constraints", () => {
 
   it("rejects duplicate page section order", async () => {
     const page = await client.page.create({
-      data: { id: "home", key: "HOME", title: "Home", canonicalPath: "/" },
+      data: {
+        id: "home",
+        branchId: TEST_BRANCH_ID,
+        key: "HOME",
+        title: "Home",
+        canonicalPath: "/",
+      },
     });
     const section = {
       pageId: page.id,

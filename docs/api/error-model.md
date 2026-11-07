@@ -1,6 +1,6 @@
 # API error model
 
-Status: **Planned**, design accepted 2026-10-24, extended 2026-11-06 (coupons, services, payments, cancellation requests)
+Status: design accepted 2026-10-24, extended 2026-11-06 (coupons, services, payments, cancellation requests). **Implemented in M4:** the serializer and the single code-to-status table (`src/app/api/v1/_http/problem.ts`) for the existing application codes (`VALIDATION`, `UNAUTHENTICATED`, `FORBIDDEN`, `NOT_FOUND`, `CONFLICT`, `RATE_LIMITED`, plus `TRY_AGAIN`), the transport codes, and `INTERNAL`. The pre-existing codes `INVALID_CREDENTIALS` (401), `NOT_PUBLISHABLE` (422), and `REFERENCED` (409) are mapped too. The reservation codes are **planned** and join the union and the table with the milestones that use them.
 
 Errors use RFC 9457 Problem Details (`Content-Type: application/problem+json`):
 

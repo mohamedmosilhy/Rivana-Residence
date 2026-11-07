@@ -16,6 +16,7 @@ import type {
 } from "@/application/ports/repositories";
 import { getPublicSiteSettings } from "@/composition/admin";
 import { NextCacheInvalidator } from "@/infrastructure/cache/next-cache-invalidator";
+import { PrismaBranchRepository } from "@/infrastructure/db/prisma/repositories/branches/branch-repository";
 import { PrismaFacilityRepository } from "@/infrastructure/db/prisma/repositories/facility-repository";
 import { PrismaMediaRepository } from "@/infrastructure/db/prisma/repositories/media-repository";
 import { PrismaPageRepository } from "@/infrastructure/db/prisma/repositories/page-repository";
@@ -30,6 +31,7 @@ export function roomCommands() {
     new PrismaRoomRepository(),
     new NextCacheInvalidator(),
     ROOM_KIND,
+    new PrismaBranchRepository(),
   );
 }
 
@@ -37,6 +39,7 @@ export function roomQueries() {
   return new CatalogQueries<RoomDto, RoomInput>(
     new PrismaRoomRepository(),
     new PrismaMediaRepository(),
+    new PrismaBranchRepository(),
   );
 }
 
@@ -45,6 +48,7 @@ export function facilityCommands() {
     new PrismaFacilityRepository(),
     new NextCacheInvalidator(),
     FACILITY_KIND,
+    new PrismaBranchRepository(),
   );
 }
 
@@ -52,6 +56,7 @@ export function facilityQueries() {
   return new CatalogQueries<FacilityDto, FacilityInput>(
     new PrismaFacilityRepository(),
     new PrismaMediaRepository(),
+    new PrismaBranchRepository(),
     "facility",
   );
 }
@@ -60,6 +65,7 @@ export function pageCommands() {
   return new PageCommands(
     new PrismaPageRepository(),
     new NextCacheInvalidator(),
+    new PrismaBranchRepository(),
   );
 }
 

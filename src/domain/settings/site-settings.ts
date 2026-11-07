@@ -45,6 +45,13 @@ function isHttpsUrl(value: string) {
   }
 }
 
+/** True for an HTTPS Google Maps embed URL (shared with branch locations). */
+export function isMapEmbedUrl(value: string) {
+  return value.startsWith(MAP_EMBED_PREFIX) && isHttpsUrl(value);
+}
+
+export const MAP_EMBED_MESSAGE = `Paste a Google Maps embed link starting with ${MAP_EMBED_PREFIX}.`;
+
 export const siteSettingsSchema = z
   .object({
     siteName: z
@@ -90,10 +97,7 @@ export const siteSettingsSchema = z
         .string()
         .trim()
         .max(2048, "Use 2048 characters or fewer.")
-        .refine(
-          (value) => value.startsWith(MAP_EMBED_PREFIX) && isHttpsUrl(value),
-          `Paste a Google Maps embed link starting with ${MAP_EMBED_PREFIX}.`,
-        )
+        .refine(isMapEmbedUrl, MAP_EMBED_MESSAGE)
         .nullable()
         .default(null),
     ),

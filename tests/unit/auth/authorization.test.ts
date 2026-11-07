@@ -8,32 +8,68 @@ import {
   type Capability,
 } from "@/domain/auth/capabilities";
 
-// The reviewed role/capability matrix. Changing a row here is a deliberate
-// security decision and must be reflected in docs/delivery/reports/phase-3-auth.md.
-const MATRIX: Record<Capability, { EDITOR: boolean; ADMIN: boolean }> = {
-  "admin:access": { EDITOR: true, ADMIN: true },
-  "content:edit": { EDITOR: true, ADMIN: true },
-  "content:publish": { EDITOR: true, ADMIN: true },
-  "content:archive": { EDITOR: true, ADMIN: true },
-  "content:delete": { EDITOR: false, ADMIN: true },
-  "media:upload": { EDITOR: true, ADMIN: true },
-  "media:delete": { EDITOR: false, ADMIN: true },
-  "media:rights": { EDITOR: false, ADMIN: true },
-  "promotions:manage": { EDITOR: true, ADMIN: true },
-  "enquiries:read": { EDITOR: true, ADMIN: true },
-  "enquiries:manage": { EDITOR: true, ADMIN: true },
-  "settings:edit": { EDITOR: false, ADMIN: true },
-  "users:manage": { EDITOR: false, ADMIN: true },
-  "sessions:manage-own": { EDITOR: true, ADMIN: true },
-  "sessions:revoke-any": { EDITOR: false, ADMIN: true },
+// T-AUTHZ-1: the reviewed role/capability matrix, transcribed from
+// docs/requirements/user-roles-and-permissions.md (columns Editor,
+// Receptionist, Manager, Admin). Changing a row here is a deliberate security
+// decision and must be reflected in that document.
+const ROLES = ["EDITOR", "RECEPTIONIST", "MANAGER", "ADMIN"] as const;
+type Row = readonly [
+  editor: 0 | 1,
+  receptionist: 0 | 1,
+  manager: 0 | 1,
+  admin: 0 | 1,
+];
+
+const MATRIX: Record<Capability, Row> = {
+  "admin:access": [1, 1, 1, 1],
+  "content:edit": [1, 0, 0, 1],
+  "content:publish": [1, 0, 0, 1],
+  "content:archive": [1, 0, 0, 1],
+  "content:delete": [0, 0, 0, 1],
+  "media:upload": [1, 0, 0, 1],
+  "media:delete": [0, 0, 0, 1],
+  "media:rights": [0, 0, 0, 1],
+  "promotions:manage": [1, 0, 0, 1],
+  // Receptionists and Managers read their branches' enquiries (Q-26).
+  "enquiries:read": [1, 1, 1, 1],
+  "enquiries:manage": [1, 1, 1, 1],
+  "settings:edit": [0, 0, 0, 1],
+  "users:manage": [0, 0, 0, 1],
+  "sessions:manage-own": [1, 1, 1, 1],
+  "sessions:revoke-any": [0, 0, 0, 1],
+  "reservations:read": [0, 1, 1, 1],
+  "reservations:create": [0, 1, 1, 1],
+  "reservations:record-external": [0, 1, 1, 1],
+  "reservations:pms-entry": [0, 1, 1, 1],
+  "reservations:modify": [0, 1, 1, 1],
+  "reservations:cancel": [0, 1, 1, 1],
+  "reservations:cancel-paid": [0, 0, 1, 1],
+  "reservations:front-desk": [0, 1, 1, 1],
+  "cancellations:decide": [0, 0, 1, 1],
+  "guests:read": [0, 1, 1, 1],
+  "guests:block": [0, 0, 1, 1],
+  "inventory:read": [0, 1, 1, 1],
+  "inventory:block": [0, 1, 1, 1],
+  "inventory:manage": [0, 0, 1, 1],
+  "pricing:read": [0, 1, 1, 1],
+  "pricing:manage": [0, 0, 1, 1],
+  "pricing:override": [0, 0, 1, 1],
+  "services:manage": [0, 0, 1, 1],
+  "coupons:manage": [0, 0, 1, 1],
+  "tax:manage": [0, 0, 0, 1],
+  "marketing:broadcast": [0, 0, 1, 1],
+  "reports:read": [0, 0, 1, 1],
+  "audit:read": [0, 0, 1, 1],
+  "branches:manage": [0, 0, 0, 1],
 };
 
-const staff = (role: "EDITOR" | "ADMIN") => ({
+const staff = (role: (typeof ROLES)[number]) => ({
   id: "user-1",
   name: "Staff",
   email: "staff@example.test",
   role,
   sessionId: "session-1",
+  branchIds: [],
 });
 
 describe("role capability matrix", () => {
@@ -43,8 +79,9 @@ describe("role capability matrix", () => {
 
   it.each(
     CAPABILITIES.flatMap((capability) =>
-      (["EDITOR", "ADMIN"] as const).map(
-        (role) => [role, capability, MATRIX[capability][role]] as const,
+      ROLES.map(
+        (role, column) =>
+          [role, capability, MATRIX[capability][column] === 1] as const,
       ),
     ),
   )("%s → %s = %s", (role, capability, expected) => {
@@ -55,6 +92,18 @@ describe("role capability matrix", () => {
   it("gives administrators every capability", () => {
     expect(capabilitiesFor("ADMIN")).toEqual(CAPABILITIES);
   });
+
+  it.each(["RECEPTIONIST", "MANAGER"] as const)(
+    "gives %s no CMS capability",
+    (role) => {
+      const cms = CAPABILITIES.filter((capability) =>
+        /^(content|media|promotions|settings|users):/.test(capability),
+      );
+      expect(
+        cms.filter((capability) => roleHasCapability(role, capability)),
+      ).toEqual([]);
+    },
+  );
 });
 
 describe("authorize", () => {

@@ -9,12 +9,14 @@ import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "../src/generated/prisma/client.ts";
 import {
   StaffAdminError,
+  assignStaffBranch,
   createStaff,
   listStaff,
   revokeStaffSessions,
   setStaffActive,
   setStaffPassword,
   setStaffRole,
+  unassignStaffBranch,
 } from "./staff-admin.ts";
 
 config({ quiet: true });
@@ -22,13 +24,20 @@ config({ quiet: true });
 const usage = `Usage: npm run staff -- <command> [options]
 
 Commands:
-  create --email <email> --name <name> --role <ADMIN|EDITOR>
+  create --email <email> --name <name> --role <ROLE> [--branch <slug>]...
+                                     --branch only for RECEPTIONIST and MANAGER
   set-password --email <email>       Operator password reset; ends all sessions
   deactivate --email <email>         Blocks sign-in and ends all sessions
   activate --email <email>
-  set-role --email <email> --role <ADMIN|EDITOR>
+  set-role --email <email> --role <ROLE>
+                                     ADMIN or EDITOR removes branch assignments
+  assign-branch --email <email> --branch <slug>
+  unassign-branch --email <email> --branch <slug>
   revoke-sessions --email <email>
   list
+
+Roles: ADMIN, EDITOR, RECEPTIONIST, MANAGER. Receptionists and managers see
+only the branches they are assigned to; admins see every branch.
 
 Passwords are never accepted as arguments. They are prompted for without
 echo, or read from standard input with --password-stdin.`;
@@ -79,6 +88,7 @@ const { positionals, values } = parseArgs({
     email: { type: "string" },
     name: { type: "string" },
     role: { type: "string" },
+    branch: { type: "string", multiple: true },
     "password-stdin": { type: "boolean", default: false },
     help: { type: "boolean", default: false },
   },
@@ -114,8 +124,11 @@ try {
         name: values.name ?? "",
         role: values.role ?? "",
         password,
+        branches: values.branch ?? [],
       });
-      console.log(`Created ${user.role.toLowerCase()} ${user.email}.`);
+      console.log(
+        `Created ${user.role.toLowerCase()} ${user.email}${user.branches.length > 0 ? ` at ${user.branches.join(", ")}` : ""}.`,
+      );
       break;
     }
     case "set-password":
@@ -138,6 +151,26 @@ try {
       await setStaffRole(client, email, values.role ?? "");
       console.log(`Role for ${email} set to ${values.role}.`);
       break;
+    case "assign-branch": {
+      const slug = values.branch?.[0] ?? "";
+      const created = await assignStaffBranch(client, email, slug);
+      console.log(
+        created
+          ? `Assigned ${email} to ${slug}.`
+          : `${email} was already assigned to ${slug}.`,
+      );
+      break;
+    }
+    case "unassign-branch": {
+      const slug = values.branch?.[0] ?? "";
+      const removed = await unassignStaffBranch(client, email, slug);
+      console.log(
+        removed
+          ? `Removed ${email} from ${slug}.`
+          : `${email} was not assigned to ${slug}.`,
+      );
+      break;
+    }
     case "revoke-sessions":
       console.log(
         `Ended ${await revokeStaffSessions(client, email)} session(s) for ${email}.`,

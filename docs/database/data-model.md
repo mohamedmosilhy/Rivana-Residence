@@ -2,7 +2,7 @@
 
 PostgreSQL is the system of record for content, staff identity, enquiries, promotions (retired), media metadata, and (planned) branches, inventory, prices, services, coupons, VAT, reservations, payments, and marketing consent. Card data is never stored (Paymob hosted checkout, ADR 025). Binary images live in the configured media store (a persistent server directory). Prisma is the migration and persistence adapter, not the domain model; it is imported only under `src/infrastructure/db`.
 
-The implemented schema is `prisma/schema.prisma` (3 migrations). Tables marked *planned* are specified here and added by milestone migrations ([migrations-and-seeding.md](./migrations-and-seeding.md)).
+The implemented schema is `prisma/schema.prisma` (5 migrations; M4 added `…_staff_roles_enum` and `…_branches_and_staff_roles`). Tables marked *planned* are specified here and added by milestone migrations ([migrations-and-seeding.md](./migrations-and-seeding.md)).
 
 ## Conventions
 
@@ -19,12 +19,12 @@ The implemented schema is `prisma/schema.prisma` (3 migrations). Tables marked *
 
 | Area | Tables | Status |
 | --- | --- | --- |
-| Staff identity | `User`, `Session`, `Account`, `Verification`, `LoginThrottle` | Implemented; `User.role` gains values and `StaffBranchAssignment` is planned (M4) |
-| Site and pages | `SiteSettings`, `SocialLink`, `Page`, `PageSection`, `PageSectionMedia` | Implemented; `Page.branchId` planned (M4) |
-| Rooms and facilities | `Room`, `RoomFeature`, `RoomMedia`, `Facility`, `FacilityMedia` | Implemented; `Room.branchId`, `Room.accommodationType`, `Facility.branchId` planned (M4) |
+| Staff identity | `User`, `Session`, `Account`, `Verification`, `LoginThrottle` | Implemented; `User.role` has `RECEPTIONIST` and `MANAGER` and `StaffBranchAssignment` exists (M4) |
+| Site and pages | `SiteSettings`, `SocialLink`, `Page`, `PageSection`, `PageSectionMedia` | Implemented; `Page.branchId` with unique `(branchId, key)` and `(branchId, canonicalPath)` (M4) |
+| Rooms and facilities | `Room`, `RoomFeature`, `RoomMedia`, `Facility`, `FacilityMedia` | Implemented; `Room.branchId`, `Room.accommodationType`, `bedroomCount`, `bathroomCount`, `Facility.branchId`, and per-branch display order (M4) |
 | Media | `MediaAsset` | Implemented |
-| Marketing and enquiries | `Promotion` (retired, Q-47; unused from M5, dropped later), `ContactEnquiry` | Implemented; `ContactEnquiry.branchId` planned (M4) |
-| Branches | `Branch`, `StaffBranchAssignment` | Planned (M4) |
+| Marketing and enquiries | `Promotion` (retired, Q-47; unused from M5, dropped later), `ContactEnquiry` | Implemented; `ContactEnquiry.branchId` nullable (M4; recorded from M5) |
+| Branches | `Branch`, `StaffBranchAssignment` | Implemented (M4) |
 | Inventory | `PhysicalRoom`, `InventoryBlock` | Planned (M6) |
 | Pricing | `RoomBaseRate`, `RatePeriod` (M6); `ServiceOffering`, `Coupon`, `CouponBranch`, `CommercialSettings` (M7) | Planned |
 | Reservations | `Reservation`, `ReservationRoom`, `ReservationNight`, `ReservationService`, `CouponRedemption`, `BranchSyncCheckpoint` | Planned (M8) |
@@ -32,7 +32,7 @@ The implemented schema is `prisma/schema.prisma` (3 migrations). Tables marked *
 | Guests | `Guest` (verified phone profiles, blocking, marketing consent), `PhoneVerification` | Planned (M8) |
 | Messaging settings | `WhatsAppSettings`, `WhatsAppTemplate` (Admin-managed, Q-67) | Planned (M8) |
 | Marketing | `Broadcast` | Planned (M13) |
-| Cross-cutting | `AuditEvent` (M4), `NotificationOutbox` (M8) | Planned |
+| Cross-cutting | `AuditEvent` (implemented, M4), `NotificationOutbox` (M8) | `AuditEvent` implemented; outbox planned |
 
 ## Content and identity tables
 

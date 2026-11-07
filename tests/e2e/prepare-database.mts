@@ -69,6 +69,19 @@ await rm("/tmp/rivana-e2e-outbox", { recursive: true, force: true });
         });
       }
       await setStaffActive(client, accounts.inactive, false);
+      // Branch-scoped roles with no CMS capability (E2E-A-2).
+      for (const [key, role, name] of [
+        ["receptionist", "RECEPTIONIST", "Rana Receptionist"],
+        ["manager", "MANAGER", "Mona Manager"],
+      ] as const) {
+        await createStaff(client, {
+          email: accounts[key],
+          name,
+          role,
+          password: E2E_PASSWORD,
+          branches: ["new-cairo"],
+        });
+      }
     }
     const author = await client.user.findFirstOrThrow({
       where: { role: "ADMIN" },

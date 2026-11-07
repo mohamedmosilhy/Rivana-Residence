@@ -36,9 +36,13 @@ function parse(input: RoomInput) {
     : invalid("Room is invalid.", issuesFromZod(parsed.error.issues));
 }
 
-async function nextSortOrder(transaction: Prisma.TransactionClient) {
+// Display order is per branch among non-archived listings.
+async function nextSortOrder(
+  transaction: Prisma.TransactionClient,
+  branchId: string,
+) {
   const last = await transaction.room.aggregate({
-    where: { status: { not: "ARCHIVED" } },
+    where: { branchId, status: { not: "ARCHIVED" } },
     _max: { sortOrder: true },
   });
   return (last._max.sortOrder ?? -1) + 1;
@@ -47,18 +51,18 @@ async function nextSortOrder(transaction: Prisma.TransactionClient) {
 export class PrismaRoomRepository implements RoomRepository {
   constructor(private readonly client: DatabaseClient = getPrisma()) {}
 
-  async listPublished() {
+  async listPublished(branchId: string) {
     const rows = await this.client.room.findMany({
-      where: { status: "PUBLISHED" },
+      where: { branchId, status: "PUBLISHED" },
       include: roomGraph,
       orderBy: [{ sortOrder: "asc" }, { id: "asc" }],
     });
     return rows.map(mapRoom);
   }
 
-  async findPublishedBySlug(slug: string) {
+  async findPublishedBySlug(branchId: string, slug: string) {
     const row = await this.client.room.findFirst({
-      where: { slug, status: "PUBLISHED" },
+      where: { branchId, slug, status: "PUBLISHED" },
       include: roomGraph,
     });
     return row ? mapRoom(row) : null;
@@ -72,15 +76,16 @@ export class PrismaRoomRepository implements RoomRepository {
     return row ? mapRoom(row) : null;
   }
 
-  async listAdmin() {
+  async listAdmin(branchId: string) {
     const rows = await this.client.room.findMany({
+      where: { branchId },
       include: roomGraph,
       orderBy: [{ sortOrder: "asc" }, { id: "asc" }],
     });
     return rows.map(mapRoom);
   }
 
-  async create(input: RoomInput, actor: Actor) {
+  async create(branchId: string, input: RoomInput, actor: Actor) {
     const parsed = parse(input);
     if (!parsed.ok) return parsed;
     const { features, ...fields } = parsed.value;
@@ -90,9 +95,10 @@ export class PrismaRoomRepository implements RoomRepository {
           data: {
             ...fields,
             id: createId(),
+            branchId,
             description: fields.description as Prisma.InputJsonObject,
             featured: input.featured,
-            sortOrder: await nextSortOrder(transaction),
+            sortOrder: await nextSortOrder(transaction, branchId),
             status: "DRAFT",
             updatedById: actor.id,
             features: {
@@ -230,7 +236,7 @@ export class PrismaRoomRepository implements RoomRepository {
       return await withTransaction(this.client, async (transaction) => {
         const row = await transaction.room.findUnique({
           where: { id },
-          select: { status: true },
+          select: { status: true, branchId: true },
         });
         if (!row) return failure("NOT_FOUND", "Room not found.");
         if (row.status !== from) {
@@ -248,7 +254,7 @@ export class PrismaRoomRepository implements RoomRepository {
             updatedById: actor.id,
             // A restored room rejoins the active order at the end.
             ...(from === "ARCHIVED"
-              ? { sortOrder: await nextSortOrder(transaction) }
+              ? { sortOrder: await nextSortOrder(transaction, row.branchId) }
               : {}),
           },
           include: roomGraph,
@@ -260,11 +266,11 @@ export class PrismaRoomRepository implements RoomRepository {
     }
   }
 
-  async reorder(orderedIds: readonly string[], actor: Actor) {
+  async reorder(branchId: string, orderedIds: readonly string[], actor: Actor) {
     try {
       return await withTransaction(this.client, async (transaction) => {
         const active = await transaction.room.findMany({
-          where: { status: { not: "ARCHIVED" } },
+          where: { branchId, status: { not: "ARCHIVED" } },
           select: { id: true },
         });
         if (!isCompleteOrder(orderedIds, active)) {

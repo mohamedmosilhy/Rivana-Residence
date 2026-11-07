@@ -12,6 +12,7 @@ import {
 } from "../../../src/application/media/import-reference-assets.ts";
 import { richTextFromEditorText } from "../../../src/domain/shared/rich-text.ts";
 import type { PrismaClient } from "../../../src/generated/prisma/client.ts";
+import { DEFAULT_BRANCH_ID as BRANCH_ID } from "../../../prisma/seed-data.ts";
 import { PrismaFacilityRepository } from "../../../src/infrastructure/db/prisma/repositories/facility-repository.ts";
 import { PrismaMediaRepository } from "../../../src/infrastructure/db/prisma/repositories/media-repository.ts";
 import { PrismaPageRepository } from "../../../src/infrastructure/db/prisma/repositories/page-repository.ts";
@@ -109,12 +110,12 @@ export async function seedPublicContent(
 
   const rooms = new PrismaRoomRepository(client);
   const room = async (
-    input: Parameters<typeof rooms.create>[0],
+    input: Parameters<typeof rooms.create>[1],
     hero: string,
     gallery: string[],
     status: "PUBLISHED" | "DRAFT" | "ARCHIVED",
   ) => {
-    const created = ok(await rooms.create(input, actor));
+    const created = ok(await rooms.create(BRANCH_ID, input, actor));
     ok(
       await rooms.replaceMedia(
         created.id,
@@ -245,12 +246,12 @@ export async function seedPublicContent(
 
   const facilities = new PrismaFacilityRepository(client);
   const facility = async (
-    input: Parameters<typeof facilities.create>[0],
+    input: Parameters<typeof facilities.create>[1],
     hero: string,
     gallery: string[],
     publish: boolean,
   ) => {
-    const created = ok(await facilities.create(input, actor));
+    const created = ok(await facilities.create(BRANCH_ID, input, actor));
     ok(
       await facilities.replaceMedia(
         created.id,
@@ -334,12 +335,13 @@ export async function seedPublicContent(
       { role: "BACKGROUND" | "PRIMARY" | "GALLERY"; files: string[] }
     > = {},
   ) => {
-    const page = (await pages.findAdminByKey(key))!;
+    const page = (await pages.findAdminByKey(BRANCH_ID, key))!;
     for (const section of page.sections) {
       const edit = edits[section.type];
       if (edit) {
         ok(
           await pages.saveSection(
+            BRANCH_ID,
             key,
             {
               id: section.id,
@@ -359,6 +361,7 @@ export async function seedPublicContent(
       if (media) {
         ok(
           await pages.replaceSectionMedia(
+            BRANCH_ID,
             key,
             section.id,
             media.files.map((file, index) => ({
@@ -372,7 +375,7 @@ export async function seedPublicContent(
         );
       }
     }
-    ok(await pages.publish(key, actor));
+    ok(await pages.publish(BRANCH_ID, key, actor));
   };
   await configure(
     "HOME",

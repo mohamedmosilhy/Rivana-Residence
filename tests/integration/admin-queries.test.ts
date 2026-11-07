@@ -10,6 +10,7 @@ import {
   createRoom,
   createTestClient,
   resetDatabase,
+  TEST_BRANCH_ID,
 } from "./support/database";
 
 const client = createTestClient();
@@ -78,6 +79,7 @@ describe("enquiry listing", () => {
     for (let index = 1; index <= 25; index += 1) await enquiry(index);
 
     const second = await enquiries.listAdminPage({
+      branchScope: "ALL",
       status: null,
       search: null,
       page: 2,
@@ -100,7 +102,13 @@ describe("enquiry listing", () => {
     await enquiry(3);
 
     const search = (text: string, status: "NEW" | "READ" | null = null) =>
-      enquiries.listAdminPage({ status, search: text, page: 1, pageSize: 20 });
+      enquiries.listAdminPage({
+        branchScope: "ALL",
+        status,
+        search: text,
+        page: 1,
+        pageSize: 20,
+      });
 
     expect((await search("layla")).items.map((item) => item.id)).toEqual([
       "enquiry-001",
@@ -119,6 +127,7 @@ describe("enquiry listing", () => {
   it("returns an empty page past the end", async () => {
     await enquiry(1);
     const page = await enquiries.listAdminPage({
+      branchScope: "ALL",
       status: null,
       search: null,
       page: 5,
@@ -136,6 +145,7 @@ describe("admin overview", () => {
     await client.page.create({
       data: {
         id: "page-home",
+        branchId: TEST_BRANCH_ID,
         key: "HOME",
         title: "Home",
         canonicalPath: "/",
@@ -145,6 +155,7 @@ describe("admin overview", () => {
     await client.page.create({
       data: {
         id: "page-about",
+        branchId: TEST_BRANCH_ID,
         key: "ABOUT",
         title: "About",
         canonicalPath: "/about",

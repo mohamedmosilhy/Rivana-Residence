@@ -32,6 +32,17 @@ describe("admin navigation", () => {
     ]);
   });
 
+  // AC-4: no CMS destination for branch-scoped roles; Enquiries stays (Q-26).
+  it.each(["RECEPTIONIST", "MANAGER"] as const)(
+    "shows %s only the overview and enquiries",
+    (role) => {
+      expect(navigationFor(role).map((item) => item.label)).toEqual([
+        "Overview",
+        "Enquiries",
+      ]);
+    },
+  );
+
   it("marks a destination current on its own page and sub-pages only", () => {
     expect(isCurrentDestination("/admin", "/admin")).toBe(true);
     expect(isCurrentDestination("/admin/rooms", "/admin")).toBe(false);

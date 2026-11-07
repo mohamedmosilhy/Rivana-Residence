@@ -1,7 +1,12 @@
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
 
 import { seedDatabase } from "../../prisma/seed-data";
-import { createTestClient, resetDatabase } from "./support/database";
+import { RESERVATION_MODELS } from "../support/reservation-models";
+import {
+  createTestClient,
+  resetDatabase,
+  TEST_BRANCH_ID,
+} from "./support/database";
 
 const client = createTestClient();
 
@@ -18,38 +23,25 @@ describe("migration from an empty database", () => {
     expect(migrations.every((row) => row.finished_at !== null)).toBe(true);
   });
 
-  it("contains no booking, pricing, guest, payment, or redemption data", async () => {
-    const columns = await client.$queryRaw<
-      { table_name: string; column_name: string }[]
-    >`
-      SELECT table_name, column_name FROM information_schema.columns
-      WHERE table_schema = 'public' AND table_name <> '_prisma_migrations'
+  // Replaces the Phase 2 "no booking data" word check (D-12): reservation
+  // tables arrive with their milestones (M6+), never earlier.
+  it("contains no reservation-module table before its milestone", async () => {
+    const tables = await client.$queryRaw<{ tablename: string }[]>`
+      SELECT tablename FROM pg_tables WHERE schemaname = 'public'
     `;
-    const forbidden = new Set([
-      "availability",
-      "booking",
-      "checkin",
-      "checkout",
-      "discount",
-      "guest",
-      "payment",
-      "price",
-      "rate",
-      "redemption",
-      "reservation",
-      "stay",
-    ]);
-    const words = (name: string) =>
-      name
-        .replace(/([a-z0-9])([A-Z])/g, "$1 $2")
-        .toLowerCase()
-        .split(/[\s_]+/)
-        .map((word) => word.replace(/s$/, ""));
-    const offending = columns
-      .flatMap(({ table_name, column_name }) => [table_name, column_name])
-      .filter((name) => words(name).some((word) => forbidden.has(word)));
+    const present = new Set(tables.map(({ tablename }) => tablename));
+    expect(RESERVATION_MODELS.filter((model) => present.has(model))).toEqual(
+      [],
+    );
+  });
 
-    expect(offending).toEqual([]);
+  it("has the M4 branch, assignment, and audit tables", async () => {
+    const tables = await client.$queryRaw<{ tablename: string }[]>`
+      SELECT tablename FROM pg_tables WHERE schemaname = 'public'
+    `;
+    expect(tables.map(({ tablename }) => tablename)).toEqual(
+      expect.arrayContaining(["Branch", "StaffBranchAssignment", "AuditEvent"]),
+    );
   });
 });
 
@@ -73,6 +65,10 @@ describe("seed", () => {
       { key: "ABOUT", canonicalPath: "/about", isPublished: false },
       { key: "CONTACT", canonicalPath: "/contact", isPublished: false },
     ]);
+    expect(await client.branch.findMany()).toEqual([
+      expect.objectContaining({ slug: "new-cairo", status: "ACTIVE" }),
+    ]);
+    expect(pages.every((page) => page.branchId === TEST_BRANCH_ID)).toBe(true);
     expect(await client.user.count()).toBe(0);
     expect(await client.room.count()).toBe(0);
     expect(await client.promotion.count()).toBe(0);
