@@ -22,7 +22,7 @@ Hotel marketing website, CMS, and (in progress) a self-managed multi-branch rese
 
 ## Build approach
 
-Milestone-gated slices (M4–M15 in [docs/delivery/roadmap.md](./docs/delivery/roadmap.md), replanned 2026-11-06; one detailed brief per milestone, with the skills to run, in [docs/delivery/milestones/](./docs/delivery/milestones/README.md)). Each milestone is a reviewable, tested slice that stops for approval before the next begins. Backend rules and the API land before the screens that use them.
+Milestones (M4–M15 in [docs/delivery/roadmap.md](./docs/delivery/roadmap.md), replanned 2026-11-06; one brief per milestone in [docs/delivery/milestones/](./docs/delivery/milestones/README.md)) are delivered as **small tasks** (the brief's Task breakdown), each planned, verified, independently reviewed, and accepted by the owner before the next begins (task-based workflow, 2026-11-07). Backend rules and the API land before the screens that use them.
 
 ## Commands
 
@@ -70,11 +70,15 @@ npm run staff -- create --email … --name … --role ADMIN   # passwords via pr
 
 ## Workflow for agents
 
-1. Read this file, the relevant docs, and the milestone. Inspect the existing code and tests.
-2. Identify the requirements and acceptance criteria. Ask when an open question affects security, data integrity, or business behavior.
-3. Plan non-trivial work, then implement only the current milestone's scope. Preserve unrelated user changes.
-4. Write or update tests, run the gates, and update docs.
-5. Review the diff. Report changed files, decisions, commands and results, limitations, and remaining work.
+**Mandatory: [docs/engineering/agent-workflow.md](./docs/engineering/agent-workflow.md)** (task lifecycle, approval gates, risk tiers, reviewer duties, review package, scope changes). In short:
+
+1. Work one task at a time (`M<N>-T<K>` in the brief's Task breakdown). Never implement a whole milestone in one step.
+2. **Plan first** and wait for the owner's approval (task card: objective, scope, behavior, architecture, files, dependencies, acceptance criteria, tests, risk tier). Contract, schema, port, or architecture decisions need approval too.
+3. Implement only the approved task. Unexpected requirement, missing decision, or architectural problem: stop, explain, recommend, wait. Preserve unrelated user changes.
+4. Test and run the gates for the risk tier ([quality-gates.md](./docs/testing/quality-gates.md#gates-per-task)), then an independent review on a different model (`/check review uncommitted`).
+5. Present the Engineering Review Package (critical code paths to review deeply, with `file:line`) and **wait for acceptance** before the next task. Then sync the docs and the task status, and commit.
+
+The owner makes engineering decisions and accepts every task; a reviewer's approval never replaces that. Never claim a check passed without running it, and never hide unresolved issues.
 
 ## Agent skills
 
@@ -94,7 +98,7 @@ Claude Code loads the same skills from `.claude/skills/`. Project rules above ov
 
 - integration: on
 - branch prefix: `m<N>-` for reservation milestones (existing phases used `phase-<N>-`)
-- commit: per milestone, only when the user asks; every accepted milestone is merged into `main` and `main` is pushed (owner rule, 2026-11-07); the next milestone branches from `main`; otherwise never push without being asked
+- commit: one commit per accepted task on the milestone branch (the owner's acceptance is the request to commit); the branch is pushed, merged into `main`, and `main` pushed when the milestone is accepted (owner rule, 2026-11-07); the next milestone branches from `main`; otherwise never push without being asked
 
 ## Context files
 

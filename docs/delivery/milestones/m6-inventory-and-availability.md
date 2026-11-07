@@ -39,6 +39,21 @@ Value objects, availability arithmetic, physical units, blocks, base rates and d
 - Reservations (M8). `sold` counts are zero until M8; the read model already reads reservation lines through a port that returns none.
 - Staff screens (M11, M12).
 
+## Task breakdown
+
+Planned, reviewed, and accepted one task at a time ([agent-workflow.md](../../engineering/agent-workflow.md)). Rows are confirmed at milestone open; the numbered **Tasks** below hold the detail.
+
+| Task | Title | Risk | Depends on | Covers (criteria, tests) | Status |
+| --- | --- | --- | --- | --- | --- |
+| M6-T1 | Date, stay, occupancy, and money value objects (`src/domain/shared`) | Critical | — | AC 3; T-DATE-1…8 | Not started |
+| M6-T2 | Availability, nightly price, and block rules (pure domain) | Critical | T1 | AC 1 (resolver), 3, 6; T-AV-1…6, T-PR-1…6 | Not started |
+| M6-T3 | Migration `inventory_and_rates`: tables, checks, exclusion constraints, demo seed | Critical | — | AC 2, 3; T-DB-3…5; drift check | Not started |
+| M6-T4 | Unit of work, `InventoryLock`, `InventoryGuard`, concurrency test harness | Critical | T2, T3 | AC 5 (harness) | Not started |
+| M6-T5 | Physical units and blocks: repositories, use cases, staff API S21–S27 | Critical | T4 | AC 4, 5; T-INV, C-4, C-8, T-HTTP | Not started |
+| M6-T6 | Base rates and date periods: repositories, audited use cases, staff API S30–S34 | Critical | T2, T3 | AC 2, 7; rate API with audit | Not started |
+| M6-T7 | Availability read model and staff grid: `SearchAvailability`, `GetAvailabilityGrid`, API S20 | Medium | T5, T6 | AC 6 | Not started |
+| M6-T8 | Public availability API P5: rate limit, no caching, minimal disclosure | Medium | T7 | AC 1 (API), 8; T-HTTP | Not started |
+
 ## Tasks
 
 ### 1. Domain (`src/domain/shared`, `src/domain/inventory`, `src/domain/pricing`)
@@ -103,4 +118,4 @@ Query plans (`EXPLAIN ANALYZE`) for capacity and sold queries on demo data; conc
 
 ## Handoff
 
-Report, then stop. M7 has not started.
+Close the milestone ([README steps 8–15](./README.md#the-loop-every-milestone-follows)), report, then stop. M7 has not started.

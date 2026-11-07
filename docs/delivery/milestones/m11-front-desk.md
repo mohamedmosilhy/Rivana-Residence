@@ -37,6 +37,21 @@ Overview desk widgets; reservation list, filters, detail, history, payment statu
 
 Pricing, services, coupons, VAT, reports, audit viewer, branch admin beyond sync settings (M12); broadcasts (M13).
 
+## Task breakdown
+
+Planned, reviewed, and accepted one task at a time ([agent-workflow.md](../../engineering/agent-workflow.md)). Rows are confirmed at milestone open; the numbered **Tasks** below hold the detail. This table is provisional: re-confirm it against the code and decisions at milestone open.
+
+| Task | Title | Risk | Depends on | Covers (criteria, tests) | Status |
+| --- | --- | --- | --- | --- | --- |
+| M11-T1 | Staff shell branch switcher and overview | Medium | M9 | AC 1, 2 | Not started |
+| M11-T2 | Reservations list and detail (read) | Medium | T1 | AC 1 | Not started |
+| M11-T3 | Reservation actions on the detail page (confirm dialogs, `If-Match`, `412` reload) | Medium | T2 | AC 6 | Not started |
+| M11-T4 | New staff booking and external recording | Medium | T2 | AC 4 | Not started |
+| M11-T5 | Cancellation requests screen | Medium | T2 | AC 3 | Not started |
+| M11-T6 | Availability grid and inventory screens | Low | T1 | axe, E2E | Not started |
+| M11-T7 | Sync reminder and branch sync settings | Medium | T1 | AC 5 | Not started |
+| M11-T8 | Guests screens | Medium | T1 | AC 1 | Not started |
+
 ## Tasks
 
 1. **Overview** (`/admin`): per assigned branch: arrivals, departures, in-house, **website bookings not yet in the hotel system** (with age; highlighted past the target, Q-61), open cancellation requests (Manager and Admin), last sync checkpoint and next due time.
@@ -73,4 +88,4 @@ Screenshots of each screen and dialog; the reminder sequence with the fake clock
 
 ## Handoff
 
-Report, then stop. M12 has not started.
+Close the milestone ([README steps 8–15](./README.md#the-loop-every-milestone-follows)), report, then stop. M12 has not started.

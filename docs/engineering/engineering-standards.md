@@ -11,6 +11,7 @@ The authoritative coding standards for Rivana Residence, for humans and coding a
 5. **Reservation consistency is protected by PostgreSQL** (locks, constraints, transactions; ADR 016), never by in-memory state or frontend checks.
 6. **Server-only code stays out of client bundles** (`import "server-only"`, the lint rules).
 7. **Tests and docs ship with the change.** Never claim a check passed without running it.
+8. **Work task by task** under the [agent workflow](./agent-workflow.md): plan approved before code, independent review, owner acceptance before the next task.
 
 ## TypeScript
 
@@ -82,7 +83,7 @@ The authoritative coding standards for Rivana Residence, for humans and coding a
 
 ## Git
 
-- One branch per milestone or phase (`m4-backend-foundations`, following the existing `phase-N-name` style). Commit when asked. Merge to `main` when asked. Push only when asked.
+- One branch per milestone or phase (`m4-backend-foundations`, following the existing `phase-N-name` style). One commit per task, made when the owner accepts the task ([agent-workflow.md](./agent-workflow.md)). An accepted milestone is pushed and merged into `main`, and `main` is pushed. Push nothing else unless asked.
 - Never commit `.env*` (except `.env.example`), credentials, or real guest data.
 
 ## Intentional exceptions

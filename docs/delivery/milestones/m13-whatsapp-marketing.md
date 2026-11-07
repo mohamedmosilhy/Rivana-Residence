@@ -40,6 +40,17 @@ Feedback message on check-out, opt-out recording, broadcasts model and sending, 
 
 Storing guest replies or ratings; SMS; email marketing; automated campaigns or segments beyond branch and consent.
 
+## Task breakdown
+
+Planned, reviewed, and accepted one task at a time ([agent-workflow.md](../../engineering/agent-workflow.md)). Rows are confirmed at milestone open; the numbered **Tasks** below hold the detail. This table is provisional: re-confirm it against the code and decisions at milestone open.
+
+| Task | Title | Risk | Depends on | Covers (criteria, tests) | Status |
+| --- | --- | --- | --- | --- | --- |
+| M13-T1 | Migration `marketing` and opt-out recording (staff S54; inbound STOP if the provider supports it) | Critical | M8 | AC 4 | Not started |
+| M13-T2 | Feedback request queued at check-out | Medium | M8 | AC 3 | Not started |
+| M13-T3 | Audience preview and broadcast sending (S60–S62) | Critical | T1 | AC 1, 2, 4 | Not started |
+| M13-T4 | Broadcasts screen | Low | T3 | axe, E2E | Not started |
+
 ## Tasks
 
 1. Use the `MARKETING` and `FEEDBACK_REQUEST` template purposes from the M8 template manager; the composer lists active marketing templates and their variables.
@@ -71,4 +82,4 @@ Audience query test table; a broadcast run with the fake adapter; provider sandb
 
 ## Handoff
 
-Report, then stop. M14 has not started.
+Close the milestone ([README steps 8–15](./README.md#the-loop-every-milestone-follows)), report, then stop. M14 has not started.

@@ -38,6 +38,22 @@ Booking pages under `/{branch}/book`, manage page, "My reservations", cancellati
 
 - Staff screens (M11, M12). Broadcast UI (M13). Currency conversion (Q-46). Embedded card forms or Paymob frames.
 
+## Task breakdown
+
+Planned, reviewed, and accepted one task at a time ([agent-workflow.md](../../engineering/agent-workflow.md)). Rows are confirmed at milestone open; the numbered **Tasks** below hold the detail. This table is provisional: re-confirm it against the code and decisions at milestone open.
+
+| Task | Title | Risk | Depends on | Covers (criteria, tests) | Status |
+| --- | --- | --- | --- | --- | --- |
+| M10-T1 | Typed API client on the contracts (`src/presentation/api-client/`) | Medium | M9 | client unit tests | Not started |
+| M10-T2 | Search and results page | Medium | T1 | AC 1, 9 | Not started |
+| M10-T3 | Selection basket with server-computed subtotal | Medium | T2 | AC 2 | Not started |
+| M10-T4 | Guest details and phone verification step | Medium | T3 | AC 9 | Not started |
+| M10-T5 | Extras and coupon | Medium | T3 | AC 3, 4 | Not started |
+| M10-T6 | Payment choice, review, submit, confirmation, conflict and price-change paths | Critical | T4, T5 | AC 5–7 | Not started |
+| M10-T7 | Payment return page | Critical | T6 | AC 6 | Not started |
+| M10-T8 | Manage reservation and My reservations with cancellation requests | Critical | T1 | AC 8 | Not started |
+| M10-T9 | Book Now internal mode per branch | Low | T6 | AC 10 | Not started |
+
 ## Tasks
 
 1. **Search** `/{branch}/book?checkIn&checkOut&adults&children`: a plain GET form (works without JavaScript), native date inputs, errors next to fields and announced; results from API-P5 rendered on the server: each available listing with its Room or Apartment badge, price per night and stay total **before VAT**, and a units selector up to the available count (cap per booking from the spec); unavailable listings with a reason.
@@ -85,4 +101,4 @@ Screenshots of every step (desktop and mobile), including errors, conflict, coup
 
 ## Handoff
 
-Report, then stop. M11 has not started.
+Close the milestone ([README steps 8–15](./README.md#the-loop-every-milestone-follows)), report, then stop. M11 has not started.

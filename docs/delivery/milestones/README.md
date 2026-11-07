@@ -1,6 +1,6 @@
 # Milestone briefs (M4–M15)
 
-One brief per forward milestone. Each brief is the contract for one reviewable, tested slice: what to build, in which order, which files and tables it touches, how to prove it, and which agent skills to run at each step. The [roadmap](../roadmap.md#reservation-milestones) holds the sequence and status; these briefs hold the detail. The plan was approved by the project owner on 2026-11-06. Each milestone's status is in the roadmap.
+One brief per forward milestone. Each brief is the contract for one tested slice: what to build, in which order, which files and tables it touches, how to prove it, and which agent skills to run at each step. Each brief's **Task breakdown** splits the milestone into small tasks that are planned, reviewed, and accepted one at a time ([agent-workflow.md](../../engineering/agent-workflow.md)). The [roadmap](../roadmap.md#reservation-milestones) holds the sequence and status; these briefs hold the detail. The plan was approved by the project owner on 2026-11-06. Each milestone's status is in the roadmap.
 
 | Brief | Scope |
 | --- | --- |
@@ -19,37 +19,56 @@ One brief per forward milestone. Each brief is the contract for one reviewable, 
 
 ## If you are an agent asked to "start milestone N"
 
-A short request such as "Start milestone 4 using docs/delivery/milestones/README.md" means all of this, even when the request does not repeat it:
+A short request such as "Start milestone 6 using docs/delivery/milestones/README.md" means **open the milestone**, not build it. Work follows the task-based workflow in [../../engineering/agent-workflow.md](../../engineering/agent-workflow.md), which is mandatory:
 
 1. Open the brief for that milestone from the table above and use the branch named for it in [Extra lines per milestone](#2-extra-lines-per-milestone). Create the branch from `main` if it does not exist (every accepted milestone is merged into `main`).
-2. Follow [the loop](#the-loop-every-milestone-follows) below from step 0, including the full prompt in [Start a milestone](#1-start-a-milestone): check the blocking questions, read first, plan mode with the plan shown before code, `/architect` spec, `/develop`, `/test`, gates, `/check verify`, `/check review`, docs, evidence report.
-3. Apply the milestone's line in [Extra lines per milestone](#2-extra-lines-per-milestone). If it names something the owner must provide (keys, wording, templates) and it is not there, stop and ask.
-4. Never commit, push, merge, or start the next milestone without the owner's explicit approval. Stop and report at the end.
+2. Run the **milestone open** steps (0–4 below): check the blocking questions, read, write the spec with `/architect`, confirm the brief's **Task breakdown**. Then stop for the owner's approval of the spec and the task breakdown.
+3. After approval, run **one task at a time** through the 7-stage task lifecycle (step 5). Each task stops twice: for plan approval before code, and for acceptance after the review package.
+4. Apply the milestone's line in [Extra lines per milestone](#2-extra-lines-per-milestone). If it names something the owner must provide (keys, wording, templates) and it is not there, stop and ask.
+5. Never commit, push, or merge outside the Git rules, and never start the next task or milestone without the owner's explicit approval.
 
 ## The loop every milestone follows
 
 Follow [../../engineering/agent-workflow.md](../../engineering/agent-workflow.md). Project rules in `AGENTS.md` override anything a skill suggests (Next.js only, thin Route Handlers, business logic in `src/domain` and `src/application`, Prisma only in `src/infrastructure/db`, PostgreSQL locks for consistency, no fabricated PMS integration).
 
+**Milestone open** (one approval gate)
+
 | Step | What | Skill | Output |
 | --- | --- | --- | --- |
 | 0 | Check approval: the previous milestone is accepted and this one is approved to start. Check that every question listed under **Blocking questions** in the brief is answered in [assumptions-and-open-questions.md](../../requirements/assumptions-and-open-questions.md). If a ★ question is open, stop and ask | — | — |
-| 1 | Work on branch `m<N>-<short-name>`, created from `main` (every accepted milestone is merged there). `git status` must be clean of unrelated work, or that work is left untouched | — | branch |
-| 2 | Read: `AGENTS.md`, this brief, every document in its **Read first** list, and the matching Next.js guide in `node_modules/next/dist/docs/` for any framework API you touch. In Claude Code, enter plan mode | — | plan |
+| 1 | Work on branch `m<N>-<short-name>`, created from `main`. `git status` must be clean of unrelated work, or that work is left untouched | — | branch |
+| 2 | Read: `AGENTS.md`, this brief, every document in its **Read first** list, and the matching Next.js guide in `node_modules/next/dist/docs/` for any framework API you touch. In Claude Code, enter plan mode | — | — |
 | 3 | Turn the brief into a build spec `docs/specs/NNNN-m<N>-<name>.md`. The spec cites the ADRs and the brief and must not contradict them. It records only local implementation choices; business decisions come from the question register, never from the spec | `/architect` (mode `ENHANCEMENT`; `FEATURE` for wholly new modules) | spec |
-| 4 | Optional: enroll the milestone as a scope feature so `/develop` and `/check` can track it (tier `Beta`, so verification and tests close it) | `/scope` | `docs/scope/` row |
-| 5 | Build in the order of the brief's **Tasks** (data, then domain, then application, then infrastructure, then API, then UI). Use the logic track for data, domain, application, and API work and the UI track for pages and components | `/develop` | code |
-| 6 | Write the tests listed in **Tests** for what you just built, after each task group, not only at the end | `/test` | tests |
-| 7 | When a test or gate fails for a reason that is not obvious, find the root cause before changing code | `/debug` | minimal fix + regression test |
-| 8 | Run every gate ([quality-gates.md](../../testing/quality-gates.md#commands)) and record the exact commands and counts | — | gate output |
-| 9 | Prove each acceptance criterion in the running app (API calls, browser, database state) | `/check verify` | verification notes |
-| 10 | Fresh-model code review of the diff, then fix or answer each finding | `/check review` | `docs/reviews/…` |
-| 11 | Update every document whose status changed (**Implemented** vs **Planned**), the roadmap overview row, and the test matrix | — | docs |
-| 12 | Write the evidence report `docs/delivery/reports/m<N>-<name>.md` (template below) | — | report |
-| 13 | After the user accepts the milestone, before the merge into `main`: update `AGENTS.md` and the scope from what changed | `/sync` | `AGENTS.md` lines |
-| 14 | When the user asks for a PR or release text | `/document pr` | PR description |
-| 15 | **Stop.** Report and wait. Do not start the next milestone | — | — |
+| 4 | Confirm or refine the brief's **Task breakdown** (ids, order, dependencies, risk tier) against the spec, then **stop: the owner approves the spec and the task breakdown** | — | approved task table |
 
-Commit only when the user asks. Every accepted milestone is merged into `main` and `main` is pushed; otherwise never push without being asked (`AGENTS.md`, Git).
+**Tasks** (repeat per task, in dependency order)
+
+| Step | What | Skill | Gate |
+| --- | --- | --- | --- |
+| 5.1 | Plan: task card and approach | — (plan mode) | **owner approves the plan** |
+| 5.2 | Design, only when a decision is owed | `/architect` | **owner approves** contract, schema, port, or architecture changes |
+| 5.3 | Implement the approved task only | `/develop`, `/debug` | — |
+| 5.4 | Tests and the gates for the risk tier ([quality-gates.md](../../testing/quality-gates.md#gates-per-task)); runtime proof | `/test`, `/check verify` | gates pass |
+| 5.5 | Independent review of the task diff (`docs/reviews/<date>-m<N>-t<K>.md`) | `/check review uncommitted` | findings resolved |
+| 5.6 | Engineering Review Package | — | **owner accepts the task** |
+| 5.7 | Docs, task status, task log row, commit on the milestone branch | — | — |
+
+Details of every stage: [agent-workflow.md](../../engineering/agent-workflow.md#task-lifecycle-every-task-in-order).
+
+**Milestone close** (one approval gate)
+
+| Step | What | Skill | Output |
+| --- | --- | --- | --- |
+| 8 | Run every gate ([quality-gates.md](../../testing/quality-gates.md#commands)) on the final tree and record the exact commands and counts | — | gate output |
+| 9 | Prove each acceptance criterion of the brief in the running app (API calls, browser, database state) and collect the brief's **Evidence for the report** | `/check verify` | verification notes |
+| 10 | Optional: a milestone-wide review when tasks interact in ways a single task diff could not show | `/check review` | `docs/reviews/…` |
+| 11 | Update every document whose status changed and is not yet updated (**Implemented** vs **Planned**), the roadmap overview row, and the test matrix | — | docs |
+| 12 | Finish the evidence report `docs/delivery/reports/m<N>-<name>.md` (template below) | — | report |
+| 13 | **Stop for milestone acceptance.** After the owner accepts, before the merge into `main`: update `AGENTS.md` from what changed | `/sync` | `AGENTS.md` lines |
+| 14 | When the owner asks for a PR or release text | `/document pr` | PR description |
+| 15 | **Stop.** Do not start the next milestone | — | — |
+
+Commits: one per accepted task on the milestone branch, made at step 5.7 (the owner's acceptance of the task is the request to commit); the branch is not pushed until the milestone is accepted. Every accepted milestone is merged into `main` and `main` is pushed; otherwise never push without being asked (`AGENTS.md`, Git).
 
 Personal or editor-level skills (for example a UI design review skill) are optional extras. The project skills above (`.claude/skills/`, `.agents/skills/`) are the required set, so Claude Code and Codex follow the same loop.
 
@@ -57,30 +76,55 @@ Personal or editor-level skills (for example a UI design review skill) are optio
 
 Copy these prompts into Claude Code or Codex. The brief holds the detail; the prompt only points the agent at it and sets the rules.
 
-### 1. Start a milestone
+### 1. Open a milestone
 
 Change `<N>`, the name, the branch, and the brief file name.
 
 ```text
-Start milestone M<N> — <name>.
+Open milestone M<N> — <name>.
 
 Work on branch m<N>-<branch-name> (create it from main if it doesn't exist).
 
-Follow docs/delivery/milestones/m<N>-<file>.md exactly, using the loop in
-docs/delivery/milestones/README.md:
+Follow docs/delivery/milestones/m<N>-<file>.md and the task-based workflow in
+docs/engineering/agent-workflow.md:
 1. Check that every blocking question in the brief is answered. If any is not, stop and ask me.
 2. Read AGENTS.md, the brief, and every document in its "Read first" list.
-3. Enter plan mode and show me your plan before writing code.
-4. Run /architect to write the build spec in docs/specs/ (cite the ADRs, invent no business rules).
-5. Build with /develop in the brief's task order (data → domain → application → infrastructure → API → UI).
-6. Write tests with /test after each task group; use /debug for any unclear failure.
-7. Run all the gates (npm run check, integration, E2E) and record the exact counts.
-8. Prove each acceptance criterion with /check verify, then run /check review.
-9. Update the docs (Implemented vs Planned, the roadmap row, the test matrix) and write the
-   evidence report docs/delivery/reports/m<N>-<name>.md.
-10. Stop and report. Don't commit, push, or start the next milestone until I approve.
+3. Run /architect to write the build spec in docs/specs/ (cite the ADRs, invent no business rules).
+4. Confirm or refine the brief's task breakdown (ids, order, dependencies, risk).
+5. Stop and show me the spec summary and the task table. Write no application code.
+```
 
-Respect the brief's "Out of scope" list. If something there seems necessary, ask me first.
+Start a task (after the milestone is open, or after the previous task is accepted):
+
+```text
+Start task M<N>-T<K>. Plan it first (task card and approach) and wait for my approval.
+```
+
+Approve a plan:
+
+```text
+Plan for M<N>-T<K> approved. Implement it, verify, run /check review, and give me the review package.
+```
+
+Accept a task:
+
+```text
+M<N>-T<K> is accepted. Sync the docs and the task status, add the task log row, and commit on
+m<N>-<branch-name>. Don't start the next task yet.
+```
+
+Ask for changes to a task:
+
+```text
+M<N>-T<K> needs changes: <list>. Fix only these, rerun the gates and the review, and give me
+an updated review package. Don't commit yet.
+```
+
+Close a milestone (after its last task is accepted):
+
+```text
+All M<N> tasks are accepted. Close the milestone: full gates, /check verify against every
+acceptance criterion, docs, and the evidence report. Then stop for my acceptance.
 ```
 
 ### 2. Extra lines per milestone
@@ -102,9 +146,9 @@ Add the line in the last column under the prompt above.
 | [M14](./m14-hardening.md) Hardening | `m14-hardening` | Whether to add the authenticator-app second sign-in step for Admin and Manager (Q-33) |
 | [M15](./m15-joint-launch.md) Launch | `m15-joint-launch` | Live Paymob keys (in the server environment), room and apartment numbers, the staff list with roles and branches, the PMS name, and the approved legal texts |
 
-### 3. After the agent reports
+### 3. After the milestone closes
 
-Accept and move on:
+Accept the milestone and move on:
 
 ```text
 M<N> is accepted. Mark it accepted in the roadmap and its evidence report, commit on
@@ -115,8 +159,8 @@ m<N+1>-<next-branch-name> from main. Don't start M<N+1> yet.
 Ask for fixes:
 
 ```text
-M<N> needs changes: <list>. Fix only these, rerun the gates, update the evidence
-report, and report again. Don't commit yet.
+M<N> needs changes: <list>. Plan the fixes as tasks (or reopen the affected task), rerun
+the gates, update the evidence report, and report again. Don't commit yet.
 ```
 
 Merge a branch into `main` by itself (the accept prompt above already does this for milestones):
@@ -149,7 +193,12 @@ Never claim a gate passed without running it. If a gate cannot run (for example 
 ```markdown
 # M<N> — <name>
 
-Status: Ready for review (YYYY-MM-DD)
+Status: In progress (YYYY-MM-DD); Ready for review at milestone close
+
+## Task log (one row per task, added when the task is accepted)
+
+| Task | Risk | Accepted | Commit | Review file | Gates (counts) | Notes |
+| --- | --- | --- | --- | --- | --- | --- |
 
 ## Outcome
 ## Scope delivered (task checklist from the brief, each ticked or explained)
@@ -170,3 +219,4 @@ Status: Ready for review (YYYY-MM-DD)
 - Every new use case calls `authorize` (and `authorizeBranch` when branch data is involved) before any repository call, and is added to the authorization sweep.
 - Every availability-reducing write takes the room-type lock first (ADR 016). Every money-changing write appends an `AuditEvent` in the same transaction.
 - **Out of scope** lists in the briefs are binding. If something there seems necessary, stop and ask.
+- **Task breakdown** tables (ids `M<N>-T<K>`, risk tier, dependencies, the acceptance criteria and tests each task covers, status) are the single place for task status. Rows are confirmed at milestone open; adding, splitting, or merging a task later needs the owner's approval. The numbered **Tasks** text below each table stays as the detailed content.

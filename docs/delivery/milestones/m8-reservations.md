@@ -42,6 +42,25 @@ Reservation tables and snapshot, website pay-at-hotel creation with immediate co
 - Broadcasts and feedback messages (M13); consent is only stored.
 - `PENDING` and `DECLINED` statuses: they must not exist anywhere.
 
+## Task breakdown
+
+Planned, reviewed, and accepted one task at a time ([agent-workflow.md](../../engineering/agent-workflow.md)). Rows are confirmed at milestone open; the numbered **Tasks** below hold the detail.
+
+| Task | Title | Risk | Depends on | Covers (criteria, tests) | Status |
+| --- | --- | --- | --- | --- | --- |
+| M8-T1 | Migration `reservations`: tables, checks, composite FKs, exclusion and idempotency constraints, demo seed | Critical | — | T-DB-6…8; drift check | Not started |
+| M8-T2 | Reservation domain: state machine, invariants R-1…R-10, reference, `PhoneNumber`, verification and per-phone policies | Critical | — | T-LIFE-1…10, T-REF-1…3, T-PHONE-1…4, T-VAL-1…5 | Not started |
+| M8-T3 | Reservation and guest repositories, unit-of-work binding | Medium | T1 | repository integration tests | Not started |
+| M8-T4 | WhatsApp setup: settings, templates, sender port, provider and fake adapters, test message, minimal Admin screen | Critical | T1 | AC 10; T-WA-1…7 | Not started |
+| M8-T5 | Phone verification: request and confirm, limits, API P9 and P10 | Critical | T2, T3, T4 | AC 7; T-GST (verification) | Not started |
+| M8-T6 | Notifications: outbox, dispatcher, email templates, token expiry job | Critical | T3, T4 | AC 4; T-NTF-1…3 | Not started |
+| M8-T7 | `CreateWebsiteReservation` (pay at hotel) and API P7 | Critical | T5, T6, M7 | AC 1–4, 8; T-RES, C-1…C-3, C-11 | Not started |
+| M8-T8 | Staff and external reservations: `CreateStaffReservation`, `RecordExternalReservation` | Critical | T7 | AC 9; T-RES, T-AUTHZ-2 | Not started |
+| M8-T9 | Inventory-changing transitions: staff cancellation with coupon release, `ModifyReservationStay` | Critical | T8 | AC 6; C-4 (block vs booking), C-5…C-7 | Not started |
+| M8-T10 | Operational transitions: guest edit, unit assignment, check-in, check-out, no-show, `MarkEnteredInHotelSystem`, resend link | Critical | T8 | AC 5; T-PMS-1…2, C-9, C-10 | Not started |
+| M8-T11 | Guests and guest access: search, profile, block and unblock; manage-token and guest-session reads | Critical | T5, T7 | AC 7, 8; T-GST, T-LKP-1…4 | Not started |
+| M8-T12 | Sync status and checkpoints API | Medium | T7 | T-SYNCAPI-1…4 | Not started |
+
 ## Tasks
 
 ### 1. Database (migration `reservations`)
@@ -114,4 +133,4 @@ Concurrency output (20×); a booking walk-through with request, response, DB row
 
 ## Handoff
 
-Report, then stop. M9 has not started.
+Close the milestone ([README steps 8–15](./README.md#the-loop-every-milestone-follows)), report, then stop. M9 has not started.

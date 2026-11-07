@@ -24,7 +24,7 @@ The single delivery plan for Rivana Residence. Work is delivered as a sequence o
 | M3 | Agent setup and engineering foundation | Accepted 2026-10-24 | [../engineering/](../engineering/engineering-standards.md), `AGENTS.md`, `CLAUDE.md` |
 | M4 | Backend foundations and branch data ownership | Accepted 2026-11-07 | [reports/m4-backend-foundations.md](./reports/m4-backend-foundations.md) |
 | M5 | Branch websites and the rooms-and-apartments catalog | Accepted 2026-11-07 | [reports/m5-branch-websites.md](./reports/m5-branch-websites.md) |
-| M6–M14 | Inventory, quote, reservations, payments, booking journey, staff tools, messaging, hardening (replanned 2026-11-06; [briefs](./milestones/README.md)) | Not started; plan approved by the project owner 2026-11-06 | — |
+| M6–M14 | Inventory, quote, reservations, payments, booking journey, staff tools, messaging, hardening (replanned 2026-11-06; [briefs](./milestones/README.md); task-based workflow from 2026-11-07) | Not started; plan approved by the project owner 2026-11-06 | — |
 | Phase 12 + M15 | Joint deployment and launch | Not started | — |
 
 The external reservation module integration once planned as Phase 13 never started. The provider supplied no module or API, and the reservation system replaces it (ADR 013).
@@ -50,6 +50,8 @@ flowchart LR
 ```
 
 ## Phase governance
+
+From M6 onward, milestones run as small tasks with their own approval gates; the workflow is in [engineering/agent-workflow.md](../engineering/agent-workflow.md) and the steps in [milestones/README.md](./milestones/README.md#the-loop-every-milestone-follows). The status values and definition of done below apply to milestones; task status lives in each brief's **Task breakdown**, and the milestone handoff is the evidence report template in the milestones README.
 
 ### Status values
 
@@ -978,7 +980,7 @@ Milestones M0–M3 produced the reservation design (accepted 2026-10-24). The cl
 
 Each milestone has a detailed brief in [milestones/](./milestones/README.md) with its tasks by layer, files, database and API impact, numbered acceptance criteria, tests, evidence, risks, and the agent skills to run at each step (`/architect` → `/develop` → `/test` → `/debug` → `/check verify` → `/check review` → `/sync` → `/document`). The brief is the contract; this section is the summary.
 
-Ordering rule: foundations and data or API contracts come before the screens that use them. Every milestone is a reviewable, tested slice that stops for approval before the next begins. The plan was approved by the project owner on 2026-11-06; none has started.
+Ordering rule: foundations and data or API contracts come before the screens that use them. Every milestone is a tested slice, delivered as the small tasks in its brief's **Task breakdown**; each task is planned, independently reviewed, and accepted by the owner before the next begins ([agent workflow](../engineering/agent-workflow.md), 2026-11-07), and the milestone stops for acceptance before the next milestone begins. The plan was approved by the project owner on 2026-11-06; M4 and M5 are accepted.
 
 ### Completion rules (every milestone)
 
@@ -986,7 +988,7 @@ Definition of done is [the brief's §23](../source/prompt.md), the roadmap's per
 
 - format, lint, typecheck, unit, integration, build, and Chromium E2E pass on the final tree, with counts recorded;
 - docs updated, including the delivery overview above;
-- diff reviewed (`/check review` on a different model);
+- every task accepted by the owner, each after its own `/check review` on a different model;
 - an evidence doc `docs/delivery/reports/m<N>-<name>.md`;
 - the next milestone has **not** started.
 

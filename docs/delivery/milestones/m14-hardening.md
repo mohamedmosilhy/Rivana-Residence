@@ -27,6 +27,23 @@ A release candidate for the whole product: branch websites, booking, payments, r
 | Review | `/check review` | Whole-diff review since M4, security focus |
 | After merge | `/sync`, `/document` (`release-note`) | |
 
+## Task breakdown
+
+Planned, reviewed, and accepted one task at a time ([agent-workflow.md](../../engineering/agent-workflow.md)). Rows are confirmed at milestone open; the numbered **Tasks** below hold the detail. This table is provisional: re-confirm it against the code and decisions at milestone open.
+
+| Task | Title | Risk | Depends on | Covers (criteria, tests) | Status |
+| --- | --- | --- | --- | --- | --- |
+| M14-T1 | Threat-model test list and full authorization sweep | Critical | M13 | AC 2 | Not started |
+| M14-T2 | Dependency audit, secret scan, client bundle check | Critical | — | AC 2 | Not started |
+| M14-T3 | Performance against a production-like dataset | Medium | — | AC 3 | Not started |
+| M14-T4 | Accessibility pass (axe, VoiceOver, keyboard) | Medium | — | AC 2 | Not started |
+| M14-T5 | Cross-browser runs | Low | — | AC 1 | Not started |
+| M14-T6 | OpenAPI review against handlers | Medium | — | AC 1 | Not started |
+| M14-T7 | Restore drill including all new tables | Critical | — | AC 4 | Not started |
+| M14-T8 | Paymob sandbox end to end | Critical | — | AC 4 | Not started |
+| M14-T9 | Second sign-in step for Admin and Manager (only if Q-33 is approved) | Critical | — | AC 2 | Not started |
+| M14-T10 | Release-candidate report and Phase 12 release checklist | Low | T1–T9 | AC 1–4 | Not started |
+
 ## Tasks
 
 1. Threat-model test list executed: authorization sweep for every use case and role, cross-branch IDOR, CSRF on staff REST, payment callback forgery and replay, amount tampering, coupon guessing and limit races, consent and blocked-number exclusion, refund authorization, token leakage, enumeration, log redaction.
@@ -49,4 +66,4 @@ A release candidate for the whole product: branch websites, booking, payments, r
 
 ## Handoff
 
-Report, then stop. M15 has not started.
+Close the milestone ([README steps 8–15](./README.md#the-loop-every-milestone-follows)), report, then stop. M15 has not started.

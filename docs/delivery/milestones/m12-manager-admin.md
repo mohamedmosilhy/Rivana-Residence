@@ -37,6 +37,21 @@ Commercial and administrative screens: prices, services, coupons, the VAT rate, 
 
 Broadcasts (M13). CSV export (Q-14). CMS audit (Q-15).
 
+## Task breakdown
+
+Planned, reviewed, and accepted one task at a time ([agent-workflow.md](../../engineering/agent-workflow.md)). Rows are confirmed at milestone open; the numbered **Tasks** below hold the detail. This table is provisional: re-confirm it against the code and decisions at milestone open.
+
+| Task | Title | Risk | Depends on | Covers (criteria, tests) | Status |
+| --- | --- | --- | --- | --- | --- |
+| M12-T1 | Pricing screens | Medium | M8 | AC 1 | Not started |
+| M12-T2 | Services and coupons screens | Medium | M8 | AC 1 | Not started |
+| M12-T3 | VAT setting (Admin only) | Medium | M8 | AC 1, 3 | Not started |
+| M12-T4 | Reports: branch-scoped read models, API S40–S42, screen | Critical | M9 | AC 2 | Not started |
+| M12-T5 | Branches screen with the online-booking switch guard | Medium | M8 | AC 3 | Not started |
+| M12-T6 | Staff role and branch assignment (last-Admin rule) | Critical | M8 | AC 1; E2E-A | Not started |
+| M12-T7 | Audit screen | Medium | M8 | AC 4 | Not started |
+| M12-T8 | WhatsApp settings screen polish | Low | M8 | AC 4 (axe) | Not started |
+
 ## Tasks
 
 1. **Pricing** `/admin/pricing`: per listing base rate, date periods (no overlap; inline server errors), rate calendar (effective price per night).
@@ -70,4 +85,4 @@ Screenshots; the fixture calculation next to the report output.
 
 ## Handoff
 
-Report, then stop. M13 has not started.
+Close the milestone ([README steps 8–15](./README.md#the-loop-every-milestone-follows)), report, then stop. M13 has not started.

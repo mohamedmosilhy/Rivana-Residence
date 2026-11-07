@@ -25,6 +25,20 @@ Q-13 (confirmed with legal advice), Q-21, Q-23, Q-24, Q-25, Q-30 (all guest-faci
 | Launch notes | `/document` (`release-note`) | |
 | After launch | `/sync` | |
 
+## Task breakdown
+
+Planned, reviewed, and accepted one task at a time ([agent-workflow.md](../../engineering/agent-workflow.md)). Rows are confirmed at milestone open; the numbered **Tasks** below hold the detail. This table is provisional: re-confirm it against the code and decisions at milestone open.
+
+| Task | Title | Risk | Depends on | Covers (criteria, tests) | Status |
+| --- | --- | --- | --- | --- | --- |
+| M15-T1 | Production database migrated after a backup | Critical | M14 | AC 5 | Not started |
+| M15-T2 | Production data entry (with the owner and client) | Critical | T1 | AC 5 | Not started |
+| M15-T3 | Cron jobs | Medium | T1 | AC 2 | Not started |
+| M15-T4 | Live Paymob keys and callback, WhatsApp token and test message, SMTP | Critical | T1 | AC 4 | Not started |
+| M15-T5 | Staff training | Low | T2 | AC 1 | Not started |
+| M15-T6 | Enable online booking per branch | Critical | T2–T5 | AC 3, 4 | Not started |
+| M15-T7 | First-week monitoring | Medium | T6 | AC 2 | Not started |
+
 ## Tasks
 
 1. Production database migrated (`npm run db:deploy`) after a backup.

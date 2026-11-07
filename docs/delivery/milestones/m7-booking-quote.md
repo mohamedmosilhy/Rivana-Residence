@@ -42,6 +42,19 @@ One server-side quote that composes accommodation (several units), optional serv
 - Any currency other than USD (Q-46).
 - Marketing broadcasts (M13).
 
+## Task breakdown
+
+Planned, reviewed, and accepted one task at a time ([agent-workflow.md](../../engineering/agent-workflow.md)). Rows are confirmed at milestone open; the numbered **Tasks** below hold the detail.
+
+| Task | Title | Risk | Depends on | Covers (criteria, tests) | Status |
+| --- | --- | --- | --- | --- | --- |
+| M7-T1 | Quote arithmetic: `roundHalfUpDiv`, `QuoteCalculator` | Critical | M6 | AC 1, 2; T-QUOTE-1…10 | Not started |
+| M7-T2 | Coupon and service rules: `CouponPolicy`, service kinds | Critical | — | AC 3, 4; T-CPN-1…5, T-SVC-1…2 | Not started |
+| M7-T3 | Migration `commercial_rules` and demo seed | Critical | — | T-CPN-7; drift check | Not started |
+| M7-T4 | Services and VAT settings: audited use cases, staff API S35–S36 and A5 | Critical | T3 | AC 5, 7; T-SVC-3…4, T-TAX-1…4 | Not started |
+| M7-T5 | Coupon management: branch-scoped audited use case, staff API S37–S39 | Critical | T2, T3 | AC 5; T-CPN-6…8 | Not started |
+| M7-T6 | `QuoteBooking` use case and public API P6 with the coupon rate limit | Critical | T1, T4, T5 | AC 1, 3, 4, 6, 7; API-P6 end to end | Not started |
+
 ## Tasks
 
 ### 1. Domain (`src/domain/pricing`, `src/domain/coupons`, `src/domain/services`)
@@ -104,4 +117,4 @@ The worked examples' API responses; audit rows for each change type; the rate-li
 
 ## Handoff
 
-Report, then stop. M8 has not started.
+Close the milestone ([README steps 8–15](./README.md#the-loop-every-milestone-follows)), report, then stop. M8 has not started.

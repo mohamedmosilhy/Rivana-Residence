@@ -20,6 +20,21 @@ The checks every change must pass, the exact commands, and the most recent recor
 
 A milestone is green only when format, lint, typecheck, unit, integration, build, and the Chromium E2E suites all pass on the final tree.
 
+## Gates per task
+
+Each task runs the gates for its risk tier ([agent-workflow.md](../engineering/agent-workflow.md#risk-classification)) before its independent review. Milestone close always runs the full set above.
+
+| Task touches | Gates |
+| --- | --- |
+| Any code (every tier) | `npm run format:check`, `npm run lint`, `npm run typecheck`, `npm run test` |
+| Domain rules, application, repositories, database, or API (medium and critical) | plus `npm run test:integration` |
+| A migration | plus the `prisma migrate diff` drift check ([migrations-and-seeding.md](../database/migrations-and-seeding.md)) |
+| Locking, inventory, or concurrent writes | plus the concurrency suite alone, 20 iterations (see the milestones README) |
+| Routes, pages, components, or `next.config` / `proxy` | plus `npm run build` and `npm run test:e2e` |
+| Critical tier | all of the above that apply, and `npm run build` |
+
+Record exact commands and counts in the review package. If a gate cannot run, say so and why; never report it as passed.
+
 ## Latest recorded results (2026-10-24)
 
 Local: macOS 27, Node **24.21.0** (project pins 22.23.2; the known deviation recorded in Phase 1), npm 11.21.0, PostgreSQL via Postgres.app on 5432.

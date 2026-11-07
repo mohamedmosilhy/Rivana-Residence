@@ -42,6 +42,24 @@ Online payment path, holds and expiry, callback endpoint, reconciliation job, la
 
 - Screens (M10, M11). Partial refunds (Q-66). Payment links for staff bookings (Q-37: staff bookings are pay at hotel). Embedding a card form or Paymob iframe on Rivana pages. Storing any card data.
 
+## Task breakdown
+
+Planned, reviewed, and accepted one task at a time ([agent-workflow.md](../../engineering/agent-workflow.md)). Rows are confirmed at milestone open; the numbered **Tasks** below hold the detail.
+
+| Task | Title | Risk | Depends on | Covers (criteria, tests) | Status |
+| --- | --- | --- | --- | --- | --- |
+| M9-T1 | Migration `payments_and_cancellations` | Critical | — | drift check | Not started |
+| M9-T2 | Domain: payment transitions, `CancellationDeadline`, PY and CX rules | Critical | — | T-PAY-1…4, T-CXL-1…3 | Not started |
+| M9-T3 | `PaymentGateway` port, fake adapter, Paymob adapter (server-only) | Critical | — | AC 9; adapter tests, bundle check | Not started |
+| M9-T4 | Online booking path: `AWAITING_PAYMENT`, hold, checkout creation, gateway failure | Critical | T1, T2, T3 | AC 1, 4; T-PAY-5 | Not started |
+| M9-T5 | Payment callback: `webhookRoute`, HMAC, idempotency, late success (API P8) | Critical | T4 | AC 1–3, 5; C-12, C-13, webhook handler tests | Not started |
+| M9-T6 | Hold expiry and payment reconciliation jobs | Critical | T5 | AC 4, 5; C-14 | Not started |
+| M9-T7 | Guest cancellation requests (G2, G4) | Critical | T1, T2 | AC 6; T-CXL-4…5 | Not started |
+| M9-T8 | Cancellation decisions and refunds: decide, refund, retry, paid staff cancellation (S9, S17–S19, S44, S45) | Critical | T5, T7 | AC 7, 8; T-PAY-8…10, T-CXL-6…8 | Not started |
+| M9-T9 | Payment and cancellation messages (email and WhatsApp templates) | Medium | T5, T8 | message content tests | Not started |
+
+AC 10 (the Paymob sandbox run) is recorded at milestone close.
+
 ## Tasks
 
 ### 1. Database (migration `payments_and_cancellations`)
@@ -113,4 +131,4 @@ Sandbox transaction ids (no personal data); state diagrams as exercised; callbac
 
 ## Handoff
 
-Report, then stop. M10 has not started.
+Close the milestone ([README steps 8–15](./README.md#the-loop-every-milestone-follows)), report, then stop. M10 has not started.
