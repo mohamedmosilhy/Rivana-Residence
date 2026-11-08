@@ -3,6 +3,10 @@
 // It builds a complete, real website on a freshly migrated database. The
 // steps and their order are in prisma/seed/index.ts (`runSeed`).
 //
+//   npm run db:seed              the real site
+//   npm run db:seed -- --demo    plus the fictional branch demo-giza (never in
+//                                production)
+//
 // Needs DATABASE_URL, MEDIA_STORAGE_ROOT, and SEED_ADMIN_PASSWORD. There is no
 // default admin password: a missing or weak one refuses the run before
 // anything is written (src/domain/auth/password-policy.ts).
@@ -17,6 +21,10 @@ import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "../src/generated/prisma/client.ts";
 import { resolveSeedAdminCredentials } from "./seed/admin-credentials.ts";
 import { runSeed } from "./seed/index.ts";
+import { resolveSeedOptions } from "./seed/options.ts";
+
+// Checked first: an unknown flag, or --demo in production, writes nothing.
+const options = resolveSeedOptions(process.argv.slice(2), process.env);
 
 const url = process.env.DATABASE_URL;
 const mediaRoot = process.env.MEDIA_STORAGE_ROOT;
@@ -35,7 +43,11 @@ const client = new PrismaClient({
 });
 
 try {
-  await runSeed(client, { mediaRoot, adminPassword: credentials.password });
+  await runSeed(client, {
+    mediaRoot,
+    adminPassword: credentials.password,
+    demo: options.demo,
+  });
   console.log(
     "If the site is running, delete .next/cache/fetch-cache and .next/dev/cache/fetch-cache, then reload.",
   );

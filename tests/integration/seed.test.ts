@@ -120,4 +120,110 @@ describe("the one seed (runSeed)", () => {
     expect(lines.join("\n")).toMatch(/interrupted earlier run/);
     await rm(mediaRoot, { recursive: true, force: true });
   }, 120_000);
+
+  it("adds nothing fictional without --demo", async () => {
+    await seed();
+    expect(await client.branch.count({ where: { slug: "demo-giza" } })).toBe(0);
+    expect(await client.branch.count()).toBe(1);
+    await rm(mediaRoot, { recursive: true, force: true });
+  }, 120_000);
+
+  it("adds the fictional second branch with --demo, once", async () => {
+    const withDemo = () =>
+      runSeed(client, {
+        mediaRoot,
+        adminPassword: PASSWORD,
+        demo: true,
+        log: (message) => lines.push(message),
+      });
+    await withDemo();
+
+    const giza = await client.branch.findUniqueOrThrow({
+      where: { slug: "demo-giza" },
+    });
+    expect(giza.status).toBe("ACTIVE");
+    expect(
+      (
+        await client.room.findMany({
+          where: { branchId: giza.id, status: "PUBLISHED" },
+          select: { accommodationType: true },
+        })
+      )
+        .map((room) => room.accommodationType)
+        .sort(),
+    ).toEqual(["APARTMENT", "ROOM"]);
+    expect(await client.facility.count({ where: { branchId: giza.id } })).toBe(
+      2,
+    );
+    expect(
+      await client.page.count({
+        where: { branchId: giza.id, isPublished: true },
+      }),
+    ).toBe(3);
+    expect(await client.branch.count({ where: { status: "ACTIVE" } })).toBe(2);
+    // The same photos serve both branches; nothing is uploaded again.
+    expect(await client.mediaAsset.count()).toBe(33);
+
+    const counts = async () => ({
+      branches: await client.branch.count(),
+      rooms: await client.room.count(),
+      pages: await client.page.count(),
+    });
+    const before = await counts();
+    lines = [];
+    await withDemo();
+    expect(await counts()).toEqual(before);
+    expect(lines.join("\n")).toMatch(/demo-giza already exists/);
+    await rm(mediaRoot, { recursive: true, force: true });
+  }, 120_000);
+
+  it("creates nothing if a demo photo is missing, and says which", async () => {
+    await seed();
+    await client.mediaAsset.updateMany({
+      where: { originalFilename: "gym-02.jpg" },
+      data: { status: "DELETED" },
+    });
+
+    await expect(
+      runSeed(client, {
+        mediaRoot,
+        adminPassword: PASSWORD,
+        demo: true,
+        log: () => undefined,
+      }),
+    ).rejects.toThrow(/gym-02\.jpg/);
+
+    expect(await client.branch.count({ where: { slug: "demo-giza" } })).toBe(0);
+    expect(await client.room.count()).toBe(3);
+    await rm(mediaRoot, { recursive: true, force: true });
+  }, 120_000);
+
+  it("reports an inactive demo branch left by an older seed", async () => {
+    await runSeed(client, {
+      mediaRoot,
+      adminPassword: PASSWORD,
+      demo: true,
+      log: () => undefined,
+    });
+    await client.branch.update({
+      where: { slug: "demo-giza" },
+      data: { status: "INACTIVE" },
+    });
+
+    lines = [];
+    await runSeed(client, {
+      mediaRoot,
+      adminPassword: PASSWORD,
+      demo: true,
+      log: (message) => lines.push(message),
+    });
+
+    expect(lines.join("\n")).toMatch(/already exists \(inactive\)/);
+    expect(lines.join("\n")).toMatch(/Admin > Branches/);
+    expect(
+      (await client.branch.findUniqueOrThrow({ where: { slug: "demo-giza" } }))
+        .status,
+    ).toBe("INACTIVE");
+    await rm(mediaRoot, { recursive: true, force: true });
+  }, 120_000);
 });
