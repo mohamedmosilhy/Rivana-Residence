@@ -16,9 +16,10 @@ import {
 // truncated database always has it (spec 0001).
 export { DEFAULT_BRANCH_ID, DEFAULT_BRANCH_SLUG, defaultSections };
 
-// Creates only structural records. Staff accounts are provisioned with
-// `npm run staff -- create`, which never takes a password from the environment.
-// Returns the default branch id.
+// Creates only structural records: settings, the default branch, and the three
+// pages. The first administrator, the branch details, and the content are
+// separate steps of the one seed (prisma/seed/index.ts). Other staff accounts
+// are provisioned with `npm run staff -- create`. Returns the default branch id.
 export async function seedDatabase(client: PrismaClient) {
   return client.$transaction(async (transaction) => {
     const settings = await transaction.siteSettings.upsert({

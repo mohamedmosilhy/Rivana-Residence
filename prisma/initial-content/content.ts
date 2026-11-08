@@ -142,18 +142,11 @@ export const IMAGES = {
 
 export type ImageKey = keyof typeof IMAGES;
 
+// Brand-wide identity. Contact details, address, coordinates, map, and
+// check-in times belong to the branch (see BRANCH below), not SiteSettings.
 export const SETTINGS = {
   siteName: "Rivana Residence",
   tagline: "Luxury is a state of mind, and here, it's our reality.",
-  phone: "+20 10 5555 3086",
-  email: "info@rivanaresidence.com",
-  addressLine1: "Plot 46 A, District 37, Southern Investors",
-  addressLine2: "Opposite the American University and El Zohour Club",
-  city: "New Cairo 1, Cairo",
-  country: "Egypt",
-  // From the old Contact page map pin.
-  latitude: 30.0162009,
-  longitude: 31.4935526,
   footerText: "© Rivana Residence",
   defaultSeoTitle: "Rivana Residence | Luxury Hotel in New Cairo",
   defaultSeoDescription:
@@ -186,6 +179,28 @@ export const SETTINGS = {
       url: "https://www.tiktok.com/@rivanaresidence",
     },
   ],
+} as const;
+
+// The New Cairo branch's own details (the only branch the real site has).
+// Applied by prisma/seed/branch.ts; a field that already has a value is never
+// overwritten, so staff edits survive a re-seed.
+export const BRANCH = {
+  summary: SETTINGS.tagline,
+  phone: "+20 10 5555 3086",
+  email: "info@rivanaresidence.com",
+  addressLine1: "Plot 46 A, District 37",
+  addressLine2: "Opposite El Zohour Club",
+  city: "New Cairo 1, Cairo Governorate 4735344",
+  country: "Egypt",
+  latitude: 30.0162614,
+  longitude: 31.4933576,
+  // Built from the place link supplied by the owner (coordinates and place id
+  // of "Rivana Residence"). Replace with the official Share > Embed a map
+  // link from Google Maps when convenient.
+  mapEmbedUrl:
+    "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3453.2!2d31.4933576!3d30.0162614!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x145823b01ca6a3c7%3A0x511d75030d80cacc!2sRivana%20Residence!5e0!3m2!1sen!2seg!4v1700000000000!5m2!1sen!2seg",
+  checkInTime: "14:00",
+  checkOutTime: "12:00",
 } as const;
 
 type RoomSeed = Readonly<{

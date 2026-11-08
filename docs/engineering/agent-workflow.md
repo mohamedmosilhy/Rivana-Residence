@@ -54,6 +54,8 @@ Before the first task (steps 0–4 of the [milestone loop](../delivery/milestone
 | 6. Review package | Present the [Engineering Review Package](#engineering-review-package) | — | **Wait for the owner's acceptance** |
 | 7. Sync and commit | After acceptance: update the docs whose behavior changed, the task's status in the brief, and the task log row in the milestone evidence report; then commit on the milestone branch | — (`/sync` when a new area convention appeared) | — |
 
+**Seed rule (from 2026-11-08):** there is one seed, `prisma/seed.mts` (`npm run db:seed`), with one step per area in `prisma/seed/`. A task that adds tables or user-visible features also adds or extends its seed step, with a test, so a freshly seeded database always gives a fully working site. Fictional or demo data goes only in `prisma/seed/demo.ts`, behind `npm run db:seed -- --demo`, which is refused in production (`NODE_ENV=production`, or an `APP_URL` that is not localhost).
+
 Never start the next task, or the next stage after a gate, without the owner's word. A requested change sends the task back to the stage it affects; rerun Stages 4–6 after the fix.
 
 ## Milestone close

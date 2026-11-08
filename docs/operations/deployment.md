@@ -47,11 +47,14 @@ Do not run development migrations or schema push in production. Destructive migr
 
 ## Initial content
 
-`npm run db:seed:initial` (needs `DATABASE_URL` and `MEDIA_STORAGE_ROOT`) fills a freshly migrated database with the previous rivanaresidence.com content from `prisma/initial-content/`. That covers the three rooms, Swimming Pool and Gym (Café as an unpublished draft until it has a photo), Home/About/Contact copy, contact details, map pin, social links, and 33 full-size photos with alt text, uploaded through the normal media pipeline. It also creates the administrator `admin@rivanaresidence.com`.
+`npm run db:seed` (needs `DATABASE_URL`, `MEDIA_STORAGE_ROOT`, and `SEED_ADMIN_PASSWORD`) is the one seed. On a freshly migrated database it creates the structure (settings, the `new-cairo` branch, the three pages), the administrator `admin@rivanaresidence.com`, the branch's own contact details, address, coordinates, Google Maps embed link and check-in and check-out times, and the previous rivanaresidence.com content from `prisma/initial-content/`: the three rooms, Swimming Pool and Gym (Café as an unpublished draft until it has a photo), Home/About/Contact copy, social links, and 33 full-size photos with alt text, uploaded through the normal media pipeline. The map link in `prisma/initial-content/content.ts` was built from the owner's place link; replace it with the official Share > Embed a map link when convenient.
 
 - Prices, availability, bookings, guests, and the old booking/refund policy pages are deliberately not imported.
-- The default password `123456` is for local and staging only. With `NODE_ENV=production` the seed refuses it and requires `SEED_ADMIN_PASSWORD`, which must meet the password policy.
-- Re-running is safe: an existing admin keeps its password, and content is added only while there are no rooms, facilities, or images.
+- There is no default admin password, in any environment (audit F07). The seed refuses to run, before writing anything, unless `SEED_ADMIN_PASSWORD` is set and meets the staff password policy (12 or more characters, not common, and not containing the name or email, so nothing with `rivana` or `admin` in it). Re-runs need the variable too.
+- `npm run db:seed -- --demo` adds fictional demo data for local review and must never run on a real site. It refuses when `NODE_ENV=production` or when `APP_URL` is set to a host other than localhost, so keep `APP_URL` set to the real https address in the server `.env`.
+- On a server, pass it once from a protected shell or a temporary file that you delete afterwards. Do not type it on the command line (shell history keeps it) and do not leave it in the server `.env`. For local development, put it in your own `.env`.
+- An administrator that an older seed created with `123456` is kept, because the seed never changes an existing account (it only logs "password unchanged"). Rotate it with `npm run staff -- set-password --email admin@rivanaresidence.com`, which also ends all of that account's sessions.
+- Re-running is safe: an existing admin keeps its password, a branch that staff have edited is left alone, and content is added only while there are no rooms, facilities, or images. If a run is interrupted partway through the content step (the seed then warns about images without rooms), drop and re-create the database, run `npm run db:deploy`, and seed again.
 
 ## Backups and recovery
 
