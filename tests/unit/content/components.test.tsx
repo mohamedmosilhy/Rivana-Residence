@@ -250,6 +250,50 @@ describe("SectionEditor", () => {
     ).toHaveValue("on");
   });
 
+  it("hides the section heading for a hero, which has its own title, and still sends the stored value", () => {
+    const { container } = withToasts(
+      <SectionEditor
+        sectionId="s3"
+        type="HERO"
+        heading="Kept as stored"
+        eyebrow="Welcome"
+        isVisible
+        locked={false}
+        payload={{
+          schemaVersion: 1,
+          title: "Rivana",
+          summary: "By the river.",
+        }}
+        action={idle}
+      />,
+    );
+    expect(screen.queryByLabelText(/Section heading/)).toBeNull();
+    expect(screen.getByLabelText(/Small heading above/)).toBeInTheDocument();
+    expect(screen.getByLabelText(/^Title/)).toBeInTheDocument();
+    expect(
+      container.querySelector('input[type="hidden"][name="heading"]'),
+    ).toHaveValue("Kept as stored");
+  });
+
+  it("shows the section heading for other section types", () => {
+    withToasts(
+      <SectionEditor
+        sectionId="s4"
+        type="RICH_TEXT"
+        heading="Welcome"
+        eyebrow={null}
+        isVisible
+        locked={false}
+        payload={{
+          schemaVersion: 1,
+          document: { type: "doc", content: [] },
+        }}
+        action={idle}
+      />,
+    );
+    expect(screen.getByLabelText(/Section heading/)).toHaveValue("Welcome");
+  });
+
   it("edits the payload through typed fields, not raw JSON", () => {
     const { container } = withToasts(
       <SectionEditor

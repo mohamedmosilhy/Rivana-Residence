@@ -94,7 +94,7 @@ export function SectionEditor({
           return messages.map((message) => ({
             fieldId:
               owner === "type" || owner === "sections"
-                ? id("heading")
+                ? id(type === "HERO" ? "eyebrow" : "heading")
                 : id(owner),
             message,
           }));
@@ -124,18 +124,25 @@ export function SectionEditor({
           }
           errors={errors("eyebrow")}
         />
-        <TextField
-          id={id("heading")}
-          name="heading"
-          label="Section heading"
-          optional
-          maxLength={160}
-          value={meta.heading}
-          onChange={(event) =>
-            setMeta({ ...meta, heading: event.target.value })
-          }
-          errors={errors("heading")}
-        />
+        {type === "HERO" ? (
+          // The hero's headline is its own Title field (below). The public
+          // page never shows a separate section heading for it, so the field
+          // is hidden. The stored value is still sent unchanged.
+          <input type="hidden" name="heading" value={meta.heading} />
+        ) : (
+          <TextField
+            id={id("heading")}
+            name="heading"
+            label="Section heading"
+            optional
+            maxLength={160}
+            value={meta.heading}
+            onChange={(event) =>
+              setMeta({ ...meta, heading: event.target.value })
+            }
+            errors={errors("heading")}
+          />
+        )}
       </div>
       <Fields
         sectionId={sectionId}
