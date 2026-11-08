@@ -227,10 +227,11 @@ Invariants:
 - R-9: A `WEBSITE` reservation has a guest profile whose phone was verified for this booking (GV-2), and the phone is not blocked at creation.
 - R-10: A reservation is `CONFIRMED` only when its inventory is held in the same database state and, for `PAYMOB`, a verified success has been processed. Confirmation messages are written only in the transaction that sets `CONFIRMED`.
 
-Domain services:
+Domain services (pure M6-T2 rules accepted 2026-11-08; the reservation state machine and full quote remain planned):
 
-- `AvailabilityCalculator`: given capacity and sold counts per night, decides availability (pure).
-- `PriceResolver`: given base rate and periods, produces night prices (pure, PR-3).
+- `AvailabilityCalculator`: given capacity and sold counts per night, checks every requested night and returns the earliest failure (implemented in `src/domain/inventory/`).
+- `checkInventoryReduction`: checks block/assignment overlaps and sparse sold dates against projected capacity, with replacement and deactivation semantics (implemented in `src/domain/inventory/`). Callers must scope inputs and load current state under the listing lock; no persistence or locking is implemented by this calculation.
+- `NightlyPriceResolver`: given base rate and active periods, produces immutable nightly prices and an exact accommodation total, or a null total for any unpriced night (implemented in `src/domain/pricing/`, PR-3).
 - `ReservationStateMachine`: allowed transitions plus preconditions (pure, given "today" in the branch zone).
 - `QuoteCalculator`: total composition (pure, ADR 027).
 - `CancellationDeadline`: 24 hours before the branch check-in time on the arrival date (pure, CX-1).

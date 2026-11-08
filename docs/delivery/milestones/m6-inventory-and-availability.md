@@ -1,6 +1,6 @@
 # M6 — Inventory, date prices, and availability
 
-Status: **In progress (1/10 tasks accepted); M6-T1 accepted by the owner, 2026-11-08.** Branch: `m6-inventory-and-availability` (owner's requested commit branch). Follow the [milestone loop](./README.md#the-loop-every-milestone-follows). Approved build spec: [0003](../../specs/0003-m6-inventory-and-availability.md). Evidence and task log: [M6 report](../reports/m6-inventory-and-availability.md).
+Status: **In progress (2/10 tasks accepted); M6-T2 accepted by the owner, 2026-11-08.** Branch: `m6-inventory-and-availability` (owner's requested commit branch). Follow the [milestone loop](./README.md#the-loop-every-milestone-follows). Approved build spec: [0003](../../specs/0003-m6-inventory-and-availability.md). Evidence and task log: [M6 report](../reports/m6-inventory-and-availability.md).
 
 ## Objective
 
@@ -54,7 +54,7 @@ Planned, reviewed, and accepted one task at a time ([agent-workflow.md](../../en
 | Task | Title | Risk | Depends on | Covers (criteria, tests) | Status |
 | --- | --- | --- | --- | --- | --- |
 | M6-T1 | Date, stay, occupancy, and money value objects (`src/domain/shared`) | Critical | — | AC 3; T-DATE-1…8 | Accepted |
-| M6-T2 | Availability, nightly price, and block rules (pure domain) | Critical | T1 | AC 1 (resolver), 3, 6; T-AV-1…6, T-PR-1…6 | Not started |
+| M6-T2 | Availability, nightly price, and block rules (pure domain) | Critical | T1 | AC 1 (resolver), 3, 6; T-AV-1…6, T-PR-1…6 | Accepted |
 | M6-T3 | Migration `inventory_and_rates`: tables, checks, exclusion constraints, safe demo seed extension | Critical | — | AC 2, 3, 6; T-DB-3…5 (M6 subset), seed tests, drift check | Not started |
 | M6-T4 | Unit of work, inventory reader and consumption ports, `InventoryLock`, `InventoryGuard`, concurrency harness | Critical | T2, T3 | AC 4, 5, 6; rollback, lock order and timeout | Not started |
 | M6-T5 | Physical units: repositories, audited use cases, staff API S21–S23 | Critical | T4 | AC 4, 5, 6; T-INV, authorization, T-HTTP | Not started |

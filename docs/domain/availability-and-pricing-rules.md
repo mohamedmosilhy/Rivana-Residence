@@ -1,6 +1,6 @@
 # Availability and pricing rules
 
-Status: **Partly implemented.** M6-T1's shared date, stay, public stay policy, occupancy, and money values were accepted 2026-11-08. Availability calculations, price resolution, persistence, and endpoints remain planned for later tasks. Design accepted 2026-10-24, revised 2026-11-06 (Q-39 several units per booking, Q-44 one kind of date period, Q-45 VAT, Q-48 coupons, Q-49 services; [ADR 027](../adr/027-booking-price-composition.md)). Rules marked *(Q-nn)* depend on an open business decision in [assumptions-and-open-questions.md](../requirements/assumptions-and-open-questions.md). "Listing" means a room type or apartment type (the CMS `Room`); "unit" means one physical room or apartment.
+Status: **Partly implemented.** M6-T1's shared values and M6-T2's pure availability, nightly price, and inventory reduction rules were accepted 2026-11-08. Persistence, locking, endpoints, and the commercial and reservation rules remain planned for later tasks and milestones. Design accepted 2026-10-24, revised 2026-11-06 (Q-39 several units per booking, Q-44 one kind of date period, Q-45 VAT, Q-48 coupons, Q-49 services; [ADR 027](../adr/027-booking-price-composition.md)). Rules marked *(Q-nn)* depend on an open business decision in [assumptions-and-open-questions.md](../requirements/assumptions-and-open-questions.md). "Listing" means a room type or apartment type (the CMS `Room`); "unit" means one physical room or apartment.
 
 ## Date semantics (ADR 020)
 
@@ -28,6 +28,8 @@ Status: **Partly implemented.** M6-T1's shared date, stay, public stay policy, o
 
 ## Capacity and availability (ADR 016)
 
+**Implemented calculation (M6-T2):** `AvailabilityCalculator.check` in `src/domain/inventory/` checks supplied nightly counts for a positive safe integer quantity and reports the earliest insufficient night. Missing dates have zero capacity and sold; negative free counts are preserved. `checkInventoryReduction` checks block overlap, consuming assignments, and projected capacity on supplied positive sold dates. Block edits replace the old range; inactive or already blocked units are not subtracted twice. Deactivation takes an explicit effective branch date, with no public horizon truncation. Long reductions inspect sparse dates and assignment ranges without expanding empty dates. Inputs must already be scoped to one listing and unit. Database reads, authorization, locks, writes, and concurrency proof remain later work.
+
 For room type `T` at branch `B` and night `n`:
 
 ```text
@@ -51,6 +53,8 @@ available(T, stay, q) ⇔ for every night n in stay: free(T, n) ≥ q      (q = 
 **Search versus booking (Q-70, owner accepted 2026-11-08):** public availability search may return inventory and accommodation prices for published listings of an active branch while online booking is disabled. Search availability does not promise that reservation creation is enabled, does not hold inventory, and does not bypass IN-4 or the later creation readiness checks. Inactive branches remain hidden.
 
 ## Accommodation prices (scope PDF sections 2–3)
+
+**Implemented resolver (M6-T2):** `NightlyPriceResolver.resolve` in `src/domain/pricing/` returns immutable ordered nightly amounts, sources, period ids, and labels. It uses an active covering period, otherwise base, otherwise explicit unpriced values. Any gap makes the accommodation total null; complete totals use checked integer addition and quantity multiplication. Overlapping active periods are rejected rather than assigned precedence. The worked example below resolves to 26000 cents. Rate authoring and its PostgreSQL `INTEGER` bound, database exclusions, APIs, persisted reservation snapshots, and manual override authorization remain future work. Public response shaping is not implemented by this internal resolver.
 
 | Rule | Definition |
 | --- | --- |

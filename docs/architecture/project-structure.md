@@ -28,6 +28,8 @@ docs/                       this documentation
 
 ## Planned additions (ADR 015, ADR 026; milestones from the 2026-11-06 replan)
 
+M6's shared values and pure rules now exist: `src/domain/shared/{local-date,stay-range,stay-policy,occupancy,money}.ts`, the explicit branch date helper in `zoned-time.ts`, `src/domain/inventory/{availability-calculator,inventory-reduction,index}.ts`, and `src/domain/pricing/{nightly-price-resolver,index}.ts` (T1 and T2 accepted 2026-11-08). The reservation persistence, locking, and API additions below remain planned. Current task evidence is in the [M6 report](../delivery/reports/m6-inventory-and-availability.md).
+
 ```text
 src/
   app/

@@ -2,6 +2,8 @@
 
 Status: **Planned**, design accepted 2026-10-24 (ADR 015), extended 2026-11-06 (ADRs 024–028). Modules marked *(implemented)* exist today; the rest are planned.
 
+**M6-T2 implemented domain portion (accepted 2026-11-08):** `src/domain/inventory/index.ts` exports `AvailabilityCalculator` and `checkInventoryReduction`; `src/domain/pricing/index.ts` exports `NightlyPriceResolver`. These modules contain pure rules and immutable records only. Their application ports, tables, repositories, locking, and endpoints below remain planned. See the [M6 report](../delivery/reports/m6-inventory-and-availability.md).
+
 | Module | Responsibility | Owns (tables) | Public interface (application) | May depend on |
 | --- | --- | --- | --- | --- |
 | Identity & access *(implemented, extended)* | Staff sessions, roles, capabilities, branch assignments | `User`, `Session`, `Account`, `Verification`, `LoginThrottle`, `StaffBranchAssignment` | `getCurrentStaff`, `authorize`, `authorizeBranch`, staff directory, `AssignStaffBranches` | Branches (ids only) |

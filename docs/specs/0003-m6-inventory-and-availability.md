@@ -1,7 +1,7 @@
 # 0003. Inventory, date prices, and availability (M6)
 
 **Date**: 2026-11-08
-**Status**: In Progress (M6-T1 accepted, 1/10 tasks; later tasks not started)
+**Status**: In Progress (M6-T1 and M6-T2 accepted, 2/10 tasks; T3 through T10 not started)
 **Owner approval**: Amended spec and ten task breakdown approved, 2026-11-08
 **Mode**: FEATURE
 **Branch**: `m6-inventory-and-availability`
@@ -326,7 +326,7 @@ M6 cannot prove concurrency against real sold reservations or produce their SQL 
 
 ## Follow-up
 
-1. Spec and refined task table approved by the owner, 2026-11-08. M6-T1 accepted on the same date. M6-T2 remains unstarted and needs a separately requested task card and owner approval before code.
+1. Spec and refined task table approved by the owner, 2026-11-08. M6-T1 and M6-T2 accepted on the same date. M6-T3 remains unstarted and needs a separately requested task card and owner approval before code. The owner requested a stop after the T2 commit.
 2. T3: reconcile the schema refinements and demo upgrade behavior in database documentation and tests. T5 through T10: update API contracts and OpenAPI as endpoints ship; keep planned versus implemented labels accurate.
 3. M7: consume nightly rates without changing PR-3; add services, coupons, and VAT only in that milestone.
 4. M8: replace empty consumption and checkpoint adapters, add assignment constraints, true booking races and sold query plans, and enforce maximum 5 across all booking lines. Add persisted snapshot and override tests then.

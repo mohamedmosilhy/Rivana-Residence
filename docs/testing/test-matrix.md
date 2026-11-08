@@ -4,12 +4,14 @@ Planned tests for branch websites, reservations, payments, and messaging, by lay
 
 ## Implemented so far
 
-M4 (2026-11-06), M5 (2026-11-07), and accepted task M6-T1 (2026-11-08) implemented the coverage listed here; everything else below is still planned.
+M4 (2026-11-06), M5 (2026-11-07), and accepted tasks M6-T1 and M6-T2 (2026-11-08) implemented the coverage listed here; everything else below is still planned.
 
 | Id | Where |
 | --- | --- |
 | T-DATE-1…8 (M6-T1) | `tests/unit/domain/local-date.test.ts`, `stay-range.test.ts`, `stay-policy.test.ts`, and `tests/unit/content/zoned-time.test.ts`: strict dates, leap and century rules, night iteration, adjacency and overlap, positive ranges, 30/31-night and 540/541-day boundaries, configurable public policy, explicit branch today and Cairo DST |
-| Occupancy and money foundation (M6-T1) | `tests/unit/domain/occupancy.test.ts` and `money.test.ts`: safe integer counts, per-unit eligibility, USD cents, zero, checked addition and multiplication, overflow, and immutable values. No nightly price resolver or full quote is implemented yet |
+| Occupancy and money foundation (M6-T1) | `tests/unit/domain/occupancy.test.ts` and `money.test.ts`: safe integer counts, per-unit eligibility, USD cents, zero, checked addition and multiplication, overflow, and immutable values. Full quote composition remains planned |
+| T-AV-1…6, domain reduction cases (M6-T2) | `tests/unit/domain/availability-calculator.test.ts` and `inventory-reduction.test.ts`: nightly quantity checks, missing and oversold inventory, invalid counts, chronological failures, block and assignment overlap, replacement, inactive and already blocked units, explicit deactivation dates, and sparse long ranges. Empty stays are rejected by T1's `StayRange`. No database concurrency proof is claimed |
+| Applicable T-PR-1…6 (M6-T2) | `tests/unit/domain/nightly-price-resolver.test.ts`: base fallback, active period boundaries and overlap rejection, inactive periods, unpriced gaps, the 26000-cent worked example, quantity multiplication, checked overflow, and immutable resolved values. Persisted reservation snapshot immutability and manual override authorization remain M8 tests |
 | T-AUTHZ-1 | `tests/unit/auth/authorization.test.ts` (four roles × every capability), `authorize-branch.test.ts`, and the sweep extended to Receptionist and Manager in `authorization-sweep.test.ts` |
 | T-ARCH-1…4 | `tests/unit/architecture/module-boundaries.test.ts` (D-7, D-8, D-11), `persistence-boundaries.test.ts` (D-9, D-12), `route-handlers.test.ts` (D-10), `openapi.test.ts` (freshness) |
 | T-HTTP-1…6 | `tests/unit/api/http-layer.test.ts` (415, 413 declared and streamed, 400, 422, 403 cross-site, 401; webhook raw body; 500 without leakage; log redaction); `tests/integration/health-route.test.ts` |
@@ -31,7 +33,7 @@ M4 (2026-11-06), M5 (2026-11-07), and accepted task M6-T1 (2026-11-08) implement
 | --- | --- | --- |
 | T-DATE-1…8 | `LocalDate`, `StayRange` | Parse and validate (2027-02-29 invalid, 2028-02-29 valid); nights; adjacency (no overlap); partial and contained overlap; zero and negative length; max stay; horizon; branch "today" across Cairo DST change dates |
 | T-AV-1…6 | `AvailabilityCalculator` | All nights free; one night full; capacity 0 from blocks; quantity (several units) > free; empty stay rejected; reason reported |
-| T-PR-1…6 | `NightlyPriceResolver` | Base only; period boundary (end exclusive); unpriced night; worked example 1 ($260.00); snapshot immutability; override needs reason |
+| T-PR-1…6 | `NightlyPriceResolver` | Base fallback; period boundary (end exclusive); unpriced night; worked example 1 ($260.00); immutable resolved values (M6-T2). Persisted reservation snapshot immutability and override reason/authorization remain planned for M8 |
 | T-QUOTE-1…10 | `QuoteCalculator` (ADR 027) | Order of operations; worked example 2 ($640.26); half-up at exactly .5 cent (example 3); percent coupon rounding; fixed coupon capped at subtotal (example 4); zero services; several units; VAT 0% and 100% bounds; VAT unset flag; no floating point |
 | T-CPN-1…5 | `CouponPolicy` | Each refusal reason (`NOT_FOUND`, `INACTIVE`, `NOT_YET_VALID`, `EXPIRED`, `WRONG_BRANCH`, `LIMIT_REACHED`, `PHONE_LIMIT_REACHED`); case-insensitive match; all-branches vs listed branches |
 | T-SVC-1…2 | Services | Added only when requested; inactive service refused |
