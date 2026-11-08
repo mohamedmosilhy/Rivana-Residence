@@ -17,7 +17,6 @@
     "db:deploy": "prisma migrate deploy",
     "db:seed": "prisma db seed",
     "db:seed:demo": "tsx --conditions=react-server scripts/seed-demo.mts",
-    "db:seed:initial": "tsx --conditions=react-server prisma/seed-initial.mts",
     "staff": "tsx scripts/staff.mts",
     "openapi": "tsx scripts/openapi.mts",
     "lint": "eslint .",

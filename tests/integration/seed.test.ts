@@ -1,0 +1,123 @@
+import { mkdtemp, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import path from "node:path";
+
+import { afterAll, beforeEach, describe, expect, it } from "vitest";
+
+import { verifyPassword } from "better-auth/crypto";
+
+import { BRANCH } from "../../prisma/initial-content/content";
+import { SEED_ADMIN } from "../../prisma/seed/admin-credentials";
+import { runSeed } from "../../prisma/seed/index";
+import {
+  createTestClient,
+  resetDatabase,
+  TEST_BRANCH_ID,
+} from "./support/database";
+
+const client = createTestClient();
+const PASSWORD = "river-lantern-4471-quiet";
+let mediaRoot: string;
+let lines: string[];
+
+const seed = () =>
+  runSeed(client, {
+    mediaRoot,
+    adminPassword: PASSWORD,
+    log: (message) => lines.push(message),
+  });
+
+beforeEach(async () => {
+  await resetDatabase(client);
+  mediaRoot = await mkdtemp(path.join(tmpdir(), "rivana-seed-test-"));
+  lines = [];
+});
+afterAll(async () => {
+  await client.$disconnect();
+});
+
+describe("the one seed (runSeed)", () => {
+  it("builds a complete site on an empty database", async () => {
+    const result = await seed();
+    expect(result.contentSeeded).toBe(true);
+
+    const admin = await client.user.findUniqueOrThrow({
+      where: { email: SEED_ADMIN.email },
+      include: { accounts: true },
+    });
+    expect(admin).toMatchObject({ role: "ADMIN", active: true });
+    expect(
+      await verifyPassword({
+        hash: admin.accounts[0]!.password!,
+        password: PASSWORD,
+      }),
+    ).toBe(true);
+
+    const branch = await client.branch.findUniqueOrThrow({
+      where: { id: TEST_BRANCH_ID },
+    });
+    expect(branch).toMatchObject({
+      phone: BRANCH.phone,
+      mapEmbedUrl: BRANCH.mapEmbedUrl,
+      checkInTime: "14:00",
+      checkOutTime: "12:00",
+    });
+
+    expect(
+      await client.room.count({
+        where: { branchId: TEST_BRANCH_ID, status: "PUBLISHED" },
+      }),
+    ).toBe(3);
+    expect(
+      await client.facility.count({ where: { branchId: TEST_BRANCH_ID } }),
+    ).toBeGreaterThanOrEqual(3);
+    expect(
+      await client.page.count({
+        where: { branchId: TEST_BRANCH_ID, isPublished: true },
+      }),
+    ).toBe(3);
+    expect(await client.mediaAsset.count({ where: { status: "READY" } })).toBe(
+      33,
+    );
+    expect(lines.map((line) => line.split(":")[0])).toEqual([
+      "Structure",
+      "Admin",
+      "Branch",
+      "Content",
+    ]);
+    await rm(mediaRoot, { recursive: true, force: true });
+  }, 120_000);
+
+  it("changes nothing on a second run", async () => {
+    await seed();
+    const counts = async () => ({
+      rooms: await client.room.count(),
+      facilities: await client.facility.count(),
+      media: await client.mediaAsset.count(),
+      users: await client.user.count(),
+      branches: await client.branch.count(),
+    });
+    const before = await counts();
+
+    lines = [];
+    const result = await seed();
+
+    expect(result.contentSeeded).toBe(false);
+    expect(await counts()).toEqual(before);
+    expect(lines.join("\n")).toMatch(/password unchanged/);
+    expect(lines.join("\n")).toMatch(/Content: skipped/);
+    await rm(mediaRoot, { recursive: true, force: true });
+  }, 120_000);
+
+  it("warns when it finds images but no rooms, like an interrupted run", async () => {
+    await seed();
+    await client.room.deleteMany();
+    await client.facility.deleteMany();
+
+    lines = [];
+    await seed();
+
+    expect(lines.join("\n")).toMatch(/interrupted earlier run/);
+    await rm(mediaRoot, { recursive: true, force: true });
+  }, 120_000);
+});

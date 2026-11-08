@@ -1,36 +1,20 @@
-// Seeds a fresh database with the previous rivanaresidence.com content
-// (prisma/initial-content) and the initial administrator account.
-//
-//   npm run db:seed:initial
-//
-// Needs DATABASE_URL, MEDIA_STORAGE_ROOT, and SEED_ADMIN_PASSWORD. Safe to
-// re-run: the admin is created only if missing (an existing password is never
-// changed), and the content is added only while the database has no rooms,
-// facilities, or images, so CMS edits are never duplicated or overwritten.
-//
-// There is no default admin password, in any environment. A missing or weak
-// SEED_ADMIN_PASSWORD (see src/domain/auth/password-policy.ts) refuses the
-// run before anything is written.
-import "dotenv/config";
-
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 
 import { createId } from "@paralleldrive/cuid2";
-import { PrismaPg } from "@prisma/adapter-pg";
 
-import type { StaffPrincipal } from "../src/application/auth/ports.ts";
-import { MediaLibrary } from "../src/application/media/media-library.ts";
-import { richTextFromEditorText } from "../src/domain/shared/rich-text.ts";
-import { PrismaClient } from "../src/generated/prisma/client.ts";
-import { PrismaFacilityRepository } from "../src/infrastructure/db/prisma/repositories/facility-repository.ts";
-import { PrismaMediaRepository } from "../src/infrastructure/db/prisma/repositories/media-repository.ts";
-import { PrismaPageRepository } from "../src/infrastructure/db/prisma/repositories/page-repository.ts";
-import { PrismaRoomRepository } from "../src/infrastructure/db/prisma/repositories/room-repository.ts";
-import { Cuid2IdGenerator } from "../src/infrastructure/ids/cuid2-id-generator.ts";
-import { LocalMediaStorage } from "../src/infrastructure/media/local-media-storage.ts";
-import { NodeHasher } from "../src/infrastructure/media/node-hasher.ts";
-import { SharpImageProcessor } from "../src/infrastructure/media/sharp-image-processor.ts";
+import type { StaffPrincipal } from "../../src/application/auth/ports.ts";
+import { MediaLibrary } from "../../src/application/media/media-library.ts";
+import { richTextFromEditorText } from "../../src/domain/shared/rich-text.ts";
+import type { PrismaClient } from "../../src/generated/prisma/client.ts";
+import { PrismaFacilityRepository } from "../../src/infrastructure/db/prisma/repositories/facility-repository.ts";
+import { PrismaMediaRepository } from "../../src/infrastructure/db/prisma/repositories/media-repository.ts";
+import { PrismaPageRepository } from "../../src/infrastructure/db/prisma/repositories/page-repository.ts";
+import { PrismaRoomRepository } from "../../src/infrastructure/db/prisma/repositories/room-repository.ts";
+import { Cuid2IdGenerator } from "../../src/infrastructure/ids/cuid2-id-generator.ts";
+import { LocalMediaStorage } from "../../src/infrastructure/media/local-media-storage.ts";
+import { NodeHasher } from "../../src/infrastructure/media/node-hasher.ts";
+import { SharpImageProcessor } from "../../src/infrastructure/media/sharp-image-processor.ts";
 import {
   FACILITIES,
   IMAGES,
@@ -39,26 +23,14 @@ import {
   SETTINGS,
   type ImageKey,
   type PageSeed,
-} from "./initial-content/content.ts";
-import { ensureSeedAdmin } from "./seed-admin.ts";
-import {
-  SEED_ADMIN,
-  resolveSeedAdminCredentials,
-} from "./seed-admin-credentials.ts";
-import { seedDatabase } from "./seed-data.ts";
+} from "../initial-content/content.ts";
 
-const IMAGE_DIR = path.join(import.meta.dirname, "initial-content", "images");
-
-const url = process.env.DATABASE_URL;
-const mediaRoot = process.env.MEDIA_STORAGE_ROOT;
-if (!url) throw new Error("DATABASE_URL is required.");
-if (!mediaRoot) throw new Error("MEDIA_STORAGE_ROOT is required.");
-
-const credentials = resolveSeedAdminCredentials(process.env);
-if (!credentials.ok) {
-  throw new Error(`Refusing to seed: ${credentials.issues.join(" ")}`);
-}
-const adminPassword = credentials.password;
+const IMAGE_DIR = path.join(
+  import.meta.dirname,
+  "..",
+  "initial-content",
+  "images",
+);
 
 function ok<T>(
   result: { ok: true; value: T } | { ok: false; error: { message: string } },
@@ -68,27 +40,16 @@ function ok<T>(
   return result.value;
 }
 
-const client = new PrismaClient({
-  // Timestamps must round-trip in UTC; see src/infrastructure/db/prisma/client.ts.
-  adapter: new PrismaPg({ connectionString: url, options: "-c TimeZone=UTC" }),
-});
-
-async function ensureAdmin() {
-  const { user, created } = await ensureSeedAdmin(client, adminPassword);
-  console.log(
-    created
-      ? `Created admin ${SEED_ADMIN.email}.`
-      : `Admin ${SEED_ADMIN.email} already exists; password unchanged.`,
-  );
-  return user;
-}
-
-async function uploadImages(staff: StaffPrincipal) {
+async function uploadImages(
+  client: PrismaClient,
+  mediaRoot: string,
+  staff: StaffPrincipal,
+) {
   const media = new PrismaMediaRepository(client);
   const library = new MediaLibrary(
     {
       media,
-      storage: await LocalMediaStorage.create(mediaRoot!),
+      storage: await LocalMediaStorage.create(mediaRoot),
       images: new SharpImageProcessor(),
       hasher: new NodeHasher(),
       ids: new Cuid2IdGenerator(),
@@ -133,8 +94,21 @@ async function uploadImages(staff: StaffPrincipal) {
   return ids;
 }
 
-async function seedContent(staff: StaffPrincipal, branchId: string) {
-  const image = await uploadImages(staff);
+/**
+ * Uploads the old site's photography and creates its rooms, facilities, and
+ * the published Home, About, and Contact pages. Callers run it only while the
+ * database has no content, so CMS edits are never duplicated.
+ */
+export async function seedContent(
+  client: PrismaClient,
+  options: Readonly<{
+    mediaRoot: string;
+    staff: StaffPrincipal;
+    branchId: string;
+  }>,
+) {
+  const { mediaRoot, staff, branchId } = options;
+  const image = await uploadImages(client, mediaRoot, staff);
   const actor = { id: staff.id, role: staff.role };
   const text = (value: string) => richTextFromEditorText(value);
   const entityMedia = (hero: ImageKey, gallery: readonly ImageKey[]) => [
@@ -157,14 +131,6 @@ async function seedContent(staff: StaffPrincipal, branchId: string) {
     data: {
       siteName: SETTINGS.siteName,
       tagline: SETTINGS.tagline,
-      phone: SETTINGS.phone,
-      email: SETTINGS.email,
-      addressLine1: SETTINGS.addressLine1,
-      addressLine2: SETTINGS.addressLine2,
-      city: SETTINGS.city,
-      country: SETTINGS.country,
-      latitude: SETTINGS.latitude,
-      longitude: SETTINGS.longitude,
       footerText: SETTINGS.footerText,
       defaultSeoTitle: SETTINGS.defaultSeoTitle,
       defaultSeoDescription: SETTINGS.defaultSeoDescription,
@@ -302,37 +268,8 @@ async function seedContent(staff: StaffPrincipal, branchId: string) {
   }
 }
 
-try {
-  // Settings, the three managed pages, and their default sections.
-  const branchId = await seedDatabase(client);
-  const admin = await ensureAdmin();
-  const staff: StaffPrincipal = {
-    id: admin.id,
-    name: admin.name,
-    email: admin.email,
-    role: "ADMIN",
-    sessionId: "seed",
-    branchIds: [],
-  };
-
-  const [rooms, facilities, media] = await Promise.all([
-    client.room.count(),
-    client.facility.count(),
-    client.mediaAsset.count(),
-  ]);
-  if (rooms + facilities + media > 0) {
-    console.log(
-      `Content skipped: the database already has ${rooms} rooms, ${facilities} facilities, and ${media} images.`,
-    );
-  } else {
-    await seedContent(staff, branchId);
-    console.log(
-      `Seeded ${ROOMS.length} rooms, ${FACILITIES.length} facilities (the Café stays a draft until it has a photo), ${Object.keys(IMAGES).length} images, and the Home, About, and Contact pages.`,
-    );
-  }
-  console.log(
-    "If the site is running, delete .next/cache/fetch-cache and .next/dev/cache/fetch-cache, then reload.",
-  );
-} finally {
-  await client.$disconnect();
-}
+export const SEEDED_COUNTS = {
+  rooms: ROOMS.length,
+  facilities: FACILITIES.length,
+  images: Object.keys(IMAGES).length,
+} as const;

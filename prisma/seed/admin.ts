@@ -1,8 +1,8 @@
 import { createId } from "@paralleldrive/cuid2";
 import { hashPassword } from "better-auth/crypto";
 
-import type { PrismaClient } from "../src/generated/prisma/client.ts";
-import { SEED_ADMIN } from "./seed-admin-credentials.ts";
+import type { PrismaClient } from "../../src/generated/prisma/client.ts";
+import { SEED_ADMIN } from "./admin-credentials.ts";
 
 /**
  * Creates the initial administrator when missing. An existing account is

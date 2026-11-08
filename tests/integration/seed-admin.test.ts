@@ -1,8 +1,8 @@
 import { verifyPassword } from "better-auth/crypto";
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
 
-import { ensureSeedAdmin } from "../../prisma/seed-admin";
-import { SEED_ADMIN } from "../../prisma/seed-admin-credentials";
+import { ensureSeedAdmin } from "../../prisma/seed/admin";
+import { SEED_ADMIN } from "../../prisma/seed/admin-credentials";
 import { createTestClient, resetDatabase } from "./support/database";
 
 const client = createTestClient();

@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   SEED_ADMIN,
   resolveSeedAdminCredentials,
-} from "../../../prisma/seed-admin-credentials";
+} from "../../../prisma/seed/admin-credentials";
 
 const STRONG = "river-lantern-4471-quiet";
 

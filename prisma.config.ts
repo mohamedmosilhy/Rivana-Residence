@@ -9,7 +9,7 @@ export default defineConfig({
   schema: "prisma/schema.prisma",
   migrations: {
     path: "prisma/migrations",
-    seed: "tsx prisma/seed.mts",
+    seed: "tsx --conditions=react-server prisma/seed.mts",
   },
   ...(migrationDatabaseUrl
     ? {

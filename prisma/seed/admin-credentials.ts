@@ -1,6 +1,6 @@
-import { passwordPolicyIssues } from "../src/domain/auth/password-policy.ts";
+import { passwordPolicyIssues } from "../../src/domain/auth/password-policy.ts";
 
-// The initial administrator of `npm run db:seed:initial`. There is no default
+// The initial administrator of `npm run db:seed`. There is no default
 // password: provisioning needs a supplied credential in every environment, so
 // a fresh database can never hold a known administrator login (audit F07).
 export const SEED_ADMIN = {
