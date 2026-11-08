@@ -160,9 +160,9 @@ export function buildOpenApiDocument() {
         staffSession: {
           type: "apiKey",
           in: "cookie",
-          name: "rivana.session_token",
+          name: "__Secure-rivana-staff.session_token",
           description:
-            "Better Auth staff session cookie. Same origin only; unsafe methods also require a same-origin Origin header.",
+            "Production Better Auth staff session cookie (rivana-staff.session_token in development), scoped to /. Same origin only; unsafe methods also require a same-origin Origin header.",
         },
       },
     },

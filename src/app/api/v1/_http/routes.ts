@@ -31,11 +31,13 @@ export type HandlerResult =
   | Result<never>;
 
 type Params = Readonly<Record<string, string | string[] | undefined>>;
-type NextContext = Readonly<{ params?: Promise<Params> }>;
-export type RouteHandler = (
-  request: Request,
-  context?: NextContext,
-) => Promise<Response>;
+type NextContext = Readonly<{ params: Promise<Params> }>;
+// Next supplies params; direct HTTP tests may call a handler without context.
+// The explicit context overload also satisfies Next's webpack type validator.
+export type RouteHandler = {
+  (request: Request): Promise<Response>;
+  (request: Request, context: NextContext): Promise<Response>;
+};
 
 type BaseContext<Body, Query> = Readonly<{
   request: Request;
@@ -225,7 +227,7 @@ export function createRoutes(deps: HttpDependencies) {
       Readonly<{ rateLimit?: Readonly<{ name: string; rule: ThrottleRule }> }>,
     handler: (context: BaseContext<Body, Query>) => Promise<HandlerResult>,
   ): RouteHandler {
-    return (request, context) =>
+    return (request: Request, context?: NextContext) =>
       run(request, context, options.route, async (state) => {
         if (options.rateLimit) {
           const outcome = await deps.rateLimit(
@@ -264,7 +266,7 @@ export function createRoutes(deps: HttpDependencies) {
       context: BaseContext<Body, Query> & Readonly<{ staff: StaffPrincipal }>,
     ) => Promise<HandlerResult>,
   ): RouteHandler {
-    return (request, context) =>
+    return (request: Request, context?: NextContext) =>
       run(request, context, options.route, async (state) => {
         if (UNSAFE_METHODS.has(request.method) && !deps.isSameOrigin(request)) {
           refuse("CROSS_SITE_REQUEST", state.requestId);
@@ -307,7 +309,7 @@ export function createRoutes(deps: HttpDependencies) {
       }>,
     ) => Promise<HandlerResult>,
   ): RouteHandler {
-    return (request, context) =>
+    return (request: Request, context?: NextContext) =>
       run(request, context, options.route, async (state) => {
         const rawBody = fromBody(
           await readRawBody(

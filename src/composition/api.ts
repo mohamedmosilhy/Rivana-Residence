@@ -14,6 +14,7 @@ import {
   getPublishedRooms,
 } from "@/composition/public";
 import type { ThrottleRule } from "@/domain/auth/login-throttle";
+import { NextRouteCacheInvalidator } from "@/infrastructure/cache/next-cache-invalidator";
 import { getPrisma } from "@/infrastructure/db/prisma/client";
 import { PrismaDatabaseProbe } from "@/infrastructure/db/prisma/database-probe";
 import { PrismaBranchRepository } from "@/infrastructure/db/prisma/repositories/branches/branch-repository";
@@ -68,7 +69,7 @@ export function listStaffBranches(staff: StaffPrincipal) {
 }
 
 export function createBranch(staff: StaffPrincipal, input: unknown) {
-  return manageBranches().create(staff, input);
+  return manageBranches(new NextRouteCacheInvalidator()).create(staff, input);
 }
 
 export function updateBranch(
@@ -76,5 +77,9 @@ export function updateBranch(
   id: string,
   input: unknown,
 ) {
-  return manageBranches().update(staff, id, input);
+  return manageBranches(new NextRouteCacheInvalidator()).update(
+    staff,
+    id,
+    input,
+  );
 }

@@ -8,6 +8,7 @@ import {
 } from "@/application/content/catalog-commands";
 import { CatalogQueries } from "@/application/content/catalog-queries";
 import { PageCommands } from "@/application/content/page-commands";
+import type { CacheInvalidator } from "@/application/ports/providers";
 import type {
   FacilityDto,
   FacilityInput,
@@ -69,11 +70,13 @@ export function pageCommands() {
 }
 
 /** Branch administration (spec 0002); also used by API-A2 and API-A3. */
-export function manageBranches() {
+export function manageBranches(
+  cache: CacheInvalidator = new NextCacheInvalidator(),
+) {
   const media = new PrismaMediaRepository();
   return new ManageBranches({
     branches: new PrismaBranchRepository(),
-    cache: new NextCacheInvalidator(),
+    cache,
     media: {
       async isUsableImage(id: string) {
         return (await media.findAdminById(id))?.status === "READY";

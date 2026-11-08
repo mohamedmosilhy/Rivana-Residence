@@ -88,15 +88,15 @@ describe("sessions", () => {
     expect(account.password?.length).toBeGreaterThan(60);
   });
 
-  it("sets an HttpOnly, SameSite=Lax, admin-scoped, host-only cookie", async () => {
+  it("sets an HttpOnly, SameSite=Lax, root-scoped, host-only staff cookie", async () => {
     await provision(client, "editor@example.test");
     const [session] = (await signIn(auth, "editor@example.test")).filter((c) =>
-      c.startsWith("rivana.session_token="),
+      c.startsWith("rivana-staff.session_token="),
     );
 
     expect(session).toMatch(/; HttpOnly/i);
     expect(session).toMatch(/; SameSite=Lax/i);
-    expect(session).toMatch(/; Path=\/admin/i);
+    expect(session).toMatch(/; Path=\/(?:;|$)/i);
     expect(session).not.toMatch(/; Domain=/i);
     expect(session).not.toMatch(/; Secure/i);
   });
@@ -108,8 +108,19 @@ describe("sessions", () => {
     const cookies = await signIn(secure.auth, "editor@example.test");
 
     expect(cookies.join("\n")).toMatch(
-      /^__Secure-rivana\.session_token=.*; Secure/im,
+      /^__Secure-rivana-staff\.session_token=.*; Secure/im,
     );
+  });
+
+  it("does not accept a valid token under the retired cookie name", async () => {
+    await provision(client, "editor@example.test");
+    const current = await signIn(auth, "editor@example.test");
+    const legacy = current.map((cookie) =>
+      cookie.replace("rivana-staff.session_token=", "rivana.session_token="),
+    );
+
+    expect(await resolve(legacy)).toBeNull();
+    expect((await resolve(current))?.email).toBe("editor@example.test");
   });
 
   it("rejects expired sessions", async () => {

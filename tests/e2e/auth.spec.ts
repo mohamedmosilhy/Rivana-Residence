@@ -44,26 +44,70 @@ test("signs in, returns to the requested page, and sets hardened cookies", async
   ).toBeVisible();
 
   const [session] = (await context.cookies()).filter((cookie) =>
-    cookie.name.endsWith("rivana.session_token"),
+    cookie.name.endsWith("rivana-staff.session_token"),
   );
   expect(session).toMatchObject({
     httpOnly: true,
     sameSite: "Lax",
-    path: "/admin",
+    path: "/",
+    secure: true,
   });
   expect(session?.domain).toBe("127.0.0.1");
 
-  // The admin-scoped cookie is never sent to public pages.
-  const publicRequest = page.waitForRequest((request) =>
-    request.url().endsWith("/"),
+  // F02: browser fetch must carry the real cookie to the staff REST API.
+  const api = await page.evaluate(async () => {
+    const response = await fetch("/api/v1/staff/branches");
+    return { status: response.status, body: await response.json() };
+  });
+  expect(api.status).toBe(200);
+  expect(api.body.items).toEqual(
+    expect.arrayContaining([expect.objectContaining({ slug: "new-cairo" })]),
   );
-  await page.goto("/");
-  expect((await publicRequest).headers().cookie ?? "").not.toContain(
-    "session_token",
-  );
+
+  // Public rendering stays anonymous even when the root cookie is sent.
+  await page.goto("/new-cairo");
+  expect(await page.content()).not.toContain(admin);
 
   const accessibility = await new AxeBuilder({ page }).analyze();
   expect(accessibility.violations).toEqual([]);
+});
+
+test("a retired admin cookie cannot shadow the new staff session", async ({
+  page,
+  context,
+}, testInfo) => {
+  const { admin } = accountsFor(testInfo.project.name);
+  await page.goto("/admin/login");
+  await signIn(page, admin);
+  await expect(page).toHaveURL(/\/admin$/);
+  const current = (await context.cookies()).find((cookie) =>
+    cookie.name.endsWith("rivana-staff.session_token"),
+  );
+  expect(current).toBeDefined();
+  if (!current) throw new Error("Sign-in did not set the staff cookie.");
+
+  // Reuse a genuinely valid session as the old deployment's /admin cookie.
+  await context.clearCookies();
+  await context.addCookies([
+    {
+      ...current,
+      name: current.name.replace("rivana-staff", "rivana"),
+      path: "/admin",
+    },
+  ]);
+  await page.goto("/admin");
+  await expect(page).toHaveURL(/\/admin\/login/);
+  await signIn(page, admin);
+  await expect(page).toHaveURL(/\/admin$/);
+
+  const response = await page.evaluate(
+    async () => (await fetch("/api/v1/staff/branches")).status,
+  );
+  expect(response).toBe(200);
+  await page.reload();
+  await expect(
+    page.getByRole("heading", { name: "Overview", exact: true }),
+  ).toBeVisible();
 });
 
 test("shows one generic, focused, accessible error for any failed sign-in", async ({
@@ -167,6 +211,11 @@ test("signs out and the old session cookie stops working", async ({
   await expect(page).toHaveURL(/\/admin\/login$/);
   await page.goto("/admin");
   await expect(page).toHaveURL(/\/admin\/login$/);
+  expect(
+    await page.evaluate(
+      async () => (await fetch("/api/v1/staff/branches")).status,
+    ),
+  ).toBe(401);
 
   const replay = await browser.newContext();
   await replay.addCookies(stolen);
@@ -207,6 +256,7 @@ test("signed-in staff visiting the login page are sent to the admin", async ({
 
 test("a revoked session cannot run a protected Server Action", async ({
   page,
+  browser,
 }, testInfo) => {
   const { account } = accountsFor(testInfo.project.name);
   await page.goto("/admin/login?returnTo=%2Fadmin%2Faccount");
@@ -214,12 +264,28 @@ test("a revoked session cannot run a protected Server Action", async ({
   await expect(
     page.getByRole("heading", { name: "Active sessions" }),
   ).toBeVisible();
+  const sessionCookies = await page.context().cookies();
 
   // Revoke every session behind the browser's back, then use the stale page.
   await sql(
     'DELETE FROM "Session" WHERE "userId" = (SELECT id FROM "User" WHERE email = $1)',
     [account],
   );
+  // The REST lookup clears invalid cookies. Use an independent browser
+  // context so the original stale form still exercises its own auth guard.
+  const replay = await browser.newContext();
+  try {
+    await replay.addCookies(sessionCookies);
+    const replayPage = await replay.newPage();
+    await replayPage.goto("/new-cairo");
+    expect(
+      await replayPage.evaluate(
+        async () => (await fetch("/api/v1/staff/branches")).status,
+      ),
+    ).toBe(401);
+  } finally {
+    await replay.close();
+  }
   await page.getByLabel("Current password").fill(E2E_PASSWORD);
   await page.getByLabel("New password").fill("Granite-harbour-sunrise-7");
   await page.getByRole("button", { name: "Change password" }).click();

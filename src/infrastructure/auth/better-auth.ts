@@ -76,7 +76,8 @@ export function createAuth(options: AuthOptions) {
       defaultCookieAttributes: {
         httpOnly: true,
         sameSite: "lax",
-        // Scoped to the admin so public pages never receive the cookie.
+        // Both /admin and /api/v1/staff need the same browser session.
+        // Public queries remain unauthenticated and never cache staff data.
         path: AUTH_COOKIE_PATH,
       },
       ipAddress: { disableIpTracking: true },

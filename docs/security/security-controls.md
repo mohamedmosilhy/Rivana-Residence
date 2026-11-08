@@ -14,6 +14,7 @@ Untrusted inputs include login credentials, all public/admin form data, URL para
 - Enforce minimum 12-character admin passwords, breached/common-password screening where practical, generic login errors, and login rate limits.
 - Password reset tokens are single-use, short-lived, and delivered through the configured email service; successful reset revokes other sessions. Until an email provider is configured, self-service reset is disabled and administrators use the operator recovery procedure in [phase-3-auth.md](../delivery/reports/phase-3-auth.md#operator-procedures), which also revokes every session.
 - Cookies: `HttpOnly`, `Secure` in production, `SameSite=Lax` or stricter where compatible, host-only, minimal path/scope, rotated/revoked on sensitive changes.
+- Staff cookies cover `/` so the same session reaches both `/admin` and `/api/v1/staff`. Their prefix is `rivana-staff` (`__Secure-` is added in production). This replaces the older `rivana` cookie at `/admin`; staff sign in again after the change, and the retired name is ignored. Public queries stay anonymous even when the browser sends the root cookie.
 - Seed/bootstrap admin credentials come from secure environment input and must be changed/rotated; never commit defaults.
 
 Add TOTP/passkey support only after the core flow is stable or earlier if the client's risk profile requires it. The design leaves this as a Better Auth extension, not custom MFA.

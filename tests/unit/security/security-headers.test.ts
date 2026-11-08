@@ -112,11 +112,20 @@ describe("proxy", () => {
   it("lets the login page and cookie-bearing admin requests render privately", () => {
     for (const response of [
       proxy(request("/admin/login")),
-      proxy(request("/admin", "rivana.session_token=opaque")),
+      proxy(request("/admin", "rivana-staff.session_token=opaque")),
     ]) {
       expect(response.status).toBe(200);
       expect(response.headers.get("Content-Security-Policy")).toBeTruthy();
       expect(response.headers.get("Cache-Control")).toBe("private, no-store");
+    }
+  });
+
+  it("requires a new sign-in when only the retired admin cookie is present", () => {
+    for (const name of [
+      "rivana.session_token",
+      "__Secure-rivana.session_token",
+    ]) {
+      expect(proxy(request("/admin", name + "=old-session")).status).toBe(307);
     }
   });
 

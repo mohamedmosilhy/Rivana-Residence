@@ -2,7 +2,7 @@ import AxeBuilder from "@axe-core/playwright";
 import { expect, test, type Page } from "@playwright/test";
 
 import { accountsFor } from "./support/accounts";
-import { signInAs } from "./support/session";
+import { signInAs, sql } from "./support/session";
 
 // Spec 0002 (M5): branch websites with two active branches. This project
 // runs last: it activates the seeded `demo-giza` branch through the admin
@@ -274,4 +274,143 @@ test("settings no longer edit contact details", async ({ page }, testInfo) => {
   await expect(
     page.getByText("Contact details, address, and map are set on each branch."),
   ).toBeVisible();
+});
+
+async function browserApi(
+  page: Page,
+  path: string,
+  method = "GET",
+  body?: unknown,
+) {
+  return page.evaluate(
+    async (input) => {
+      const response = await fetch(input.path, {
+        method: input.method,
+        ...(input.body === undefined
+          ? {}
+          : {
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(input.body),
+            }),
+      });
+      return {
+        status: response.status,
+        body: (await response.json()) as Record<string, unknown>,
+      };
+    },
+    { path, method, body },
+  );
+}
+
+// Audit F02/F03: these requests use real browser cookies and the real Next
+// cache runtime. They run last so temporary activation cannot disturb the
+// single-branch public/visual projects.
+test("staff REST writes succeed and immediately refresh public branch data", async ({
+  page,
+}, testInfo) => {
+  const path = "/api/v1/staff/branches";
+  await page.goto("/admin/login");
+  expect((await browserApi(page, path)).status).toBe(401);
+  await signInAs(page, accountsFor(testInfo.project.name).admin);
+  expect((await browserApi(page, path)).status).toBe(200);
+
+  const slug = "api-cache-regression-" + testInfo.retry;
+  const created = await browserApi(page, path, "POST", {
+    slug,
+    name: "API cache regression",
+  });
+  expect(created.status).toBe(201);
+  expect(created.body.status).toBe("INACTIVE");
+  const id = String(created.body.id);
+  const itemPath = path + "/" + id;
+
+  try {
+    const saved = await sql(
+      'SELECT (SELECT count(*)::int FROM "Page" WHERE "branchId" = $1) AS pages, (SELECT count(*)::int FROM "AuditEvent" WHERE "entityId" = $1 AND action = $2) AS audits',
+      [id, "branch.created"],
+    );
+    expect(saved.rows[0]).toEqual({ pages: 3, audits: 1 });
+
+    // Prime the active-branch cache with this branch absent.
+    const publicPath = "/api/v1/branches/" + slug;
+    expect((await browserApi(page, publicPath)).status).toBe(404);
+    const activated = await browserApi(page, itemPath, "PATCH", {
+      status: "ACTIVE",
+    });
+    expect(activated.status).toBe(200);
+    expect((await browserApi(page, publicPath)).status).toBe(200);
+
+    const updatedName = "Updated through the staff API";
+    expect(
+      (await browserApi(page, itemPath, "PATCH", { name: updatedName })).status,
+    ).toBe(200);
+    const fresh = await browserApi(page, publicPath);
+    expect(fresh.status).toBe(200);
+    expect(fresh.body.name).toBe(updatedName);
+
+    // The HTTP client does not send Secure cookies over this HTTP test
+    // origin. Forward the real browser session only for this CSRF probe,
+    // where Chrome would otherwise replace a spoofed Origin header.
+    const cookie = (await page.context().cookies())
+      .filter((item) => item.name.endsWith("rivana-staff.session_token"))
+      .map((item) => item.name + "=" + item.value)
+      .join("; ");
+    expect(
+      (await page.request.get(path, { headers: { cookie } })).status(),
+    ).toBe(200);
+    const refused = await page.request.patch(itemPath, {
+      headers: {
+        cookie,
+        origin: "https://evil.example",
+        "sec-fetch-site": "cross-site",
+      },
+      data: { name: "Must not be saved" },
+    });
+    expect(refused.status()).toBe(403);
+    expect(await refused.json()).toMatchObject({ code: "CROSS_SITE_REQUEST" });
+    expect((await browserApi(page, publicPath)).body.name).toBe(updatedName);
+  } finally {
+    expect(
+      (await browserApi(page, itemPath, "PATCH", { status: "INACTIVE" }))
+        .status,
+    ).toBe(200);
+    expect((await browserApi(page, "/api/v1/branches/" + slug)).status).toBe(
+      404,
+    );
+  }
+});
+
+test("staff REST preserves role and branch restrictions after browser sign-in", async ({
+  browser,
+}, testInfo) => {
+  const accounts = accountsFor(testInfo.project.name);
+  for (const role of ["manager", "editor"] as const) {
+    const context = await browser.newContext();
+    try {
+      const page = await context.newPage();
+      await signInAs(page, accounts[role]);
+      const listed = await browserApi(page, "/api/v1/staff/branches");
+      if (role === "manager") {
+        expect(listed.status).toBe(200);
+        expect(listed.body).toEqual({
+          items: [expect.objectContaining({ slug: "new-cairo" })],
+        });
+      } else {
+        expect(listed.status).toBe(403);
+      }
+      const refused = await browserApi(page, "/api/v1/staff/branches", "POST", {
+        slug: "forbidden-api-branch",
+        name: "Must not be created",
+      });
+      expect(refused.status).toBe(403);
+      expect(refused.body.code).toBe("FORBIDDEN");
+    } finally {
+      await context.close();
+    }
+  }
+  const saved = await sql(
+    'SELECT count(*)::int AS n FROM "Branch" WHERE slug = $1',
+    ["forbidden-api-branch"],
+  );
+  expect(saved.rows[0].n).toBe(0);
 });

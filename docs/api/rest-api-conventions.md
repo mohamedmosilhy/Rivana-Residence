@@ -46,7 +46,7 @@ Status: **Implemented in M4** (2026-11-06): the shared HTTP layer (`src/app/api/
 
 - **Public**: no authentication; rate-limited per client key (an HMAC of the client address, the existing `LoginThrottle` pattern) and per resource.
 - **Guest**: `Authorization: Bearer <manage token>` (ADR 019).
-- **Staff**: the Better Auth session cookie (`HttpOnly`, `Secure`, `SameSite=Lax`). Every handler resolves the principal through `getCurrentStaff()` (database session check). Branch assignments are reloaded per request.
+- **Staff**: the Better Auth session cookie (`HttpOnly`, `Secure` in production, `SameSite=Lax`, `Path=/`): `__Secure-rivana-staff.session_token` in production, `rivana-staff.session_token` in development. The root path covers both `/admin` and `/api/v1/staff`; the retired `rivana` cookie is ignored, so existing staff sign in again after upgrading. Every handler resolves the database session from its request headers. Branch assignments are reloaded per request.
 - **CSRF** for cookie-authenticated, state-changing requests: require an `Origin` equal to `APP_URL` and `Sec-Fetch-Site: same-origin` when present (the existing `isSameOriginRequest`), plus `Content-Type: application/json`, which forces a CORS preflight that the API does not grant. Never mutate on `GET`.
 - **Webhooks**: the Paymob callback (`/api/v1/payments/paymob/callback`, ADR 025) uses the `webhookRoute` wrapper instead: no session and no browser CSRF check, the raw body is kept for HMAC verification, and an unverified request gets `401` with no detail.
 - **CORS**: none. The API answers same-origin only until a future client is approved. A non-browser client would then need a token mechanism (for example a Better Auth bearer or API-key plugin), added under its own ADR.
@@ -65,6 +65,8 @@ export const POST = staffRoute(
 ```
 
 The wrappers in `src/app/api/v1/_http/` (`publicRoute`, `staffRoute`, `webhookRoute`) own body parsing, size and content-type checks, Zod validation, CSRF, principal resolution, problem mapping, request ids, and logging. The wrapper has no `capability` option. The use case owns authorization (it calls `authorize` and `authorizeBranch` itself, so the authorization sweep covers it), business rules, and transactions. The handler maps fields, and calls `setBranch` for the log line, and nothing else. Refusals (`413`, `415`, `400`, CSRF `403`, `401`) never reach the handler. A thrown error becomes `500 INTERNAL` with only the request id; the log gets the error name and stack frames, never its message. The exact rules (body cap, request-id format, log fields) are in the spec's standard definition. Every `route.ts` is checked by `tests/unit/architecture/route-handlers.test.ts` (D-10).
+
+Branch REST writes use `NextRouteCacheInvalidator`, wired in `composition/api.ts`: `revalidateTag(tag, { expire: 0 })` expires public data immediately. CMS Server Actions keep `NextCacheInvalidator` and `updateTag`. The application port is shared; composition selects the adapter for the transport, since `updateTag` is invalid in Route Handlers.
 
 ## OpenAPI
 

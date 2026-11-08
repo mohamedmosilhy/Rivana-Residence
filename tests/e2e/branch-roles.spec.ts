@@ -99,7 +99,7 @@ test("a receptionist session cannot run a CMS action", async ({
     const receptionistPage = await receptionistContext.newPage();
     await signIn(receptionistPage, accounts.receptionist);
     const receptionistCookies = (await receptionistContext.cookies()).filter(
-      (cookie) => cookie.name.endsWith("rivana.session_token"),
+      (cookie) => cookie.name.endsWith("rivana-staff.session_token"),
     );
     expect(receptionistCookies).toHaveLength(1);
 
