@@ -3,14 +3,14 @@
 //
 //   npm run db:seed:initial
 //
-// Needs DATABASE_URL and MEDIA_STORAGE_ROOT. Safe to re-run: the admin is
-// created only if missing (an existing password is never changed), and the
-// content is added only while the database has no rooms, facilities, or
-// images, so CMS edits are never duplicated or overwritten.
+// Needs DATABASE_URL, MEDIA_STORAGE_ROOT, and SEED_ADMIN_PASSWORD. Safe to
+// re-run: the admin is created only if missing (an existing password is never
+// changed), and the content is added only while the database has no rooms,
+// facilities, or images, so CMS edits are never duplicated or overwritten.
 //
-// The default admin password (123456) is for local and staging use. It is
-// below the admin password policy, so in production the seed refuses it and
-// requires SEED_ADMIN_PASSWORD, which must pass the policy.
+// There is no default admin password, in any environment. A missing or weak
+// SEED_ADMIN_PASSWORD (see src/domain/auth/password-policy.ts) refuses the
+// run before anything is written.
 import "dotenv/config";
 
 import { readFile } from "node:fs/promises";
@@ -18,11 +18,9 @@ import path from "node:path";
 
 import { createId } from "@paralleldrive/cuid2";
 import { PrismaPg } from "@prisma/adapter-pg";
-import { hashPassword } from "better-auth/crypto";
 
 import type { StaffPrincipal } from "../src/application/auth/ports.ts";
 import { MediaLibrary } from "../src/application/media/media-library.ts";
-import { passwordPolicyIssues } from "../src/domain/auth/password-policy.ts";
 import { richTextFromEditorText } from "../src/domain/shared/rich-text.ts";
 import { PrismaClient } from "../src/generated/prisma/client.ts";
 import { PrismaFacilityRepository } from "../src/infrastructure/db/prisma/repositories/facility-repository.ts";
@@ -42,13 +40,13 @@ import {
   type ImageKey,
   type PageSeed,
 } from "./initial-content/content.ts";
+import { ensureSeedAdmin } from "./seed-admin.ts";
+import {
+  SEED_ADMIN,
+  resolveSeedAdminCredentials,
+} from "./seed-admin-credentials.ts";
 import { seedDatabase } from "./seed-data.ts";
 
-const ADMIN = {
-  email: "admin@rivanaresidence.com",
-  name: "Rivana Admin",
-  defaultPassword: "123456",
-};
 const IMAGE_DIR = path.join(import.meta.dirname, "initial-content", "images");
 
 const url = process.env.DATABASE_URL;
@@ -56,16 +54,11 @@ const mediaRoot = process.env.MEDIA_STORAGE_ROOT;
 if (!url) throw new Error("DATABASE_URL is required.");
 if (!mediaRoot) throw new Error("MEDIA_STORAGE_ROOT is required.");
 
-const production = process.env.NODE_ENV === "production";
-const adminPassword = process.env.SEED_ADMIN_PASSWORD ?? ADMIN.defaultPassword;
-if (production) {
-  const issues = process.env.SEED_ADMIN_PASSWORD
-    ? passwordPolicyIssues(adminPassword, ADMIN)
-    : ["Set SEED_ADMIN_PASSWORD; the default password is not allowed."];
-  if (issues.length > 0) {
-    throw new Error(`Refusing to seed production: ${issues.join(" ")}`);
-  }
+const credentials = resolveSeedAdminCredentials(process.env);
+if (!credentials.ok) {
+  throw new Error(`Refusing to seed: ${credentials.issues.join(" ")}`);
 }
+const adminPassword = credentials.password;
 
 function ok<T>(
   result: { ok: true; value: T } | { ok: false; error: { message: string } },
@@ -81,33 +74,12 @@ const client = new PrismaClient({
 });
 
 async function ensureAdmin() {
-  const existing = await client.user.findUnique({
-    where: { email: ADMIN.email },
-  });
-  if (existing) {
-    console.log(`Admin ${ADMIN.email} already exists; password unchanged.`);
-    return existing;
-  }
-  const id = createId();
-  const user = await client.user.create({
-    data: {
-      id,
-      email: ADMIN.email,
-      name: ADMIN.name,
-      role: "ADMIN",
-      active: true,
-      emailVerified: true,
-      accounts: {
-        create: {
-          id: createId(),
-          providerId: "credential",
-          accountId: id,
-          password: await hashPassword(adminPassword),
-        },
-      },
-    },
-  });
-  console.log(`Created admin ${ADMIN.email}.`);
+  const { user, created } = await ensureSeedAdmin(client, adminPassword);
+  console.log(
+    created
+      ? `Created admin ${SEED_ADMIN.email}.`
+      : `Admin ${SEED_ADMIN.email} already exists; password unchanged.`,
+  );
   return user;
 }
 

@@ -47,10 +47,12 @@ Do not run development migrations or schema push in production. Destructive migr
 
 ## Initial content
 
-`npm run db:seed:initial` (needs `DATABASE_URL` and `MEDIA_STORAGE_ROOT`) fills a freshly migrated database with the previous rivanaresidence.com content from `prisma/initial-content/`. That covers the three rooms, Swimming Pool and Gym (Café as an unpublished draft until it has a photo), Home/About/Contact copy, contact details, map pin, social links, and 33 full-size photos with alt text, uploaded through the normal media pipeline. It also creates the administrator `admin@rivanaresidence.com`.
+`npm run db:seed:initial` (needs `DATABASE_URL`, `MEDIA_STORAGE_ROOT`, and `SEED_ADMIN_PASSWORD`) fills a freshly migrated database with the previous rivanaresidence.com content from `prisma/initial-content/`. That covers the three rooms, Swimming Pool and Gym (Café as an unpublished draft until it has a photo), Home/About/Contact copy, contact details, map pin, social links, and 33 full-size photos with alt text, uploaded through the normal media pipeline. It also creates the administrator `admin@rivanaresidence.com`.
 
 - Prices, availability, bookings, guests, and the old booking/refund policy pages are deliberately not imported.
-- The default password `123456` is for local and staging only. With `NODE_ENV=production` the seed refuses it and requires `SEED_ADMIN_PASSWORD`, which must meet the password policy.
+- There is no default admin password, in any environment (audit F07). The seed refuses to run, before writing anything, unless `SEED_ADMIN_PASSWORD` is set and meets the staff password policy (12 or more characters, not common, and not containing the name or email, so nothing with `rivana` or `admin` in it). Re-runs need the variable too.
+- On a server, pass it once from a protected shell or a temporary file that you delete afterwards. Do not type it on the command line (shell history keeps it) and do not leave it in the server `.env`. For local development, put it in your own `.env`.
+- An administrator that an older seed created with `123456` is kept, because the seed never changes an existing account (it only logs "password unchanged"). Rotate it with `npm run staff -- set-password --email admin@rivanaresidence.com`, which also ends all of that account's sessions.
 - Re-running is safe: an existing admin keeps its password, and content is added only while there are no rooms, facilities, or images.
 
 ## Backups and recovery
