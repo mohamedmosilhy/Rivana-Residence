@@ -3,7 +3,7 @@ import type { PrismaClient } from "../../src/generated/prisma/client.ts";
 import { seedDatabase } from "../seed-data.ts";
 import { ensureSeedAdmin } from "./admin.ts";
 import { SEED_ADMIN } from "./admin-credentials.ts";
-import { seedBranchDetails } from "./branch.ts";
+import { seedBranchDetails, seedBranchHero } from "./branch.ts";
 import { SEEDED_COUNTS, seedContent } from "./content.ts";
 import { seedDemo } from "./demo.ts";
 
@@ -14,6 +14,7 @@ import { seedDemo } from "./demo.ts";
  *   1. structure  settings, the default branch, the three pages
  *   2. admin      the first administrator
  *   3. branch     the branch's contact, address, map, and check-in times
+ *               (its hero image is set after the content step)
  *   4. content    the old site's rooms, facilities, photos, and page text
  *   5. demo       only with --demo, never in production: fictional data
  */
@@ -81,6 +82,10 @@ export async function runSeed(
         "Warning: there are images but no rooms or facilities, which looks like an interrupted earlier run. Start again from an empty database (see docs/operations/deployment.md).",
       );
     }
+  }
+
+  if (await seedBranchHero(client, branchId)) {
+    log("Branch: set the hero image shown in the branch chooser.");
   }
 
   if (options.demo) {
