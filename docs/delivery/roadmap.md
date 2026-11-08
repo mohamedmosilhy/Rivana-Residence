@@ -24,7 +24,8 @@ The single delivery plan for Rivana Residence. Work is delivered as a sequence o
 | M3 | Agent setup and engineering foundation | Accepted 2026-10-24 | [../engineering/](../engineering/engineering-standards.md), `AGENTS.md`, `CLAUDE.md` |
 | M4 | Backend foundations and branch data ownership | Accepted 2026-11-07 | [reports/m4-backend-foundations.md](./reports/m4-backend-foundations.md) |
 | M5 | Branch websites and the rooms-and-apartments catalog | Accepted 2026-11-07 | [reports/m5-branch-websites.md](./reports/m5-branch-websites.md) |
-| M6–M14 | Inventory, quote, reservations, payments, booking journey, staff tools, messaging, hardening (replanned 2026-11-06; [briefs](./milestones/README.md); task-based workflow from 2026-11-07) | Not started; plan approved by the project owner 2026-11-06 | — |
+| M6 | Inventory, date prices, and availability ([brief](./milestones/m6-inventory-and-availability.md)) | In progress (1/10 tasks accepted); M6-T1 accepted 2026-11-08 | [reports/m6-inventory-and-availability.md](./reports/m6-inventory-and-availability.md) |
+| M7–M14 | Quote, reservations, payments, booking journey, staff tools, messaging, hardening (replanned 2026-11-06; [briefs](./milestones/README.md); task-based workflow from 2026-11-07) | Not started; plan approved by the project owner 2026-11-06 | — |
 | Phase 12 + M15 | Joint deployment and launch | Not started | — |
 
 The external reservation module integration once planned as Phase 13 never started. The provider supplied no module or API, and the reservation system replaces it (ADR 013).

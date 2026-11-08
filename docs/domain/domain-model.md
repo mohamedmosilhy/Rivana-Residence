@@ -176,12 +176,15 @@ Better Auth owns user, account, session, and verification records. Rivana adds a
 
 ### Value objects
 
+**Implemented (M6-T1, accepted 2026-11-08):** `LocalDate`, `StayRange`, `StayPolicy`, `Occupancy`, and `Money` in `src/domain/shared/`, plus `localDateAt` in `zoned-time.ts`. The remaining value objects below are planned for later tasks and milestones. See [spec 0003](../specs/0003-m6-inventory-and-availability.md) and the [M6 evidence](../delivery/reports/m6-inventory-and-availability.md).
+
 | Name | Rules |
 | --- | --- |
-| `LocalDate` | Valid ISO calendar date; ordering; add days; parse and format |
-| `StayRange` | `checkIn < checkOut`; nights; overlap (AV-3); length limits (AV-6/7) |
-| `Occupancy` | `adults ≥ 1`, `children ≥ 0`, bounded (≤ 20 each, matching the CMS) |
-| `Money` | Integer minor units + `currency`; addition only; same currency |
+| `LocalDate` | Strict `YYYY-MM-DD`, real Gregorian years 0001–9999; ordering, calendar-day addition, day difference, and canonical formatting without instant arithmetic |
+| `StayRange` | Immutable `checkIn < checkOut`; exclusive checkout, lazy nights, symmetric overlap (AV-3). Structural ranges do not enforce public booking limits |
+| `StayPolicy` | `validatePublicStay(stay, today, policy)` checks public dates separately: no past arrival, maximum 30 nights and arrival at most 540 days ahead by default (AV-5/6/7, Q-09). Same-day arrival has no cutoff |
+| `Occupancy` | Safe integer `adults ≥ 1`, `children ≥ 0`; per-unit eligibility against that listing's `maxAdults` and `maxChildren`. No fixed shared-value limit of 20 |
+| `Money` | Nonnegative safe integer USD cents; checked same-currency addition and integer multiplication; storage-specific rate bounds belong at persistence boundaries |
 | `ReservationReference` | Format, normalization (uppercase, ambiguous characters mapped) |
 | `PhoneNumber` | E.164 international format, normalized with a maintained library; equality on the normalized value |
 | `GuestContact` | `fullName` (1–120), `email` (normalized), `phone` (`PhoneNumber`), optional `country`, optional `specialRequests` (≤ 1000, plain text) |

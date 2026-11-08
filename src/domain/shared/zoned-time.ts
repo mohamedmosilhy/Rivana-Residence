@@ -2,6 +2,9 @@
 // using only Intl. Local times are entered in a branch or property zone
 // (e.g. Africa/Cairo, which observes daylight saving time) and stored in UTC.
 
+import { DomainValidationError } from "@/domain/shared/domain-error";
+import { LocalDate } from "@/domain/shared/local-date";
+
 const LOCAL_PATTERN = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})$/;
 
 const partFormatters = new Map<string, Intl.DateTimeFormat>();
@@ -94,4 +97,43 @@ export function utcToZonedLocal(value: Date, timeZone: string) {
   const pad = (number: number, length = 2) =>
     String(number).padStart(length, "0");
   return `${pad(p.year, 4)}-${pad(p.month)}-${pad(p.day)}T${pad(p.hour)}:${pad(p.minute)}`;
+}
+
+/** Converts an injected instant to the branch's date, without reading the clock. */
+export function localDateAt(instant: Date, timeZone: string): LocalDate {
+  if (!Number.isFinite(instant.getTime())) {
+    throw new DomainValidationError("The clock instant is invalid.", [
+      { path: "instant", message: "Supply a valid UTC instant." },
+    ]);
+  }
+  if (!isValidTimeZone(timeZone)) {
+    throw new DomainValidationError("The branch time zone is invalid.", [
+      { path: "timeZone", message: "Supply a valid IANA time zone." },
+    ]);
+  }
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone,
+    calendar: "gregory",
+    numberingSystem: "latn",
+    era: "short",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(instant);
+  const part = (type: Intl.DateTimeFormatPartTypes) =>
+    parts.find((value) => value.type === type)?.value ?? "";
+  if (part("era") !== "AD") {
+    throw new DomainValidationError(
+      "The branch date is outside the supported years.",
+      [
+        {
+          path: "instant",
+          message: "Use a branch date within years 0001 to 9999.",
+        },
+      ],
+    );
+  }
+  return LocalDate.parse(
+    `${part("year").padStart(4, "0")}-${part("month")}-${part("day")}`,
+  );
 }

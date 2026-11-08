@@ -35,7 +35,22 @@ Each task runs the gates for its risk tier ([agent-workflow.md](../engineering/a
 
 Record exact commands and counts in the review package. If a gate cannot run, say so and why; never report it as passed.
 
-## Latest recorded results (2026-10-24)
+## Latest accepted task results (2026-11-08, M6-T1)
+
+Local: Node **22.23.2** (via the pinned runtime wrapper), npm **11.21.0**, PostgreSQL **18.4** (Postgres.app). The owner accepted M6-T1 after the following verification and an independent review. Full commands and scope are in the [M6 evidence report](../delivery/reports/m6-inventory-and-availability.md).
+
+| Gate | Result |
+| --- | --- |
+| `npm run check` | **Pass**: formatting, lint, typecheck, 54 unit files / 1,070 tests, production build |
+| `npm run test:integration -- --reporter=dot` | **Pass**: 20 files / 243 tests on disposable `rivana_test` |
+| Focused T1 tests | **Pass**: 6 files / 157 tests; independently rerun by the reviewer |
+| Runtime smoke | **Pass**: 7 assertions; reviewer also checked 10,000 seeded date offsets against an independent UTC oracle |
+| E2E, concurrency, migration drift | Not applicable to T1: no routes, inventory writes, or migration changes |
+| Independent review | **Approve**, no findings; [gpt-6-astra report](../reviews/2026-11-08-m6-t1.md) |
+
+These are accepted task results, not a claim that M6 or its milestone-close gate set is complete.
+
+## Historical baseline (2026-10-24)
 
 Local: macOS 27, Node **24.21.0** (project pins 22.23.2; the known deviation recorded in Phase 1), npm 11.21.0, PostgreSQL via Postgres.app on 5432.
 

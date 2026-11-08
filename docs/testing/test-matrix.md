@@ -4,10 +4,12 @@ Planned tests for branch websites, reservations, payments, and messaging, by lay
 
 ## Implemented so far
 
-M4 (2026-11-06) and M5 (2026-11-07) implemented these ids; everything else below is still planned.
+M4 (2026-11-06), M5 (2026-11-07), and accepted task M6-T1 (2026-11-08) implemented the coverage listed here; everything else below is still planned.
 
 | Id | Where |
 | --- | --- |
+| T-DATE-1…8 (M6-T1) | `tests/unit/domain/local-date.test.ts`, `stay-range.test.ts`, `stay-policy.test.ts`, and `tests/unit/content/zoned-time.test.ts`: strict dates, leap and century rules, night iteration, adjacency and overlap, positive ranges, 30/31-night and 540/541-day boundaries, configurable public policy, explicit branch today and Cairo DST |
+| Occupancy and money foundation (M6-T1) | `tests/unit/domain/occupancy.test.ts` and `money.test.ts`: safe integer counts, per-unit eligibility, USD cents, zero, checked addition and multiplication, overflow, and immutable values. No nightly price resolver or full quote is implemented yet |
 | T-AUTHZ-1 | `tests/unit/auth/authorization.test.ts` (four roles × every capability), `authorize-branch.test.ts`, and the sweep extended to Receptionist and Manager in `authorization-sweep.test.ts` |
 | T-ARCH-1…4 | `tests/unit/architecture/module-boundaries.test.ts` (D-7, D-8, D-11), `persistence-boundaries.test.ts` (D-9, D-12), `route-handlers.test.ts` (D-10), `openapi.test.ts` (freshness) |
 | T-HTTP-1…6 | `tests/unit/api/http-layer.test.ts` (415, 413 declared and streamed, 400, 422, 403 cross-site, 401; webhook raw body; 500 without leakage; log redaction); `tests/integration/health-route.test.ts` |

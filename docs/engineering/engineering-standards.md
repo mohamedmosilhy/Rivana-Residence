@@ -35,6 +35,7 @@ The authoritative coding standards for Rivana Residence, for humans and coding a
 
 - Stay dates use `LocalDate` / `StayRange` (`YYYY-MM-DD`); never `Date` in domain logic. Instants are `Date` in UTC.
 - "Today" comes from an injected `Clock` plus the branch time zone.
+- Shared reservation values are implemented in `src/domain/shared/{local-date,stay-range,stay-policy,occupancy,money}.ts` (M6-T1). Use `localDateAt(clock.now(), branch.timeZone)` from `zoned-time.ts`; keep `validatePublicStay` separate from structural ranges so blocks and rate periods do not inherit booking limits.
 - Money is integer minor units plus currency. No floats. Format only in presentation.
 - Every `new PrismaPg(...)` passes `options: "-c TimeZone=UTC"`.
 

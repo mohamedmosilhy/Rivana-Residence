@@ -1,8 +1,10 @@
 # Availability and pricing rules
 
-Status: **Planned**, design accepted 2026-10-24, revised 2026-11-06 (Q-39 several units per booking, Q-44 one kind of date period, Q-45 VAT, Q-48 coupons, Q-49 services; [ADR 027](../adr/027-booking-price-composition.md)). Rules marked *(Q-nn)* depend on an open business decision in [assumptions-and-open-questions.md](../requirements/assumptions-and-open-questions.md). "Listing" means a room type or apartment type (the CMS `Room`); "unit" means one physical room or apartment.
+Status: **Partly implemented.** M6-T1's shared date, stay, public stay policy, occupancy, and money values were accepted 2026-11-08. Availability calculations, price resolution, persistence, and endpoints remain planned for later tasks. Design accepted 2026-10-24, revised 2026-11-06 (Q-39 several units per booking, Q-44 one kind of date period, Q-45 VAT, Q-48 coupons, Q-49 services; [ADR 027](../adr/027-booking-price-composition.md)). Rules marked *(Q-nn)* depend on an open business decision in [assumptions-and-open-questions.md](../requirements/assumptions-and-open-questions.md). "Listing" means a room type or apartment type (the CMS `Room`); "unit" means one physical room or apartment.
 
 ## Date semantics (ADR 020)
+
+**Implemented foundation (M6-T1):** `LocalDate` and `StayRange` provide calendar arithmetic, exclusive checkout, and overlap. `validatePublicStay` separately applies the public date policy; `localDateAt` derives today from an explicitly supplied instant and branch zone. Blocks and rate periods do not inherit public stay limits. No public API enforces these helpers yet. Evidence: [M6 report](../delivery/reports/m6-inventory-and-availability.md).
 
 | Rule | Definition |
 | --- | --- |
