@@ -48,6 +48,16 @@ The client decisions of **2026-11-06** (two batches: the main decisions, then Q-
 | Q-67 | **WhatsApp is configured by the Admin in the dashboard.** The client supplies the WhatsApp Business number later; until then it is an empty placeholder and WhatsApp sending stays off (online booking needs it for verification codes). The Admin enters the business number (and the provider's phone-number id) on an Admin-only WhatsApp settings screen, manages the **message templates** there (one per message purpose and language: template name as approved by Meta, language, variables mapped to booking fields, and a preview text), and presses **Send test message** to a phone of their choice to check the setup. The provider access token stays a server secret. Rivana does not submit templates to Meta for approval; the client approves them in Meta's tools and enters the approved names. Answers most of Q-10 | ADR 028; `WhatsAppSettings`, `WhatsAppTemplate`; M8 |
 | Q-53 | **Confirmation messages only after the confirmed reservation commits.** Email and WhatsApp confirmations are queued in the same transaction that makes the reservation `CONFIRMED`. A failed, conflicting, expired, or unpaid booking is never called confirmed | FR-NTF-1; ADR 024 |
 
+### Decided 2026-11-08 (M6 open)
+
+| Id | Decision | Source and effect |
+| --- | --- | --- |
+| Q-09 | **Stay recommendations accepted for M6:** maximum 30 nights, check-in at most 540 days ahead, no same-day cutoff, no minimum beyond a positive stay. Each branch needs `checkInTime` before online booking can be enabled | Acceptance already recorded in the M6 brief, checked at milestone open. Existing seed data supplies New Cairo check-in `14:00` and check-out `12:00`; no times are invented for other branches |
+| Q-17 | **No forced block or unit deactivation that would oversell**, including by a Manager or Admin. Move or cancel affected reservations first | Acceptance already recorded in the M6 brief, checked at milestone open; IN-6 and the inventory guard |
+| Q-68 | **P5 accepts optional `unitsRequested`, default 1**, for availability of a requested number of units of each listing | Owner, 2026-11-08; completes the M6 requested-quantity contract |
+| Q-69 | **Maximum 5 units per booking**, across all its listings. Adopt the existing OC-3 recommendation in M6 rather than defer the choice to M10. P5 caps `unitsAvailable` at 5 | Owner, 2026-11-08; quantity validation and disclosure in M6, whole-booking enforcement when reservations arrive |
+| Q-70 | **Availability search is allowed for active branches while online booking is disabled.** Search returns inventory and accommodation prices; it neither enables booking nor bypasses the reservation readiness checks | Owner, 2026-11-08; P5 is usable before VAT and WhatsApp setup exists. Inactive or missing branches still return 404 |
+
 ## Superseded decisions
 
 Kept as the record of the earlier approved design (accepted M1–M3 documents and ADRs describe them).
@@ -66,9 +76,7 @@ Kept as the record of the earlier approved design (accepted M1–M3 documents an
 | Id | Question | Recommendation | Blocks |
 | --- | --- | --- | --- |
 | Q-10 | WhatsApp provider (rest of the earlier question): Meta WhatsApp Cloud API directly, or a provider such as Twilio; who completes Meta business verification and template approval. The number and templates themselves are now Admin-managed (Q-67), so Arabic templates can be added whenever wanted | Meta Cloud API directly, with the client completing business verification; the adapter stays swappable | M8 |
-| Q-09 | Stay rules: maximum nights, how far ahead, same-day cut-off, minimum stay, check-in and check-out times | 30 nights max, 540 days ahead, no same-day cut-off, no minimum stay; check-in time per branch is required (it defines the cancellation deadline, Q-38) | M6 |
 | Q-15 | Audit CMS content changes too? | Later. Reservation, pricing, coupon, payment, inventory, and access first; CMS edits keep `updatedById` | M12 |
-| Q-17 | May a manager force a block or unit deactivation that would oversell? | No. Staff must first move or cancel affected reservations | M6 |
 | Q-18 | Reinstating cancelled reservations, undoing check-in | Not in v1 (create a new reservation instead) | M8 |
 | Q-19 | When staff change dates or units, are changed nights re-priced at current rates? | Yes, with old and new totals shown (including VAT), and manager override possible. For paid bookings see Q-66 | M8 |
 | Q-21 | Name of the hotel's operational system (PMS), and can it export daily arrival or booking reports? | Needed for the reconciliation procedure; informational | M15 |

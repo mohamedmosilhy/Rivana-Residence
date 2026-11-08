@@ -11,10 +11,10 @@ Status: **Planned**, design accepted 2026-10-24, revised 2026-11-06 (Q-39 severa
 | AV-3 | Two stays overlap if and only if `a.checkIn < b.checkOut && b.checkIn < a.checkOut`. Back-to-back stays (one checks out on the day the other checks in) do **not** overlap. |
 | AV-4 | `checkOut > checkIn`. A zero-night stay is invalid (`422`). |
 | AV-5 | Public check-in must be on or after the branch's "today" in its time zone. Staff may record past-dated stays only for `EXTERNAL` reconciliation and corrections (audited). |
-| AV-6 | Night count is at most `maxStayNights` (proposed 30) *(Q-09)*. |
-| AV-7 | Check-in is at most `bookingHorizonDays` ahead (proposed 540) *(Q-09)*. |
+| AV-6 | Night count is at most `maxStayNights`, default 30 (Q-09, accepted for M6). |
+| AV-7 | Check-in is at most `bookingHorizonDays` ahead, default 540 (Q-09, accepted for M6). |
 | AV-8 | Dates are `YYYY-MM-DD` calendar dates. Impossible dates such as `2027-02-30` are rejected. Leap days are valid only in leap years. |
-| AV-9 | Same-day bookings are allowed until a cut-off time in the branch time zone; the default is no cut-off *(Q-09)*. |
+| AV-9 | Same-day bookings have no cut-off by default (Q-09, accepted for M6). There is no minimum stay beyond AV-4's positive night count. |
 
 ## Occupancy
 
@@ -22,7 +22,7 @@ Status: **Planned**, design accepted 2026-10-24, revised 2026-11-06 (Q-39 severa
 | --- | --- |
 | OC-1 | A request has `adults ≥ 1` and `children ≥ 0`. |
 | OC-2 | Each unit in a booking carries its own occupancy; a listing is eligible for that unit when `adults ≤ maxAdults` and `children ≤ maxChildren`, using the CMS fields on `Room`. |
-| OC-3 | One booking may hold several units (rooms, apartments, or both) at one branch for the same dates (Q-39), up to a per-booking maximum (proposed 5, set in the M10 spec). Different dates per unit need separate bookings. |
+| OC-3 | One booking may hold several units (rooms, apartments, or both) at one branch for the same dates (Q-39), up to 5 units across all listings (Q-69, owner accepted 2026-11-08 at M6 open). Different dates per unit need separate bookings. P5 accepts `unitsRequested` from 1 to 5, default 1 (Q-68). |
 
 ## Capacity and availability (ADR 016)
 
@@ -42,9 +42,11 @@ available(T, stay, q) ⇔ for every night n in stay: free(T, n) ≥ q      (q = 
 | IN-3 | Early check-out shortens the stay to the actual departure date, which releases the remaining nights. |
 | IN-4 | A listing is **bookable online** when its CMS status is `PUBLISHED`, its branch is `ACTIVE` with online booking enabled and a VAT rate configured (TX-1), it has at least one active unit, and every night of the stay has a resolvable price (PR-3). |
 | IN-5 | Publicly, availability is shown per listing as available or not for the requested units, plus how many more units can be added up to the per-booking maximum (never the raw capacity). Staff see `capacity`, `sold`, and `free` per night. |
-| IN-6 | Every operation that can reduce `free` runs under the room-type lock and fails with `INVENTORY_UNAVAILABLE` rather than making `free` negative. That covers bookings (including payment holds and late payment successes), date or unit changes, blocks, and unit deactivation *(Q-17: manager override)*. |
+| IN-6 | Every operation that can reduce `free` runs under the room-type lock and fails with `INVENTORY_UNAVAILABLE` rather than making `free` negative. That covers bookings (including payment holds and late payment successes), date or unit changes, blocks, and unit deactivation. There is no Manager or Admin override (Q-17, accepted for M6). |
 | IN-7 | One physical room cannot have two overlapping inventory-consuming assignments, or two overlapping active blocks. It also cannot be assigned while blocked. The first two are database exclusion constraints; the block-versus-assignment check runs under the lock. |
 | IN-8 | An `EXTERNAL` reservation consumes inventory exactly like any other. Recording it may fail with `INVENTORY_UNAVAILABLE`. That is a **detected cross-system conflict** and is escalated ([manual-synchronization-procedure.md](../operations/manual-synchronization-procedure.md)). |
+
+**Search versus booking (Q-70, owner accepted 2026-11-08):** public availability search may return inventory and accommodation prices for published listings of an active branch while online booking is disabled. Search availability does not promise that reservation creation is enabled, does not hold inventory, and does not bypass IN-4 or the later creation readiness checks. Inactive branches remain hidden.
 
 ## Accommodation prices (scope PDF sections 2–3)
 
