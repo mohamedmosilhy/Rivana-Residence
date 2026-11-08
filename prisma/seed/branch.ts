@@ -2,7 +2,7 @@ import type {
   Prisma,
   PrismaClient,
 } from "../../src/generated/prisma/client.ts";
-import { BRANCH } from "../initial-content/content.ts";
+import { BRANCH, IMAGES } from "../initial-content/content.ts";
 
 /**
  * Gives the default branch its own contact, address, location, map, and
@@ -36,5 +36,41 @@ export async function seedBranchDetails(
       await transaction.branch.update({ where: { id: branchId }, data: fill });
     }
     return fields;
+  });
+}
+
+/**
+ * Gives the default branch its hero image, which the branch chooser shows.
+ * It runs after the content step, because it needs the uploaded photos. Any
+ * seeded photo will do for now: the exterior, which the demo branch shares.
+ * Like `seedBranchDetails`, it leaves a branch alone once staff have edited
+ * it, and never replaces a hero that is already set. Returns whether it set
+ * the hero.
+ */
+export async function seedBranchHero(
+  client: PrismaClient,
+  branchId: string,
+): Promise<boolean> {
+  return client.$transaction(async (transaction) => {
+    const branch = await transaction.branch.findUniqueOrThrow({
+      where: { id: branchId },
+    });
+    if (branch.updatedById !== null || branch.heroMediaId !== null) {
+      return false;
+    }
+    const photo = await transaction.mediaAsset.findFirst({
+      where: {
+        status: "READY",
+        originalFilename: IMAGES.exteriorWide.file,
+      },
+      orderBy: { createdAt: "asc" },
+      select: { id: true },
+    });
+    if (!photo) return false;
+    await transaction.branch.update({
+      where: { id: branchId },
+      data: { heroMediaId: photo.id },
+    });
+    return true;
   });
 }

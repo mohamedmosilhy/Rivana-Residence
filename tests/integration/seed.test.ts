@@ -10,6 +10,8 @@ import { BRANCH } from "../../prisma/initial-content/content";
 import { SEED_ADMIN } from "../../prisma/seed/admin-credentials";
 import { runSeed } from "../../prisma/seed/index";
 import {
+  actor,
+  createActor,
   createTestClient,
   resetDatabase,
   TEST_BRANCH_ID,
@@ -84,6 +86,7 @@ describe("the one seed (runSeed)", () => {
       "Admin",
       "Branch",
       "Content",
+      "Branch",
     ]);
     await rm(mediaRoot, { recursive: true, force: true });
   }, 120_000);
@@ -224,6 +227,37 @@ describe("the one seed (runSeed)", () => {
       (await client.branch.findUniqueOrThrow({ where: { slug: "demo-giza" } }))
         .status,
     ).toBe("INACTIVE");
+    await rm(mediaRoot, { recursive: true, force: true });
+  }, 120_000);
+
+  it("gives the default branch a hero image for the branch chooser", async () => {
+    await seed();
+    const branch = await client.branch.findUniqueOrThrow({
+      where: { id: TEST_BRANCH_ID },
+      include: { heroMedia: true },
+    });
+    expect(branch.heroMedia).toMatchObject({
+      status: "READY",
+      originalFilename: "exterior-wide.jpg",
+    });
+    expect(lines.join("\n")).toMatch(/hero image/);
+    await rm(mediaRoot, { recursive: true, force: true });
+  }, 120_000);
+
+  it("does not replace or restore a hero that staff changed or removed", async () => {
+    await seed();
+    await createActor(client);
+    await client.branch.update({
+      where: { id: TEST_BRANCH_ID },
+      data: { heroMediaId: null, updatedById: actor.id },
+    });
+
+    await seed();
+
+    expect(
+      (await client.branch.findUniqueOrThrow({ where: { id: TEST_BRANCH_ID } }))
+        .heroMediaId,
+    ).toBeNull();
     await rm(mediaRoot, { recursive: true, force: true });
   }, 120_000);
 });
