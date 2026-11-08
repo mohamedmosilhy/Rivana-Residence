@@ -17,6 +17,10 @@ One brief per forward milestone. Each brief is the contract for one tested slice
 | [M14](./m14-hardening.md) | Security, regression, E2E hardening |
 | [M15](./m15-joint-launch.md) | Joint launch and handover (with Phase 12) |
 
+## Audit repair schedule
+
+The engineering audit repairs are tracked as small milestone tasks in [repairs/README.md](./repairs/README.md). Open the linked repair file when starting the related milestone. F02 and F03 are complete and merged. F01 is patched and verified before public exposure.
+
 ## If you are an agent asked to "start milestone N"
 
 A short request such as "Start milestone 6 using docs/delivery/milestones/README.md" means **open the milestone**, not build it. Work follows the task-based workflow in [../../engineering/agent-workflow.md](../../engineering/agent-workflow.md), which is mandatory:

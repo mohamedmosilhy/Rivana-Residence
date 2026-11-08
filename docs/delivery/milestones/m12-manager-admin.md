@@ -13,6 +13,10 @@ Commercial and administrative screens: prices, services, coupons, the VAT rate, 
 - [requirements/user-stories-and-acceptance-criteria.md](../../requirements/user-stories-and-acceptance-criteria.md) (US-M1…M3, US-M5, US-A1…A3, US-A5)
 - [api/api-contracts.md](../../api/api-contracts.md) (S30–S43, A1–A5)
 
+## Required audit repairs in M12
+
+Keep F13 in M12. Its locked final administrator task is defined in [repairs/m12-manager-admin.md](./repairs/m12-manager-admin.md).
+
 ## Blocking questions
 
 - Q-15 (CMS audit): recommendation (later) accepted unless answered.

@@ -13,6 +13,10 @@ Receptionists run the front desk in the dashboard: today's work, reservations wi
 - [requirements/user-stories-and-acceptance-criteria.md](../../requirements/user-stories-and-acceptance-criteria.md) (US-R1…R7, US-R1a, US-M4, US-M6, US-A4)
 - [api/api-contracts.md](../../api/api-contracts.md) (S1–S6, S9–S29, S44, S45, S50–S53, A3)
 
+## Required audit repairs in M11
+
+Include the enquiry detail and archive task from [repairs/m11-front-desk.md](./repairs/m11-front-desk.md) in the M11 task breakdown.
+
 ## Blocking questions
 
 - Q-35 (sync pop-up for managers), Q-61 (PMS-entry target time): recommendations accepted unless answered.

@@ -13,6 +13,10 @@ A release candidate for the whole product: branch websites, booking, payments, r
 - [operations/known-limitations.md](../../operations/known-limitations.md), [delivery/risks-and-constraints.md](../risks-and-constraints.md)
 - [reports/phase-11-release-candidate.md](../reports/phase-11-release-candidate.md) (the format to follow)
 
+## Required audit repairs in M14
+
+Add the remaining media, backup, publication, logo, and documentation repairs from [repairs/m14-hardening.md](./repairs/m14-hardening.md) to the M14 task breakdown before opening the milestone.
+
 ## Blocking questions
 
 - Q-33 (second sign-in step for Admin and Manager): if approved, implement with the Better Auth plugin in this milestone.

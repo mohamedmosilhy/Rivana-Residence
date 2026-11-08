@@ -4,7 +4,7 @@
 
 | Constraint | Source |
 | --- | --- |
-| Next.js 16.3.3 App Router is the only application framework | ADR 001; brief §2 |
+| Next.js 16.4.5 App Router is the only application framework | ADR 001; brief §2; F01 dependency security repair |
 | PostgreSQL via Prisma 7.10 with the `@prisma/adapter-pg` driver; every connection uses `-c TimeZone=UTC` | `src/infrastructure/db/prisma/client.ts` |
 | Hosting: a Hostinger VPS with Node 22 under systemd behind Nginx, PostgreSQL 17+, and local media (not yet provisioned) | [ADR 023](../adr/023-hostinger-vps-deployment.md), [hosting-preflight.md](../operations/hosting-preflight.md) |
 | No PMS API or export | Brief §4 |

@@ -13,6 +13,10 @@ Correct availability and nightly accommodation prices for every listing (room or
 - [database/integrity-and-concurrency.md](../../database/integrity-and-concurrency.md), [database/data-model.md](../../database/data-model.md) (`PhysicalRoom`, `InventoryBlock`, `RoomBaseRate`, `RatePeriod`)
 - [api/api-contracts.md](../../api/api-contracts.md) (P5, S20–S27, S30–S34)
 
+## Required audit repairs before M6
+
+Complete and accept the seed safety gate in [repairs/pre-m6.md](./repairs/pre-m6.md) before the M6 deployment rehearsal.
+
 ## Blocking questions
 
 - Q-09 (stay rules) and Q-17 (forced blocks): recommendations accepted unless the client answers differently. Check-in time per branch is required data (it defines the cancellation deadline in M9).
