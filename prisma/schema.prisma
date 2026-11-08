@@ -28,6 +28,12 @@ enum AccommodationType {
   APARTMENT
 }
 
+enum BlockReason {
+  MAINTENANCE
+  OWNER_USE
+  OTHER
+}
+
 enum PublicationStatus {
   DRAFT
   PUBLISHED
@@ -108,7 +114,12 @@ model User {
   updatedPromotions   Promotion[]    @relation("PromotionUpdatedBy")
   updatedBranches     Branch[]       @relation("BranchUpdatedBy")
 
-  branchAssignments StaffBranchAssignment[]
+  branchAssignments        StaffBranchAssignment[]
+  updatedPhysicalRooms     PhysicalRoom[]          @relation("PhysicalRoomUpdatedBy")
+  createdInventoryBlocks   InventoryBlock[]        @relation("InventoryBlockCreatedBy")
+  cancelledInventoryBlocks InventoryBlock[]        @relation("InventoryBlockCancelledBy")
+  updatedBaseRates         RoomBaseRate[]          @relation("RoomBaseRateUpdatedBy")
+  updatedRatePeriods       RatePeriod[]            @relation("RatePeriodUpdatedBy")
 }
 
 // Better Auth 1.7 core tables. Field names follow the library schema; the app
@@ -302,11 +313,14 @@ model Room {
   updatedAt         DateTime          @updatedAt @db.Timestamptz(3)
   updatedById       String?           @db.VarChar(32)
 
-  branch    Branch        @relation(fields: [branchId], references: [id], onDelete: Restrict)
-  ogMedia   MediaAsset?   @relation("RoomOgMedia", fields: [ogMediaId], references: [id], onDelete: Restrict)
-  updatedBy User?         @relation("RoomUpdatedBy", fields: [updatedById], references: [id], onDelete: Restrict)
-  features  RoomFeature[]
-  media     RoomMedia[]
+  branch        Branch         @relation(fields: [branchId], references: [id], onDelete: Restrict)
+  ogMedia       MediaAsset?    @relation("RoomOgMedia", fields: [ogMediaId], references: [id], onDelete: Restrict)
+  updatedBy     User?          @relation("RoomUpdatedBy", fields: [updatedById], references: [id], onDelete: Restrict)
+  features      RoomFeature[]
+  media         RoomMedia[]
+  physicalRooms PhysicalRoom[]
+  baseRate      RoomBaseRate?
+  ratePeriods   RatePeriod[]
 
   // Composite target for same-branch foreign keys from inventory and
   // reservations (ADR 017).
@@ -314,6 +328,78 @@ model Room {
   @@index([branchId, status, sortOrder])
   @@index([status, sortOrder])
   @@index([featured, status, sortOrder])
+}
+
+model PhysicalRoom {
+  id          String   @id @db.VarChar(32)
+  branchId    String   @db.VarChar(32)
+  roomTypeId  String   @db.VarChar(32)
+  label       String   @db.VarChar(40)
+  active      Boolean  @default(true)
+  notes       String?  @db.VarChar(500)
+  createdAt   DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt   DateTime @updatedAt @db.Timestamptz(3)
+  updatedById String?  @db.VarChar(32)
+
+  roomType  Room             @relation(fields: [roomTypeId, branchId], references: [id, branchId], onDelete: Restrict, onUpdate: Restrict)
+  updatedBy User?            @relation("PhysicalRoomUpdatedBy", fields: [updatedById], references: [id], onDelete: Restrict)
+  blocks    InventoryBlock[]
+
+  @@unique([branchId, label])
+  @@unique([id, roomTypeId])
+  @@unique([id, branchId])
+  @@index([roomTypeId, active])
+}
+
+model InventoryBlock {
+  id             String      @id @db.VarChar(32)
+  branchId       String      @db.VarChar(32)
+  physicalRoomId String      @db.VarChar(32)
+  startDate      DateTime    @db.Date
+  endDate        DateTime    @db.Date
+  reason         BlockReason
+  note           String?     @db.VarChar(500)
+  cancelledAt    DateTime?   @db.Timestamptz(3)
+  cancelledById  String?     @db.VarChar(32)
+  createdAt      DateTime    @default(now()) @db.Timestamptz(3)
+  createdById    String      @db.VarChar(32)
+
+  physicalRoom PhysicalRoom @relation(fields: [physicalRoomId, branchId], references: [id, branchId], onDelete: Restrict, onUpdate: Restrict)
+  createdBy    User         @relation("InventoryBlockCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+  cancelledBy  User?        @relation("InventoryBlockCancelledBy", fields: [cancelledById], references: [id], onDelete: Restrict)
+
+  @@index([physicalRoomId, startDate])
+  @@index([branchId, startDate])
+}
+
+model RoomBaseRate {
+  roomTypeId  String   @id @db.VarChar(32)
+  amountMinor Int
+  currency    String   @default("USD") @db.Char(3)
+  updatedAt   DateTime @updatedAt @db.Timestamptz(3)
+  updatedById String?  @db.VarChar(32)
+
+  roomType  Room  @relation(fields: [roomTypeId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  updatedBy User? @relation("RoomBaseRateUpdatedBy", fields: [updatedById], references: [id], onDelete: Restrict)
+}
+
+model RatePeriod {
+  id          String   @id @db.VarChar(32)
+  roomTypeId  String   @db.VarChar(32)
+  startDate   DateTime @db.Date
+  endDate     DateTime @db.Date
+  amountMinor Int
+  currency    String   @default("USD") @db.Char(3)
+  active      Boolean  @default(true)
+  label       String?  @db.VarChar(80)
+  createdAt   DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt   DateTime @updatedAt @db.Timestamptz(3)
+  updatedById String?  @db.VarChar(32)
+
+  roomType  Room  @relation(fields: [roomTypeId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  updatedBy User? @relation("RatePeriodUpdatedBy", fields: [updatedById], references: [id], onDelete: Restrict)
+
+  @@index([roomTypeId, startDate])
 }
 
 model RoomFeature {

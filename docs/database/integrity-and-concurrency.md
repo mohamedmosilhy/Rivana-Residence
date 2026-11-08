@@ -110,6 +110,8 @@ Raw SQL is parameterized through Prisma's tagged `$queryRaw` and lives only in `
 
 ## Proof plan (integration tests on real PostgreSQL)
 
+**Implemented in M6-T3** (`tests/integration/inventory-constraints.test.ts`): the structural constraints (overlap exclusion for blocks and rate periods, ranges, positive USD amounts, branch-unique labels, composite ownership, `RESTRICT` deletes and moves) are tested directly on PostgreSQL, including 20 races per exclusion constraint on separate connections. Two uncommitted overlapping inserts wait on each other, so PostgreSQL ends the race as either the exclusion violation (`23P01`) or a detected deadlock (`40P01`); exactly one commits either way. M6-T4's room-type lock serialises block writers so the loser gets a clean domain error instead of a deadlock. Rate-period creates take no lock in the current design, so overlapping period creates can still deadlock; M6-T7 must decide whether to map `40P01` to a conflict or lock the listing on period create. `RESTRICT` ownership violations report `23001`, not `23503`. The reusable lock harness and C-1…C-11 follow in later tasks.
+
 | Test | Setup | Action | Expected |
 | --- | --- | --- | --- |
 | C-1 last unit | 1 physical room, free | 10 parallel creates on 10 separate clients | Exactly 1 × `201`, 9 × `INVENTORY_UNAVAILABLE`; 1 inventory-consuming line in the DB |

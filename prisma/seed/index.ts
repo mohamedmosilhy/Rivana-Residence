@@ -5,7 +5,7 @@ import { ensureSeedAdmin } from "./admin.ts";
 import { SEED_ADMIN } from "./admin-credentials.ts";
 import { seedBranchDetails, seedBranchHero } from "./branch.ts";
 import { SEEDED_COUNTS, seedContent } from "./content.ts";
-import { seedDemo } from "./demo.ts";
+import { seedDemo, seedDemoInventory } from "./demo.ts";
 
 /**
  * The one seed, step by step. Each new feature adds its step here, with a
@@ -88,16 +88,24 @@ export async function runSeed(
     log("Branch: set the hero image shown in the branch chooser.");
   }
 
+  log(
+    "Inventory: units and rates need approved hotel data; no real inventory or prices were seeded.",
+  );
+
   if (options.demo) {
     const demo = await seedDemo(client, { staffId: user.id });
     log(
       demo.created
         ? "Demo: created the fictional branch demo-giza (active), so the site now has two branches."
-        : `Demo: demo-giza already exists (${demo.status.toLowerCase()}); nothing changed.${
+        : `Demo: demo-giza already exists (${demo.status.toLowerCase()}); existing branch content preserved.${
             demo.status === "INACTIVE"
               ? " To show it, set its status to Active in Admin > Branches."
               : ""
           }`,
+    );
+    const inventory = await seedDemoInventory(client);
+    log(
+      `Demo inventory: created ${inventory.created} fictional unit/rate records; existing records preserved.`,
     );
   }
   return { branchId, contentSeeded };

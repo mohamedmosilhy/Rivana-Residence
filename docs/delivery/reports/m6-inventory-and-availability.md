@@ -1,6 +1,6 @@
 # M6: Inventory, date prices, and availability
 
-Status: **In progress (2/10 tasks accepted)**, 2026-11-08. M6-T1 and M6-T2 are accepted; M6-T3 through M6-T10 have not started. The milestone has not been accepted or merged.
+Status: **In progress (3/10 tasks accepted)**, 2026-11-08. M6-T1, M6-T2, and M6-T3 are accepted; M6-T4 through M6-T10 have not started. The milestone has not been accepted or merged.
 
 Branch: `m6-inventory-and-availability`. The owner requested this spelling when accepting T1; the original local `m6-Inventory-and-availability` branch was renamed without changing its history. Build spec: [0003](../../specs/0003-m6-inventory-and-availability.md). Task status belongs to the [brief](../milestones/m6-inventory-and-availability.md#task-breakdown).
 
@@ -10,8 +10,9 @@ Branch: `m6-inventory-and-availability`. The owner requested this spelling when 
 | --- | --- | --- | --- | --- | --- | --- |
 | M6-T1 | Critical | Owner, 2026-11-08 | `4334654` | [2026-11-08-m6-t1.md](../../reviews/2026-11-08-m6-t1.md) | Check passed: 54 unit files / 1,070 tests and build; integration passed: 20 files / 243 tests; focused: 6 files / 157 tests | Shared values, public stay policy, explicit branch date conversion; independent review approved with no findings |
 | M6-T2 | Critical | Owner, 2026-11-08 | `feat(domain): add M6-T2 inventory and pricing rules` (this task commit) | [2026-11-08-m6-t2.md](../../reviews/2026-11-08-m6-t2.md) | Check passed: 57 unit files / 1,143 tests and build; integration passed: 20 files / 243 tests; focused: 3 files / 73 tests; runtime: 8 assertions | Pure availability, nightly price resolution, block and deactivation projection; independent review approved with no findings and 1,000 capacity oracle scenarios passed |
+| M6-T3 | Critical | Owner, 2026-11-08 | `feat(db): add M6-T3 inventory and rates migration and demo seed` (this task commit) | [2026-11-08-m6-t3.md](../../reviews/2026-11-08-m6-t3.md) | Check passed: 57 unit files / 1,143 tests and build; integration passed: 21 files / 271 tests; migration rehearsal on M5 data and drift check inside that suite | Four tables, `BlockReason`, CHECKs, two GiST exclusion constraints, composite ownership FKs; guarded demo inventory seed; independent review (Opus) requested changes, one major docs finding and minors fixed before acceptance |
 
-The current task commit is identified by its unique subject in the log row. Locate its hash with `git log --oneline --fixed-strings --grep='feat(domain): add M6-T2 inventory and pricing rules'`.
+The current task commit is identified by its unique subject in the log row. Locate its hash with `git log --oneline --fixed-strings --grep='feat(domain): add M6-T2 inventory and pricing rules'` (likewise for T3 with `feat(db): add M6-T3 inventory and rates migration and demo seed`).
 
 ## Outcome
 
@@ -28,7 +29,8 @@ T2 implements the pure inventory and pricing rules. `AvailabilityCalculator` che
 - M6-T1: date, stay, public policy, occupancy, and money foundation, accepted by the owner.
 - M6-T2: pure availability, nightly price resolution, and inventory reduction rules, accepted by the owner.
 - Domain portions of AC-1, AC-3, AC-4, and AC-6. HTTP and database parts of those criteria remain planned.
-- Tables, transactions, locks, APIs, and screens remain future work. T3 through T10 have not started.
+- M6-T3: migration `20261108120000_inventory_and_rates` (`PhysicalRoom`, `InventoryBlock`, `RoomBaseRate`, `RatePeriod`, constraints) and the guarded demo inventory seed, accepted by the owner.
+- Domain-to-database wiring, transactions, locks, APIs, and screens remain future work. T4 through T10 have not started.
 
 ## Files by responsibility
 
@@ -109,6 +111,15 @@ E2E and migration drift were not applicable because no routes or migration chang
 
 The acceptance documentation sync passed `npm run format:check`, `git diff --check`, and local link and task-state checks. The full application gates above were not repeated for documentation-only edits.
 
+## M6-T3 commands and results
+
+Verification used Node **22.23.2** (installed in a scratch directory because the shell default was Node 24), PostgreSQL **18.4**, and disposable `rivana_test`.
+
+- `npm run check` exited 0: formatting, lint, typecheck, **57 unit files / 1,143 tests**, production build (the existing `StorageSecurityError` trace warning is unchanged).
+- `TEST_DATABASE_URL=… npx vitest run --config vitest.integration.config.ts` passed **21 files / 271 tests**, including `inventory-constraints.test.ts` (23 tests: overlap matrix, adjacency, cancelled blocks, inactive periods, ranges, nonpositive and overflowing amounts, non-USD, duplicate labels, cross-branch ownership, `RESTRICT` behavior, and 20 race iterations per exclusion constraint on separate connections), the M5-copy migration rehearsal (every existing row identical, no new data, `btree_gist` installed), the Prisma drift check, and the seed tests (fresh, repeated, and upgraded demo runs; staff edits preserved; production refusal before any write through the real `seed.mts`).
+- Findings from running them: `RESTRICT` reports SQLSTATE `23001`, not `23503`; two uncommitted overlapping inserts end as the exclusion violation `23P01` or a deadlock `40P01`, with exactly one commit. The T4 lock covers blocks; rate periods take no lock, so M6-T7 must decide whether to map `40P01` or lock the listing.
+- E2E not run: no routes or screens changed.
+
 ## Acceptance criteria and evidence
 
 | Criterion | Accepted T1/T2 evidence and remaining scope |
@@ -127,10 +138,12 @@ The owner accepted M6-T1 on 2026-11-08 and authorized the documentation sync and
 
 The owner accepted M6-T2 on 2026-11-08 after its review package. `gpt-6-astra` independently reviewed the nine-file uncommitted T2 change against accepted T1 commit `4334654`, with `gpt-6.1-sol` as the author. Verdict: **Approve**, zero findings. Full report: [2026-11-08-m6-t2.md](../../reviews/2026-11-08-m6-t2.md). The owner authorized documentation sync and the T2 commit, explicitly without starting the next task. No push or merge is authorized by that acceptance.
 
+M6-T3 was independently reviewed by Opus (author: Sonnet; an earlier session began the implementation). Verdict: **Changes requested** (one major: `data-model.md` not reconciled; four minors; five nits). The major and the cheap minors were fixed and the gates rerun; the remaining minors (partial-upgrade rollback test strength, race barrier) and nits are accepted as is. Full report: [2026-11-08-m6-t3.md](../../reviews/2026-11-08-m6-t3.md). The owner accepted M6-T3 on 2026-11-08 and authorized the documentation sync and commit, without starting T4. No push or merge is authorized.
+
 ## Known limitations and deferred work
 
 The values and pure rules are not yet wired into reservation use cases or public APIs. M6's remaining tasks still need their own plan approvals, implementation, verification, independent review, and owner acceptance. The sold adapter, lock proof, persisted physical units, blocks, rates, and availability endpoints have not been built. Callers must eventually enforce branch scope and load reduction inputs under the listing lock. Rate authoring must enforce the positive PostgreSQL `INTEGER` bound; generic `Money` and the resolver remain calculation values. Persisted snapshot immutability and manual override authorization belong to M8.
 
 ## Next milestone
 
-M7 has not started. M6-T3 has not started either; stop after the accepted T2 commit.
+M7 has not started. M6-T4 has not started; stop after the accepted T3 commit.
