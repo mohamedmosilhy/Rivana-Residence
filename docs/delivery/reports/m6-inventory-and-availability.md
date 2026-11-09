@@ -1,6 +1,6 @@
 # M6: Inventory, date prices, and availability
 
-Status: **In progress (3/10 tasks accepted)**, 2026-11-08. M6-T1, M6-T2, and M6-T3 are accepted; M6-T4 through M6-T10 have not started. The milestone has not been accepted or merged.
+Status: **In progress (4/10 tasks accepted)**, 2026-11-09. M6-T1 through M6-T4 are accepted; M6-T5 through M6-T10 have not started. The milestone has not been accepted or merged.
 
 Branch: `m6-inventory-and-availability`. The owner requested this spelling when accepting T1; the original local `m6-Inventory-and-availability` branch was renamed without changing its history. Build spec: [0003](../../specs/0003-m6-inventory-and-availability.md). Task status belongs to the [brief](../milestones/m6-inventory-and-availability.md#task-breakdown).
 
@@ -11,8 +11,9 @@ Branch: `m6-inventory-and-availability`. The owner requested this spelling when 
 | M6-T1 | Critical | Owner, 2026-11-08 | `4334654` | [2026-11-08-m6-t1.md](../../reviews/2026-11-08-m6-t1.md) | Check passed: 54 unit files / 1,070 tests and build; integration passed: 20 files / 243 tests; focused: 6 files / 157 tests | Shared values, public stay policy, explicit branch date conversion; independent review approved with no findings |
 | M6-T2 | Critical | Owner, 2026-11-08 | `feat(domain): add M6-T2 inventory and pricing rules` (this task commit) | [2026-11-08-m6-t2.md](../../reviews/2026-11-08-m6-t2.md) | Check passed: 57 unit files / 1,143 tests and build; integration passed: 20 files / 243 tests; focused: 3 files / 73 tests; runtime: 8 assertions | Pure availability, nightly price resolution, block and deactivation projection; independent review approved with no findings and 1,000 capacity oracle scenarios passed |
 | M6-T3 | Critical | Owner, 2026-11-08 | `feat(db): add M6-T3 inventory and rates migration and demo seed` (this task commit) | [2026-11-08-m6-t3.md](../../reviews/2026-11-08-m6-t3.md) | Check passed: 57 unit files / 1,143 tests and build; integration passed: 21 files / 271 tests; migration rehearsal on M5 data and drift check inside that suite | Four tables, `BlockReason`, CHECKs, two GiST exclusion constraints, composite ownership FKs; guarded demo inventory seed; independent review (Opus) requested changes, one major docs finding and minors fixed before acceptance |
+| M6-T4 | Critical | Owner, 2026-11-09 | `feat(inventory): add M6-T4 transaction guard foundation` (this task commit) | [2026-11-09-m6-t4.md](../../reviews/2026-11-09-m6-t4.md) | Check passed: 59 unit files / 1,157 tests and build; integration passed: 24 files / 289 tests; concurrency: 3 cases × 20 iterations | Transaction bound ports, `READ COMMITTED` unit of work, sorted room type lock, complete inventory reader, guard, and empty M6 consumption adapter; fresh model review approved with no open findings |
 
-The current task commit is identified by its unique subject in the log row. Locate its hash with `git log --oneline --fixed-strings --grep='feat(domain): add M6-T2 inventory and pricing rules'` (likewise for T3 with `feat(db): add M6-T3 inventory and rates migration and demo seed`).
+Task commits identified by subject in this log can be located with `git log --oneline --fixed-strings --grep='<subject>'`.
 
 ## Outcome
 
@@ -24,13 +25,18 @@ T2 implements the pure inventory and pricing rules. `AvailabilityCalculator` che
 
 `checkInventoryReduction` rejects overlapping blocks and consuming physical assignments, then compares sold with projected capacity on sparse supplied sold dates. Block replacement and inactive or already blocked units do not subtract capacity twice. Deactivation starts at an explicit branch date without a public horizon shortcut. Long block ranges never expand empty calendar dates. These functions perform no database access, authorization, locking, or writes.
 
+T4 adds the transaction and locking foundation used by later inventory writers. `ReservationUnitOfWork` binds only the ports a use case needs to one Prisma transaction at `READ COMMITTED`. A failed result is converted into an internal abort so Prisma rolls back instead of committing it; unexpected exceptions still propagate to the redacted HTTP failure path. `InventoryLock` deduplicates and sorts room type ids, takes `FOR NO KEY UPDATE` locks with a five second PostgreSQL timeout, verifies complete branch ownership, and maps lock timeout to `TRY_AGAIN`.
+
+The batched inventory reader returns every requested listing and night, including zero capacity, and merges checked sparse consumption contributions. M6's production consumption adapter intentionally returns none until reservation persistence arrives in M8. `InventoryGuard` enforces lock, reload, validation, mutation, and audit order inside the same unit of work. T4 provides the foundation and tests, but no production unit or block writer is composed before T5 and T6.
+
 ## Scope delivered
 
 - M6-T1: date, stay, public policy, occupancy, and money foundation, accepted by the owner.
 - M6-T2: pure availability, nightly price resolution, and inventory reduction rules, accepted by the owner.
-- Domain portions of AC-1, AC-3, AC-4, and AC-6. HTTP and database parts of those criteria remain planned.
+- T2 covers the domain portions of AC-1, AC-3, AC-4, and AC-6. Later tasks still own concrete writers and endpoints.
 - M6-T3: migration `20261108120000_inventory_and_rates` (`PhysicalRoom`, `InventoryBlock`, `RoomBaseRate`, `RatePeriod`, constraints) and the guarded demo inventory seed, accepted by the owner.
-- Domain-to-database wiring, transactions, locks, APIs, and screens remain future work. T4 through T10 have not started.
+- M6-T4: generic reservation unit of work, inventory lock and reader ports and Prisma adapters, inventory guard, safe conflict mapping, and deterministic concurrency harness, accepted by the owner.
+- Concrete unit, block, rate, and availability use cases, composition, APIs, and screens remain future work. T5 through T10 have not started.
 
 ## Files by responsibility
 
@@ -38,12 +44,17 @@ T2 implements the pure inventory and pricing rules. `AvailabilityCalculator` che
 - Domain (T2): `src/domain/inventory/{availability-calculator,inventory-reduction,index}.ts` and `src/domain/pricing/{nightly-price-resolver,index}.ts`. Cross-module callers use the public exports.
 - Tests (T1): five suites in `tests/unit/domain/`, plus branch date cases in `tests/unit/content/zoned-time.test.ts`.
 - Tests (T2): `tests/unit/domain/{availability-calculator,inventory-reduction,nightly-price-resolver}.test.ts`, 73 tests.
-- Evidence: independent T1 and T2 reports in `docs/reviews/`; topic documentation, test matrix, quality gates, and progress summaries synchronized on owner acceptance.
-- Durable context: additive root `AGENTS.md` rules point to the shared values and pure inventory/pricing exports and preserve sparse reduction checks. No new nested context file is needed for these small domain modules.
+- Application (T4): `src/application/reservations/ports.ts`, `src/application/inventory/{ports,inventory-guard}.ts`, and their public exports; typed inventory conflict context in `src/application/shared/result.ts`.
+- Infrastructure and HTTP (T4): Prisma unit of work, inventory lock, batched reader, empty consumption adapter, SQLSTATE extraction, and the shared problem mapping.
+- Tests (T4): unit guard and HTTP tests plus real PostgreSQL unit of work, inventory reader, and concurrency suites under `tests/integration/reservations/`.
+- Evidence: independent task reports in `docs/reviews/`; topic documentation, test matrix, quality gates, and progress summaries synchronized on owner acceptance.
+- Durable context: root rules point to the shared values, pure rules, and guard transaction boundary. `tests/integration/reservations/AGENTS.md` records the new concurrency test conventions.
 
 ## Architecture, migrations, and configuration
 
 T1 stays in the shared domain layer and its tests; T2 adds the pure inventory and pricing modules and their public exports. Neither task adds dependencies, ports, use cases, database tables, migrations, API contracts, seed data, or environment variables. Neither task introduces persistence, an authorization entry point, an inventory writer, or an external call.
+
+T4 adds application ports and orchestration plus transaction bound Prisma infrastructure. It adds no table, migration, dependency, environment variable, endpoint, production writer, authorization entry point, or external call. The shared HTTP layer now recognizes the typed inventory conflict, but no M6 endpoint uses it yet.
 
 Calendar arithmetic uses integer day numbers rather than instants. The supported wire format is strict `YYYY-MM-DD`, Gregorian AD years 0001 through 9999. The 30 night limit and 540 day arrival horizon are the accepted Q-09 defaults and are configurable inputs to the public validator. Long structural ranges are valid independently of that public policy.
 
@@ -117,18 +128,43 @@ Verification used Node **22.23.2** (installed in a scratch directory because the
 
 - `npm run check` exited 0: formatting, lint, typecheck, **57 unit files / 1,143 tests**, production build (the existing `StorageSecurityError` trace warning is unchanged).
 - `TEST_DATABASE_URL=… npx vitest run --config vitest.integration.config.ts` passed **21 files / 271 tests**, including `inventory-constraints.test.ts` (23 tests: overlap matrix, adjacency, cancelled blocks, inactive periods, ranges, nonpositive and overflowing amounts, non-USD, duplicate labels, cross-branch ownership, `RESTRICT` behavior, and 20 race iterations per exclusion constraint on separate connections), the M5-copy migration rehearsal (every existing row identical, no new data, `btree_gist` installed), the Prisma drift check, and the seed tests (fresh, repeated, and upgraded demo runs; staff edits preserved; production refusal before any write through the real `seed.mts`).
-- Findings from running them: `RESTRICT` reports SQLSTATE `23001`, not `23503`; two uncommitted overlapping inserts end as the exclusion violation `23P01` or a deadlock `40P01`, with exactly one commit. The T4 lock covers blocks; rate periods take no lock, so M6-T7 must decide whether to map `40P01` or lock the listing.
+- Findings from running them: `RESTRICT` reports SQLSTATE `23001`, not `23503`; two uncommitted overlapping inserts end as the exclusion violation `23P01` or a deadlock `40P01`, with exactly one commit. T4 supplies the lock that T6 block writers must use; rate periods take no lock, so M6-T7 must decide whether to map `40P01` or lock the listing.
 - E2E not run: no routes or screens changed.
+
+## M6-T4 commands and results
+
+Verification used Node **22.23.2**, npm **11.21.0**, and disposable real PostgreSQL databases.
+
+```sh
+npm exec --yes --package=node@22.23.2 -- npm run check
+```
+
+Passed formatting, lint and architecture boundaries, typecheck, **59 unit files / 1,157 tests**, and the production build. The build retained the existing unrelated Turbopack dynamic filesystem tracing warning at `src/infrastructure/media/local-media-storage.ts:74`.
+
+```sh
+TEST_DATABASE_URL=postgresql://mohamedmosilhy@127.0.0.1:5432/rivana_test npm exec --yes --package=node@22.23.2 -- npm run test:integration -- --reporter=dot
+```
+
+Passed **24 integration files / 289 tests**. Expected Better Auth warnings from negative authentication cases did not fail the suite.
+
+```sh
+TEST_DATABASE_URL=postgresql://mohamedmosilhy@127.0.0.1:5432/rivana_test npm exec --yes --package=node@22.23.2 -- npm run test:integration -- --reporter=dot tests/integration/reservations/concurrency.test.ts
+```
+
+Passed **1 file / 3 tests**. Each case ran 20 iterations: reversed multi listing lock order without a deadlock, same listing wait followed by a fresh committed read, and independent locking across branches. The suite uses separate clients and observes real PostgreSQL lock waits instead of relying on sleeps.
+
+Direct runtime verification additionally proved that a failed result rolls back writes, missing or foreign listings stay hidden as `NOT_FOUND`, a held row lock becomes `TRY_AGAIN` after the configured timeout, the serializer returns `503` with `Retry-After: 5`, and `INVENTORY_UNAVAILABLE` exposes only the typed safe context. The temporary verification script was removed. `git diff --check` passed. E2E, migration drift, and OpenAPI generation were not applicable because T4 adds no route, page, schema change, migration, or endpoint contract.
 
 ## Acceptance criteria and evidence
 
-| Criterion | Accepted T1/T2 evidence and remaining scope |
+| Criterion | Accepted T1 through T4 evidence and remaining scope |
 | --- | --- |
 | AC-1 | T1 covers integer money arithmetic; T2's resolver produces 26000 cents for the worked example and 52000 cents for quantity 2. Public P5 proof remains T10 |
-| AC-3 | T-DATE-1 through T-DATE-8 cover strict dates, leap and century rules, positive ranges, adjacency, partial and contained overlap, policy limits, branch today, and Cairo DST. Database block constraints arrive later |
-| AC-4 | T2 covers pure sold-versus-projected-capacity refusal, earliest conflict date, overlapping blocks, and consuming assignments. Database locking, writes, and HTTP 409 mapping remain later tasks |
-| AC-6 | T2 covers zero/missing capacity, explicit unpriced nights, and null totals for gaps. Persistence and public response mapping remain later tasks |
-| AC-2, AC-5, AC-7, AC-8 | Remain in the brief's later tasks; pure calculations alone do not satisfy database, concurrency, authorization, audit, or public disclosure requirements. No milestone completion is claimed |
+| AC-3 | T-DATE-1 through T-DATE-8 cover strict dates, leap and century rules, positive ranges, adjacency, partial and contained overlap, policy limits, branch today, and Cairo DST. T3 adds block range and overlap constraints; block write workflows remain T6 |
+| AC-4 | T2 covers pure sold versus projected capacity refusal, earliest conflict date, overlapping blocks, and consuming assignments. T4 proves the shared guard order, transaction rollback, typed 409 mapping, and injected sold and assignment refusal. Concrete writers remain T5 and T6 |
+| AC-5 | T4 proves sorted complete set locking, real waiting and fresh reads, five second timeout mapping, rollback of mutation and audit, and branch independent locking. Writer versus writer cases remain T5 and T6 |
+| AC-6 | T2 covers zero or missing capacity, explicit unpriced nights, and null totals for gaps. T4's batched reader retains every requested zero capacity night and validates sparse consumption. Public response mapping remains T10 |
+| AC-2, AC-7, AC-8 | Database constraints for AC-2 arrived in T3, while coherent rate writes, authorization, audit use cases, and public disclosure remain in later tasks. No milestone completion is claimed |
 
 ## Independent review and owner acceptance
 
@@ -140,10 +176,12 @@ The owner accepted M6-T2 on 2026-11-08 after its review package. `gpt-6-astra` i
 
 M6-T3 was independently reviewed by Opus (author: Sonnet; an earlier session began the implementation). Verdict: **Changes requested** (one major: `data-model.md` not reconciled; four minors; five nits). The major and the cheap minors were fixed and the gates rerun; the remaining minors (partial-upgrade rollback test strength, race barrier) and nits are accepted as is. Full report: [2026-11-08-m6-t3.md](../../reviews/2026-11-08-m6-t3.md). The owner accepted M6-T3 on 2026-11-08 and authorized the documentation sync and commit, without starting T4. No push or merge is authorized.
 
+M6-T4 received a fresh model review against the approved critical risk task card. The first pass found two test coverage gaps: the audit rollback case did not exercise the real guard and persistence path, and several refusal paths lacked direct coverage. The tests were expanded for real guard rollback, foreign listings, invalid consumption contributions, failed loads, and assigned units. The reviewer reran the affected unit, architecture, and integration suites and then returned **Approve** with no open findings. Full report: [2026-11-09-m6-t4.md](../../reviews/2026-11-09-m6-t4.md). The owner accepted M6-T4 on 2026-11-09 and authorized this documentation sync and task commit, explicitly without starting T5. No push or merge is authorized.
+
 ## Known limitations and deferred work
 
-The values and pure rules are not yet wired into reservation use cases or public APIs. M6's remaining tasks still need their own plan approvals, implementation, verification, independent review, and owner acceptance. The sold adapter, lock proof, persisted physical units, blocks, rates, and availability endpoints have not been built. Callers must eventually enforce branch scope and load reduction inputs under the listing lock. Rate authoring must enforce the positive PostgreSQL `INTEGER` bound; generic `Money` and the resolver remain calculation values. Persisted snapshot immutability and manual override authorization belong to M8.
+The values and pure rules are not yet wired into concrete inventory use cases or public APIs. M6's remaining tasks still need their own plan approvals, implementation, verification, independent review, and owner acceptance. Persisted physical unit and block repositories, rate use cases, composition, and availability endpoints have not been built. The M6 reservation consumption adapter intentionally reports no sold or assigned rows; M8 replaces it with persisted consumption inside the same transaction context. T4's harness proves the shared lock protocol, not the later block versus block or block versus deactivation writer races. Rate authoring must enforce the positive PostgreSQL `INTEGER` bound; generic `Money` and the resolver remain calculation values. Persisted snapshot immutability and manual override authorization belong to M8.
 
 ## Next milestone
 
-M7 has not started. M6-T4 has not started; stop after the accepted T3 commit.
+M7 has not started. M6-T5 has not started; stop after the accepted T4 commit.

@@ -4,7 +4,7 @@ Planned tests for branch websites, reservations, payments, and messaging, by lay
 
 ## Implemented so far
 
-M4 (2026-11-06), M5 (2026-11-07), and accepted tasks M6-T1 and M6-T2 (2026-11-08) implemented the coverage listed here; everything else below is still planned.
+M4 (2026-11-06), M5 (2026-11-07), and accepted tasks M6-T1 through M6-T4 (latest 2026-11-09) implemented the coverage listed here; everything else below is still planned.
 
 | Id | Where |
 | --- | --- |
@@ -12,6 +12,9 @@ M4 (2026-11-06), M5 (2026-11-07), and accepted tasks M6-T1 and M6-T2 (2026-11-08
 | Occupancy and money foundation (M6-T1) | `tests/unit/domain/occupancy.test.ts` and `money.test.ts`: safe integer counts, per-unit eligibility, USD cents, zero, checked addition and multiplication, overflow, and immutable values. Full quote composition remains planned |
 | T-AV-1…6, domain reduction cases (M6-T2) | `tests/unit/domain/availability-calculator.test.ts` and `inventory-reduction.test.ts`: nightly quantity checks, missing and oversold inventory, invalid counts, chronological failures, block and assignment overlap, replacement, inactive and already blocked units, explicit deactivation dates, and sparse long ranges. Empty stays are rejected by T1's `StayRange`. No database concurrency proof is claimed |
 | Applicable T-PR-1…6 (M6-T2) | `tests/unit/domain/nightly-price-resolver.test.ts`: base fallback, active period boundaries and overlap rejection, inactive periods, unpriced gaps, the 26000-cent worked example, quantity multiplication, checked overflow, and immutable resolved values. Persisted reservation snapshot immutability and manual override authorization remain M8 tests |
+| Inventory schema foundation (M6-T3) | `tests/integration/inventory-constraints.test.ts`, schema, seed, and migration suites: range and amount checks, GiST overlap exclusions, adjacency, inactive or cancelled rows, ownership, delete restrictions, migration rehearsal, drift, and safe repeated demo seeding |
+| Inventory transaction foundation (M6-T4) | `tests/unit/application/inventory-guard.test.ts` and `tests/integration/reservations/{unit-of-work,inventory-reader}.test.ts`: guard ordering and refusal, same connection and `READ COMMITTED`, rollback of mutation and audit, hidden foreign listings, complete zero capacity nights, sparse consumption validation, and real five second timeout mapping |
+| Inventory lock harness (M6-T4) | `tests/integration/reservations/concurrency.test.ts`: 20 iterations each for reversed multi listing lock order, observable same listing wait with a fresh committed read, and independent branch locking |
 | T-AUTHZ-1 | `tests/unit/auth/authorization.test.ts` (four roles × every capability), `authorize-branch.test.ts`, and the sweep extended to Receptionist and Manager in `authorization-sweep.test.ts` |
 | T-ARCH-1…4 | `tests/unit/architecture/module-boundaries.test.ts` (D-7, D-8, D-11), `persistence-boundaries.test.ts` (D-9, D-12), `route-handlers.test.ts` (D-10), `openapi.test.ts` (freshness) |
 | T-HTTP-1…6 | `tests/unit/api/http-layer.test.ts` (415, 413 declared and streamed, 400, 422, 403 cross-site, 401; webhook raw body; 500 without leakage; log redaction); `tests/integration/health-route.test.ts` |

@@ -6,6 +6,7 @@ import type {
 export type ApplicationErrorCode =
   | "CONFLICT"
   | "FORBIDDEN"
+  | "INVENTORY_UNAVAILABLE"
   | "RATE_LIMITED"
   | "UNAUTHENTICATED"
   | "INVALID_CREDENTIALS"
@@ -15,11 +16,31 @@ export type ApplicationErrorCode =
   | "TRY_AGAIN"
   | "VALIDATION";
 
-export type ApplicationError = Readonly<{
-  code: ApplicationErrorCode;
+type StandardApplicationErrorCode = Exclude<
+  ApplicationErrorCode,
+  "INVENTORY_UNAVAILABLE"
+>;
+
+type StandardApplicationError = Readonly<{
+  code: StandardApplicationErrorCode;
   message: string;
   fieldErrors?: Readonly<Record<string, readonly string[]>>;
+  context?: never;
 }>;
+
+export type InventoryUnavailableError = Readonly<{
+  code: "INVENTORY_UNAVAILABLE";
+  message: string;
+  context: Readonly<{
+    firstUnavailableNight: string;
+    roomTypeId: string;
+  }>;
+  fieldErrors?: never;
+}>;
+
+export type ApplicationError =
+  | StandardApplicationError
+  | InventoryUnavailableError;
 
 export type Result<T, E = ApplicationError> =
   | Readonly<{ ok: true; value: T }>
@@ -30,7 +51,7 @@ export function success<T>(value: T): Result<T> {
 }
 
 export function failure(
-  code: ApplicationErrorCode,
+  code: StandardApplicationErrorCode,
   message: string,
   fieldErrors?: Readonly<Record<string, readonly string[]>>,
 ): Result<never> {
@@ -40,6 +61,20 @@ export function failure(
       code,
       message,
       ...(fieldErrors ? { fieldErrors } : {}),
+    },
+  };
+}
+
+export function inventoryUnavailable(
+  roomTypeId: string,
+  firstUnavailableNight: string,
+): Result<never> {
+  return {
+    ok: false,
+    error: {
+      code: "INVENTORY_UNAVAILABLE",
+      message: "The requested inventory is no longer available.",
+      context: { firstUnavailableNight, roomTypeId },
     },
   };
 }

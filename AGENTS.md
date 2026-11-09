@@ -60,7 +60,7 @@ npm run staff -- create --email … --name … --role ADMIN   # passwords via pr
 - **REST APIs are Next.js Route Handlers** under `src/app/api/v1`, kept thin: parse, call one use case, map the result. Server Actions are fine for CMS forms but **never replace the reservation REST API**.
 - **Business logic lives in `src/domain` and `src/application`** (per-module folders). Never put complex workflows in Route Handlers, pages, components, or Server Actions.
 - **Reuse the shared reservation values** in `src/domain/shared/{local-date,stay-range,stay-policy,occupancy,money}.ts`. Keep public stay limits separate from structural date ranges; derive branch today with `localDateAt(clock.now(), branch.timeZone)` from `src/domain/shared/zoned-time.ts`.
-- **Reuse the pure inventory and nightly pricing rules** through `src/domain/inventory/index.ts` and `src/domain/pricing/index.ts`. Reduction checks use sparse sold dates and assignment ranges, without expanding empty dates or imposing the public booking horizon. These calculations do not acquire locks; future writers must load their inputs under the listing lock.
+- **Reuse the pure inventory and nightly pricing rules** through `src/domain/inventory/index.ts` and `src/domain/pricing/index.ts`. Reduction checks use sparse sold dates and assignment ranges, without expanding empty dates or imposing the public booking horizon. These calculations do not acquire locks; availability-reducing writes must run through `InventoryGuard` and load their inputs under `InventoryLock` inside `ReservationUnitOfWork`.
 - **Follow [docs/architecture/dependency-rules.md](./docs/architecture/dependency-rules.md).** Prisma only in `src/infrastructure/db`; infrastructure is constructed only in `src/composition`; presentation never imports infrastructure; domain imports no framework.
 - **Server-only code stays out of client bundles** (`import "server-only"`; the lint rules).
 - **Enforce authentication, capabilities, and branch scope on the server**, inside use cases (`authorize`, `authorizeBranch`). Hidden buttons are not security.
@@ -107,3 +107,4 @@ Claude Code loads the same skills from `.claude/skills/`. Project rules above ov
 <!-- Nested AGENTS.md files are listed here as they are created -->
 
 - [src/app/api/AGENTS.md](src/app/api/AGENTS.md): Route Handler rules for `/api/v1` (wrappers, thin handlers, contracts and OpenAPI)
+- [tests/integration/reservations/AGENTS.md](tests/integration/reservations/AGENTS.md): real PostgreSQL transaction and concurrency test conventions

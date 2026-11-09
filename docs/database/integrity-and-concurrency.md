@@ -1,6 +1,6 @@
 # Data integrity and concurrency
 
-Status: **Planned**, design accepted 2026-10-24 (ADR 016, ADR 022), extended 2026-11-06 for several units per booking, payment holds, late payment results, and coupon limits (ADR 024, 025, 027). This document specifies how overselling and limit breaches are prevented and how that is proven.
+Status: **Partly implemented**, design accepted 2026-10-24 (ADR 016, ADR 022), extended 2026-11-06 for several units per booking, payment holds, late payment results, and coupon limits (ADR 024, 025, 027). M6-T3 implements the inventory constraints and M6-T4 implements the shared transaction, listing lock, capacity read, and guard foundation. Concrete inventory and reservation writers remain planned.
 
 ## Threats to consistency
 
@@ -108,9 +108,13 @@ Raw SQL is parameterized through Prisma's tagged `$queryRaw` and lives only in `
 4. Lock timeout: `SET LOCAL lock_timeout = '5s'`. On timeout the request fails with `503 TRY_AGAIN` rather than piling up.
 5. Read paths (public availability search, staff grid) take no locks. They can show availability that is gone a millisecond later, which is acceptable because creation re-checks.
 
+**Implemented in M6-T4:** `PrismaReservationUnitOfWork` uses an explicit `READ COMMITTED` interactive transaction and rolls back both failed results and exceptions. `PrismaInventoryLock` deduplicates and sorts ids, applies the local five second timeout, locks the complete branch scoped listing set, and maps SQLSTATE `55P03` to `TRY_AGAIN`. `InventoryGuard` keeps load, validation, mutation, and audit in that transaction. Later writer tasks must compose their concrete ports through this guard.
+
 ## Proof plan (integration tests on real PostgreSQL)
 
-**Implemented in M6-T3** (`tests/integration/inventory-constraints.test.ts`): the structural constraints (overlap exclusion for blocks and rate periods, ranges, positive USD amounts, branch-unique labels, composite ownership, `RESTRICT` deletes and moves) are tested directly on PostgreSQL, including 20 races per exclusion constraint on separate connections. Two uncommitted overlapping inserts wait on each other, so PostgreSQL ends the race as either the exclusion violation (`23P01`) or a detected deadlock (`40P01`); exactly one commits either way. M6-T4's room-type lock serialises block writers so the loser gets a clean domain error instead of a deadlock. Rate-period creates take no lock in the current design, so overlapping period creates can still deadlock; M6-T7 must decide whether to map `40P01` to a conflict or lock the listing on period create. `RESTRICT` ownership violations report `23001`, not `23503`. The reusable lock harness and C-1…C-11 follow in later tasks.
+**Implemented in M6-T3** (`tests/integration/inventory-constraints.test.ts`): the structural constraints (overlap exclusion for blocks and rate periods, ranges, positive USD amounts, branch-unique labels, composite ownership, `RESTRICT` deletes and moves) are tested directly on PostgreSQL, including 20 races per exclusion constraint on separate connections. Two uncommitted overlapping inserts wait on each other, so PostgreSQL ends the race as either the exclusion violation (`23P01`) or a detected deadlock (`40P01`); exactly one commits either way. Rate period creates take no lock in the current design, so overlapping period creates can still deadlock; M6-T7 must decide whether to map `40P01` to a conflict or lock the listing on period create. `RESTRICT` ownership violations report `23001`, not `23503`.
+
+**Implemented in M6-T4** (`tests/integration/reservations/`): the reusable harness creates independent clients, coordinates overlap with barriers, and observes PostgreSQL lock waits. Twenty iterations prove deterministic reverse order lock requests do not deadlock, a waiter reads fresh committed state after acquiring the same listing lock, and another branch locks and commits independently. Unit of work tests prove one connection, `READ COMMITTED`, rollback of mutation and audit, hidden foreign listings, and real timeout mapping. Inventory reader tests prove complete zero capacity rows and fail closed consumption merging. Concrete C-1 through C-15 writer races remain in their owning later tasks.
 
 | Test | Setup | Action | Expected |
 | --- | --- | --- | --- |

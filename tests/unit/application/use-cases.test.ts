@@ -1,7 +1,12 @@
 import { describe, expect, it } from "vitest";
 
 import { ResolveBooking } from "@/application/booking/resolve-booking";
-import { failure, notPublishable, success } from "@/application/shared/result";
+import {
+  failure,
+  inventoryUnavailable,
+  notPublishable,
+  success,
+} from "@/application/shared/result";
 import { DomainValidationError } from "@/domain/shared/domain-error";
 import { DisabledBookingProvider } from "@/infrastructure/booking/disabled-booking-provider";
 import { isCompleteOrder } from "@/infrastructure/db/prisma/ordering";
@@ -12,6 +17,20 @@ describe("results", () => {
     expect(failure("NOT_FOUND", "Missing.")).toEqual({
       ok: false,
       error: { code: "NOT_FOUND", message: "Missing." },
+    });
+  });
+
+  it("builds inventory failures with only the approved safe context", () => {
+    expect(inventoryUnavailable("room-1", "2027-01-10")).toEqual({
+      ok: false,
+      error: {
+        code: "INVENTORY_UNAVAILABLE",
+        message: "The requested inventory is no longer available.",
+        context: {
+          firstUnavailableNight: "2027-01-10",
+          roomTypeId: "room-1",
+        },
+      },
     });
   });
 

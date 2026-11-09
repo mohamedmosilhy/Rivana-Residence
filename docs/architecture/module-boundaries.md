@@ -1,8 +1,8 @@
 # Module boundaries
 
-Status: **Planned**, design accepted 2026-10-24 (ADR 015), extended 2026-11-06 (ADRs 024–028). Modules marked *(implemented)* exist today; the rest are planned.
+Status: **Partly implemented**, design accepted 2026-10-24 (ADR 015), extended 2026-11-06 (ADRs 024–028). Modules marked *(implemented)* exist today; the rest are planned.
 
-**M6-T2 implemented domain portion (accepted 2026-11-08):** `src/domain/inventory/index.ts` exports `AvailabilityCalculator` and `checkInventoryReduction`; `src/domain/pricing/index.ts` exports `NightlyPriceResolver`. These modules contain pure rules and immutable records only. Their application ports, tables, repositories, locking, and endpoints below remain planned. See the [M6 report](../delivery/reports/m6-inventory-and-availability.md).
+**M6 implemented portions:** T2 added the pure `AvailabilityCalculator`, `checkInventoryReduction`, and `NightlyPriceResolver` exports. T3 added the inventory and rate tables. T4 added reservation unit of work and inventory ports, `InventoryGuard`, and transaction bound Prisma adapters for listing locks, capacity reads, and the intentionally empty M6 reservation consumption source. Concrete inventory and pricing repositories, use cases, composition, and endpoints remain planned. See the [M6 report](../delivery/reports/m6-inventory-and-availability.md).
 
 | Module | Responsibility | Owns (tables) | Public interface (application) | May depend on |
 | --- | --- | --- | --- | --- |
