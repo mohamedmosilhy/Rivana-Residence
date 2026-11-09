@@ -31,6 +31,26 @@ export type AuditChanges = {
     active?: Readonly<{ from: boolean; to: boolean }>;
     notesChanged?: true;
   }>;
+  /** A unit block was created (M6-T6). Notes are never stored in audit. */
+  "inventory-block.created": Readonly<{
+    physicalRoomId: string;
+    roomTypeId: string;
+    startDate: string;
+    endDate: string;
+    reason: string;
+    noteChanged: boolean;
+  }>;
+  /** End date keeps before and after; a note edit only flags a change. */
+  "inventory-block.updated": Readonly<{
+    endDate?: Readonly<{ from: string; to: string }>;
+    noteChanged?: true;
+  }>;
+  /** A block was soft cancelled; the record keeps who and when. */
+  "inventory-block.cancelled": Readonly<{
+    physicalRoomId: string;
+    startDate: string;
+    endDate: string;
+  }>;
 };
 
 export type AuditAction = keyof AuditChanges;
@@ -41,7 +61,7 @@ export type AuditEvent<A extends AuditAction = AuditAction> = Readonly<{
   /** Staff user id or guest id; null for SYSTEM (the CLI, scheduled jobs). */
   actorId: string | null;
   action: A;
-  entityType: "User" | "Branch" | "PhysicalRoom";
+  entityType: "User" | "Branch" | "PhysicalRoom" | "InventoryBlock";
   entityId: string;
   branchId: string | null;
   reason: string | null;

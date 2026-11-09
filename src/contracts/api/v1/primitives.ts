@@ -3,7 +3,7 @@ import { z } from "zod";
 // Shared HTTP DTO building blocks (ADR 014, ADR 020). Zod only (D-7), so
 // these are safe in client bundles.
 
-const isoDate = z
+export const isoDate = z
   .string()
   .regex(/^\d{4}-\d{2}-\d{2}$/, "Use the YYYY-MM-DD format.")
   .refine(

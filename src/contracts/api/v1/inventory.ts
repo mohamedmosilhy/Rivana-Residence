@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import { isoDate } from "./primitives";
+
 // Physical unit DTOs (API-S21…S23; spec 0003, M6-T5). Zod only (D-7).
 
 const label = z
@@ -64,3 +66,64 @@ export const PhysicalRoomPatch = z
   );
 
 export type PhysicalRoomDto = z.infer<typeof PhysicalRoom>;
+
+// Block DTOs (API-S24…S27; spec 0003, M6-T6).
+
+const blockNote = z
+  .string()
+  .trim()
+  .max(500, "Use at most 500 characters.")
+  .nullable();
+
+export const BlockReason = z.enum(["MAINTENANCE", "OWNER_USE", "OTHER"]);
+
+export const Block = z
+  .object({
+    id: z.string(),
+    branchId: z.string(),
+    physicalRoomId: z.string(),
+    startDate: isoDate.describe("First blocked night (YYYY-MM-DD)."),
+    endDate: isoDate.describe("Exclusive end (YYYY-MM-DD)."),
+    reason: BlockReason,
+    note: z.string().nullable(),
+    cancelledAt: z.string().nullable().describe("UTC instant (ISO 8601)."),
+    createdAt: z.string().describe("UTC instant (ISO 8601)."),
+  })
+  .describe("A maintenance, owner use, or other block on one unit.");
+
+export const BlockList = z.object({ items: z.array(Block) });
+
+// Shape only: the use case checks the calendar and the 62 night window, so an
+// impossible date or an oversized window is a 422 like every other range error.
+const queryDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Use YYYY-MM-DD.");
+
+export const BlockQuery = z
+  .object({
+    from: queryDate,
+    to: queryDate.describe("Exclusive end; at most 62 nights after from."),
+  })
+  .strict();
+
+export const BlockInput = z
+  .object({
+    physicalRoomId: z.string().min(1),
+    startDate: isoDate,
+    endDate: isoDate,
+    reason: BlockReason,
+    note: blockNote.optional(),
+  })
+  .strict();
+
+export const BlockPatch = z
+  .object({
+    endDate: isoDate.optional(),
+    note: blockNote
+      .optional()
+      .describe("Null, empty, or whitespace only clears the note."),
+  })
+  .strict()
+  .refine((value) => value.endDate !== undefined || value.note !== undefined, {
+    message: "Change at least one field.",
+  });
+
+export type BlockDto = z.infer<typeof Block>;

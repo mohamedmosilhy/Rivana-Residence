@@ -26,3 +26,10 @@ export type {
   PhysicalRoomRepository,
   RoomTypeCatalog,
 } from "./ports";
+export { ManageBlocks, type BlockContext } from "./manage-blocks";
+export type {
+  BlockChange,
+  BlockCreate,
+  BlockRecord,
+  BlockRepository,
+} from "./ports";

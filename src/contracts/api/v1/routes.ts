@@ -13,6 +13,11 @@ import {
 } from "./branches";
 import { HealthResponse } from "./health";
 import {
+  Block,
+  BlockInput,
+  BlockList,
+  BlockPatch,
+  BlockQuery,
   PhysicalRoom,
   PhysicalRoomInput,
   PhysicalRoomList,
@@ -211,6 +216,85 @@ export const API_ROUTES: readonly ApiRoute[] = [
       "CONFLICT",
       "INVENTORY_UNAVAILABLE",
       "VALIDATION",
+      "TRY_AGAIN",
+    ],
+  },
+  {
+    method: "get",
+    path: "/api/v1/staff/branches/{branchId}/blocks",
+    operationId: "listBlocks",
+    summary:
+      "API-S24. Uncancelled blocks overlapping a window of at most 62 nights (exclusive end). Needs inventory:read.",
+    tag: "Inventory",
+    security: "staff",
+    query: BlockQuery,
+    responses: {
+      200: { description: "The overlapping blocks.", schema: BlockList },
+    },
+    errors: ["UNAUTHENTICATED", "FORBIDDEN", "NOT_FOUND", "VALIDATION"],
+  },
+  {
+    method: "post",
+    path: "/api/v1/staff/branches/{branchId}/blocks",
+    operationId: "createBlock",
+    summary:
+      "API-S25. Block one unit (inventory:block). Never oversells: it takes the listing lock and refuses with INVENTORY_UNAVAILABLE naming the first night. Overlap on the unit is a CONFLICT. Audited. Returns Location.",
+    tag: "Inventory",
+    security: "staff",
+    request: BlockInput,
+    responses: {
+      201: { description: "The new block.", schema: Block },
+    },
+    errors: [
+      "UNAUTHENTICATED",
+      "FORBIDDEN",
+      "CROSS_SITE_REQUEST",
+      "NOT_FOUND",
+      "CONFLICT",
+      "INVENTORY_UNAVAILABLE",
+      "VALIDATION",
+      "TRY_AGAIN",
+    ],
+  },
+  {
+    method: "patch",
+    path: "/api/v1/staff/blocks/{id}",
+    operationId: "updateBlock",
+    summary:
+      "API-S26. Change a block's end date or note (inventory:block). An end date change takes the listing lock; a cancelled block cannot change. Audited.",
+    tag: "Inventory",
+    security: "staff",
+    request: BlockPatch,
+    responses: {
+      200: { description: "The updated block.", schema: Block },
+    },
+    errors: [
+      "UNAUTHENTICATED",
+      "FORBIDDEN",
+      "CROSS_SITE_REQUEST",
+      "NOT_FOUND",
+      "CONFLICT",
+      "INVENTORY_UNAVAILABLE",
+      "VALIDATION",
+      "TRY_AGAIN",
+    ],
+  },
+  {
+    method: "delete",
+    path: "/api/v1/staff/blocks/{id}",
+    operationId: "cancelBlock",
+    summary:
+      "API-S27. Soft cancel a block (inventory:block). Repeating it succeeds without another audit event. Audited.",
+    tag: "Inventory",
+    security: "staff",
+    responses: {
+      204: { description: "The block is cancelled." },
+    },
+    errors: [
+      "UNAUTHENTICATED",
+      "FORBIDDEN",
+      "CROSS_SITE_REQUEST",
+      "NOT_FOUND",
       "TRY_AGAIN",
     ],
   },

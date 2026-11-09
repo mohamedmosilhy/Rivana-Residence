@@ -60,7 +60,7 @@ describe("persistence boundaries", () => {
 // access. Only these exact declarations are exempt: a string literal that is
 // the whole value of an `entityType` property assignment, or one member of a
 // union type declared on an `entityType` property signature.
-const AUDIT_ENTITY_LABELS = ["PhysicalRoom"];
+const AUDIT_ENTITY_LABELS = ["PhysicalRoom", "InventoryBlock"];
 
 function propertyName(node: ts.Node | undefined) {
   return node && (ts.isPropertyAssignment(node) || ts.isPropertySignature(node))

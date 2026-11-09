@@ -15,6 +15,10 @@ import {
 } from "./branches";
 import { HealthResponse } from "./health";
 import {
+  Block,
+  BlockInput,
+  BlockList,
+  BlockPatch,
   PhysicalRoom,
   PhysicalRoomInput,
   PhysicalRoomList,
@@ -49,6 +53,10 @@ const COMPONENTS: Readonly<Record<string, z.ZodType>> = {
   PhysicalRoomList,
   PhysicalRoomInput,
   PhysicalRoomPatch,
+  Block,
+  BlockList,
+  BlockInput,
+  BlockPatch,
 };
 
 function componentSchemas() {

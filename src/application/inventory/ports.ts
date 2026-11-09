@@ -1,4 +1,5 @@
 import type { Result } from "@/application/shared/result";
+import type { BlockReason } from "@/domain/inventory";
 import type { LocalDate } from "@/domain/shared/local-date";
 import type { StayRange } from "@/domain/shared/stay-range";
 
@@ -133,4 +134,64 @@ export interface RoomTypeCatalog {
   ): Promise<Readonly<{ id: string; timeZone: string }> | null>;
   /** True only when the listing exists and belongs to the branch. */
   branchOwnsRoomType(branchId: string, roomTypeId: string): Promise<boolean>;
+}
+
+/** A unit block. Branch, unit, and start never change after creation. */
+export type BlockRecord = Readonly<{
+  id: string;
+  branchId: string;
+  physicalRoomId: string;
+  /** The unit's listing; used for the lock, never exposed over HTTP. */
+  roomTypeId: string;
+  range: StayRange;
+  reason: BlockReason;
+  note: string | null;
+  cancelledAt: Date | null;
+  createdAt: Date;
+}>;
+
+export type BlockCreate = Readonly<{
+  id: string;
+  branchId: string;
+  physicalRoomId: string;
+  range: StayRange;
+  reason: BlockReason;
+  note: string | null;
+  createdById: string;
+  at: Date;
+}>;
+
+export type BlockChange = Readonly<{
+  endDate?: LocalDate;
+  note?: string | null;
+}>;
+
+export interface BlockRepository {
+  /** Uncancelled blocks of the branch overlapping the window, stable order. */
+  listOverlapping(
+    branchId: string,
+    window: StayRange,
+  ): Promise<readonly BlockRecord[]>;
+  /** Plain read constrained to visible branches; null when missing or hidden. */
+  findVisible(
+    id: string,
+    visible: BranchVisibility,
+  ): Promise<BlockRecord | null>;
+  /**
+   * Locks the block row (`FOR UPDATE`) and returns the state committed after
+   * the lock. Null when hidden; TRY_AGAIN past the 5 second lock timeout.
+   */
+  lockVisible(
+    id: string,
+    visible: BranchVisibility,
+  ): Promise<Result<BlockRecord | null>>;
+  /** CONFLICT with date field errors when the unit already has an overlapping block. */
+  create(input: BlockCreate): Promise<Result<BlockRecord>>;
+  /** Changes the end date or note; CONFLICT on overlap. */
+  update(id: string, change: BlockChange): Promise<Result<BlockRecord>>;
+  /** Soft cancellation of a locked, uncancelled block. */
+  cancel(
+    id: string,
+    input: Readonly<{ cancelledById: string; at: Date }>,
+  ): Promise<Result<BlockRecord>>;
 }

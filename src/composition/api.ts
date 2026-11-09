@@ -6,7 +6,7 @@ import { CheckHealth } from "@/application/health";
 import { RateLimiter } from "@/application/shared/rate-limit";
 import { resolveStaffFromHeaders, throttleKeys } from "@/composition/auth";
 import { manageBranches } from "@/composition/content";
-import { managePhysicalRooms } from "@/composition/inventory";
+import { manageBlocks, managePhysicalRooms } from "@/composition/inventory";
 import { clientAddressFrom, isSameOriginRequest } from "@/composition/http";
 import {
   getActiveBranchBySlug,
@@ -105,4 +105,30 @@ export function updatePhysicalRoom(
   input: unknown,
 ) {
   return managePhysicalRooms().update(staff, id, input);
+}
+
+// Block API (API-S24…S27; spec 0003, M6-T6).
+
+export function listBlocks(
+  staff: StaffPrincipal,
+  branchId: string,
+  query: unknown,
+) {
+  return manageBlocks().list(staff, branchId, query);
+}
+
+export function createBlock(
+  staff: StaffPrincipal,
+  branchId: string,
+  input: unknown,
+) {
+  return manageBlocks().create(staff, branchId, input);
+}
+
+export function updateBlock(staff: StaffPrincipal, id: string, input: unknown) {
+  return manageBlocks().update(staff, id, input);
+}
+
+export function cancelBlock(staff: StaffPrincipal, id: string) {
+  return manageBlocks().cancel(staff, id);
 }

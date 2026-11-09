@@ -1,5 +1,5 @@
-import type { PhysicalRoomRecord } from "@/application/inventory";
-import type { PhysicalRoomDto } from "@/contracts/api/v1/inventory";
+import type { BlockRecord, PhysicalRoomRecord } from "@/application/inventory";
+import type { BlockDto, PhysicalRoomDto } from "@/contracts/api/v1/inventory";
 
 // Application record → HTTP DTO for physical units (M6-T5).
 export function physicalRoom(record: PhysicalRoomRecord): PhysicalRoomDto {
@@ -12,5 +12,21 @@ export function physicalRoom(record: PhysicalRoomRecord): PhysicalRoomDto {
     notes: record.notes,
     createdAt: record.createdAt.toISOString(),
     updatedAt: record.updatedAt.toISOString(),
+  };
+}
+
+// Application record → HTTP DTO for blocks (M6-T6). The listing id stays
+// internal.
+export function block(record: BlockRecord): BlockDto {
+  return {
+    id: record.id,
+    branchId: record.branchId,
+    physicalRoomId: record.physicalRoomId,
+    startDate: record.range.checkIn.value,
+    endDate: record.range.checkOut.value,
+    reason: record.reason,
+    note: record.note,
+    cancelledAt: record.cancelledAt?.toISOString() ?? null,
+    createdAt: record.createdAt.toISOString(),
   };
 }

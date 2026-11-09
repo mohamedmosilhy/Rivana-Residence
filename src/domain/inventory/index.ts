@@ -20,3 +20,15 @@ export {
   type PhysicalRoomInput,
   type PhysicalRoomPatch,
 } from "./physical-room";
+export {
+  BLOCK_NOTE_MAX,
+  BLOCK_REASONS,
+  STAFF_READ_WINDOW_MAX_NIGHTS,
+  parseBlockInput,
+  parseBlockPatch,
+  parseStaffReadWindow,
+  rangeWithEnd,
+  type BlockInput,
+  type BlockPatch,
+  type BlockReason,
+} from "./block";
