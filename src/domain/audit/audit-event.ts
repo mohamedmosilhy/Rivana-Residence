@@ -18,6 +18,19 @@ export type AuditChanges = {
   "branch.created": Readonly<{ slug: string; name: string; status: string }>;
   /** Only the fields that changed, by attribute name. */
   "branch.updated": Readonly<Record<string, FieldChange>>;
+  /** A physical unit was added (M6). Notes are never stored in audit. */
+  "physical-room.created": Readonly<{
+    roomTypeId: string;
+    label: string;
+    active: boolean;
+    notesChanged: boolean;
+  }>;
+  /** Label and active keep before and after; notes only flag a change. */
+  "physical-room.updated": Readonly<{
+    label?: Readonly<{ from: string; to: string }>;
+    active?: Readonly<{ from: boolean; to: boolean }>;
+    notesChanged?: true;
+  }>;
 };
 
 export type AuditAction = keyof AuditChanges;
@@ -28,7 +41,7 @@ export type AuditEvent<A extends AuditAction = AuditAction> = Readonly<{
   /** Staff user id or guest id; null for SYSTEM (the CLI, scheduled jobs). */
   actorId: string | null;
   action: A;
-  entityType: "User" | "Branch";
+  entityType: "User" | "Branch" | "PhysicalRoom";
   entityId: string;
   branchId: string | null;
   reason: string | null;

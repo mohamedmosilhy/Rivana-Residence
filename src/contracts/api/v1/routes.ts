@@ -12,6 +12,12 @@ import {
   StaffBranchList,
 } from "./branches";
 import { HealthResponse } from "./health";
+import {
+  PhysicalRoom,
+  PhysicalRoomInput,
+  PhysicalRoomList,
+  PhysicalRoomPatch,
+} from "./inventory";
 
 /** One documented endpoint. The OpenAPI document is generated from these. */
 export type ApiRoute = Readonly<{
@@ -149,6 +155,63 @@ export const API_ROUTES: readonly ApiRoute[] = [
       "CROSS_SITE_REQUEST",
       "NOT_FOUND",
       "VALIDATION",
+    ],
+  },
+  {
+    method: "get",
+    path: "/api/v1/staff/branches/{branchId}/physical-rooms",
+    operationId: "listPhysicalRooms",
+    summary:
+      "API-S21. Every physical unit of the branch, inactive ones included. Needs inventory:read.",
+    tag: "Inventory",
+    security: "staff",
+    responses: {
+      200: { description: "The branch's units.", schema: PhysicalRoomList },
+    },
+    errors: ["UNAUTHENTICATED", "FORBIDDEN", "NOT_FOUND"],
+  },
+  {
+    method: "post",
+    path: "/api/v1/staff/branches/{branchId}/physical-rooms",
+    operationId: "createPhysicalRoom",
+    summary:
+      "API-S22. Add an active unit to a listing of the branch (inventory:manage). Audited. Returns Location.",
+    tag: "Inventory",
+    security: "staff",
+    request: PhysicalRoomInput,
+    responses: {
+      201: { description: "The new unit.", schema: PhysicalRoom },
+    },
+    errors: [
+      "UNAUTHENTICATED",
+      "FORBIDDEN",
+      "CROSS_SITE_REQUEST",
+      "NOT_FOUND",
+      "CONFLICT",
+      "VALIDATION",
+    ],
+  },
+  {
+    method: "patch",
+    path: "/api/v1/staff/physical-rooms/{id}",
+    operationId: "updatePhysicalRoom",
+    summary:
+      "API-S23. Change a unit's label, notes, or activity (inventory:manage). Deactivation never oversells: it takes the listing lock. Audited.",
+    tag: "Inventory",
+    security: "staff",
+    request: PhysicalRoomPatch,
+    responses: {
+      200: { description: "The updated unit.", schema: PhysicalRoom },
+    },
+    errors: [
+      "UNAUTHENTICATED",
+      "FORBIDDEN",
+      "CROSS_SITE_REQUEST",
+      "NOT_FOUND",
+      "CONFLICT",
+      "INVENTORY_UNAVAILABLE",
+      "VALIDATION",
+      "TRY_AGAIN",
     ],
   },
 ];

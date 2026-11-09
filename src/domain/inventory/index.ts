@@ -12,3 +12,11 @@ export {
   type InventoryReductionResult,
   type ReductionConflict,
 } from "./inventory-reduction";
+export {
+  PHYSICAL_ROOM_LABEL_MAX,
+  PHYSICAL_ROOM_NOTES_MAX,
+  parsePhysicalRoomInput,
+  parsePhysicalRoomPatch,
+  type PhysicalRoomInput,
+  type PhysicalRoomPatch,
+} from "./physical-room";

@@ -1,6 +1,6 @@
 # M6: Inventory, date prices, and availability
 
-Status: **In progress (4/10 tasks accepted)**, 2026-11-09. M6-T1 through M6-T4 are accepted; M6-T5 through M6-T10 have not started. The milestone has not been accepted or merged.
+Status: **In progress (5/10 tasks accepted)**, 2026-11-09. M6-T1 through M6-T5 are accepted; M6-T6 through M6-T10 have not started. The milestone has not been accepted or merged.
 
 Branch: `m6-inventory-and-availability`. The owner requested this spelling when accepting T1; the original local `m6-Inventory-and-availability` branch was renamed without changing its history. Build spec: [0003](../../specs/0003-m6-inventory-and-availability.md). Task status belongs to the [brief](../milestones/m6-inventory-and-availability.md#task-breakdown).
 
@@ -12,6 +12,7 @@ Branch: `m6-inventory-and-availability`. The owner requested this spelling when 
 | M6-T2 | Critical | Owner, 2026-11-08 | `feat(domain): add M6-T2 inventory and pricing rules` (this task commit) | [2026-11-08-m6-t2.md](../../reviews/2026-11-08-m6-t2.md) | Check passed: 57 unit files / 1,143 tests and build; integration passed: 20 files / 243 tests; focused: 3 files / 73 tests; runtime: 8 assertions | Pure availability, nightly price resolution, block and deactivation projection; independent review approved with no findings and 1,000 capacity oracle scenarios passed |
 | M6-T3 | Critical | Owner, 2026-11-08 | `feat(db): add M6-T3 inventory and rates migration and demo seed` (this task commit) | [2026-11-08-m6-t3.md](../../reviews/2026-11-08-m6-t3.md) | Check passed: 57 unit files / 1,143 tests and build; integration passed: 21 files / 271 tests; migration rehearsal on M5 data and drift check inside that suite | Four tables, `BlockReason`, CHECKs, two GiST exclusion constraints, composite ownership FKs; guarded demo inventory seed; independent review (Opus) requested changes, one major docs finding and minors fixed before acceptance |
 | M6-T4 | Critical | Owner, 2026-11-09 | `feat(inventory): add M6-T4 transaction guard foundation` (this task commit) | [2026-11-09-m6-t4.md](../../reviews/2026-11-09-m6-t4.md) | Check passed: 59 unit files / 1,157 tests and build; integration passed: 24 files / 289 tests; concurrency: 3 cases × 20 iterations | Transaction bound ports, `READ COMMITTED` unit of work, sorted room type lock, complete inventory reader, guard, and empty M6 consumption adapter; fresh model review approved with no open findings |
+| M6-T5 | Critical | Owner, 2026-11-09 | `feat(inventory): add M6-T5 physical unit management and staff API` (this task commit) | [2026-11-09-m6-t5.md](../../reviews/2026-11-09-m6-t5.md) | Check passed: 60 unit files / 1,225 tests and build; integration passed: 25 files / 321 tests; concurrency: 6 cases (T5 adds 3 × 20 iterations); Chromium E2E: 163 passed, 30 skipped | Physical unit repository, catalog bridge, `ManagePhysicalRooms`, S21 to S23, audited and guarded deactivation; fresh model review (Opus) approved with nits, three minors fixed before acceptance |
 
 Task commits identified by subject in this log can be located with `git log --oneline --fixed-strings --grep='<subject>'`.
 
@@ -29,6 +30,26 @@ T4 adds the transaction and locking foundation used by later inventory writers. 
 
 The batched inventory reader returns every requested listing and night, including zero capacity, and merges checked sparse consumption contributions. M6's production consumption adapter intentionally returns none until reservation persistence arrives in M8. `InventoryGuard` enforces lock, reload, validation, mutation, and audit order inside the same unit of work. T4 provides the foundation and tests, but no production unit or block writer is composed before T5 and T6.
 
+## M6-T5 (accepted)
+
+Status: accepted by the owner, 2026-11-09. Independent review (Opus): [2026-11-09-m6-t5.md](../../reviews/2026-11-09-m6-t5.md), approve with nits, no blockers or majors.
+
+Delivered: `PhysicalRoomRepository`, the narrow `RoomTypeCatalog` bridge, `ManagePhysicalRooms`, composition, strict contracts, DTOs, thin handlers and OpenAPI for S21 to S23. Deactivation always goes through `InventoryGuard`; activation, creation, and label or notes edits take no listing lock. Audit actions `physical-room.created` and `physical-room.updated` record label and active before and after, and notes only as `notesChanged`.
+
+Owner decisions recorded 2026-11-09:
+
+1. Blank notes: empty and whitespace only notes are stored as `null`. Covered by unit tests (create and update, including the no-op case) and an HTTP integration test; documented in the input contract and API contracts.
+2. Architecture guard: the D-9 textual check exempts only the exact audit `entityType` declarations for `PhysicalRoom` (an `entityType` property assigned that literal, or that literal as a union member of an `entityType` property type), found through the TypeScript AST. Regression tests prove Prisma access, raw SQL, and other uses of the name are still detected, including inside an `entityType` property.
+3. The 503 `TRY_AGAIN` with `Retry-After: 5` is proven through the real Route Handlers on PostgreSQL (listing lock and unit row lock cases, including the problem content type and no leaked database detail), not in browser E2E.
+4. Production consumption stays the empty adapter.
+
+Remaining limitations:
+
+- Injected sold and assignment tests prove the guard's reduction logic on a real database. They do not prove integration with real reservation consumption; that verification is M8's responsibility.
+- No 20 iteration race of activation against deactivation yet (the code path is correct by inspection); suggested for T6.
+- The integration test wiring (`tests/integration/reservations/support/physical-rooms.ts`) mirrors `src/composition/inventory.ts` by hand.
+- Review minors fixed before acceptance: unit row lock timeout now maps to 503, plain edits set the same five second lock timeout, and the foreign key mapping ignores the `updatedById` key.
+
 ## Scope delivered
 
 - M6-T1: date, stay, public policy, occupancy, and money foundation, accepted by the owner.
@@ -36,7 +57,8 @@ The batched inventory reader returns every requested listing and night, includin
 - T2 covers the domain portions of AC-1, AC-3, AC-4, and AC-6. Later tasks still own concrete writers and endpoints.
 - M6-T3: migration `20261108120000_inventory_and_rates` (`PhysicalRoom`, `InventoryBlock`, `RoomBaseRate`, `RatePeriod`, constraints) and the guarded demo inventory seed, accepted by the owner.
 - M6-T4: generic reservation unit of work, inventory lock and reader ports and Prisma adapters, inventory guard, safe conflict mapping, and deterministic concurrency harness, accepted by the owner.
-- Concrete unit, block, rate, and availability use cases, composition, APIs, and screens remain future work. T5 through T10 have not started.
+- M6-T5: physical unit repository and catalog bridge, `ManagePhysicalRooms`, S21 to S23, accepted by the owner.
+- Concrete block, rate, and availability use cases, composition, APIs, and screens remain future work. T6 through T10 have not started.
 
 ## Files by responsibility
 

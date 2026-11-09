@@ -1,6 +1,6 @@
 # Data integrity and concurrency
 
-Status: **Partly implemented**, design accepted 2026-10-24 (ADR 016, ADR 022), extended 2026-11-06 for several units per booking, payment holds, late payment results, and coupon limits (ADR 024, 025, 027). M6-T3 implements the inventory constraints and M6-T4 implements the shared transaction, listing lock, capacity read, and guard foundation. Concrete inventory and reservation writers remain planned.
+Status: **Partly implemented**, design accepted 2026-10-24 (ADR 016, ADR 022), extended 2026-11-06 for several units per booking, payment holds, late payment results, and coupon limits (ADR 024, 025, 027). M6-T3 implements the inventory constraints and M6-T4 implements the shared transaction, listing lock, capacity read, and guard foundation. M6-T5 adds the first production writer, guarded unit deactivation (S23). Other concrete inventory and reservation writers remain planned.
 
 ## Threats to consistency
 

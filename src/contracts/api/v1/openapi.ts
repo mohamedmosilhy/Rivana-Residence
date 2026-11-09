@@ -14,6 +14,12 @@ import {
   StaffBranchList,
 } from "./branches";
 import { HealthResponse } from "./health";
+import {
+  PhysicalRoom,
+  PhysicalRoomInput,
+  PhysicalRoomList,
+  PhysicalRoomPatch,
+} from "./inventory";
 import { Money, Occupancy, Problem, Stay } from "./primitives";
 import { API_ROUTES, type ApiRoute } from "./routes";
 
@@ -39,6 +45,10 @@ const COMPONENTS: Readonly<Record<string, z.ZodType>> = {
   StaffBranchList,
   BranchInput,
   BranchPatch,
+  PhysicalRoom,
+  PhysicalRoomList,
+  PhysicalRoomInput,
+  PhysicalRoomPatch,
 };
 
 function componentSchemas() {

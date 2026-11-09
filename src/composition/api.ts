@@ -6,6 +6,7 @@ import { CheckHealth } from "@/application/health";
 import { RateLimiter } from "@/application/shared/rate-limit";
 import { resolveStaffFromHeaders, throttleKeys } from "@/composition/auth";
 import { manageBranches } from "@/composition/content";
+import { managePhysicalRooms } from "@/composition/inventory";
 import { clientAddressFrom, isSameOriginRequest } from "@/composition/http";
 import {
   getActiveBranchBySlug,
@@ -82,4 +83,26 @@ export function updateBranch(
     id,
     input,
   );
+}
+
+// Physical unit API (API-S21…S23; spec 0003, M6-T5).
+
+export function listPhysicalRooms(staff: StaffPrincipal, branchId: string) {
+  return managePhysicalRooms().list(staff, branchId);
+}
+
+export function createPhysicalRoom(
+  staff: StaffPrincipal,
+  branchId: string,
+  input: unknown,
+) {
+  return managePhysicalRooms().create(staff, branchId, input);
+}
+
+export function updatePhysicalRoom(
+  staff: StaffPrincipal,
+  id: string,
+  input: unknown,
+) {
+  return managePhysicalRooms().update(staff, id, input);
 }

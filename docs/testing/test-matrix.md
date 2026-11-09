@@ -4,7 +4,7 @@ Planned tests for branch websites, reservations, payments, and messaging, by lay
 
 ## Implemented so far
 
-M4 (2026-11-06), M5 (2026-11-07), and accepted tasks M6-T1 through M6-T4 (latest 2026-11-09) implemented the coverage listed here; everything else below is still planned.
+M4 (2026-11-06), M5 (2026-11-07), and accepted tasks M6-T1 through M6-T5 (latest 2026-11-09) implemented the coverage listed here; everything else below is still planned.
 
 | Id | Where |
 | --- | --- |
@@ -14,7 +14,8 @@ M4 (2026-11-06), M5 (2026-11-07), and accepted tasks M6-T1 through M6-T4 (latest
 | Applicable T-PR-1…6 (M6-T2) | `tests/unit/domain/nightly-price-resolver.test.ts`: base fallback, active period boundaries and overlap rejection, inactive periods, unpriced gaps, the 26000-cent worked example, quantity multiplication, checked overflow, and immutable resolved values. Persisted reservation snapshot immutability and manual override authorization remain M8 tests |
 | Inventory schema foundation (M6-T3) | `tests/integration/inventory-constraints.test.ts`, schema, seed, and migration suites: range and amount checks, GiST overlap exclusions, adjacency, inactive or cancelled rows, ownership, delete restrictions, migration rehearsal, drift, and safe repeated demo seeding |
 | Inventory transaction foundation (M6-T4) | `tests/unit/application/inventory-guard.test.ts` and `tests/integration/reservations/{unit-of-work,inventory-reader}.test.ts`: guard ordering and refusal, same connection and `READ COMMITTED`, rollback of mutation and audit, hidden foreign listings, complete zero capacity nights, sparse consumption validation, and real five second timeout mapping |
-| Inventory lock harness (M6-T4) | `tests/integration/reservations/concurrency.test.ts`: 20 iterations each for reversed multi listing lock order, observable same listing wait with a fresh committed read, and independent branch locking |
+| Physical units (M6-T5) | `tests/unit/application/manage-physical-rooms.test.ts` (T-AUTHZ-2 role and branch sweep with zero port calls on refusal, validation, blank note normalization, patch paths, no-op, guarded deactivation with sparse future sold nights, assignments, blocks, audit redaction); `tests/integration/reservations/physical-rooms.test.ts` (T-AUD-1 rollback on audit failure, T-HTTP for S21 to S23 including `Location`, hidden cross branch 404, `409` label field error, `503` with `Retry-After: 5` and safe body for listing and unit row locks); `tests/e2e/physical-rooms-api.spec.ts` (Chromium REST, CSRF, role and branch restrictions). Sold inventory is injected through the consumption port, so these prove the guard's reduction logic, not real reservation consumption (M8). |
+| Inventory lock harness (M6-T4) | `tests/integration/reservations/concurrency.test.ts`: 20 iterations each for reversed multi listing lock order, observable same listing wait with a fresh committed read, and independent branch locking; M6-T5 adds 20 iteration cases for competing deactivations (nonnegative capacity), deactivation waiting behind the listing lock and reloading fresh state, and matching labels across branches |
 | T-AUTHZ-1 | `tests/unit/auth/authorization.test.ts` (four roles × every capability), `authorize-branch.test.ts`, and the sweep extended to Receptionist and Manager in `authorization-sweep.test.ts` |
 | T-ARCH-1…4 | `tests/unit/architecture/module-boundaries.test.ts` (D-7, D-8, D-11), `persistence-boundaries.test.ts` (D-9, D-12), `route-handlers.test.ts` (D-10), `openapi.test.ts` (freshness) |
 | T-HTTP-1…6 | `tests/unit/api/http-layer.test.ts` (415, 413 declared and streamed, 400, 422, 403 cross-site, 401; webhook raw body; 500 without leakage; log redaction); `tests/integration/health-route.test.ts` |

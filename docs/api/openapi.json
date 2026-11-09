@@ -356,6 +356,162 @@
           }
         }
       }
+    },
+    "/api/v1/staff/branches/{branchId}/physical-rooms": {
+      "get": {
+        "operationId": "listPhysicalRooms",
+        "summary": "API-S21. Every physical unit of the branch, inactive ones included. Needs inventory:read.",
+        "tags": [
+          "Inventory"
+        ],
+        "security": [
+          {
+            "staffSession": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "branchId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The branch's units.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PhysicalRoomList"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Problem details. Codes: INTERNAL, UNAUTHENTICATED, FORBIDDEN, NOT_FOUND.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "operationId": "createPhysicalRoom",
+        "summary": "API-S22. Add an active unit to a listing of the branch (inventory:manage). Audited. Returns Location.",
+        "tags": [
+          "Inventory"
+        ],
+        "security": [
+          {
+            "staffSession": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "branchId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PhysicalRoomInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "The new unit.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PhysicalRoom"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Problem details. Codes: INTERNAL, UNAUTHENTICATED, FORBIDDEN, CROSS_SITE_REQUEST, NOT_FOUND, CONFLICT, VALIDATION.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/staff/physical-rooms/{id}": {
+      "patch": {
+        "operationId": "updatePhysicalRoom",
+        "summary": "API-S23. Change a unit's label, notes, or activity (inventory:manage). Deactivation never oversells: it takes the listing lock. Audited.",
+        "tags": [
+          "Inventory"
+        ],
+        "security": [
+          {
+            "staffSession": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PhysicalRoomPatch"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The updated unit.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PhysicalRoom"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Problem details. Codes: INTERNAL, UNAUTHENTICATED, FORBIDDEN, CROSS_SITE_REQUEST, NOT_FOUND, CONFLICT, INVENTORY_UNAVAILABLE, VALIDATION, TRY_AGAIN.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -1191,6 +1347,125 @@
             "type": "integer",
             "minimum": -9007199254740991,
             "maximum": 9007199254740991
+          }
+        },
+        "additionalProperties": false
+      },
+      "PhysicalRoom": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "branchId": {
+            "type": "string"
+          },
+          "roomTypeId": {
+            "type": "string"
+          },
+          "label": {
+            "type": "string"
+          },
+          "active": {
+            "type": "boolean"
+          },
+          "notes": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "createdAt": {
+            "type": "string",
+            "description": "UTC instant (ISO 8601)."
+          },
+          "updatedAt": {
+            "type": "string",
+            "description": "UTC instant (ISO 8601)."
+          }
+        },
+        "required": [
+          "id",
+          "branchId",
+          "roomTypeId",
+          "label",
+          "active",
+          "notes",
+          "createdAt",
+          "updatedAt"
+        ],
+        "additionalProperties": false,
+        "description": "A physical unit that can be sold. Never deleted or moved."
+      },
+      "PhysicalRoomList": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PhysicalRoom"
+            }
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "additionalProperties": false
+      },
+      "PhysicalRoomInput": {
+        "type": "object",
+        "properties": {
+          "roomTypeId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "label": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 40
+          },
+          "notes": {
+            "description": "At most 500 characters after trimming. Null, empty, or whitespace only means no note.",
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 500
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "roomTypeId",
+          "label"
+        ],
+        "additionalProperties": false
+      },
+      "PhysicalRoomPatch": {
+        "type": "object",
+        "properties": {
+          "label": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 40
+          },
+          "notes": {
+            "description": "Null, empty, or whitespace only clears the note; otherwise at most 500 characters after trimming.",
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 500
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "active": {
+            "description": "False is checked against sold inventory under a lock.",
+            "type": "boolean"
           }
         },
         "additionalProperties": false

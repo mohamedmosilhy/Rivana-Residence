@@ -1,7 +1,7 @@
 # 0003. Inventory, date prices, and availability (M6)
 
 **Date**: 2026-11-08
-**Status**: In Progress (M6-T1 through M6-T4 accepted, 4/10 tasks; T5 through T10 not started)
+**Status**: In Progress (M6-T1 through M6-T5 accepted, 5/10 tasks; T6 through T10 not started)
 **Owner approval**: Amended spec and ten task breakdown approved, 2026-11-08
 **Mode**: FEATURE
 **Branch**: `m6-inventory-and-availability`

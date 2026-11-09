@@ -13,3 +13,16 @@ export type {
   ReservationConsumptionReader,
   SoldNightContribution,
 } from "./ports";
+export {
+  ManagePhysicalRooms,
+  type PhysicalRoomContext,
+} from "./manage-physical-rooms";
+export type {
+  ActiveBlockRange,
+  BranchVisibility,
+  PhysicalRoomChange,
+  PhysicalRoomCreate,
+  PhysicalRoomRecord,
+  PhysicalRoomRepository,
+  RoomTypeCatalog,
+} from "./ports";

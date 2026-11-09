@@ -84,8 +84,8 @@ Authentication: staff session cookie. Authorization: listed capability **and** b
 | --- | --- | --- | --- | --- | --- |
 | API-S20 | `GET /api/v1/staff/branches/{branchId}/availability?from&to` | `inventory:read` | range ≤ 62 nights | `200 { roomTypes: [{ id, name, nights: [{ night, capacity, sold, free, blocked }] }], lastSyncCheckpoint }` | Read model |
 | API-S21 | `GET /api/v1/staff/branches/{branchId}/physical-rooms` | `inventory:read` | — | `200 { items: PhysicalRoomDto[] }` | |
-| API-S22 | `POST /api/v1/staff/branches/{branchId}/physical-rooms` | `inventory:manage` | `{ roomTypeId, label, notes? }` | `201` | Audit; `409` on duplicate label |
-| API-S23 | `PATCH /api/v1/staff/physical-rooms/{id}` | `inventory:manage` | `{ label?, notes?, active? }` | `200` | Deactivation: **Tx, Lock**; `409 INVENTORY_UNAVAILABLE` if it would oversell |
+| API-S22 | `POST /api/v1/staff/branches/{branchId}/physical-rooms` | `inventory:manage` | `{ roomTypeId, label, notes? }` | `201` + `Location` | Audit; `409` on duplicate label. `label` trimmed, 1 to 40 characters; `notes` trimmed, at most 500, and `null`, empty, or whitespace only is stored as no note |
+| API-S23 | `PATCH /api/v1/staff/physical-rooms/{id}` | `inventory:manage` | `{ label?, notes?, active? }` | `200` | Deactivation: **Tx, Lock**; `409 INVENTORY_UNAVAILABLE` if it would oversell; `503 TRY_AGAIN` (`Retry-After: 5`) on lock timeout. Blank `notes` clears the note; `null` also clears it |
 | API-S24 | `GET /api/v1/staff/branches/{branchId}/blocks?from&to` | `inventory:read` | — | `200 { items: BlockDto[] }` | |
 | API-S25 | `POST /api/v1/staff/branches/{branchId}/blocks` | `inventory:block` | `{ physicalRoomId, startDate, endDate, reason, note? }` | `201 BlockDto` | **Tx, Lock, Audit**; `409` if it would oversell or overlap (Q-17) |
 | API-S26 | `PATCH /api/v1/staff/blocks/{id}` | `inventory:block` | `{ endDate?, note? }` | `200` | Extending: **Lock** |
