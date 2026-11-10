@@ -127,3 +127,40 @@ export const BlockPatch = z
   });
 
 export type BlockDto = z.infer<typeof Block>;
+
+// Staff availability grid (API-S20; spec 0003, M6-T8).
+
+export const AvailabilityGridQuery = z
+  .object({
+    from: queryDate,
+    to: queryDate.describe("Exclusive end; at most 62 nights after from."),
+  })
+  .strict();
+
+export const AvailabilityGrid = z
+  .object({
+    roomTypes: z.array(
+      z.object({
+        id: z.string(),
+        name: z.string(),
+        nights: z.array(
+          z.object({
+            night: isoDate,
+            capacity: z.number().int().nonnegative(),
+            sold: z.number().int().nonnegative(),
+            free: z.number().int().nonnegative(),
+            blocked: z.number().int().nonnegative(),
+          }),
+        ),
+      }),
+    ),
+    lastSyncCheckpoint: z
+      .string()
+      .nullable()
+      .describe("UTC instant of the last manual sync. Null until M8."),
+  })
+  .describe(
+    "Per listing and night: capacity (active unblocked units), sold, free, and blocked units. Every listing of the branch appears, whatever its publication status.",
+  );
+
+export type AvailabilityGridDto = z.infer<typeof AvailabilityGrid>;

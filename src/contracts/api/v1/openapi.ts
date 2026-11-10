@@ -15,6 +15,7 @@ import {
 } from "./branches";
 import { HealthResponse } from "./health";
 import {
+  AvailabilityGrid,
   Block,
   BlockInput,
   BlockList,
@@ -61,6 +62,7 @@ const COMPONENTS: Readonly<Record<string, z.ZodType>> = {
   PhysicalRoomList,
   PhysicalRoomInput,
   PhysicalRoomPatch,
+  AvailabilityGrid,
   Block,
   BlockList,
   BlockInput,

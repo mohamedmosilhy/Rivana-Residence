@@ -6,7 +6,11 @@ import { CheckHealth } from "@/application/health";
 import { RateLimiter } from "@/application/shared/rate-limit";
 import { resolveStaffFromHeaders, throttleKeys } from "@/composition/auth";
 import { manageBranches } from "@/composition/content";
-import { manageBlocks, managePhysicalRooms } from "@/composition/inventory";
+import {
+  getAvailabilityGrid,
+  manageBlocks,
+  managePhysicalRooms,
+} from "@/composition/inventory";
 import { getRateCalendar, manageRates } from "@/composition/pricing";
 import { clientAddressFrom, isSameOriginRequest } from "@/composition/http";
 import {
@@ -106,6 +110,16 @@ export function updatePhysicalRoom(
   input: unknown,
 ) {
   return managePhysicalRooms().update(staff, id, input);
+}
+
+// Availability grid (API-S20; spec 0003, M6-T8).
+
+export function readAvailabilityGrid(
+  staff: StaffPrincipal,
+  branchId: string,
+  query: unknown,
+) {
+  return getAvailabilityGrid().execute(staff, branchId, query);
 }
 
 // Block API (API-S24…S27; spec 0003, M6-T6).

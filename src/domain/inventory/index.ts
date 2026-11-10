@@ -32,3 +32,9 @@ export {
   type BlockPatch,
   type BlockReason,
 } from "./block";
+export {
+  MAX_UNITS_REQUESTED,
+  parseAvailabilitySearch,
+  type AvailabilitySearch,
+  type ParsedAvailabilitySearch,
+} from "./availability-search";

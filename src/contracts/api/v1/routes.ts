@@ -15,6 +15,8 @@ import { HealthResponse } from "./health";
 import {
   Block,
   BlockInput,
+  AvailabilityGrid,
+  AvailabilityGridQuery,
   BlockList,
   BlockPatch,
   BlockQuery,
@@ -230,6 +232,26 @@ export const API_ROUTES: readonly ApiRoute[] = [
   },
   {
     method: "get",
+    path: "/api/v1/staff/branches/{branchId}/availability",
+    operationId: "getAvailabilityGrid",
+    summary:
+      "API-S20. Capacity, sold, free, and blocked units per listing and night for a window of at most 62 nights (exclusive end), every listing of the branch in any publication status. Never cached. Needs inventory:read.",
+    tag: "Inventory",
+    security: "staff",
+    query: AvailabilityGridQuery,
+    responses: {
+      200: { description: "The grid.", schema: AvailabilityGrid },
+    },
+    errors: [
+      "UNAUTHENTICATED",
+      "FORBIDDEN",
+      "NOT_FOUND",
+      "VALIDATION",
+      "INVALID_QUERY",
+    ],
+  },
+  {
+    method: "get",
     path: "/api/v1/staff/branches/{branchId}/blocks",
     operationId: "listBlocks",
     summary:
@@ -240,7 +262,13 @@ export const API_ROUTES: readonly ApiRoute[] = [
     responses: {
       200: { description: "The overlapping blocks.", schema: BlockList },
     },
-    errors: ["UNAUTHENTICATED", "FORBIDDEN", "NOT_FOUND", "VALIDATION"],
+    errors: [
+      "UNAUTHENTICATED",
+      "FORBIDDEN",
+      "NOT_FOUND",
+      "VALIDATION",
+      "INVALID_QUERY",
+    ],
   },
   {
     method: "post",
@@ -319,7 +347,13 @@ export const API_ROUTES: readonly ApiRoute[] = [
     responses: {
       200: { description: "The listing's rates.", schema: RateCalendar },
     },
-    errors: ["UNAUTHENTICATED", "FORBIDDEN", "NOT_FOUND", "VALIDATION"],
+    errors: [
+      "UNAUTHENTICATED",
+      "FORBIDDEN",
+      "NOT_FOUND",
+      "VALIDATION",
+      "INVALID_QUERY",
+    ],
   },
   {
     method: "put",

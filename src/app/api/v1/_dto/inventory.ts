@@ -1,5 +1,13 @@
-import type { BlockRecord, PhysicalRoomRecord } from "@/application/inventory";
-import type { BlockDto, PhysicalRoomDto } from "@/contracts/api/v1/inventory";
+import type {
+  AvailabilityGrid,
+  BlockRecord,
+  PhysicalRoomRecord,
+} from "@/application/inventory";
+import type {
+  AvailabilityGridDto,
+  BlockDto,
+  PhysicalRoomDto,
+} from "@/contracts/api/v1/inventory";
 
 // Application record → HTTP DTO for physical units (M6-T5).
 export function physicalRoom(record: PhysicalRoomRecord): PhysicalRoomDto {
@@ -28,5 +36,23 @@ export function block(record: BlockRecord): BlockDto {
     note: record.note,
     cancelledAt: record.cancelledAt?.toISOString() ?? null,
     createdAt: record.createdAt.toISOString(),
+  };
+}
+
+// Application grid → HTTP DTO (M6-T8, API-S20).
+export function availabilityGrid(grid: AvailabilityGrid): AvailabilityGridDto {
+  return {
+    roomTypes: grid.roomTypes.map((roomType) => ({
+      id: roomType.id,
+      name: roomType.name,
+      nights: roomType.nights.map((night) => ({
+        night: night.night.value,
+        capacity: night.capacity,
+        sold: night.sold,
+        free: night.free,
+        blocked: night.blocked,
+      })),
+    })),
+    lastSyncCheckpoint: grid.lastSyncCheckpoint?.toISOString() ?? null,
   };
 }

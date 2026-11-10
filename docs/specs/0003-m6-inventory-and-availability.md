@@ -293,6 +293,8 @@ Capture `EXPLAIN (ANALYZE, BUFFERS)` for the capacity query on demo data and for
 
 Spec cross check, 2026-11-08: an independent read by `gpt-6-astra` found four decision gaps. The owner approved the insert then base row lock protocol, sparse block validation, all status staff grid membership, and the existing five second 503 retry default. Those corrections are recorded above. The reviewer has not rechecked the amended text. The owner subsequently approved the amended spec and ten task breakdown on 2026-11-08. That approval does not start an application task or accept the completed milestone.
 
+M6-T8 implementation notes, 2026-11-10: the read use cases use three narrow ports (`AvailabilityCatalog`, `LastSyncCheckpointReader`, `RateBatchReader`) rather than extending the write repositories. A listing deleted between the listing read and the inventory read is retried once. The grid fails loudly when sold exceeds capacity. The cap of 5 is the domain constant `MAX_UNITS_REQUESTED`, not composition configuration.
+
 ## Build plan
 
 The [brief task table](../delivery/milestones/m6-inventory-and-availability.md#task-breakdown) is the only task status tracker. Approved opening refinements split the original T5 into units and blocks, move rates and later tasks accordingly, and separate limiter readiness from its first public consumer. All tasks remain Not started until their own plan is approved.

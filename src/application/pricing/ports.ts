@@ -82,3 +82,12 @@ export interface RateRepository {
     change: RatePeriodChange,
   ): Promise<Result<RatePeriodRecord>>;
 }
+
+/** Batched rate read for availability search: one query pair for many listings. */
+export interface RateBatchReader {
+  /** Every listing id gets an entry, empty when it has no rates. */
+  readMany(
+    roomTypeIds: readonly string[],
+    window: StayRange,
+  ): Promise<ReadonlyMap<string, RateReadModel>>;
+}

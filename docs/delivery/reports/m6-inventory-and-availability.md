@@ -1,6 +1,6 @@
 # M6: Inventory, date prices, and availability
 
-Status: **In progress (7/10 tasks accepted)**, 2026-11-10. M6-T1 through M6-T7 are accepted; M6-T8 through M6-T10 have not started. The milestone has not been accepted or merged.
+Status: **In progress (8/10 tasks accepted)**, 2026-11-10. M6-T1 through M6-T8 are accepted; M6-T9 and M6-T10 have not started. The milestone has not been accepted or merged.
 
 Branch: `m6-inventory-and-availability`. The owner requested this spelling when accepting T1; the original local `m6-Inventory-and-availability` branch was renamed without changing its history. Build spec: [0003](../../specs/0003-m6-inventory-and-availability.md). Task status belongs to the [brief](../milestones/m6-inventory-and-availability.md#task-breakdown).
 
@@ -15,6 +15,7 @@ Branch: `m6-inventory-and-availability`. The owner requested this spelling when 
 | M6-T5 | Critical | Owner, 2026-11-09 | `feat(inventory): add M6-T5 physical unit management and staff API` (this task commit) | [2026-11-09-m6-t5.md](../../reviews/2026-11-09-m6-t5.md) | Check passed: 60 unit files / 1,225 tests and build; integration passed: 25 files / 321 tests; concurrency: 6 cases (T5 adds 3 × 20 iterations); Chromium E2E: 163 passed, 30 skipped | Physical unit repository, catalog bridge, `ManagePhysicalRooms`, S21 to S23, audited and guarded deactivation; fresh model review (Opus) approved with nits, three minors fixed before acceptance |
 | M6-T6 | Critical | Owner, 2026-11-09 | `feat(inventory): add M6-T6 block management and staff API` (this task commit) | [2026-11-09-m6-t6.md](../../reviews/2026-11-09-m6-t6.md) | Check passed: 61 unit files / 1,291 tests and build; integration passed: 26 files / 347 tests; concurrency: 14 cases (T6 adds 8 × 20 iterations); Chromium E2E: 167 passed, 30 skipped | Block repository, `ManageBlocks`, S24 to S27, audited and guarded create and end date change; fresh model review (Opus) changes requested (one major, no blockers), major and minors fixed before acceptance |
 | M6-T7 | Critical | Owner, 2026-11-10 | `feat(pricing): add M6-T7 base rates, date periods, and staff API` (this task commit) | [2026-11-10-m6-t7.md](../../reviews/2026-11-10-m6-t7.md), recheck [2026-11-10-m6-t7-recheck.md](../../reviews/2026-11-10-m6-t7-recheck.md) | Check passed: 63 unit files / 1,334 tests and build; integration passed: 27 files / 368 tests; concurrency: 5 rate races × 20 iterations (T7) plus S32 and period row lock timeout cases; Chromium E2E: 171 passed, 30 skipped | Rate repository, `ManageRates`, `GetRateCalendar`, S30 to S34; first review (GPT) changes requested (four majors, all fixed), recheck (Opus) changes requested (one major, `TRY_AGAIN` on the wrong route, fixed) and two minors fixed before acceptance |
+| M6-T8 | Critical | Owner, 2026-11-10 | `feat(inventory): add M6-T8 availability search and staff grid` (this task commit) | [2026-11-10-m6-t8.md](../../reviews/2026-11-10-m6-t8.md) | Check passed: 65 unit files / 1,363 tests and build; integration passed: 28 files / 377 tests; Chromium E2E for S20: 2 passed (the full E2E suite was not rerun); `npm run openapi` regenerated, no drift | `GetAvailabilityGrid`, S20, `SearchAvailability` (no route yet), three read ports; review (Opus) approve with nits, four minors fixed before acceptance, five nits left |
 
 Task commits identified by subject in this log can be located with `git log --oneline --fixed-strings --grep='<subject>'`.
 
@@ -31,6 +32,26 @@ T2 implements the pure inventory and pricing rules. `AvailabilityCalculator` che
 T4 adds the transaction and locking foundation used by later inventory writers. `ReservationUnitOfWork` binds only the ports a use case needs to one Prisma transaction at `READ COMMITTED`. A failed result is converted into an internal abort so Prisma rolls back instead of committing it; unexpected exceptions still propagate to the redacted HTTP failure path. `InventoryLock` deduplicates and sorts room type ids, takes `FOR NO KEY UPDATE` locks with a five second PostgreSQL timeout, verifies complete branch ownership, and maps lock timeout to `TRY_AGAIN`.
 
 The batched inventory reader returns every requested listing and night, including zero capacity, and merges checked sparse consumption contributions. M6's production consumption adapter intentionally returns none until reservation persistence arrives in M8. `InventoryGuard` enforces lock, reload, validation, mutation, and audit order inside the same unit of work. T4 provides the foundation and tests, but no production unit or block writer is composed before T5 and T6.
+
+## M6-T8 (accepted)
+
+Availability reads: `GetAvailabilityGrid` with API-S20, and the `SearchAvailability` use case (no HTTP route until M6-T10). Both are reads: no lock, no write, no cache. New read ports `AvailabilityCatalog`, `LastSyncCheckpointReader` (null adapter, M8 replaces it) and `RateBatchReader` (one base rate query and one period query for every listing). The grid lists every listing of the branch in any publication status with every requested night. Search lists published listings of an active branch and applies the public stay policy in the branch time zone, the quantity cap of 5, and the refusal order `UNPRICED`, `OCCUPANCY`, `SOLD_OUT`.
+
+Decisions recorded 2026-11-10:
+
+1. Sold above capacity makes the grid fail as a redacted server error. It is never clamped or shown as a negative number.
+2. `SearchAvailability` applies the public stay policy now, not in T10, and takes numbers only. Query string coercion belongs to the P5 contract.
+3. A listing deleted between the listing read and the inventory read is retried once with a fresh listing read, so it drops out instead of making a 404 (`read-listing-nights.ts`).
+
+Review: Opus ([2026-11-10-m6-t8.md](../../reviews/2026-11-10-m6-t8.md)), approve with nits. Fixed: `INVALID_QUERY` listed for S20 (and added to S24 and S30), an occupancy test with free units, a database level test of one rate query pair, and the deleted listing race.
+
+Evidence: `EXPLAIN (ANALYZE, BUFFERS)` of the capacity query on the demo seed (5 listings, 61 nights, 122 rows): about 1.7 ms, 662 shared buffers, almost all cached. There is no reservation query plan until M8, because the consumption adapter is empty. The S20 route was also proved in a real browser session by `tests/e2e/availability-api.spec.ts`.
+
+Remaining limitations:
+
+- Five nits are left as is: `readMany` assembles periods in two loops, the inactive period test does not pin the SQL `active` filter, the cap of 5 is a domain constant rather than passed from composition, `free` is computed inline in the grid, and the cap math lives in the application layer (reuse it from there in T10).
+- Capacity and rates are read in separate statements without a shared snapshot. Availability is a current observation, never a hold.
+- The full E2E suite was not rerun for this task; only the new S20 spec was.
 
 ## M6-T7 (accepted)
 
@@ -95,7 +116,8 @@ Remaining limitations:
 - M6-T5: physical unit repository and catalog bridge, `ManagePhysicalRooms`, S21 to S23, accepted by the owner.
 - M6-T6: block repository, `ManageBlocks`, S24 to S27, accepted by the owner.
 - M6-T7: rate repository, `ManageRates`, `GetRateCalendar`, S30 to S34, accepted by the owner.
-- Availability use cases, the staff grid, the public availability API, and screens remain future work. T8 through T10 have not started.
+- M6-T8: `GetAvailabilityGrid`, S20, and the `SearchAvailability` use case, accepted by the owner.
+- The public availability API (P5), its limiter, and screens remain future work. T9 and T10 have not started.
 
 ## Files by responsibility
 

@@ -1,6 +1,7 @@
 import "server-only";
 
 import {
+  GetAvailabilityGrid,
   ManageBlocks,
   ManagePhysicalRooms,
   type BlockContext,
@@ -9,6 +10,8 @@ import {
 import { getPrisma } from "@/infrastructure/db/prisma/client";
 import { PrismaAuditLog } from "@/infrastructure/db/prisma/repositories/audit/audit-log";
 import { EmptyReservationConsumptionReader } from "@/infrastructure/db/prisma/repositories/reservations/inventory/empty-reservation-consumption-reader";
+import { PrismaAvailabilityCatalog } from "@/infrastructure/db/prisma/repositories/reservations/inventory/availability-catalog";
+import { NullLastSyncCheckpointReader } from "@/infrastructure/db/prisma/repositories/reservations/inventory/null-sync-checkpoint-reader";
 import { PrismaBlockRepository } from "@/infrastructure/db/prisma/repositories/reservations/inventory/block-repository";
 import { PrismaInventoryLock } from "@/infrastructure/db/prisma/repositories/reservations/inventory/inventory-lock";
 import { PrismaInventoryReader } from "@/infrastructure/db/prisma/repositories/reservations/inventory/inventory-reader";
@@ -66,5 +69,18 @@ export function manageBlocks() {
     catalog: new PrismaRoomTypeCatalog(client),
     clock,
     ids: new Cuid2IdGenerator(),
+  });
+}
+
+/** Staff availability grid (M6-T8). Reads only: no lock and no cache. */
+export function getAvailabilityGrid() {
+  const client = getPrisma();
+  return new GetAvailabilityGrid({
+    catalog: new PrismaAvailabilityCatalog(client),
+    reader: new PrismaInventoryReader(
+      client,
+      new EmptyReservationConsumptionReader(),
+    ),
+    checkpoints: new NullLastSyncCheckpointReader(),
   });
 }

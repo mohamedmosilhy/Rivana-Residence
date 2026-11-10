@@ -82,7 +82,7 @@ Authentication: staff session cookie. Authorization: listed capability **and** b
 
 | Id | Method & path | Capability | Request | Response | Notes |
 | --- | --- | --- | --- | --- | --- |
-| API-S20 | `GET /api/v1/staff/branches/{branchId}/availability?from&to` | `inventory:read` | range ≤ 62 nights | `200 { roomTypes: [{ id, name, nights: [{ night, capacity, sold, free, blocked }] }], lastSyncCheckpoint }` | Read model |
+| API-S20 | `GET /api/v1/staff/branches/{branchId}/availability?from&to` | `inventory:read` | range ≤ 62 nights | `200 { roomTypes: [{ id, name, nights: [{ night, capacity, sold, free, blocked }] }], lastSyncCheckpoint }` | Implemented (M6-T8). Window of at most 62 nights (`422` otherwise; unknown or missing query keys are `400`). Every listing of the branch in any publication status, ordered by `sortOrder` then `id`, each with every requested night (zero counts without an active unit). `lastSyncCheckpoint` is null until M8. Never cached. Hidden or unknown branch: `403` or `404` |
 | API-S21 | `GET /api/v1/staff/branches/{branchId}/physical-rooms` | `inventory:read` | — | `200 { items: PhysicalRoomDto[] }` | |
 | API-S22 | `POST /api/v1/staff/branches/{branchId}/physical-rooms` | `inventory:manage` | `{ roomTypeId, label, notes? }` | `201` + `Location` | Audit; `409` on duplicate label. `label` trimmed, 1 to 40 characters; `notes` trimmed, at most 500, and `null`, empty, or whitespace only is stored as no note |
 | API-S23 | `PATCH /api/v1/staff/physical-rooms/{id}` | `inventory:manage` | `{ label?, notes?, active? }` | `200` | Deactivation: **Tx, Lock**; `409 INVENTORY_UNAVAILABLE` if it would oversell; `503 TRY_AGAIN` (`Retry-After: 5`) on lock timeout. Blank `notes` clears the note; `null` also clears it |

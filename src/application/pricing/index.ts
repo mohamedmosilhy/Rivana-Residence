@@ -7,6 +7,7 @@ export type {
   RatePeriodChange,
   RatePeriodCreate,
   RatePeriodRecord,
+  RateBatchReader,
   RateReadModel,
   RateRepository,
   RoomTypeRateScope,

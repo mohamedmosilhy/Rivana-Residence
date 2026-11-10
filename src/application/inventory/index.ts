@@ -7,9 +7,13 @@ export {
 } from "./inventory-guard";
 export type {
   AssignmentWindow,
+  AvailabilityBranch,
+  AvailabilityCatalog,
+  CatalogRoomType,
   InventoryLock,
   InventoryNightRecord,
   InventoryReader,
+  LastSyncCheckpointReader,
   ReservationConsumptionReader,
   SoldNightContribution,
 } from "./ports";
@@ -33,3 +37,15 @@ export type {
   BlockRecord,
   BlockRepository,
 } from "./ports";
+export {
+  GetAvailabilityGrid,
+  type AvailabilityGrid,
+  type AvailabilityGridNight,
+  type AvailabilityGridRoomType,
+} from "./get-availability-grid";
+export {
+  SearchAvailability,
+  type ListingSearchResult,
+  type SearchAvailabilityResult,
+  type SearchRefusal,
+} from "./search-availability";

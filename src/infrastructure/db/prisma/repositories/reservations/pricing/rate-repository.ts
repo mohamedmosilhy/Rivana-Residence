@@ -7,6 +7,7 @@ import type {
   RatePeriodChange,
   RatePeriodCreate,
   RatePeriodRecord,
+  RateBatchReader,
   RateRepository,
   RateReadModel,
 } from "@/application/pricing";
@@ -101,7 +102,7 @@ function translatePeriod(error: unknown): Result<never> {
   throw error;
 }
 
-export class PrismaRateRepository implements RateRepository {
+export class PrismaRateRepository implements RateRepository, RateBatchReader {
   constructor(private readonly client: DatabaseClient) {}
 
   async findRoomTypeVisible(roomTypeId: string, visible: BranchScope) {
@@ -139,6 +140,57 @@ export class PrismaRateRepository implements RateRepository {
       baseRate: base ? baseRecord(base) : null,
       periods: periods.map(periodRecord),
     };
+  }
+
+  async readMany(
+    roomTypeIds: readonly string[],
+    window: StayRange,
+  ): Promise<ReadonlyMap<string, RateReadModel>> {
+    const ids = [...new Set(roomTypeIds)];
+    const models = new Map<string, RateReadModel>(
+      ids.map((id) => [id, { baseRate: null, periods: [] }]),
+    );
+    if (ids.length === 0) return models;
+    // Two queries for every listing, not one pair per listing. Availability is a
+    // current observation, so the pair need not share a snapshot.
+    const [bases, periods] = await Promise.all([
+      this.client.roomBaseRate.findMany({
+        where: { roomTypeId: { in: ids } },
+        select: {
+          roomTypeId: true,
+          amountMinor: true,
+          currency: true,
+          updatedAt: true,
+        },
+      }),
+      this.client.ratePeriod.findMany({
+        where: {
+          roomTypeId: { in: ids },
+          active: true,
+          startDate: { lt: toDate(window.checkOut) },
+          endDate: { gt: toDate(window.checkIn) },
+        },
+        select: periodSelect,
+        orderBy: [{ startDate: "asc" }, { id: "asc" }],
+      }),
+    ]);
+    const grouped = new Map<string, RatePeriodRecord[]>();
+    for (const row of periods) {
+      const list = grouped.get(row.roomTypeId) ?? [];
+      list.push(periodRecord(row));
+      grouped.set(row.roomTypeId, list);
+    }
+    for (const base of bases) {
+      models.set(base.roomTypeId, {
+        baseRate: baseRecord(base),
+        periods: grouped.get(base.roomTypeId) ?? [],
+      });
+    }
+    for (const [id, list] of grouped) {
+      const model = models.get(id);
+      if (model) models.set(id, { ...model, periods: list });
+    }
+    return models;
   }
 
   async findPeriodVisible(id: string, visible: BranchScope) {

@@ -195,3 +195,34 @@ export interface BlockRepository {
     input: Readonly<{ cancelledById: string; at: Date }>,
   ): Promise<Result<BlockRecord>>;
 }
+
+export type CatalogRoomType = Readonly<{
+  id: string;
+  name: string;
+  maxAdults: number;
+  maxChildren: number;
+}>;
+
+export type AvailabilityBranch = Readonly<{
+  id: string;
+  timeZone: string;
+  active: boolean;
+}>;
+
+/**
+ * Uncached listing reads for availability. `ALL` returns every status (staff
+ * grid); `PUBLISHED` is the public catalog. Both are ordered by `sortOrder`
+ * then `id`.
+ */
+export interface AvailabilityCatalog {
+  findBranch(branchId: string): Promise<AvailabilityBranch | null>;
+  listRoomTypes(
+    branchId: string,
+    scope: "ALL" | "PUBLISHED",
+  ): Promise<readonly CatalogRoomType[]>;
+}
+
+/** The last manual hotel system sync (UTC instant), null until M8 stores one. */
+export interface LastSyncCheckpointReader {
+  read(branchId: string): Promise<Date | null>;
+}
