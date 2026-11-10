@@ -214,12 +214,12 @@ flowchart LR
 
 ## Technology baseline
 
-- Next.js 16.3 / React 19.2: App Router, Server Components, metadata, image optimization, Route Handlers.
+- Next.js 16.4 / React 19.2: App Router, Server Components, metadata, image optimization, Route Handlers.
 - Node.js 22 LTS (CI and hosting).
 - TypeScript 5.9 strict.
 - PostgreSQL 18 (17 as the managed-provider minimum; `btree_gist` for reservations).
 - Prisma ORM 7.10 with the pg driver adapter, isolated in infrastructure, with a UTC session on every connection.
-- Better Auth 1.7.6: closed email and password staff accounts, database sessions.
+- Better Auth 1.7: closed email and password staff accounts, database sessions.
 - Tailwind CSS 4.3 with CSS custom-property tokens; `motion` for animation.
 - Zod at every external input and configuration boundary.
 - React Hook Form for complex admin forms only.
