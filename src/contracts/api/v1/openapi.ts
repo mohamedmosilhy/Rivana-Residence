@@ -13,6 +13,7 @@ import {
   StaffBranch,
   StaffBranchList,
 } from "./branches";
+import { AvailabilityResult, AvailabilityResponse } from "./availability";
 import { HealthResponse } from "./health";
 import {
   AvailabilityGrid,
@@ -47,6 +48,8 @@ const COMPONENTS: Readonly<Record<string, z.ZodType>> = {
   Stay,
   Occupancy,
   HealthResponse,
+  AvailabilityResult,
+  AvailabilityResponse,
   Image,
   BranchSummary,
   BranchDetail,

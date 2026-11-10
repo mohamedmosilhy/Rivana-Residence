@@ -11,6 +11,7 @@ import {
   StaffBranch,
   StaffBranchList,
 } from "./branches";
+import { AvailabilityQuery, AvailabilityResponse } from "./availability";
 import { HealthResponse } from "./health";
 import {
   Block,
@@ -119,6 +120,24 @@ export const API_ROUTES: readonly ApiRoute[] = [
       200: { description: "The listing.", schema: RoomTypeDetail },
     },
     errors: ["NOT_FOUND"],
+  },
+  {
+    method: "get",
+    path: "/api/v1/branches/{branchSlug}/availability",
+    operationId: "searchAvailability",
+    summary:
+      "API-P5. Uncached published listing availability and accommodation prices before VAT.",
+    tag: "Inventory",
+    security: "public",
+    query: AvailabilityQuery,
+    responses: {
+      200: {
+        description:
+          "Availability for the requested quantity (default 1, maximum 5); no hold. Rates and inventory are read afresh. 60 requests per 60 second client window across branches, shared anonymous fallback without a trusted address.",
+        schema: AvailabilityResponse,
+      },
+    },
+    errors: ["INVALID_QUERY", "VALIDATION", "NOT_FOUND", "RATE_LIMITED"],
   },
   {
     method: "get",

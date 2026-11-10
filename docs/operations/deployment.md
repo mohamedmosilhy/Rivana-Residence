@@ -87,7 +87,7 @@ Schedule it hourly in the existing app user's cron before P5 is exposed. Run fro
 
 The deployment paths above are examples, not provisioned paths. Check exit status and log output during deployment rehearsal. A result of 1,000 means more expired rows may remain; additional bounded runs are safe. Cleanup is storage maintenance, not part of request admission, so missed runs do not bypass the limit.
 
-The prepared P5 policy uses one availability bucket per trusted client across branches, allowing 60 admissions per 60 second window. P5 endpoint wiring remains M6-T10. Without a trusted address, all such requests share one anonymous bucket. Enable `AUTH_TRUST_PROXY_HEADERS` only when the edge overwrites client supplied forwarding headers and the Next.js listener cannot be reached directly. Rehearse that trust configuration before public exposure. Staff sign-in policy remains separate.
+P5 uses one availability bucket per trusted client across branches, allowing 60 admissions per 60 second window. P5 endpoint wiring is implemented in M6-T10. Without a trusted address, all such requests share one anonymous bucket. Enable `AUTH_TRUST_PROXY_HEADERS` only when the edge overwrites client supplied forwarding headers and the Next.js listener cannot be reached directly. Rehearse that trust configuration before public exposure. Staff sign-in policy remains separate.
 
 ### Backup and restore tooling
 

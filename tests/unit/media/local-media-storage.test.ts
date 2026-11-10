@@ -111,4 +111,20 @@ describe("local filesystem containment", () => {
       LocalMediaStorage.create(separate, { forbidInside: app }),
     ).resolves.toBeInstanceOf(LocalMediaStorage);
   });
+  it("canonicalizes symlink aliases on both sides of the application boundary", async () => {
+    const app = await freshRoot();
+    const links = await freshRoot();
+    const alias = path.join(links, "checkout");
+    await symlink(app, alias, "dir");
+    await expect(
+      LocalMediaStorage.create(path.join(app, "media"), {
+        forbidInside: alias,
+      }),
+    ).rejects.toThrow("outside the application directory");
+    await expect(
+      LocalMediaStorage.create(path.join(alias, "media"), {
+        forbidInside: app,
+      }),
+    ).rejects.toThrow("outside the application directory");
+  });
 });

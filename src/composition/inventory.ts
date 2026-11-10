@@ -2,11 +2,16 @@ import "server-only";
 
 import {
   GetAvailabilityGrid,
+  SearchAvailability,
   ManageBlocks,
   ManagePhysicalRooms,
   type BlockContext,
   type PhysicalRoomContext,
 } from "@/application/inventory";
+import { SearchPublicAvailability } from "@/application/public/search-public-availability";
+import { PrismaBranchRepository } from "@/infrastructure/db/prisma/repositories/branches/branch-repository";
+import { PrismaRoomRepository } from "@/infrastructure/db/prisma/repositories/room-repository";
+import { PrismaRateRepository } from "@/infrastructure/db/prisma/repositories/reservations/pricing/rate-repository";
 import { getPrisma } from "@/infrastructure/db/prisma/client";
 import { PrismaAuditLog } from "@/infrastructure/db/prisma/repositories/audit/audit-log";
 import { EmptyReservationConsumptionReader } from "@/infrastructure/db/prisma/repositories/reservations/inventory/empty-reservation-consumption-reader";
@@ -82,5 +87,23 @@ export function getAvailabilityGrid() {
       new EmptyReservationConsumptionReader(),
     ),
     checkpoints: new NullLastSyncCheckpointReader(),
+  });
+}
+
+/** P5 reads branch, public catalog, inventory and prices afresh each request. */
+export function publicAvailability() {
+  const client = getPrisma();
+  return new SearchPublicAvailability({
+    branches: new PrismaBranchRepository(client),
+    rooms: new PrismaRoomRepository(client),
+    search: new SearchAvailability({
+      catalog: new PrismaAvailabilityCatalog(client),
+      reader: new PrismaInventoryReader(
+        client,
+        new EmptyReservationConsumptionReader(),
+      ),
+      rates: new PrismaRateRepository(client),
+      clock,
+    }),
   });
 }

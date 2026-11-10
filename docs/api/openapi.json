@@ -221,6 +221,93 @@
         }
       }
     },
+    "/api/v1/branches/{branchSlug}/availability": {
+      "get": {
+        "operationId": "searchAvailability",
+        "summary": "API-P5. Uncached published listing availability and accommodation prices before VAT.",
+        "tags": [
+          "Inventory"
+        ],
+        "security": [],
+        "parameters": [
+          {
+            "name": "branchSlug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "checkIn",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "Check-in in YYYY-MM-DD, branch local date."
+            }
+          },
+          {
+            "name": "checkOut",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "Exclusive check-out in YYYY-MM-DD."
+            }
+          },
+          {
+            "name": "adults",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "Whole number, at least 1, per unit."
+            }
+          },
+          {
+            "name": "children",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "Whole number, at least 0, per unit."
+            }
+          },
+          {
+            "name": "unitsRequested",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "description": "Whole number 1–5; defaults to 1.",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Availability for the requested quantity (default 1, maximum 5); no hold. Rates and inventory are read afresh. 60 requests per 60 second client window across branches, shared anonymous fallback without a trusted address.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AvailabilityResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Problem details. Codes: INTERNAL, INVALID_QUERY, VALIDATION, NOT_FOUND, RATE_LIMITED.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/staff/branches": {
       "get": {
         "operationId": "listStaffBranches",
@@ -1190,6 +1277,79 @@
         "required": [
           "status",
           "database"
+        ],
+        "additionalProperties": false
+      },
+      "AvailabilityResult": {
+        "type": "object",
+        "properties": {
+          "roomType": {
+            "$ref": "#/components/schemas/RoomTypeSummary"
+          },
+          "available": {
+            "type": "boolean"
+          },
+          "unitsAvailable": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 5
+          },
+          "pricePerNight": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Money"
+            },
+            "description": "Ordered per-unit nightly prices; empty when unpriced."
+          },
+          "accommodationTotal": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Money"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Requested quantity, before VAT; null when unpriced."
+          },
+          "reason": {
+            "type": "string",
+            "enum": [
+              "SOLD_OUT",
+              "OCCUPANCY",
+              "UNPRICED"
+            ]
+          }
+        },
+        "required": [
+          "roomType",
+          "available",
+          "unitsAvailable",
+          "pricePerNight",
+          "accommodationTotal"
+        ],
+        "additionalProperties": false
+      },
+      "AvailabilityResponse": {
+        "type": "object",
+        "properties": {
+          "stay": {
+            "$ref": "#/components/schemas/Stay"
+          },
+          "occupancy": {
+            "$ref": "#/components/schemas/Occupancy"
+          },
+          "results": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AvailabilityResult"
+            }
+          }
+        },
+        "required": [
+          "stay",
+          "occupancy",
+          "results"
         ],
         "additionalProperties": false
       },

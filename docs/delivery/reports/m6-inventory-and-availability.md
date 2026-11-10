@@ -1,6 +1,6 @@
 # M6: Inventory, date prices, and availability
 
-Status: **In progress (9/10 tasks accepted)**, 2026-11-10. M6-T1 through M6-T9 are accepted; M6-T10 has not started. The milestone has not been accepted or merged.
+Status: **In progress (10/10 tasks accepted)**, 2026-11-10. M6-T1 through M6-T10 are accepted; milestone closeout and acceptance remain pending. The milestone has not been accepted or merged.
 
 Branch: `m6-inventory-and-availability`. The owner requested this spelling when accepting T1; the original local `m6-Inventory-and-availability` branch was renamed without changing its history. Build spec: [0003](../../specs/0003-m6-inventory-and-availability.md). Task status belongs to the [brief](../milestones/m6-inventory-and-availability.md#task-breakdown).
 
@@ -17,6 +17,7 @@ Branch: `m6-inventory-and-availability`. The owner requested this spelling when 
 | M6-T7 | Critical | Owner, 2026-11-10 | `feat(pricing): add M6-T7 base rates, date periods, and staff API` (this task commit) | [2026-11-10-m6-t7.md](../../reviews/2026-11-10-m6-t7.md), recheck [2026-11-10-m6-t7-recheck.md](../../reviews/2026-11-10-m6-t7-recheck.md) | Check passed: 63 unit files / 1,334 tests and build; integration passed: 27 files / 368 tests; concurrency: 5 rate races × 20 iterations (T7) plus S32 and period row lock timeout cases; Chromium E2E: 171 passed, 30 skipped | Rate repository, `ManageRates`, `GetRateCalendar`, S30 to S34; first review (GPT) changes requested (four majors, all fixed), recheck (Opus) changes requested (one major, `TRY_AGAIN` on the wrong route, fixed) and two minors fixed before acceptance |
 | M6-T8 | Critical | Owner, 2026-11-10 | `feat(inventory): add M6-T8 availability search and staff grid` (this task commit) | [2026-11-10-m6-t8.md](../../reviews/2026-11-10-m6-t8.md) | Check passed: 65 unit files / 1,363 tests and build; integration passed: 28 files / 377 tests; Chromium E2E for S20: 2 passed (the full E2E suite was not rerun); `npm run openapi` regenerated, no drift | `GetAvailabilityGrid`, S20, `SearchAvailability` (no route yet), three read ports; review (Opus) approve with nits, four minors fixed before acceptance, five nits left |
 | M6-T9 | Medium | Owner, 2026-11-10 | `feat(security): add M6-T9 atomic public limiter and cleanup` (this task commit) | [2026-11-10-m6-t9.md](../../reviews/2026-11-10-m6-t9.md) | Check passed: 67 unit files / 1,373 tests and build; integration passed: 29 files / 391 tests; 3 limiter race cases × 20 iterations; reviewer reruns: 22 unit and 21 integration tests | Atomic public admission, shared anonymous fallback, safe bounded expiry cleanup and operator command; independent review approved with zero findings |
+| M6-T10 | Critical | Owner, 2026-11-10, conditional warning fixes completed | `feat(inventory): add M6-T10 public availability API` (this task commit) | [2026-11-10-m6-t10.md](../../reviews/2026-11-10-m6-t10.md), warning recheck [2026-11-10-m6-t10-warning-recheck.md](../../reviews/2026-11-10-m6-t10-warning-recheck.md) | Final check passed: 68 unit files / 1,385 tests and build; integration: 30 files / 425 tests; full Chromium E2E: 176 passed / 30 skipped; focused concurrency: 2 files / 28 tests with 20-iteration races | P5, strict public contracts and DTO, uncached public summary orchestration, worked-example response; Tailwind deprecation and media tracing warning fixes included at owner's request |
 
 Task commits identified by subject in this log can be located with `git log --oneline --fixed-strings --grep='<subject>'`.
 
@@ -33,6 +34,56 @@ T2 implements the pure inventory and pricing rules. `AvailabilityCalculator` che
 T4 adds the transaction and locking foundation used by later inventory writers. `ReservationUnitOfWork` binds only the ports a use case needs to one Prisma transaction at `READ COMMITTED`. A failed result is converted into an internal abort so Prisma rolls back instead of committing it; unexpected exceptions still propagate to the redacted HTTP failure path. `InventoryLock` deduplicates and sorts room type ids, takes `FOR NO KEY UPDATE` locks with a five second PostgreSQL timeout, verifies complete branch ownership, and maps lock timeout to `TRY_AGAIN`.
 
 The batched inventory reader returns every requested listing and night, including zero capacity, and merges checked sparse consumption contributions. M6's production consumption adapter intentionally returns none until reservation persistence arrives in M8. `InventoryGuard` enforces lock, reload, validation, mutation, and audit order inside the same unit of work. T4 provides the foundation and tests, but no production unit or block writer is composed before T5 and T6.
+
+## M6-T10 (accepted)
+
+The owner approved the task plan, reviewed the result, and accepted T10 on 2026-11-10 conditional on resolving the existing Tailwind deprecation and media tracing warnings. The owner explicitly authorized documentation synchronization and the task commit, without starting another task. Both warning fixes are included in this task. M6 milestone closeout, acceptance, push and merge remain separate.
+
+### Delivered behavior
+
+`GET /api/v1/branches/{branchSlug}/availability` uses the shared public wrapper and T9's availability limiter. The new `SearchPublicAvailability` application orchestration resolves the active branch from its URL slug and calls the accepted T8 `SearchAvailability`. It joins results by internal listing identity to freshly loaded published room summaries and omits summaries that disappear or are unpublished during the reads. Existing branch/room ports, repositories, public view models and summary mappers are reused; no new port or schema is added.
+
+P5 requires `checkIn`, `checkOut`, `adults`, and `children`; omitted `unitsRequested` defaults to 1, with a maximum of 5. Missing, unknown, and duplicate query keys return 400; invalid date, number, stay and occupancy values return 422 with field errors. Empty numeric strings remain invalid instead of becoming zero. Branch-local today is derived from the server's clock and the branch zone. Active branches remain searchable while booking is disabled; inactive/missing branches return 404.
+
+Every published listing is returned in catalog order with availability for the requested quantity, a selectable count capped at 5, ordered per-unit nightly amounts, and their accommodation total multiplied by quantity, before VAT. Refusal precedence is `UNPRICED`, `OCCUPANCY`, then `SOLD_OUT`. Unpriced results have an empty nightly array and null total. The explicit HTTP mapper exposes no internal listing IDs, physical IDs/labels, block notes or raw inventory counts. Every GET success/error is `no-store`; no marketing cache is used. Search neither holds inventory nor promises reservation creation readiness.
+
+The existing guarded demo seed already supplies usable published room/apartment summaries, physical units and rates. A new real-handler test proves P5 after both a fresh and repeated demo seed; no additional fictional inventory or prices were needed. Existing production seed refusal tests remain green. OpenAPI was regenerated and freshness verified.
+
+### Warning fixes and safety proof
+
+The Tailwind 4.3.0 Node loader called deprecated `module.register()` on Node 26. Tailwind and its PostCSS adapter are pinned to **4.3.5**, which retains the upstream `registerHooks()` fix ([first shipped in 4.3.1](https://github.com/tailwindlabs/tailwindcss/releases/tag/v4.3.1)). The 4.3.1 trial was not retained because its pinned PostCSS introduced two additional development audit findings; 4.3.5 returns the audit to the original 26 development findings, with zero production findings and no newly flagged packages. A clean install after an interrupted dependency trial succeeded; no installed-package edit or warning-suppression environment setting is used.
+
+Turbopack traced `realpath(options.forbidInside)` as a deployment asset and expanded the whole checkout. The call now carries the supported `turbopackIgnore` asset-tracing annotation, with a comment explaining that this is a runtime containment boundary. The `realpath` call and rejection remain intact. The added media regression case checks aliases on both sides of the application boundary; existing traversal, symlink, permissions, quarantine and storage contract cases also pass. The directive changes asset analysis, not the runtime security policy.
+
+Inspection of all 56 server tracing manifests measured a maximum of **1,320 files before / 339 after**. References to checkout documentation/tests/git files, counted across manifests, fell from **3,748 to 56**; the remaining references are only the two JSON documents `docs/api/openapi.json` and the captured worked-example response, not a whole-checkout traversal. The final aggregate, integration, and E2E build logs contain neither targeted warning. No global issue filter was configured.
+
+### Commands, results and runtime evidence
+
+Final verification used Node **26.13.0**, npm **11.20.0**, PostgreSQL **18.4**:
+
+```sh
+npm ci --no-audit
+npm run check
+TEST_DATABASE_URL=postgresql://mohamedmosilhy@127.0.0.1:5432/rivana_test npm run test:integration -- --reporter=dot
+E2E_DATABASE_URL=postgresql://mohamedmosilhy@127.0.0.1:5432/rivana_e2e_test npm run test:e2e
+TEST_DATABASE_URL=postgresql://mohamedmosilhy@127.0.0.1:5432/rivana_test npm run test:integration -- --reporter=dot tests/integration/reservations/concurrency.test.ts tests/integration/public-rate-limit.test.ts
+npm audit --json
+npm audit --omit=dev --json
+```
+
+Passed clean installation and Prisma generation; format, lint, typecheck, **68 unit files / 1,385 tests**, and production build; **30 integration files / 425 tests**; **176 Chromium E2E tests**, with **30 intentionally skipped** by viewport/project scoping; and focused concurrency **2 files / 28 tests**, including inventory and limiter races repeated 20 times. Full E2E includes media upload/replacement and visual baselines after the dependency and tracing fixes. Audit exits nonzero for the existing 26 development findings (2 low, 10 moderate, 14 high); production audit exits zero with zero findings. No migration/drift check applies because there is no schema change.
+
+Initial P5 verification also ran the following separate live browser proof; the final full E2E suite reran that same P5 case successfully:
+
+```sh
+E2E_DATABASE_URL=postgresql://mohamedmosilhy@127.0.0.1:5432/rivana_e2e_test PLAYWRIGHT_JSON_OUTPUT_FILE=/tmp/rivana-m6-t10-live.json npm run test:e2e -- --project=branches --no-deps --grep 'P5 exposes' --reporter=json
+```
+
+Passed **1 test**. [Captured real HTTP response](./m6-t10-worked-example.json): December 10 to December 14, 2026, nightly amounts 6000, 6000, 7000, 7000 and total **26000 USD cents**. That live case also proves quantity 2 totals 52000, the 400/422 split, fresh rates and unit changes, and branch deactivation returning 404 without cache invalidation. Fixtures are confined to the disposable E2E database and cleaned afterward. Persisted reservation consumption remains empty until M8.
+
+### Independent review
+
+Initial reviewer `gpt-6-astra`, author `gpt-6.1-sol`: **Approve**, zero findings ([report](../../reviews/2026-11-10-m6-t10.md)). It independently reran **67 unit/architecture tests** and **34 P5 PostgreSQL integration tests**. The warning fixes were rechecked independently by `claude-sonnet-5-5`: **Approve**, zero findings ([recheck](../../reviews/2026-11-10-m6-t10-warning-recheck.md)). It confirmed Tailwind 4.3.5 only, a lockfile change confined to the Tailwind tree, no `DEP0205` and no tracing warning in a fresh build, 339 files in the largest tracing manifest, the unchanged runtime containment check, and the same 26 development and 0 production audit findings.
 
 ## M6-T9 (accepted)
 
@@ -145,7 +196,7 @@ Remaining limitations:
 - M6-T7: rate repository, `ManageRates`, `GetRateCalendar`, S30 to S34, accepted by the owner.
 - M6-T8: `GetAvailabilityGrid`, S20, and the `SearchAvailability` use case, accepted by the owner.
 - M6-T9: atomic public limiter admission, anonymous fallback, bounded expiry cleanup and its operator command, accepted by the owner.
-- The public availability API (P5) remains T10; staff screens remain M11 and M12.
+- M6-T10: P5 public availability API, query/response contracts and DTO, uncached public summary orchestration, live worked-example evidence, and targeted build warning fixes, accepted by the owner. Staff screens remain M11 and M12.
 
 ## Files by responsibility
 
@@ -268,16 +319,16 @@ Direct runtime verification additionally proved that a failed result rolls back 
 
 ## Acceptance criteria and evidence
 
-| Criterion | Accepted T1 through T9 evidence and remaining scope |
+| Criterion | Accepted T1 through T10 evidence and deferred scope |
 | --- | --- |
-| AC-1 | Domain resolver and T8 search prove the 26000-cent worked example and quantity multiplication. Public P5 proof remains T10 |
+| AC-1 | Domain resolver and T8 search prove the 26000-cent worked example and quantity multiplication. T10 proves the same total through the real P5 handler and live browser response |
 | AC-2 | T3 exclusions and T7 rate API tests refuse overlapping active periods with safe 409 errors |
 | AC-3 | T1/T2 date and overlap arithmetic, T3 database exclusions, and T6 block workflows cover adjacency and partial overlap |
 | AC-4 | Guard and writer tests cover projected capacity refusal, conflicting blocks, earliest unavailable night, locking, and audit rollback; sold/assignments are injected until M8 |
 | AC-5 | Real PostgreSQL races cover block versus block, block versus deactivation, locking entry points, and branch isolation with 20 repetitions |
-| AC-6 | Pure rules and T8 reads retain zero capacity and complete unpriced results. P5 response mapping remains T10 |
+| AC-6 | Pure rules and T8 reads retain zero capacity and complete unpriced results. T10 proves the P5 response mapping, refusal precedence, capped quantity, and no invented price |
 | AC-7 | T7 rate API authorization, branch scope, audited before/after writes, and rollback tests passed |
-| AC-8 | T8 proves uncached staff grid reads and the search view-model allowlist. T9 proves atomic limiter admission, fallback and safe expiry lifecycle. Public route cache/disclosure proof remains T10 |
+| AC-8 | T8 proves uncached staff grid reads and the search view-model allowlist. T9 proves atomic limiter admission, fallback and safe expiry lifecycle. T10 proves public no-store responses, uncached branch/catalog/inventory/rate reads, the response allowlist and limiter wiring |
 
 ## Independent review and owner acceptance
 
@@ -293,8 +344,8 @@ M6-T4 received a fresh model review against the approved critical risk task card
 
 ## Known limitations and deferred work
 
-M6-T1 through M6-T9 are accepted. Public availability API P5 remains M6-T10 and requires its own approved plan, implementation, verification, independent review, and acceptance. Hourly limiter cleanup and trusted-proxy configuration still need the deployment rehearsal. The production reservation consumption adapter intentionally reports no sold or assigned rows until M8, and the sync checkpoint reader returns null until persisted synchronization arrives. Availability reads do not hold inventory or promise a shared capacity/rate snapshot. Persisted reservation price snapshots and manual override authorization remain M8 work. Task-specific accepted limitations remain documented in the sections above.
+M6-T1 through M6-T10 are accepted. Milestone closeout verification and owner acceptance remain separate; no milestone completion or merge is claimed. Hourly limiter cleanup and trusted-proxy configuration still need the deployment rehearsal. The production reservation consumption adapter intentionally reports no sold or assigned rows until M8, and the sync checkpoint reader returns null until persisted synchronization arrives. Availability reads do not hold inventory or promise a shared capacity/rate snapshot. Persisted reservation price snapshots and manual override authorization remain M8 work. Task-specific accepted limitations remain documented in the sections above.
 
 ## Next milestone
 
-M7 has not started. M6-T10 has not started; stop after the accepted T9 commit unless the owner requests separate maintenance work.
+M7 has not started. Stop after the accepted T10 commit; do not start another task. Milestone acceptance, push and merge remain pending.

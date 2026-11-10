@@ -70,10 +70,10 @@ Each section states its status: **Implemented** (built and accepted in Phases 1�
 - **FR-INV-2** Receptionist and above create, shorten, extend, and cancel blocks on a unit with a reason (IN-6, IN-7).
 - **FR-INV-3** Staff see an availability grid per branch: listings by nights, showing capacity, sold, free, and blocked, for up to 62 nights.
 
-## FR-AV Availability search — Planned (M6, UI M10)
+## FR-AV Availability search — API implemented (M6-T10), UI planned (M10)
 
 - **FR-AV-1** Guests search a branch by check-in, check-out, adults, and children (AV-1…9, OC-1…3).
-- **FR-AV-2** Results list only the branch's published listings that are available for those dates and that party, with the accommodation price **before VAT**, and how many units can still be added to the booking.
+- **FR-AV-2** Results list the branch's published listings with availability for those dates, party, and requested quantity, the accommodation price **before VAT**, and a selectable unit count capped at 5. Unavailable listings retain the reason in FR-AV-3.
 - **FR-AV-3** Unavailable listings show a reason: sold out, too many guests, or no price.
 - **FR-AV-4** Results are computed server-side for every request and never cached.
 

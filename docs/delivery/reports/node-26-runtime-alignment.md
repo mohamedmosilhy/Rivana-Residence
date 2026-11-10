@@ -36,8 +36,8 @@ Both shell checks selected 26.13.0 and npm 11.20.0. Clean installation passed an
 
 ## Warnings and limits
 
-- The existing media-storage dynamic filesystem tracing warning remains in the build.
-- Node 26 reports `DEP0205` for `module.register()`. A focused rerun with `node --trace-deprecation node_modules/vitest/vitest.mjs run tests/unit/application/public-rate-limit.test.ts --reporter=dot` passed **11 tests** and traced the warning to the installed `@tailwindcss/node` loader. No application source change was needed.
+- The existing media-storage dynamic filesystem tracing warning remained at this verification; it was subsequently resolved in M6-T10.
+- Node 26 reports `DEP0205` for `module.register()`. A focused rerun with `node --trace-deprecation node_modules/vitest/vitest.mjs run tests/unit/application/public-rate-limit.test.ts --reporter=dot` passed **11 tests** and traced the warning to the installed `@tailwindcss/node` loader. No application source change was needed for runtime alignment. The loader warning was subsequently resolved by the Tailwind patch update in M6-T10.
 - The install audit reported **26 development dependency findings** (2 low, 10 moderate, 14 high). `npm audit --json` findings were exactly equal to an audit of the accepted T9 package/lockfile in an isolated temporary directory. `npm audit --omit=dev --json` reported **zero production vulnerabilities**. This runtime update neither introduced nor repairs those existing development dependency findings.
 - npm warned about four dependency install scripts lacking an `allowScripts` declaration. Installation, Prisma generation, and the aggregate gates completed successfully; no install policy or dependency script approval was changed.
 - Local verification is on macOS. No production host was provisioned or remote CI run triggered, and nothing was pushed.

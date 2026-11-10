@@ -21,9 +21,9 @@ Add TOTP/passkey support only after the core flow is stable or earlier if the cl
 
 ## Public request admission (M6-T9, implemented)
 
-The prepared P5 limiter uses one namespaced HMAC key per trusted client across branches, with a shared anonymous bucket when no trusted address is available. It admits 60 requests per 60 second fixed window, with the check and count in one PostgreSQL transaction over `LoginThrottle`. Concurrent bursts cannot exceed the limit. Rejections carry the remaining window in `Retry-After` and do not extend the window. Staff sign-in retains its separate failure and lock policy.
+P5 uses one namespaced HMAC key per trusted client across branches, with a shared anonymous bucket when no trusted address is available. It admits 60 requests per 60 second fixed window, with the check and count in one PostgreSQL transaction over `LoginThrottle`. Concurrent bursts cannot exceed the limit. Rejections carry the remaining window in `Retry-After` and do not extend the window. Staff sign-in retains its separate failure and lock policy.
 
-The availability namespace is isolated from staff account and client keys and other public limits. Hourly `npm run throttles -- cleanup-public` removes at most 1,000 expired availability buckets, skips busy rows, and preserves active windows and locks. See [deployment](../operations/deployment.md#public-throttle-cleanup-m6-t9) for invocation and trusted-proxy rehearsal. P5 endpoint wiring remains M6-T10.
+The availability namespace is isolated from staff account and client keys and other public limits. Hourly `npm run throttles -- cleanup-public` removes at most 1,000 expired availability buckets, skips busy rows, and preserves active windows and locks. See [deployment](../operations/deployment.md#public-throttle-cleanup-m6-t9) for invocation and trusted-proxy rehearsal. P5 endpoint wiring is implemented in M6-T10. It resolves the active branch from the URL on the server, performs uncached reads, and returns an explicit public field allowlist.
 
 ## Authorization
 

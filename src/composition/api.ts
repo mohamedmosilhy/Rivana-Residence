@@ -8,6 +8,7 @@ import { resolveStaffFromHeaders, throttleKeys } from "@/composition/auth";
 import { manageBranches } from "@/composition/content";
 import {
   getAvailabilityGrid,
+  publicAvailability,
   manageBlocks,
   managePhysicalRooms,
 } from "@/composition/inventory";
@@ -183,4 +184,9 @@ export function updateRatePeriod(
 
 export function deactivateRatePeriod(staff: StaffPrincipal, id: string) {
   return manageRates().deactivatePeriod(staff, id);
+}
+
+// API-P5: uncached public availability with server-resolved branch identity.
+export function searchPublicAvailability(slug: string, input: unknown) {
+  return publicAvailability().execute(slug, input);
 }
