@@ -30,6 +30,10 @@ export const PROBLEMS: Readonly<Record<ProblemCode, ProblemDefinition>> = {
   FORBIDDEN: { status: 403, title: "You do not have access to this" },
   NOT_FOUND: { status: 404, title: "Not found" },
   CONFLICT: { status: 409, title: "This conflicts with the current state" },
+  INVENTORY_UNAVAILABLE: {
+    status: 409,
+    title: "The requested inventory is unavailable",
+  },
   REFERENCED: { status: 409, title: "This is still in use" },
   NOT_PUBLISHABLE: { status: 422, title: "This cannot be published yet" },
   RATE_LIMITED: { status: 429, title: "Too many requests" },
@@ -96,5 +100,6 @@ export function problemFromError(error: ApplicationError, requestId: string) {
     requestId,
     detail: error.message,
     ...(error.fieldErrors ? { fieldErrors: error.fieldErrors } : {}),
+    ...(error.context ? { context: error.context } : {}),
   });
 }

@@ -11,7 +11,30 @@ import {
   StaffBranch,
   StaffBranchList,
 } from "./branches";
+import { AvailabilityQuery, AvailabilityResponse } from "./availability";
 import { HealthResponse } from "./health";
+import {
+  Block,
+  BlockInput,
+  AvailabilityGrid,
+  AvailabilityGridQuery,
+  BlockList,
+  BlockPatch,
+  BlockQuery,
+  PhysicalRoom,
+  PhysicalRoomInput,
+  PhysicalRoomList,
+  PhysicalRoomPatch,
+} from "./inventory";
+import {
+  BaseRateInput,
+  RateCalendar,
+  RatePeriod,
+  RatePeriodInput,
+  RatePeriodPatch,
+  RateQuery,
+} from "./pricing";
+import { Money } from "./primitives";
 
 /** One documented endpoint. The OpenAPI document is generated from these. */
 export type ApiRoute = Readonly<{
@@ -100,6 +123,24 @@ export const API_ROUTES: readonly ApiRoute[] = [
   },
   {
     method: "get",
+    path: "/api/v1/branches/{branchSlug}/availability",
+    operationId: "searchAvailability",
+    summary:
+      "API-P5. Uncached published listing availability and accommodation prices before VAT.",
+    tag: "Inventory",
+    security: "public",
+    query: AvailabilityQuery,
+    responses: {
+      200: {
+        description:
+          "Availability for the requested quantity (default 1, maximum 5); no hold. Rates and inventory are read afresh. 60 requests per 60 second client window across branches, shared anonymous fallback without a trusted address.",
+        schema: AvailabilityResponse,
+      },
+    },
+    errors: ["INVALID_QUERY", "VALIDATION", "NOT_FOUND", "RATE_LIMITED"],
+  },
+  {
+    method: "get",
     path: "/api/v1/staff/branches",
     operationId: "listStaffBranches",
     summary:
@@ -149,6 +190,270 @@ export const API_ROUTES: readonly ApiRoute[] = [
       "CROSS_SITE_REQUEST",
       "NOT_FOUND",
       "VALIDATION",
+    ],
+  },
+  {
+    method: "get",
+    path: "/api/v1/staff/branches/{branchId}/physical-rooms",
+    operationId: "listPhysicalRooms",
+    summary:
+      "API-S21. Every physical unit of the branch, inactive ones included. Needs inventory:read.",
+    tag: "Inventory",
+    security: "staff",
+    responses: {
+      200: { description: "The branch's units.", schema: PhysicalRoomList },
+    },
+    errors: ["UNAUTHENTICATED", "FORBIDDEN", "NOT_FOUND"],
+  },
+  {
+    method: "post",
+    path: "/api/v1/staff/branches/{branchId}/physical-rooms",
+    operationId: "createPhysicalRoom",
+    summary:
+      "API-S22. Add an active unit to a listing of the branch (inventory:manage). Audited. Returns Location.",
+    tag: "Inventory",
+    security: "staff",
+    request: PhysicalRoomInput,
+    responses: {
+      201: { description: "The new unit.", schema: PhysicalRoom },
+    },
+    errors: [
+      "UNAUTHENTICATED",
+      "FORBIDDEN",
+      "CROSS_SITE_REQUEST",
+      "NOT_FOUND",
+      "CONFLICT",
+      "VALIDATION",
+    ],
+  },
+  {
+    method: "patch",
+    path: "/api/v1/staff/physical-rooms/{id}",
+    operationId: "updatePhysicalRoom",
+    summary:
+      "API-S23. Change a unit's label, notes, or activity (inventory:manage). Deactivation never oversells: it takes the listing lock. Audited.",
+    tag: "Inventory",
+    security: "staff",
+    request: PhysicalRoomPatch,
+    responses: {
+      200: { description: "The updated unit.", schema: PhysicalRoom },
+    },
+    errors: [
+      "UNAUTHENTICATED",
+      "FORBIDDEN",
+      "CROSS_SITE_REQUEST",
+      "NOT_FOUND",
+      "CONFLICT",
+      "INVENTORY_UNAVAILABLE",
+      "VALIDATION",
+      "TRY_AGAIN",
+    ],
+  },
+  {
+    method: "get",
+    path: "/api/v1/staff/branches/{branchId}/availability",
+    operationId: "getAvailabilityGrid",
+    summary:
+      "API-S20. Capacity, sold, free, and blocked units per listing and night for a window of at most 62 nights (exclusive end), every listing of the branch in any publication status. Never cached. Needs inventory:read.",
+    tag: "Inventory",
+    security: "staff",
+    query: AvailabilityGridQuery,
+    responses: {
+      200: { description: "The grid.", schema: AvailabilityGrid },
+    },
+    errors: [
+      "UNAUTHENTICATED",
+      "FORBIDDEN",
+      "NOT_FOUND",
+      "VALIDATION",
+      "INVALID_QUERY",
+    ],
+  },
+  {
+    method: "get",
+    path: "/api/v1/staff/branches/{branchId}/blocks",
+    operationId: "listBlocks",
+    summary:
+      "API-S24. Uncancelled blocks overlapping a window of at most 62 nights (exclusive end). Needs inventory:read.",
+    tag: "Inventory",
+    security: "staff",
+    query: BlockQuery,
+    responses: {
+      200: { description: "The overlapping blocks.", schema: BlockList },
+    },
+    errors: [
+      "UNAUTHENTICATED",
+      "FORBIDDEN",
+      "NOT_FOUND",
+      "VALIDATION",
+      "INVALID_QUERY",
+    ],
+  },
+  {
+    method: "post",
+    path: "/api/v1/staff/branches/{branchId}/blocks",
+    operationId: "createBlock",
+    summary:
+      "API-S25. Block one unit (inventory:block). Never oversells: it takes the listing lock and refuses with INVENTORY_UNAVAILABLE naming the first night. Overlap on the unit is a CONFLICT. Audited. Returns Location.",
+    tag: "Inventory",
+    security: "staff",
+    request: BlockInput,
+    responses: {
+      201: { description: "The new block.", schema: Block },
+    },
+    errors: [
+      "UNAUTHENTICATED",
+      "FORBIDDEN",
+      "CROSS_SITE_REQUEST",
+      "NOT_FOUND",
+      "CONFLICT",
+      "INVENTORY_UNAVAILABLE",
+      "VALIDATION",
+      "TRY_AGAIN",
+    ],
+  },
+  {
+    method: "patch",
+    path: "/api/v1/staff/blocks/{id}",
+    operationId: "updateBlock",
+    summary:
+      "API-S26. Change a block's end date or note (inventory:block). An end date change takes the listing lock; a cancelled block cannot change. Audited.",
+    tag: "Inventory",
+    security: "staff",
+    request: BlockPatch,
+    responses: {
+      200: { description: "The updated block.", schema: Block },
+    },
+    errors: [
+      "UNAUTHENTICATED",
+      "FORBIDDEN",
+      "CROSS_SITE_REQUEST",
+      "NOT_FOUND",
+      "CONFLICT",
+      "INVENTORY_UNAVAILABLE",
+      "VALIDATION",
+      "TRY_AGAIN",
+    ],
+  },
+  {
+    method: "delete",
+    path: "/api/v1/staff/blocks/{id}",
+    operationId: "cancelBlock",
+    summary:
+      "API-S27. Soft cancel a block (inventory:block). Repeating it succeeds without another audit event. Audited.",
+    tag: "Inventory",
+    security: "staff",
+    responses: {
+      204: { description: "The block is cancelled." },
+    },
+    errors: [
+      "UNAUTHENTICATED",
+      "FORBIDDEN",
+      "CROSS_SITE_REQUEST",
+      "NOT_FOUND",
+      "TRY_AGAIN",
+    ],
+  },
+  {
+    method: "get",
+    path: "/api/v1/staff/room-types/{roomTypeId}/rates",
+    operationId: "getRates",
+    summary:
+      "API-S30. Base rate, intersecting periods, and resolved calendar for at most 62 nights. Needs pricing:read.",
+    tag: "Pricing",
+    security: "staff",
+    query: RateQuery,
+    responses: {
+      200: { description: "The listing's rates.", schema: RateCalendar },
+    },
+    errors: [
+      "UNAUTHENTICATED",
+      "FORBIDDEN",
+      "NOT_FOUND",
+      "VALIDATION",
+      "INVALID_QUERY",
+    ],
+  },
+  {
+    method: "put",
+    path: "/api/v1/staff/room-types/{roomTypeId}/base-rate",
+    operationId: "setBaseRate",
+    summary:
+      "API-S31. Create or replace the base nightly rate (pricing:manage). Audited.",
+    tag: "Pricing",
+    security: "staff",
+    request: BaseRateInput,
+    responses: {
+      200: { description: "The base nightly rate.", schema: Money },
+    },
+    errors: [
+      "UNAUTHENTICATED",
+      "FORBIDDEN",
+      "CROSS_SITE_REQUEST",
+      "NOT_FOUND",
+      "VALIDATION",
+      "TRY_AGAIN",
+    ],
+  },
+  {
+    method: "post",
+    path: "/api/v1/staff/room-types/{roomTypeId}/rate-periods",
+    operationId: "createRatePeriod",
+    summary:
+      "API-S32. Create an active date rate period (pricing:manage). Audited. Returns Location.",
+    tag: "Pricing",
+    security: "staff",
+    request: RatePeriodInput,
+    responses: {
+      201: { description: "The new rate period.", schema: RatePeriod },
+    },
+    errors: [
+      "UNAUTHENTICATED",
+      "FORBIDDEN",
+      "CROSS_SITE_REQUEST",
+      "NOT_FOUND",
+      "CONFLICT",
+      "VALIDATION",
+      "TRY_AGAIN",
+    ],
+  },
+  {
+    method: "patch",
+    path: "/api/v1/staff/rate-periods/{id}",
+    operationId: "updateRatePeriod",
+    summary:
+      "API-S33. Change or reactivate a date rate period (pricing:manage). Audited.",
+    tag: "Pricing",
+    security: "staff",
+    request: RatePeriodPatch,
+    responses: {
+      200: { description: "The changed rate period.", schema: RatePeriod },
+    },
+    errors: [
+      "UNAUTHENTICATED",
+      "FORBIDDEN",
+      "CROSS_SITE_REQUEST",
+      "NOT_FOUND",
+      "CONFLICT",
+      "VALIDATION",
+      "TRY_AGAIN",
+    ],
+  },
+  {
+    method: "delete",
+    path: "/api/v1/staff/rate-periods/{id}",
+    operationId: "deactivateRatePeriod",
+    summary:
+      "API-S34. Soft deactivate a date rate period (pricing:manage). Repeating it succeeds without another audit. Audited.",
+    tag: "Pricing",
+    security: "staff",
+    responses: { 204: { description: "The period is inactive." } },
+    errors: [
+      "UNAUTHENTICATED",
+      "FORBIDDEN",
+      "CROSS_SITE_REQUEST",
+      "NOT_FOUND",
+      "TRY_AGAIN",
     ],
   },
 ];

@@ -1,0 +1,56 @@
+-- M6 closeout, 2026-11-10: EXPLAIN (ANALYZE, BUFFERS) of the capacity query in inventory-reader.ts on the demo seed plus fictional fixtures (scratch database, since dropped). The sold adapter returns no rows until M8, so no sold query plan exists yet.
+                                                          QUERY PLAN                                                           
+-------------------------------------------------------------------------------------------------------------------------------
+ GroupAggregate (actual rows=12.00 loops=1)
+   Group Key: room.id, "*VALUES*_1".column1
+   Buffers: shared hit=103
+   InitPlan 3
+     ->  Seq Scan on "Branch" (actual rows=1.00 loops=1)
+           Filter: ((slug)::text = 'new-cairo'::text)
+           Rows Removed by Filter: 1
+           Buffers: shared hit=1
+   ->  Sort (actual rows=16.00 loops=1)
+         Sort Key: room.id, "*VALUES*_1".column1
+         Sort Method: quicksort  Memory: 25kB
+         Buffers: shared hit=15
+         ->  Nested Loop (actual rows=16.00 loops=1)
+               Buffers: shared hit=9
+               ->  Nested Loop Left Join (actual rows=4.00 loops=1)
+                     Join Filter: ((unit."roomTypeId")::text = (room.id)::text)
+                     Rows Removed by Join Filter: 6
+                     Buffers: shared hit=9
+                     ->  Nested Loop (actual rows=3.00 loops=1)
+                           Join Filter: ("*VALUES*".column1 = (room.id)::text)
+                           Rows Removed by Join Filter: 15
+                           Buffers: shared hit=3
+                           ->  Index Scan using "Room_branchId_status_sortOrder_idx" on "Room" room (actual rows=6.00 loops=1)
+                                 Index Cond: (("branchId")::text = ((InitPlan 3).col1)::text)
+                                 Index Searches: 1
+                                 Buffers: shared hit=3
+                           ->  Values Scan on "*VALUES*" (actual rows=3.00 loops=6)
+                     ->  Index Scan using "PhysicalRoom_branchId_label_key" on "PhysicalRoom" unit (actual rows=3.00 loops=3)
+                           Index Cond: (("branchId")::text = ((InitPlan 3).col1)::text)
+                           Filter: active
+                           Index Searches: 3
+                           Buffers: shared hit=6
+               ->  Values Scan on "*VALUES*_1" (actual rows=4.00 loops=4)
+   SubPlan 1
+     ->  Index Scan using "InventoryBlock_no_overlap" on "InventoryBlock" b (actual rows=0.58 loops=12)
+           Index Cond: (("physicalRoomId")::text = (unit.id)::text)
+           Filter: (("startDate" <= "*VALUES*_1".column1) AND ("endDate" > "*VALUES*_1".column1))
+           Rows Removed by Filter: 1
+           Index Searches: 12
+           Buffers: shared hit=64
+   SubPlan 2
+     ->  Index Scan using "InventoryBlock_no_overlap" on "InventoryBlock" b_1 (actual rows=0.58 loops=12)
+           Index Cond: (("physicalRoomId")::text = (unit.id)::text)
+           Filter: (("startDate" <= "*VALUES*_1".column1) AND ("endDate" > "*VALUES*_1".column1))
+           Rows Removed by Filter: 1
+           Index Searches: 12
+           Buffers: shared hit=24
+ Planning:
+   Buffers: shared hit=626
+ Planning Time: 2.701 ms
+ Execution Time: 1.336 ms
+(51 rows)
+

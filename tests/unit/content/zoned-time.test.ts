@@ -1,10 +1,12 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  localDateAt,
   isValidTimeZone,
   utcToZonedLocal,
   zonedLocalToUtc,
 } from "@/domain/shared/zoned-time";
+import { DomainValidationError } from "@/domain/shared/domain-error";
 
 describe("property time zone conversion", () => {
   it("converts Cairo wall-clock time in winter (UTC+2) and summer (UTC+3)", () => {
@@ -58,4 +60,41 @@ describe("property time zone conversion", () => {
     expect(isValidTimeZone("Africa/Cairo")).toBe(true);
     expect(isValidTimeZone("Mars/Olympus")).toBe(false);
   });
+});
+
+describe("branch calendar date (AC-3, T-DATE-8)", () => {
+  it.each([
+    ["2026-09-25T21:05:00Z", "Africa/Cairo", "2026-09-26"],
+    ["2026-09-25T21:05:00Z", "UTC", "2026-09-25"],
+    ["2026-01-01T01:00:00Z", "America/New_York", "2025-12-31"],
+    ["2026-04-23T21:59:59Z", "Africa/Cairo", "2026-04-23"],
+    ["2026-04-23T22:00:00Z", "Africa/Cairo", "2026-04-24"],
+    ["2026-10-29T20:59:59Z", "Africa/Cairo", "2026-10-29"],
+    ["2026-10-29T21:00:00Z", "Africa/Cairo", "2026-10-29"],
+    ["2026-10-29T22:00:00Z", "Africa/Cairo", "2026-10-30"],
+    ["0001-01-01T00:00:00Z", "UTC", "0001-01-01"],
+  ])("derives %s in %s as %s", (instant, zone, expected) => {
+    expect(localDateAt(new Date(instant), zone).toString()).toBe(expected);
+  });
+
+  it("rejects an invalid clock instant", () => {
+    expect(() => localDateAt(new Date(NaN), "Africa/Cairo")).toThrow(
+      DomainValidationError,
+    );
+  });
+
+  it("rejects an invalid branch time zone", () => {
+    expect(() =>
+      localDateAt(new Date("2026-01-01T00:00:00Z"), "Mars/Olympus"),
+    ).toThrow(DomainValidationError);
+  });
+
+  it.each(["0000-01-01T00:00:00Z", "+010000-01-01T00:00:00Z"])(
+    "rejects a branch date outside the supported Gregorian years for %s",
+    (instant) => {
+      expect(() => localDateAt(new Date(instant), "UTC")).toThrow(
+        DomainValidationError,
+      );
+    },
+  );
 });

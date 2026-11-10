@@ -1,0 +1,69 @@
+{
+  "status": 200,
+  "headers": {
+    "cache-control": "no-store",
+    "connection": "keep-alive",
+    "content-security-policy": "default-src 'self'; script-src 'self' 'nonce-Br3Z1aiFPqJsuJt/AXhoRw==' 'strict-dynamic'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self'; frame-src https://www.google.com; media-src 'self'; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'",
+    "content-type": "application/json; charset=utf-8",
+    "cross-origin-opener-policy": "same-origin",
+    "date": "Tue, 10 Nov 2026 17:13:40 GMT",
+    "keep-alive": "timeout=5",
+    "permissions-policy": "camera=(), microphone=(), geolocation=(), payment=(), usb=(), browsing-topics=()",
+    "referrer-policy": "strict-origin-when-cross-origin",
+    "transfer-encoding": "chunked",
+    "vary": "rsc, next-router-state-tree, next-router-prefetch, next-router-segment-prefetch",
+    "x-content-type-options": "nosniff",
+    "x-frame-options": "DENY",
+    "x-request-id": "cd0744a2-1b87-406d-b89e-4b2cf48d8a42"
+  },
+  "body": {
+    "stay": {
+      "checkIn": "2026-12-10",
+      "checkOut": "2026-12-14"
+    },
+    "occupancy": {
+      "adults": 2,
+      "children": 0
+    },
+    "results": [
+      {
+        "roomType": {
+          "slug": "e2e-p5-room",
+          "name": "Fictional P5 worked example",
+          "accommodationType": "ROOM",
+          "shortDescription": "Fictional availability test listing",
+          "maxAdults": 2,
+          "maxChildren": 0,
+          "bedroomCount": null,
+          "bathroomCount": null,
+          "heroImage": null,
+          "detailUrl": "/e2e-p5/stay/e2e-p5-room"
+        },
+        "available": true,
+        "unitsAvailable": 2,
+        "pricePerNight": [
+          {
+            "amountMinor": 6000,
+            "currency": "USD"
+          },
+          {
+            "amountMinor": 6000,
+            "currency": "USD"
+          },
+          {
+            "amountMinor": 7000,
+            "currency": "USD"
+          },
+          {
+            "amountMinor": 7000,
+            "currency": "USD"
+          }
+        ],
+        "accommodationTotal": {
+          "amountMinor": 26000,
+          "currency": "USD"
+        }
+      }
+    ]
+  }
+}

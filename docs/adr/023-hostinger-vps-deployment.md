@@ -12,7 +12,7 @@ The implemented design depends on a normal, long-running Node server with a pers
 
 Deploy Rivana on a **Hostinger KVM VPS** used only for Rivana, running a current Ubuntu LTS release.
 
-- **Application:** `next start` on Node 22.23 (the `.nvmrc` version), one process run by a systemd service as a dedicated unprivileged user, restarted on failure. It listens on `127.0.0.1` only.
+- **Application:** `next start` on Node 26.13.0 LTS (the `.nvmrc` version; runtime target amended with owner approval, 2026-11-10), one process run by a systemd service as a dedicated unprivileged user, restarted on failure. It listens on `127.0.0.1` only.
 - **Reverse proxy:** Nginx terminates TLS (Let's Encrypt, or a Cloudflare origin certificate when the zone is proxied), redirects HTTP to HTTPS, sets upload body limits, and sets `X-Forwarded-For`, so `AUTH_TRUST_PROXY_HEADERS=true`.
 - **Database:** PostgreSQL 17+ that meets ADR 022. The default is PostgreSQL 18 on the same VPS from the PostgreSQL project's packages (`btree_gist` comes with contrib, there is no pooler, and lock hold times have no network latency). A managed PostgreSQL service near the VPS stays an option if the client prefers paying for managed backups and point-in-time recovery. The final choice is made in Phase 12 (Q-25).
 - **Media:** unchanged from ADR 005: a persistent directory on the VPS outside every release directory, served through the application `/media/` route.

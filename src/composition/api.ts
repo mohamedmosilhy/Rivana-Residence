@@ -6,6 +6,13 @@ import { CheckHealth } from "@/application/health";
 import { RateLimiter } from "@/application/shared/rate-limit";
 import { resolveStaffFromHeaders, throttleKeys } from "@/composition/auth";
 import { manageBranches } from "@/composition/content";
+import {
+  getAvailabilityGrid,
+  publicAvailability,
+  manageBlocks,
+  managePhysicalRooms,
+} from "@/composition/inventory";
+import { getRateCalendar, manageRates } from "@/composition/pricing";
 import { clientAddressFrom, isSameOriginRequest } from "@/composition/http";
 import {
   getActiveBranchBySlug,
@@ -18,7 +25,7 @@ import { NextRouteCacheInvalidator } from "@/infrastructure/cache/next-cache-inv
 import { getPrisma } from "@/infrastructure/db/prisma/client";
 import { PrismaDatabaseProbe } from "@/infrastructure/db/prisma/database-probe";
 import { PrismaBranchRepository } from "@/infrastructure/db/prisma/repositories/branches/branch-repository";
-import { PrismaLoginThrottleStore } from "@/infrastructure/db/prisma/repositories/login-throttle-store";
+import { PrismaPublicRateLimitStore } from "@/infrastructure/db/prisma/repositories/public-rate-limit-store";
 
 // Composition for `/api/v1` Route Handlers and their shared HTTP layer.
 
@@ -34,9 +41,8 @@ export const httpDependencies = {
   resolveStaff: resolveStaffFromHeaders,
   rateLimit: (namespace: string, rule: ThrottleRule, request: Request) =>
     new RateLimiter(
-      new PrismaLoginThrottleStore(getPrisma()),
+      new PrismaPublicRateLimitStore(getPrisma(), clock),
       throttleKeys(),
-      clock,
     ).consume(namespace, rule, clientAddressFrom(request.headers)),
 };
 
@@ -82,4 +88,105 @@ export function updateBranch(
     id,
     input,
   );
+}
+
+// Physical unit API (API-S21…S23; spec 0003, M6-T5).
+
+export function listPhysicalRooms(staff: StaffPrincipal, branchId: string) {
+  return managePhysicalRooms().list(staff, branchId);
+}
+
+export function createPhysicalRoom(
+  staff: StaffPrincipal,
+  branchId: string,
+  input: unknown,
+) {
+  return managePhysicalRooms().create(staff, branchId, input);
+}
+
+export function updatePhysicalRoom(
+  staff: StaffPrincipal,
+  id: string,
+  input: unknown,
+) {
+  return managePhysicalRooms().update(staff, id, input);
+}
+
+// Availability grid (API-S20; spec 0003, M6-T8).
+
+export function readAvailabilityGrid(
+  staff: StaffPrincipal,
+  branchId: string,
+  query: unknown,
+) {
+  return getAvailabilityGrid().execute(staff, branchId, query);
+}
+
+// Block API (API-S24…S27; spec 0003, M6-T6).
+
+export function listBlocks(
+  staff: StaffPrincipal,
+  branchId: string,
+  query: unknown,
+) {
+  return manageBlocks().list(staff, branchId, query);
+}
+
+export function createBlock(
+  staff: StaffPrincipal,
+  branchId: string,
+  input: unknown,
+) {
+  return manageBlocks().create(staff, branchId, input);
+}
+
+export function updateBlock(staff: StaffPrincipal, id: string, input: unknown) {
+  return manageBlocks().update(staff, id, input);
+}
+
+export function cancelBlock(staff: StaffPrincipal, id: string) {
+  return manageBlocks().cancel(staff, id);
+}
+
+// Rate API (API-S30…S34; spec 0003, M6-T7).
+
+export function readRates(
+  staff: StaffPrincipal,
+  roomTypeId: string,
+  query: unknown,
+) {
+  return getRateCalendar().execute(staff, roomTypeId, query);
+}
+
+export function setBaseRate(
+  staff: StaffPrincipal,
+  roomTypeId: string,
+  input: unknown,
+) {
+  return manageRates().setBaseRate(staff, roomTypeId, input);
+}
+
+export function createRatePeriod(
+  staff: StaffPrincipal,
+  roomTypeId: string,
+  input: unknown,
+) {
+  return manageRates().createPeriod(staff, roomTypeId, input);
+}
+
+export function updateRatePeriod(
+  staff: StaffPrincipal,
+  id: string,
+  input: unknown,
+) {
+  return manageRates().updatePeriod(staff, id, input);
+}
+
+export function deactivateRatePeriod(staff: StaffPrincipal, id: string) {
+  return manageRates().deactivatePeriod(staff, id);
+}
+
+// API-P5: uncached public availability with server-resolved branch identity.
+export function searchPublicAvailability(slug: string, input: unknown) {
+  return publicAvailability().execute(slug, input);
 }

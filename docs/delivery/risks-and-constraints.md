@@ -6,10 +6,10 @@
 | --- | --- |
 | Next.js 16.4.5 App Router is the only application framework | ADR 001; brief §2; F01 dependency security repair |
 | PostgreSQL via Prisma 7.10 with the `@prisma/adapter-pg` driver; every connection uses `-c TimeZone=UTC` | `src/infrastructure/db/prisma/client.ts` |
-| Hosting: a Hostinger VPS with Node 22 under systemd behind Nginx, PostgreSQL 17+, and local media (not yet provisioned) | [ADR 023](../adr/023-hostinger-vps-deployment.md), [hosting-preflight.md](../operations/hosting-preflight.md) |
+| Hosting: a Hostinger VPS with Node 26.13.0 LTS under systemd behind Nginx, PostgreSQL 17+, and local media (not yet provisioned) | [ADR 023](../adr/023-hostinger-vps-deployment.md), [hosting-preflight.md](../operations/hosting-preflight.md) |
 | No PMS API or export | Brief §4 |
 | CSP `default-src 'self'`, strict nonce scripts, `connect-src 'self'` | `src/infrastructure/http/security-headers.ts` |
-| Local development runs Node 24.21.0; CI and deployment pin Node 22.23.2 | `.nvmrc`, Phase 1 report |
+| Local development, CI, and deployment target Node 26.13.0 LTS; verify the service and cron runtime during deployment rehearsal | `.nvmrc`, `.node-version`, `package.json`, owner decision 2026-11-10 |
 | Playwright Firefox does not launch on this Mac (macOS 27) | Phase 11 report |
 
 ## Risks

@@ -1,6 +1,6 @@
 # M6 — Inventory, date prices, and availability
 
-Status: **Not started.** Branch: `m6-inventory-and-availability`. Follow the [milestone loop](./README.md#the-loop-every-milestone-follows).
+Status: **Accepted by the owner, 2026-11-10 (10/10 tasks accepted, closeout verified).** Branch: `m6-inventory-and-availability` (owner's requested commit branch). Follow the [milestone loop](./README.md#the-loop-every-milestone-follows). Approved build spec: [0003](../../specs/0003-m6-inventory-and-availability.md). Evidence and task log: [M6 report](../reports/m6-inventory-and-availability.md).
 
 ## Objective
 
@@ -20,6 +20,10 @@ Complete and accept the seed safety gate in [repairs/pre-m6.md](./repairs/pre-m6
 ## Blocking questions
 
 - Q-09 (stay rules) and Q-17 (forced blocks): recommendations accepted unless the client answers differently. Check-in time per branch is required data (it defines the cancellation deadline in M9).
+
+Checked at milestone open, 2026-11-08: both recommendations are accepted by this brief; the pre-M6 repair gate is recorded as accepted; M5 is accepted and merged. Existing seed data supplies New Cairo's check-in and check-out times. Other branches must have their own check-in time before booking is enabled.
+
+The owner resolved three API gaps on 2026-11-08 ([Q-68–Q-70](../../requirements/assumptions-and-open-questions.md#decided-2026-11-08-m6-open)): optional P5 `unitsRequested` defaults to 1; the documented maximum of 5 units is adopted now; public search is allowed for active branches while booking is disabled. Reservation creation still enforces all readiness checks.
 
 ## Skills for this milestone
 
@@ -45,18 +49,22 @@ Value objects, availability arithmetic, physical units, blocks, base rates and d
 
 ## Task breakdown
 
-Planned, reviewed, and accepted one task at a time ([agent-workflow.md](../../engineering/agent-workflow.md)). Rows are confirmed at milestone open; the numbered **Tasks** below hold the detail.
+Planned, reviewed, and accepted one task at a time ([agent-workflow.md](../../engineering/agent-workflow.md)). The following opening refinement was **approved by the owner on 2026-11-08**, with details in spec 0003. Execute in table order even where there is no technical dependency. The numbered **Tasks** below group the module responsibilities, not task ids.
 
 | Task | Title | Risk | Depends on | Covers (criteria, tests) | Status |
 | --- | --- | --- | --- | --- | --- |
-| M6-T1 | Date, stay, occupancy, and money value objects (`src/domain/shared`) | Critical | — | AC 3; T-DATE-1…8 | Not started |
-| M6-T2 | Availability, nightly price, and block rules (pure domain) | Critical | T1 | AC 1 (resolver), 3, 6; T-AV-1…6, T-PR-1…6 | Not started |
-| M6-T3 | Migration `inventory_and_rates`: tables, checks, exclusion constraints, demo seed | Critical | — | AC 2, 3; T-DB-3…5; drift check | Not started |
-| M6-T4 | Unit of work, `InventoryLock`, `InventoryGuard`, concurrency test harness | Critical | T2, T3 | AC 5 (harness) | Not started |
-| M6-T5 | Physical units and blocks: repositories, use cases, staff API S21–S27 | Critical | T4 | AC 4, 5; T-INV, C-4, C-8, T-HTTP | Not started |
-| M6-T6 | Base rates and date periods: repositories, audited use cases, staff API S30–S34 | Critical | T2, T3 | AC 2, 7; rate API with audit | Not started |
-| M6-T7 | Availability read model and staff grid: `SearchAvailability`, `GetAvailabilityGrid`, API S20 | Medium | T5, T6 | AC 6 | Not started |
-| M6-T8 | Public availability API P5: rate limit, no caching, minimal disclosure | Medium | T7 | AC 1 (API), 8; T-HTTP | Not started |
+| M6-T1 | Date, stay, occupancy, and money value objects (`src/domain/shared`) | Critical | — | AC 3; T-DATE-1…8 | Accepted |
+| M6-T2 | Availability, nightly price, and block rules (pure domain) | Critical | T1 | AC 1 (resolver), 3, 6; T-AV-1…6, T-PR-1…6 | Accepted |
+| M6-T3 | Migration `inventory_and_rates`: tables, checks, exclusion constraints, safe demo seed extension | Critical | — | AC 2, 3, 6; T-DB-3…5 (M6 subset), seed tests, drift check | Accepted |
+| M6-T4 | Unit of work, inventory reader and consumption ports, `InventoryLock`, `InventoryGuard`, concurrency harness | Critical | T2, T3 | AC 4, 5, 6; rollback, lock order and timeout | Accepted |
+| M6-T5 | Physical units: repositories, audited use cases, staff API S21–S23 | Critical | T4 | AC 4, 5, 6; T-INV, authorization, T-HTTP | Accepted |
+| M6-T6 | Blocks: repositories, audited use cases, staff API S24–S27, concurrency proof | Critical | T4, T5 | AC 3, 4, 5; T-INV, adapted C-4, C-8, T-HTTP | Accepted |
+| M6-T7 | Base rates and date periods: repositories, audited use cases, staff API S30–S34 | Critical | T2, T3, T4 | AC 1, 2, 7; rate API with audit | Accepted |
+| M6-T8 | Availability queries and staff grid: `SearchAvailability`, `GetAvailabilityGrid`, API S20 | Critical | T5, T6, T7 | AC 1, 5, 6, 8; complete nights, quantity, branch isolation | Accepted |
+| M6-T9 | Public limiter readiness: atomic admission, safe expiry cleanup, operational invocation | Medium | M4 limiter | AC 8 (public protection); concurrent limit, fallback, cleanup, sign-in regression | Accepted |
+| M6-T10 | Public availability API P5: quantity, no caching, minimal disclosure, worked example | Critical | T8, T9 | AC 1 (API), 6, 8; T-HTTP, 429, response allowlist | Accepted |
+
+Refinement: split the original T5 into units (T5) and blocks (T6), shift original T6/T7 to T7/T8, and split original T8 into limiter readiness (T9) and P5 (T10). Availability reads are Critical under the workflow because they compute inventory, money, and branch isolation. T9 stays Medium only while staff sign-in behavior is unchanged. It addresses the existing limiter's documented concurrent-admission and expiry gaps before its first public use.
 
 ## Tasks
 
@@ -79,16 +87,18 @@ Planned, reviewed, and accepted one task at a time ([agent-workflow.md](../../en
 1. Ports: `ReservationUnitOfWork` (transaction binding), `InventoryLock.lockRoomTypes(branchId, ids)` (`SELECT … ORDER BY id FOR NO KEY UPDATE`, `SET LOCAL lock_timeout = '5s'`), `InventoryReader` (capacity and sold per night), `RateRepository`, `PhysicalRoomRepository`, `BlockRepository`.
 2. `InventoryGuard` application service: the only path for availability-reducing writes (block create or extend, unit deactivation; reservation writes in M8 and M9).
 3. Use cases: `SearchAvailability` (branch, stay, occupancy, units requested per listing), `GetAvailabilityGrid`, `ManagePhysicalRooms`, `CreateBlock`, `UpdateBlock`, `CancelBlock`, `ManageRates` (base rate, create, update, deactivate periods), `GetRateCalendar`.
-4. Prisma repositories with tagged `$queryRaw` in `src/infrastructure/db/prisma/repositories/{inventory,pricing}/`; the SQL shapes in integrity-and-concurrency.
+4. Prisma repositories with tagged `$queryRaw` in `src/infrastructure/db/prisma/repositories/reservations/{inventory,pricing}/`, preserving ADR 015 and D-9; the SQL shapes in integrity-and-concurrency, with zero-capacity nights retained.
 
 ### 4. API
 
 - Public: API-P5 availability (no lock; rate-limited 60/min/client; validation per AV and OC; results per published listing of the branch with availability for the requested unit count and the accommodation price before VAT, or a reason `SOLD_OUT`, `OCCUPANCY`, `UNPRICED`).
 - Staff: API-S20 grid, S21–S23 units, S24–S27 blocks, S30–S34 rates. All audited where they mutate.
 
+Before P5: prepare atomic public limiter admission and bounded namespace-specific expiry cleanup using the existing throttle table. The approved implementation choices and staff read-window refinements are in spec 0003. No staff screens are added.
+
 ## Database impact
 
-One migration, additive. Demo seed extended: 2–4 units per listing, base rates, one date period per listing.
+One migration, additive. The guarded `--demo` seed is extended for fictional `demo-giza` listings: 2–4 units per listing, base rates, one date period per listing, including when that demo branch already exists. Normal seeding invents no hotel inventory or prices.
 
 ## API impact
 
@@ -111,9 +121,11 @@ P5, S20–S27, S30–S34.
 - Integration: T-INV-1…6, T-DB-3…5 (exclusion and check constraints), rate API with audit, T-HTTP for the new routes.
 - Concurrency: C-4 (block vs block for this milestone; extended to bookings in M8), C-8; 20 iterations each.
 
+The spec distinguishes injected sold/assignment guard tests from real PostgreSQL proof. Persisted sold counts are zero until M8. A block racing deactivation can validly have two successes in M6; assert nonnegative inventory and that both reductions take the lock. Assignment exclusions, persisted reservation snapshots, and manual override tests remain deferred to M8.
+
 ## Evidence for the report
 
-Query plans (`EXPLAIN ANALYZE`) for capacity and sold queries on demo data; concurrency run output (20× green); the worked example response.
+Query plans (`EXPLAIN ANALYZE`) for capacity on demo data; explicitly record the empty sold adapter in M6, with the real sold query plan deferred to M8; concurrency run output (20× green); the worked example response. For live API proof, translate the illustrative September 2026 dates together into the future, retaining the same $260.00 total, rather than bypassing the past-date rule.
 
 ## Risks
 

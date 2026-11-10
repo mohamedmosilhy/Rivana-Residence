@@ -2,7 +2,7 @@
 
 PostgreSQL is the system of record for content, staff identity, enquiries, promotions (retired), media metadata, and (planned) branches, inventory, prices, services, coupons, VAT, reservations, payments, and marketing consent. Card data is never stored (Paymob hosted checkout, ADR 025). Binary images live in the configured media store (a persistent server directory). Prisma is the migration and persistence adapter, not the domain model; it is imported only under `src/infrastructure/db`.
 
-The implemented schema is `prisma/schema.prisma` (5 migrations; M4 added `…_staff_roles_enum` and `…_branches_and_staff_roles`). Tables marked *planned* are specified here and added by milestone migrations ([migrations-and-seeding.md](./migrations-and-seeding.md)).
+The implemented schema is `prisma/schema.prisma` (7 migrations; M4 added `…_staff_roles_enum` and `…_branches_and_staff_roles`, M5 `…_reserve_legacy_branch_slugs`, M6-T3 `…_inventory_and_rates`). Tables marked *planned* are specified here and added by milestone migrations ([migrations-and-seeding.md](./migrations-and-seeding.md)).
 
 ## Conventions
 
@@ -25,8 +25,9 @@ The implemented schema is `prisma/schema.prisma` (5 migrations; M4 added `…_st
 | Media | `MediaAsset` | Implemented |
 | Marketing and enquiries | `Promotion` (retired, Q-47; unused since M5, dropped later), `ContactEnquiry` | Implemented; `ContactEnquiry.branchId` nullable (M4), recorded by the contact form since M5 |
 | Branches | `Branch`, `StaffBranchAssignment` | Implemented (M4); edited through the branch admin and API since M5; reserved slugs extended by migration `20261107120000_reserve_legacy_branch_slugs` (M5) |
-| Inventory | `PhysicalRoom`, `InventoryBlock` | Planned (M6) |
-| Pricing | `RoomBaseRate`, `RatePeriod` (M6); `ServiceOffering`, `Coupon`, `CouponBranch`, `CommercialSettings` (M7) | Planned |
+| Inventory | `PhysicalRoom`, `InventoryBlock` | Implemented (M6-T3): branch-unique labels, composite ownership FKs (`ON UPDATE/DELETE RESTRICT`), `InventoryBlock_dates_check`, `InventoryBlock_no_overlap` (GiST exclusion over uncancelled blocks per unit) |
+| Pricing | `RoomBaseRate`, `RatePeriod` (M6-T3) | Implemented: positive `INTEGER` cents, explicit `USD`, `RatePeriod_no_overlap` (GiST exclusion over active periods per listing) |
+| Commercial | `ServiceOffering`, `Coupon`, `CouponBranch`, `CommercialSettings` (M7) | Planned |
 | Reservations | `Reservation`, `ReservationRoom`, `ReservationNight`, `ReservationService`, `CouponRedemption`, `BranchSyncCheckpoint` | Planned (M8) |
 | Payments | `Payment`, `PaymentEvent`, `CancellationRequest` | Planned (M9) |
 | Guests | `Guest` (verified phone profiles, blocking, marketing consent), `PhoneVerification` | Planned (M8) |
@@ -261,13 +262,14 @@ model PhysicalRoom {
   createdAt / updatedAt / updatedById
   @@unique([branchId, label])
   @@unique([id, roomTypeId])            // composite-FK target for assignments
+  @@unique([id, branchId])              // composite-FK target for blocks (M6-T3)
   @@index([roomTypeId, active])
 }
 
 model InventoryBlock {
   id             String      @id @db.VarChar(32)
   branchId       String      @db.VarChar(32)
-  physicalRoomId String      @db.VarChar(32)
+  physicalRoomId String      @db.VarChar(32)   // (physicalRoomId, branchId) → PhysicalRoom(id, branchId)
   startDate      DateTime    @db.Date
   endDate        DateTime    @db.Date          // exclusive
   reason         BlockReason
@@ -281,7 +283,8 @@ model InventoryBlock {
 
 model RoomBaseRate {
   roomTypeId  String   @id @db.VarChar(32)   // → Room RESTRICT
-  amountMinor Int
+  amountMinor Int                            // INTEGER cents, > 0
+  currency    String   @default("USD") @db.Char(3)  // CHECK = 'USD'
   updatedAt / updatedById
 }
 
@@ -291,6 +294,7 @@ model RatePeriod {                     // one kind (Q-44)
   startDate   DateTime       @db.Date
   endDate     DateTime       @db.Date        // exclusive
   amountMinor Int
+  currency    String         @default("USD") @db.Char(3)  // CHECK = 'USD'
   label       String?        @db.VarChar(80)
   active      Boolean        @default(true)
   createdAt / updatedAt / updatedById
@@ -605,8 +609,8 @@ CREATE EXTENSION IF NOT EXISTS btree_gist;
 
 ALTER TABLE "Reservation"     ADD CHECK ("checkOut" > "checkIn");
 ALTER TABLE "ReservationRoom" ADD CHECK ("checkOut" > "checkIn" AND "adults" >= 1 AND "children" >= 0);
-ALTER TABLE "InventoryBlock"  ADD CHECK ("endDate" > "startDate");
-ALTER TABLE "RatePeriod"      ADD CHECK ("endDate" > "startDate" AND "amountMinor" > 0);
+ALTER TABLE "InventoryBlock"  ADD CHECK ("endDate" > "startDate");  -- implemented (M6-T3)
+ALTER TABLE "RatePeriod"      ADD CHECK ("endDate" > "startDate" AND "amountMinor" > 0 AND "currency" = 'USD');  -- implemented (M6-T3)
 ALTER TABLE "ServiceOffering" ADD CHECK ("priceMinor" > 0);
 ALTER TABLE "Coupon"          ADD CHECK (("kind" = 'PERCENT' AND "percentBasisPoints" BETWEEN 1 AND 10000 AND "amountMinor" IS NULL) OR ("kind" = 'FIXED' AND "amountMinor" > 0 AND "percentBasisPoints" IS NULL));
 ALTER TABLE "Coupon"          ADD CHECK ("endsAt" IS NULL OR "startsAt" IS NULL OR "endsAt" > "startsAt");
@@ -617,7 +621,7 @@ ALTER TABLE "Reservation"     ADD CHECK ("totalMinor" IS NULL OR ("totalMinor" =
 CREATE UNIQUE INDEX "CancellationRequest_one_open" ON "CancellationRequest" ("reservationId") WHERE "status" = 'OPEN';
 -- Implemented as "Branch_slug_check" (M4, extended in M5): format, the reserved list, and no *.html.
 ALTER TABLE "Branch"          ADD CHECK ("slug" NOT IN ('admin','api','media','reservations','book','sitemap.xml','robots.txt','about','contact','rooms','facilities') AND "slug" NOT LIKE '%.html');
-ALTER TABLE "RoomBaseRate"    ADD CHECK ("amountMinor" > 0);
+ALTER TABLE "RoomBaseRate"    ADD CHECK ("amountMinor" > 0 AND "currency" = 'USD');  -- implemented (M6-T3)
 ALTER TABLE "ReservationNight" ADD CHECK ("amountMinor" IS NULL OR "amountMinor" >= 0);
 ALTER TABLE "Reservation"     ADD CHECK ("source" <> 'EXTERNAL' OR "externalReference" IS NOT NULL);
 ALTER TABLE "Reservation"     ADD CHECK ("source" <> 'WEBSITE'  OR ("guestEmail" IS NOT NULL AND "guestId" IS NOT NULL));
@@ -626,7 +630,9 @@ ALTER TABLE "Branch"          ADD CHECK ("syncReminderIntervalMinutes" BETWEEN 1
 -- Same-branch guarantees (composite FKs)
 ALTER TABLE "ReservationRoom" ADD FOREIGN KEY ("roomTypeId","branchId") REFERENCES "Room"("id","branchId");
 ALTER TABLE "ReservationRoom" ADD FOREIGN KEY ("physicalRoomId","roomTypeId") REFERENCES "PhysicalRoom"("id","roomTypeId");
+-- Implemented (M6-T3), all ON UPDATE RESTRICT ON DELETE RESTRICT:
 ALTER TABLE "PhysicalRoom"    ADD FOREIGN KEY ("roomTypeId","branchId") REFERENCES "Room"("id","branchId");
+ALTER TABLE "InventoryBlock"  ADD FOREIGN KEY ("physicalRoomId","branchId") REFERENCES "PhysicalRoom"("id","branchId");  -- needs UNIQUE ("id","branchId") on PhysicalRoom
 -- ReservationRoom.branchId must equal Reservation.branchId: FK (reservationId, branchId) → Reservation(id, branchId)
 
 -- No double assignment of a physical room; no overlapping blocks; no overlapping same-kind rate periods
@@ -641,7 +647,7 @@ ALTER TABLE "RatePeriod" ADD CONSTRAINT "RatePeriod_no_overlap"
   WHERE ("active");
 ```
 
-Prisma does not model exclusion constraints. The project already keeps `CHECK` constraints in SQL migrations, and `prisma migrate diff` reported no drift with them in Phase 11. In M4/M6 we must verify that `migrate diff` stays clean with exclusion constraints and with expression-based composite FKs. If Prisma insists on modelling the composite FKs, they move into `schema.prisma` as `@relation(fields: [roomTypeId, branchId], references: [id, branchId])`.
+Prisma does not model exclusion constraints. The project already keeps `CHECK` constraints in SQL migrations, and `prisma migrate diff` reported no drift with them in Phase 11. Verified in M6-T3: `migrate diff` reports no difference after the migration (tested on a migrated M3→M6 database and on a fresh one) with the exclusion constraints in SQL and the composite FKs in `schema.prisma`. If Prisma insists on modelling the composite FKs, they move into `schema.prisma` as `@relation(fields: [roomTypeId, branchId], references: [id, branchId])`.
 
 ## Entity-relationship diagram
 

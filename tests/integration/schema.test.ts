@@ -30,9 +30,12 @@ describe("migration from an empty database", () => {
       SELECT tablename FROM pg_tables WHERE schemaname = 'public'
     `;
     const present = new Set(tables.map(({ tablename }) => tablename));
-    expect(RESERVATION_MODELS.filter((model) => present.has(model))).toEqual(
-      [],
-    );
+    expect(RESERVATION_MODELS.filter((model) => present.has(model))).toEqual([
+      "PhysicalRoom",
+      "InventoryBlock",
+      "RoomBaseRate",
+      "RatePeriod",
+    ]);
   });
 
   it("has the M4 branch, assignment, and audit tables", async () => {

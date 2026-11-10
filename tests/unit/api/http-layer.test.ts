@@ -4,7 +4,11 @@ import { z } from "zod";
 
 import { DEFAULT_MAX_BODY_BYTES } from "@/app/api/v1/_http/body";
 import type { ErrorLogLine, RequestLogLine } from "@/app/api/v1/_http/logger";
-import { PROBLEMS, problem } from "@/app/api/v1/_http/problem";
+import {
+  PROBLEMS,
+  problem,
+  problemFromError,
+} from "@/app/api/v1/_http/problem";
 import {
   createRoutes,
   json,
@@ -14,6 +18,7 @@ import {
 import type { StaffPrincipal } from "@/application/auth/ports";
 import {
   failure,
+  inventoryUnavailable,
   type ApplicationErrorCode,
 } from "@/application/shared/result";
 
@@ -86,6 +91,7 @@ describe("problem mapping", () => {
   const applicationCodes: readonly ApplicationErrorCode[] = [
     "CONFLICT",
     "FORBIDDEN",
+    "INVENTORY_UNAVAILABLE",
     "RATE_LIMITED",
     "UNAUTHENTICATED",
     "INVALID_CREDENTIALS",
@@ -108,6 +114,7 @@ describe("problem mapping", () => {
     ["FORBIDDEN", 403],
     ["NOT_FOUND", 404],
     ["CONFLICT", 409],
+    ["INVENTORY_UNAVAILABLE", 409],
     ["RATE_LIMITED", 429],
     ["TRY_AGAIN", 503],
     ["MALFORMED_JSON", 400],
@@ -151,6 +158,25 @@ describe("problem mapping", () => {
     expect(
       problem("NOT_FOUND", { requestId: "r" }).headers.get("retry-after"),
     ).toBeNull();
+  });
+
+  it("forwards only typed inventory context into a problem response", async () => {
+    const unavailable = inventoryUnavailable("room-1", "2027-01-10");
+    if (unavailable.ok) throw new Error("Expected an inventory failure.");
+
+    const result = await read(problemFromError(unavailable.error, "req-2"));
+
+    expect(result).toMatchObject({
+      status: 409,
+      body: {
+        code: "INVENTORY_UNAVAILABLE",
+        requestId: "req-2",
+        context: {
+          firstUnavailableNight: "2027-01-10",
+          roomTypeId: "room-1",
+        },
+      },
+    });
   });
 });
 

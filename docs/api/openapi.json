@@ -221,6 +221,93 @@
         }
       }
     },
+    "/api/v1/branches/{branchSlug}/availability": {
+      "get": {
+        "operationId": "searchAvailability",
+        "summary": "API-P5. Uncached published listing availability and accommodation prices before VAT.",
+        "tags": [
+          "Inventory"
+        ],
+        "security": [],
+        "parameters": [
+          {
+            "name": "branchSlug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "checkIn",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "Check-in in YYYY-MM-DD, branch local date."
+            }
+          },
+          {
+            "name": "checkOut",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "Exclusive check-out in YYYY-MM-DD."
+            }
+          },
+          {
+            "name": "adults",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "Whole number, at least 1, per unit."
+            }
+          },
+          {
+            "name": "children",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "Whole number, at least 0, per unit."
+            }
+          },
+          {
+            "name": "unitsRequested",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "description": "Whole number 1–5; defaults to 1.",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Availability for the requested quantity (default 1, maximum 5); no hold. Rates and inventory are read afresh. 60 requests per 60 second client window across branches, shared anonymous fallback without a trusted address.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AvailabilityResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Problem details. Codes: INTERNAL, INVALID_QUERY, VALIDATION, NOT_FOUND, RATE_LIMITED.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/staff/branches": {
       "get": {
         "operationId": "listStaffBranches",
@@ -346,6 +433,709 @@
           },
           "default": {
             "description": "Problem details. Codes: INTERNAL, UNAUTHENTICATED, FORBIDDEN, CROSS_SITE_REQUEST, NOT_FOUND, VALIDATION.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/staff/branches/{branchId}/physical-rooms": {
+      "get": {
+        "operationId": "listPhysicalRooms",
+        "summary": "API-S21. Every physical unit of the branch, inactive ones included. Needs inventory:read.",
+        "tags": [
+          "Inventory"
+        ],
+        "security": [
+          {
+            "staffSession": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "branchId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The branch's units.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PhysicalRoomList"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Problem details. Codes: INTERNAL, UNAUTHENTICATED, FORBIDDEN, NOT_FOUND.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "operationId": "createPhysicalRoom",
+        "summary": "API-S22. Add an active unit to a listing of the branch (inventory:manage). Audited. Returns Location.",
+        "tags": [
+          "Inventory"
+        ],
+        "security": [
+          {
+            "staffSession": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "branchId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PhysicalRoomInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "The new unit.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PhysicalRoom"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Problem details. Codes: INTERNAL, UNAUTHENTICATED, FORBIDDEN, CROSS_SITE_REQUEST, NOT_FOUND, CONFLICT, VALIDATION.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/staff/physical-rooms/{id}": {
+      "patch": {
+        "operationId": "updatePhysicalRoom",
+        "summary": "API-S23. Change a unit's label, notes, or activity (inventory:manage). Deactivation never oversells: it takes the listing lock. Audited.",
+        "tags": [
+          "Inventory"
+        ],
+        "security": [
+          {
+            "staffSession": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PhysicalRoomPatch"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The updated unit.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PhysicalRoom"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Problem details. Codes: INTERNAL, UNAUTHENTICATED, FORBIDDEN, CROSS_SITE_REQUEST, NOT_FOUND, CONFLICT, INVENTORY_UNAVAILABLE, VALIDATION, TRY_AGAIN.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/staff/branches/{branchId}/availability": {
+      "get": {
+        "operationId": "getAvailabilityGrid",
+        "summary": "API-S20. Capacity, sold, free, and blocked units per listing and night for a window of at most 62 nights (exclusive end), every listing of the branch in any publication status. Never cached. Needs inventory:read.",
+        "tags": [
+          "Inventory"
+        ],
+        "security": [
+          {
+            "staffSession": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "branchId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "from",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+            }
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+              "description": "Exclusive end; at most 62 nights after from."
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The grid.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AvailabilityGrid"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Problem details. Codes: INTERNAL, UNAUTHENTICATED, FORBIDDEN, NOT_FOUND, VALIDATION, INVALID_QUERY.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/staff/branches/{branchId}/blocks": {
+      "get": {
+        "operationId": "listBlocks",
+        "summary": "API-S24. Uncancelled blocks overlapping a window of at most 62 nights (exclusive end). Needs inventory:read.",
+        "tags": [
+          "Inventory"
+        ],
+        "security": [
+          {
+            "staffSession": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "branchId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "from",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+            }
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+              "description": "Exclusive end; at most 62 nights after from."
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The overlapping blocks.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BlockList"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Problem details. Codes: INTERNAL, UNAUTHENTICATED, FORBIDDEN, NOT_FOUND, VALIDATION, INVALID_QUERY.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "operationId": "createBlock",
+        "summary": "API-S25. Block one unit (inventory:block). Never oversells: it takes the listing lock and refuses with INVENTORY_UNAVAILABLE naming the first night. Overlap on the unit is a CONFLICT. Audited. Returns Location.",
+        "tags": [
+          "Inventory"
+        ],
+        "security": [
+          {
+            "staffSession": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "branchId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BlockInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "The new block.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Block"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Problem details. Codes: INTERNAL, UNAUTHENTICATED, FORBIDDEN, CROSS_SITE_REQUEST, NOT_FOUND, CONFLICT, INVENTORY_UNAVAILABLE, VALIDATION, TRY_AGAIN.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/staff/blocks/{id}": {
+      "patch": {
+        "operationId": "updateBlock",
+        "summary": "API-S26. Change a block's end date or note (inventory:block). An end date change takes the listing lock; a cancelled block cannot change. Audited.",
+        "tags": [
+          "Inventory"
+        ],
+        "security": [
+          {
+            "staffSession": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BlockPatch"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The updated block.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Block"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Problem details. Codes: INTERNAL, UNAUTHENTICATED, FORBIDDEN, CROSS_SITE_REQUEST, NOT_FOUND, CONFLICT, INVENTORY_UNAVAILABLE, VALIDATION, TRY_AGAIN.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "operationId": "cancelBlock",
+        "summary": "API-S27. Soft cancel a block (inventory:block). Repeating it succeeds without another audit event. Audited.",
+        "tags": [
+          "Inventory"
+        ],
+        "security": [
+          {
+            "staffSession": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "The block is cancelled."
+          },
+          "default": {
+            "description": "Problem details. Codes: INTERNAL, UNAUTHENTICATED, FORBIDDEN, CROSS_SITE_REQUEST, NOT_FOUND, TRY_AGAIN.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/staff/room-types/{roomTypeId}/rates": {
+      "get": {
+        "operationId": "getRates",
+        "summary": "API-S30. Base rate, intersecting periods, and resolved calendar for at most 62 nights. Needs pricing:read.",
+        "tags": [
+          "Pricing"
+        ],
+        "security": [
+          {
+            "staffSession": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "roomTypeId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "from",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+            }
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+              "description": "Exclusive end; at most 62 nights after from."
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The listing's rates.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateCalendar"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Problem details. Codes: INTERNAL, UNAUTHENTICATED, FORBIDDEN, NOT_FOUND, VALIDATION, INVALID_QUERY.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/staff/room-types/{roomTypeId}/base-rate": {
+      "put": {
+        "operationId": "setBaseRate",
+        "summary": "API-S31. Create or replace the base nightly rate (pricing:manage). Audited.",
+        "tags": [
+          "Pricing"
+        ],
+        "security": [
+          {
+            "staffSession": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "roomTypeId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BaseRateInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The base nightly rate.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Money"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Problem details. Codes: INTERNAL, UNAUTHENTICATED, FORBIDDEN, CROSS_SITE_REQUEST, NOT_FOUND, VALIDATION, TRY_AGAIN.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/staff/room-types/{roomTypeId}/rate-periods": {
+      "post": {
+        "operationId": "createRatePeriod",
+        "summary": "API-S32. Create an active date rate period (pricing:manage). Audited. Returns Location.",
+        "tags": [
+          "Pricing"
+        ],
+        "security": [
+          {
+            "staffSession": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "roomTypeId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RatePeriodInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "The new rate period.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RatePeriod"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Problem details. Codes: INTERNAL, UNAUTHENTICATED, FORBIDDEN, CROSS_SITE_REQUEST, NOT_FOUND, CONFLICT, VALIDATION, TRY_AGAIN.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/staff/rate-periods/{id}": {
+      "patch": {
+        "operationId": "updateRatePeriod",
+        "summary": "API-S33. Change or reactivate a date rate period (pricing:manage). Audited.",
+        "tags": [
+          "Pricing"
+        ],
+        "security": [
+          {
+            "staffSession": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RatePeriodPatch"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The changed rate period.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RatePeriod"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Problem details. Codes: INTERNAL, UNAUTHENTICATED, FORBIDDEN, CROSS_SITE_REQUEST, NOT_FOUND, CONFLICT, VALIDATION, TRY_AGAIN.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "operationId": "deactivateRatePeriod",
+        "summary": "API-S34. Soft deactivate a date rate period (pricing:manage). Repeating it succeeds without another audit. Audited.",
+        "tags": [
+          "Pricing"
+        ],
+        "security": [
+          {
+            "staffSession": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "The period is inactive."
+          },
+          "default": {
+            "description": "Problem details. Codes: INTERNAL, UNAUTHENTICATED, FORBIDDEN, CROSS_SITE_REQUEST, NOT_FOUND, TRY_AGAIN.",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -487,6 +1277,79 @@
         "required": [
           "status",
           "database"
+        ],
+        "additionalProperties": false
+      },
+      "AvailabilityResult": {
+        "type": "object",
+        "properties": {
+          "roomType": {
+            "$ref": "#/components/schemas/RoomTypeSummary"
+          },
+          "available": {
+            "type": "boolean"
+          },
+          "unitsAvailable": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 5
+          },
+          "pricePerNight": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Money"
+            },
+            "description": "Ordered per-unit nightly prices; empty when unpriced."
+          },
+          "accommodationTotal": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Money"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Requested quantity, before VAT; null when unpriced."
+          },
+          "reason": {
+            "type": "string",
+            "enum": [
+              "SOLD_OUT",
+              "OCCUPANCY",
+              "UNPRICED"
+            ]
+          }
+        },
+        "required": [
+          "roomType",
+          "available",
+          "unitsAvailable",
+          "pricePerNight",
+          "accommodationTotal"
+        ],
+        "additionalProperties": false
+      },
+      "AvailabilityResponse": {
+        "type": "object",
+        "properties": {
+          "stay": {
+            "$ref": "#/components/schemas/Stay"
+          },
+          "occupancy": {
+            "$ref": "#/components/schemas/Occupancy"
+          },
+          "results": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AvailabilityResult"
+            }
+          }
+        },
+        "required": [
+          "stay",
+          "occupancy",
+          "results"
         ],
         "additionalProperties": false
       },
@@ -1191,6 +2054,606 @@
             "type": "integer",
             "minimum": -9007199254740991,
             "maximum": 9007199254740991
+          }
+        },
+        "additionalProperties": false
+      },
+      "PhysicalRoom": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "branchId": {
+            "type": "string"
+          },
+          "roomTypeId": {
+            "type": "string"
+          },
+          "label": {
+            "type": "string"
+          },
+          "active": {
+            "type": "boolean"
+          },
+          "notes": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "createdAt": {
+            "type": "string",
+            "description": "UTC instant (ISO 8601)."
+          },
+          "updatedAt": {
+            "type": "string",
+            "description": "UTC instant (ISO 8601)."
+          }
+        },
+        "required": [
+          "id",
+          "branchId",
+          "roomTypeId",
+          "label",
+          "active",
+          "notes",
+          "createdAt",
+          "updatedAt"
+        ],
+        "additionalProperties": false,
+        "description": "A physical unit that can be sold. Never deleted or moved."
+      },
+      "PhysicalRoomList": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PhysicalRoom"
+            }
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "additionalProperties": false
+      },
+      "PhysicalRoomInput": {
+        "type": "object",
+        "properties": {
+          "roomTypeId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "label": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 40
+          },
+          "notes": {
+            "description": "At most 500 characters after trimming. Null, empty, or whitespace only means no note.",
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 500
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "roomTypeId",
+          "label"
+        ],
+        "additionalProperties": false
+      },
+      "PhysicalRoomPatch": {
+        "type": "object",
+        "properties": {
+          "label": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 40
+          },
+          "notes": {
+            "description": "Null, empty, or whitespace only clears the note; otherwise at most 500 characters after trimming.",
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 500
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "active": {
+            "description": "False is checked against sold inventory under a lock.",
+            "type": "boolean"
+          }
+        },
+        "additionalProperties": false
+      },
+      "AvailabilityGrid": {
+        "type": "object",
+        "properties": {
+          "roomTypes": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "name": {
+                  "type": "string"
+                },
+                "nights": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "night": {
+                        "type": "string",
+                        "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                      },
+                      "capacity": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 9007199254740991
+                      },
+                      "sold": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 9007199254740991
+                      },
+                      "free": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 9007199254740991
+                      },
+                      "blocked": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 9007199254740991
+                      }
+                    },
+                    "required": [
+                      "night",
+                      "capacity",
+                      "sold",
+                      "free",
+                      "blocked"
+                    ],
+                    "additionalProperties": false
+                  }
+                }
+              },
+              "required": [
+                "id",
+                "name",
+                "nights"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "lastSyncCheckpoint": {
+            "description": "UTC instant of the last manual sync. Null until M8.",
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "roomTypes",
+          "lastSyncCheckpoint"
+        ],
+        "additionalProperties": false,
+        "description": "Per listing and night: capacity (active unblocked units), sold, free, and blocked units. Every listing of the branch appears, whatever its publication status."
+      },
+      "Block": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "branchId": {
+            "type": "string"
+          },
+          "physicalRoomId": {
+            "type": "string"
+          },
+          "startDate": {
+            "type": "string",
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+            "description": "First blocked night (YYYY-MM-DD)."
+          },
+          "endDate": {
+            "type": "string",
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+            "description": "Exclusive end (YYYY-MM-DD)."
+          },
+          "reason": {
+            "type": "string",
+            "enum": [
+              "MAINTENANCE",
+              "OWNER_USE",
+              "OTHER"
+            ]
+          },
+          "note": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "cancelledAt": {
+            "description": "UTC instant (ISO 8601).",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "createdAt": {
+            "type": "string",
+            "description": "UTC instant (ISO 8601)."
+          }
+        },
+        "required": [
+          "id",
+          "branchId",
+          "physicalRoomId",
+          "startDate",
+          "endDate",
+          "reason",
+          "note",
+          "cancelledAt",
+          "createdAt"
+        ],
+        "additionalProperties": false,
+        "description": "A maintenance, owner use, or other block on one unit."
+      },
+      "BlockList": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Block"
+            }
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "additionalProperties": false
+      },
+      "BlockInput": {
+        "type": "object",
+        "properties": {
+          "physicalRoomId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "startDate": {
+            "type": "string",
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+          },
+          "endDate": {
+            "type": "string",
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+          },
+          "reason": {
+            "type": "string",
+            "enum": [
+              "MAINTENANCE",
+              "OWNER_USE",
+              "OTHER"
+            ]
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 500
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "physicalRoomId",
+          "startDate",
+          "endDate",
+          "reason"
+        ],
+        "additionalProperties": false
+      },
+      "BlockPatch": {
+        "type": "object",
+        "properties": {
+          "endDate": {
+            "type": "string",
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+          },
+          "note": {
+            "description": "Null, empty, or whitespace only clears the note.",
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 500
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "BaseRateInput": {
+        "type": "object",
+        "properties": {
+          "amount": {
+            "type": "object",
+            "properties": {
+              "amountMinor": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 2147483647
+              },
+              "currency": {
+                "type": "string",
+                "const": "USD"
+              }
+            },
+            "required": [
+              "amountMinor",
+              "currency"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "amount"
+        ],
+        "additionalProperties": false
+      },
+      "RatePeriod": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "roomTypeId": {
+            "type": "string"
+          },
+          "startDate": {
+            "type": "string",
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+          },
+          "endDate": {
+            "type": "string",
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+          },
+          "amount": {
+            "$ref": "#/components/schemas/Money"
+          },
+          "label": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "active": {
+            "type": "boolean"
+          },
+          "createdAt": {
+            "type": "string",
+            "description": "UTC instant (ISO 8601)."
+          },
+          "updatedAt": {
+            "type": "string",
+            "description": "UTC instant (ISO 8601)."
+          }
+        },
+        "required": [
+          "id",
+          "roomTypeId",
+          "startDate",
+          "endDate",
+          "amount",
+          "label",
+          "active",
+          "createdAt",
+          "updatedAt"
+        ],
+        "additionalProperties": false
+      },
+      "NightPrice": {
+        "type": "object",
+        "properties": {
+          "night": {
+            "type": "string",
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+          },
+          "amount": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Money"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "source": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "BASE",
+                  "PERIOD"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "periodId": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "label": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "night",
+          "amount",
+          "source",
+          "periodId",
+          "label"
+        ],
+        "additionalProperties": false
+      },
+      "RateCalendar": {
+        "type": "object",
+        "properties": {
+          "baseRate": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Money"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "periods": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RatePeriod"
+            }
+          },
+          "calendar": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/NightPrice"
+            }
+          }
+        },
+        "required": [
+          "baseRate",
+          "periods",
+          "calendar"
+        ],
+        "additionalProperties": false
+      },
+      "RatePeriodInput": {
+        "type": "object",
+        "properties": {
+          "startDate": {
+            "type": "string",
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+          },
+          "endDate": {
+            "type": "string",
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+          },
+          "amount": {
+            "type": "object",
+            "properties": {
+              "amountMinor": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 2147483647
+              },
+              "currency": {
+                "type": "string",
+                "const": "USD"
+              }
+            },
+            "required": [
+              "amountMinor",
+              "currency"
+            ],
+            "additionalProperties": false
+          },
+          "label": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 80
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "startDate",
+          "endDate",
+          "amount"
+        ],
+        "additionalProperties": false
+      },
+      "RatePeriodPatch": {
+        "type": "object",
+        "properties": {
+          "startDate": {
+            "type": "string",
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+          },
+          "endDate": {
+            "type": "string",
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+          },
+          "amount": {
+            "type": "object",
+            "properties": {
+              "amountMinor": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 2147483647
+              },
+              "currency": {
+                "type": "string",
+                "const": "USD"
+              }
+            },
+            "required": [
+              "amountMinor",
+              "currency"
+            ],
+            "additionalProperties": false
+          },
+          "label": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 80
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "active": {
+            "type": "boolean"
           }
         },
         "additionalProperties": false

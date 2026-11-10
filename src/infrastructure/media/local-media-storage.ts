@@ -71,7 +71,11 @@ export class LocalMediaStorage implements MediaStorage {
       throw new StorageSecurityError("The media root is not a directory.");
     }
     if (options.forbidInside) {
-      const forbidden = await realpath(options.forbidInside);
+      // This resolves a runtime containment boundary, not a deployable asset.
+      // Tracing it would copy the whole checkout into media route manifests.
+      const forbidden = await realpath(
+        /* turbopackIgnore: true */ options.forbidInside,
+      );
       const relative = path.relative(forbidden, canonical);
       if (!relative.startsWith("..") && !path.isAbsolute(relative)) {
         throw new StorageSecurityError(

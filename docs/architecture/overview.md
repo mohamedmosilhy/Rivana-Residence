@@ -4,6 +4,8 @@ Rivana is **one deployable Next.js application**, a modular monolith. The public
 
 Status: everything described here for content, media, enquiries, promotions, and staff accounts is **implemented** (single site; the promotion popup is retired and removed in M5). Branch websites, inventory, pricing, services, coupons, VAT, reservations, Paymob payments, WhatsApp messaging, the `/api/v1` REST API, and audit are **planned** (milestones M4–M13, replanned 2026-11-06). Diagrams show both, and planned parts are labelled where it matters.
 
+**M6 domain foundation:** shared date, stay, occupancy, and money values (T1), plus pure availability, inventory reduction, and nightly price rules (T2), are implemented and accepted 2026-11-08. Inventory and pricing persistence, application workflows, locks, and endpoints remain planned; calculations alone do not enforce concurrency. See [module boundaries](./module-boundaries.md) and the [M6 report](../delivery/reports/m6-inventory-and-availability.md).
+
 ## System context
 
 ```mermaid
@@ -198,7 +200,7 @@ sequenceDiagram
 ```mermaid
 flowchart LR
   CF["Cloudflare DNS (client account)"] --> Nginx["Nginx + TLS (Hostinger VPS)"]
-  Nginx --> Node1["Node 22: next start (systemd)"]
+  Nginx --> Node1["Node 26.13.0 LTS: next start (systemd)"]
   Node1 --> PG[("PostgreSQL 17+ on the VPS or managed, btree_gist")]
   Node1 --> FS[("/var/lib/rivana/media")]
   Node1 --> SMTP["SMTP"]

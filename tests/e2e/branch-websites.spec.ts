@@ -414,3 +414,107 @@ test("staff REST preserves role and branch restrictions after browser sign-in", 
   );
   expect(saved.rows[0].n).toBe(0);
 });
+
+// P5 runs in this final serial project so its temporary second-branch fixture
+// cannot disturb the single-branch marketing and visual suites above.
+test("P5 exposes the $260 worked example and fresh public availability", async ({
+  page,
+}, testInfo) => {
+  const branch = "e2e-p5-branch";
+  const room = "e2e-p5-room";
+  const baseDate = new Date();
+  baseDate.setUTCDate(baseDate.getUTCDate() + 30);
+  const day = (offset: number) =>
+    new Date(+baseDate + offset * 86_400_000).toISOString().slice(0, 10);
+  const query = `checkIn=${day(0)}&checkOut=${day(4)}&adults=2&children=0`;
+  const endpoint = `/api/v1/branches/e2e-p5/availability?${query}`;
+  await sql(
+    'INSERT INTO "Branch" (id, slug, name, status, "sortOrder", "updatedAt") VALUES ($1, $2, $3, \'ACTIVE\', 99, now())',
+    [branch, "e2e-p5", "Fictional P5 evidence branch"],
+  );
+  try {
+    await sql(
+      'INSERT INTO "Room" (id, "branchId", name, slug, "shortDescription", description, "maxAdults", status, "sortOrder", "updatedAt") VALUES ($1, $2, $3, $4, $5, $6::jsonb, 2, \'PUBLISHED\', 99, now())',
+      [
+        room,
+        branch,
+        "Fictional P5 worked example",
+        "e2e-p5-room",
+        "Fictional availability test listing",
+        JSON.stringify({ type: "doc", content: [] }),
+      ],
+    );
+    for (const id of ["e2e-p5-u1", "e2e-p5-u2"])
+      await sql(
+        'INSERT INTO "PhysicalRoom" (id, "branchId", "roomTypeId", label, "updatedAt") VALUES ($1, $2, $3, $1, now())',
+        [id, branch, room],
+      );
+    await sql(
+      'INSERT INTO "RatePeriod" (id, "roomTypeId", "startDate", "endDate", "amountMinor", "updatedAt") VALUES ($1, $2, $3::date, $4::date, 6000, now()), ($5, $2, $4::date, $6::date, 7000, now())',
+      ["e2e-p5-first", room, day(0), day(2), "e2e-p5-second", day(4)],
+    );
+    await page.goto("/new-cairo");
+    const read = (target: string) =>
+      page.evaluate(async (url) => {
+        const response = await fetch(url);
+        return {
+          status: response.status,
+          headers: Object.fromEntries(response.headers.entries()),
+          body: await response.json(),
+        };
+      }, target);
+    const first = await read(endpoint);
+    expect(first.status).toBe(200);
+    expect(first.headers["cache-control"]).toBe("no-store");
+    expect(first.body.results).toHaveLength(1);
+    expect(first.body.results[0]).toMatchObject({
+      available: true,
+      unitsAvailable: 2,
+      accommodationTotal: { amountMinor: 26000, currency: "USD" },
+    });
+    expect(
+      first.body.results[0].pricePerNight.map(
+        (value: { amountMinor: number }) => value.amountMinor,
+      ),
+    ).toEqual([6000, 6000, 7000, 7000]);
+    expect(JSON.stringify(first.body)).not.toMatch(
+      /physicalRoomId|roomTypeId|capacity|blocked|branchId|e2e-p5-u/,
+    );
+    await testInfo.attach("p5-worked-example.json", {
+      body: JSON.stringify(first, null, 2),
+      contentType: "application/json",
+    });
+    expect(
+      (await read(`${endpoint}&unitsRequested=2`)).body.results[0]
+        .accommodationTotal.amountMinor,
+    ).toBe(52000);
+    expect((await read(`${endpoint}&unitsRequested=6`)).status).toBe(422);
+    expect((await read(`${endpoint}&unknown=yes`)).status).toBe(400);
+    expect((await read(`${endpoint}&adults=2`)).status).toBe(400);
+    await sql('UPDATE "RatePeriod" SET "amountMinor" = 8000 WHERE id = $1', [
+      "e2e-p5-first",
+    ]);
+    expect(
+      (await read(endpoint)).body.results[0].accommodationTotal.amountMinor,
+    ).toBe(30000);
+    await sql('UPDATE "PhysicalRoom" SET active = false WHERE id = $1', [
+      "e2e-p5-u1",
+    ]);
+    expect(
+      (await read(`${endpoint}&unitsRequested=2`)).body.results[0],
+    ).toMatchObject({
+      available: false,
+      unitsAvailable: 1,
+      reason: "SOLD_OUT",
+    });
+    await sql("UPDATE \"Branch\" SET status = 'INACTIVE' WHERE id = $1", [
+      branch,
+    ]);
+    expect((await read(endpoint)).status).toBe(404);
+  } finally {
+    await sql('DELETE FROM "RatePeriod" WHERE "roomTypeId" = $1', [room]);
+    await sql('DELETE FROM "PhysicalRoom" WHERE "branchId" = $1', [branch]);
+    await sql('DELETE FROM "Room" WHERE id = $1', [room]);
+    await sql('DELETE FROM "Branch" WHERE id = $1', [branch]);
+  }
+});

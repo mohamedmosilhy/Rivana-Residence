@@ -13,7 +13,27 @@ import {
   StaffBranch,
   StaffBranchList,
 } from "./branches";
+import { AvailabilityResult, AvailabilityResponse } from "./availability";
 import { HealthResponse } from "./health";
+import {
+  AvailabilityGrid,
+  Block,
+  BlockInput,
+  BlockList,
+  BlockPatch,
+  PhysicalRoom,
+  PhysicalRoomInput,
+  PhysicalRoomList,
+  PhysicalRoomPatch,
+} from "./inventory";
+import {
+  BaseRateInput,
+  NightPrice,
+  RateCalendar,
+  RatePeriod,
+  RatePeriodInput,
+  RatePeriodPatch,
+} from "./pricing";
 import { Money, Occupancy, Problem, Stay } from "./primitives";
 import { API_ROUTES, type ApiRoute } from "./routes";
 
@@ -28,6 +48,8 @@ const COMPONENTS: Readonly<Record<string, z.ZodType>> = {
   Stay,
   Occupancy,
   HealthResponse,
+  AvailabilityResult,
+  AvailabilityResponse,
   Image,
   BranchSummary,
   BranchDetail,
@@ -39,6 +61,21 @@ const COMPONENTS: Readonly<Record<string, z.ZodType>> = {
   StaffBranchList,
   BranchInput,
   BranchPatch,
+  PhysicalRoom,
+  PhysicalRoomList,
+  PhysicalRoomInput,
+  PhysicalRoomPatch,
+  AvailabilityGrid,
+  Block,
+  BlockList,
+  BlockInput,
+  BlockPatch,
+  BaseRateInput,
+  RatePeriod,
+  NightPrice,
+  RateCalendar,
+  RatePeriodInput,
+  RatePeriodPatch,
 };
 
 function componentSchemas() {

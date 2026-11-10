@@ -13,6 +13,95 @@ import { IMAGES, type ImageKey } from "../initial-content/content.ts";
 export const DEMO_BRANCH_SLUG = "demo-giza";
 const DEMO_BRANCH_NAME = "Rivana Giza (demo)";
 
+// Fixed CUID2 fixture identities survive label/rate edits and reruns.
+const INVENTORY_FIXTURES = [
+  {
+    slug: "giza-garden-room",
+    units: [
+      { id: "xrrak1qqdghqceomhwi7qxf3", label: "DEMO-R101" },
+      { id: "olykhmme4g8okk4hg10ytppz", label: "DEMO-R102" },
+    ],
+    baseMinor: 6000,
+    periodId: "pzxtjg48tips90xlu6yhzulc",
+    periodMinor: 7000,
+  },
+  {
+    slug: "giza-family-apartment",
+    units: [
+      { id: "kv6yjbuqcdt728wvwxsumkmj", label: "DEMO-A201" },
+      { id: "uyg16a8szhvapwnflhnvht0w", label: "DEMO-A202" },
+      { id: "wm14iiyl2t1vbl0rkup16482", label: "DEMO-A203" },
+    ],
+    baseMinor: 10000,
+    periodId: "o9jq9gupykn0kts7wkymhw8j",
+    periodMinor: 12000,
+  },
+] as const;
+
+/** M6 upgrade for fresh AND existing demo branches, never the real branch. */
+export async function seedDemoInventory(client: PrismaClient) {
+  return client.$transaction(async (tx) => {
+    const branch = await tx.branch.findUniqueOrThrow({
+      where: { slug: DEMO_BRANCH_SLUG },
+      select: { id: true },
+    });
+    // Resolve every target first so a missing listing cannot leave half an upgrade.
+    const targets = await Promise.all(
+      INVENTORY_FIXTURES.map(async (fixture) => ({
+        fixture,
+        room: await tx.room
+          .findFirstOrThrow({
+            where: { branchId: branch.id, slug: fixture.slug },
+            select: { id: true },
+          })
+          .catch(() => {
+            throw new Error(
+              `Demo inventory needs the listing "${fixture.slug}" in ${DEMO_BRANCH_SLUG}; it was renamed or deleted.`,
+            );
+          }),
+      })),
+    );
+    let created = 0;
+    for (const { fixture, room } of targets) {
+      const units = await tx.physicalRoom.createMany({
+        data: fixture.units.map((unit) => ({
+          ...unit,
+          branchId: branch.id,
+          roomTypeId: room.id,
+          notes: "Fictional unit for local review only.",
+        })),
+        skipDuplicates: true,
+      });
+      const base = await tx.roomBaseRate.createMany({
+        data: [
+          {
+            roomTypeId: room.id,
+            amountMinor: fixture.baseMinor,
+            currency: "USD",
+          },
+        ],
+        skipDuplicates: true,
+      });
+      const period = await tx.ratePeriod.createMany({
+        data: [
+          {
+            id: fixture.periodId,
+            roomTypeId: room.id,
+            startDate: new Date("2027-01-01T00:00:00Z"),
+            endDate: new Date("2027-02-01T00:00:00Z"),
+            amountMinor: fixture.periodMinor,
+            currency: "USD",
+            label: "Fictional demo period",
+          },
+        ],
+        skipDuplicates: true,
+      });
+      created += units.count + base.count + period.count;
+    }
+    return { created };
+  });
+}
+
 // The photos the demo uses, all from the real seeded library.
 const DEMO_PHOTOS = [
   "exteriorWide",
@@ -40,8 +129,9 @@ function ok<T>(
  * room, and one apartment, and it reuses the real photos already in the
  * media library (the demo only needs to prove the features work).
  *
- * Later milestones add their demo data here (units and rates in M6, services
- * and coupons in M7, guests and reservations in M8 and M9), each with a test.
+ * M6 units and rates run separately via seedDemoInventory, including for
+ * existing branches. Later milestones add services and coupons in M7,
+ * guests and reservations in M8 and M9, each with a test.
  * Returns whether it created the branch; an existing one is left alone.
  */
 export async function seedDemo(
