@@ -35,20 +35,21 @@ Each task runs the gates for its risk tier ([agent-workflow.md](../engineering/a
 
 Record exact commands and counts in the review package. If a gate cannot run, say so and why; never report it as passed.
 
-## Latest accepted task results (2026-11-08, M6-T2)
+## Latest accepted task results (2026-11-10, M6-T9)
 
-Local: Node **22.23.2** (via the pinned runtime wrapper), npm **11.21.0**, PostgreSQL **18.4** (Postgres.app). The owner accepted M6-T2 after the following verification and an independent review. Full commands and scope are in the [M6 evidence report](../delivery/reports/m6-inventory-and-availability.md).
+Local: Node **22.23.2** (via the pinned runtime wrapper), npm **11.21.0**, PostgreSQL **18.4**. The owner accepted M6-T9 after verification and independent review. Exact commands and the task evidence are in the [M6 report](../delivery/reports/m6-inventory-and-availability.md#m6-t9-accepted).
 
 | Gate | Result |
 | --- | --- |
-| `npm run check` | **Pass**: formatting, lint, typecheck, 57 unit files / 1,143 tests, production build (existing media-storage tracing warning) |
-| `npm run test:integration -- --reporter=dot` | **Pass**: 20 files / 243 tests on disposable `rivana_test` |
-| Focused T2 tests | **Pass**: 3 files / 73 tests; independently rerun by the reviewer |
-| Runtime smoke | **Pass**: 8 assertions; reviewer also checked 1,000 generated reduction scenarios against an independent capacity oracle |
-| E2E, concurrency, migration drift | Not applicable to T2: pure calculations only; no routes, persisted inventory writes, or migration changes. Real locking and concurrency proof remain T4 through T6 |
-| Independent review | **Approve**, no findings; [gpt-6-astra report](../reviews/2026-11-08-m6-t2.md) |
+| `npm run check` via pinned Node wrapper | **Pass**: formatting, lint, typecheck, 67 unit files / 1,373 tests, production build (existing media-storage tracing warning) |
+| `npm run test:integration -- --reporter=dot` via pinned Node wrapper | **Pass**: 29 files / 391 tests on disposable `rivana_test` |
+| Public limiter concurrency | **Pass**: burst admission and both cleanup race orderings, 20 iterations each, independent database clients |
+| Runtime smoke | **Pass**: direct subsystem and proxy seam plus the real npm cleanup command; exact persisted count, anonymous fallback across branch paths, and preserved staff/other namespace rows |
+| Reviewer reruns | **Pass**: 4 unit files / 22 tests; 2 integration files / 21 tests, including staff throttle regression and all limiter race repetitions |
+| E2E, migration drift, OpenAPI generation | Not applicable to T9: no route, page, endpoint contract, schema, or migration changes. P5 exposure remains T10 |
+| Independent review | **Approve**, zero findings; [gpt-6-astra report](../reviews/2026-11-10-m6-t9.md) |
 
-These are accepted task results, not a claim that M6 or its milestone-close gate set is complete.
+The initial parallel aggregate run hit the existing architecture boundary test's five second timeout. Its focused rerun passed 10 tests, and the full aggregate rerun passed. These are accepted task results, not a claim that M6 or its milestone-close gates are complete.
 
 ## Historical baseline (2026-10-24)
 

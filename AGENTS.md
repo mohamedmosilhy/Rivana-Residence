@@ -44,6 +44,9 @@ E2E_DATABASE_URL=postgresql://<user>@127.0.0.1:5432/rivana_e2e_test npm run test
 # Database
 npm run db:migrate                # dev migrations; production uses npm run db:deploy
 npm run staff -- create --email … --name … --role ADMIN   # passwords via prompt or --password-stdin
+
+# Maintenance (hourly app-user cron; bounded availability buckets only)
+npm run throttles -- cleanup-public
 ```
 
 ## Specs

@@ -1,6 +1,6 @@
 # M6: Inventory, date prices, and availability
 
-Status: **In progress (8/10 tasks accepted)**, 2026-11-10. M6-T1 through M6-T8 are accepted; M6-T9 and M6-T10 have not started. The milestone has not been accepted or merged.
+Status: **In progress (9/10 tasks accepted)**, 2026-11-10. M6-T1 through M6-T9 are accepted; M6-T10 has not started. The milestone has not been accepted or merged.
 
 Branch: `m6-inventory-and-availability`. The owner requested this spelling when accepting T1; the original local `m6-Inventory-and-availability` branch was renamed without changing its history. Build spec: [0003](../../specs/0003-m6-inventory-and-availability.md). Task status belongs to the [brief](../milestones/m6-inventory-and-availability.md#task-breakdown).
 
@@ -16,6 +16,7 @@ Branch: `m6-inventory-and-availability`. The owner requested this spelling when 
 | M6-T6 | Critical | Owner, 2026-11-09 | `feat(inventory): add M6-T6 block management and staff API` (this task commit) | [2026-11-09-m6-t6.md](../../reviews/2026-11-09-m6-t6.md) | Check passed: 61 unit files / 1,291 tests and build; integration passed: 26 files / 347 tests; concurrency: 14 cases (T6 adds 8 × 20 iterations); Chromium E2E: 167 passed, 30 skipped | Block repository, `ManageBlocks`, S24 to S27, audited and guarded create and end date change; fresh model review (Opus) changes requested (one major, no blockers), major and minors fixed before acceptance |
 | M6-T7 | Critical | Owner, 2026-11-10 | `feat(pricing): add M6-T7 base rates, date periods, and staff API` (this task commit) | [2026-11-10-m6-t7.md](../../reviews/2026-11-10-m6-t7.md), recheck [2026-11-10-m6-t7-recheck.md](../../reviews/2026-11-10-m6-t7-recheck.md) | Check passed: 63 unit files / 1,334 tests and build; integration passed: 27 files / 368 tests; concurrency: 5 rate races × 20 iterations (T7) plus S32 and period row lock timeout cases; Chromium E2E: 171 passed, 30 skipped | Rate repository, `ManageRates`, `GetRateCalendar`, S30 to S34; first review (GPT) changes requested (four majors, all fixed), recheck (Opus) changes requested (one major, `TRY_AGAIN` on the wrong route, fixed) and two minors fixed before acceptance |
 | M6-T8 | Critical | Owner, 2026-11-10 | `feat(inventory): add M6-T8 availability search and staff grid` (this task commit) | [2026-11-10-m6-t8.md](../../reviews/2026-11-10-m6-t8.md) | Check passed: 65 unit files / 1,363 tests and build; integration passed: 28 files / 377 tests; Chromium E2E for S20: 2 passed (the full E2E suite was not rerun); `npm run openapi` regenerated, no drift | `GetAvailabilityGrid`, S20, `SearchAvailability` (no route yet), three read ports; review (Opus) approve with nits, four minors fixed before acceptance, five nits left |
+| M6-T9 | Medium | Owner, 2026-11-10 | `feat(security): add M6-T9 atomic public limiter and cleanup` (this task commit) | [2026-11-10-m6-t9.md](../../reviews/2026-11-10-m6-t9.md) | Check passed: 67 unit files / 1,373 tests and build; integration passed: 29 files / 391 tests; 3 limiter race cases × 20 iterations; reviewer reruns: 22 unit and 21 integration tests | Atomic public admission, shared anonymous fallback, safe bounded expiry cleanup and operator command; independent review approved with zero findings |
 
 Task commits identified by subject in this log can be located with `git log --oneline --fixed-strings --grep='<subject>'`.
 
@@ -32,6 +33,32 @@ T2 implements the pure inventory and pricing rules. `AvailabilityCalculator` che
 T4 adds the transaction and locking foundation used by later inventory writers. `ReservationUnitOfWork` binds only the ports a use case needs to one Prisma transaction at `READ COMMITTED`. A failed result is converted into an internal abort so Prisma rolls back instead of committing it; unexpected exceptions still propagate to the redacted HTTP failure path. `InventoryLock` deduplicates and sorts room type ids, takes `FOR NO KEY UPDATE` locks with a five second PostgreSQL timeout, verifies complete branch ownership, and maps lock timeout to `TRY_AGAIN`.
 
 The batched inventory reader returns every requested listing and night, including zero capacity, and merges checked sparse consumption contributions. M6's production consumption adapter intentionally returns none until reservation persistence arrives in M8. `InventoryGuard` enforces lock, reload, validation, mutation, and audit order inside the same unit of work. T4 provides the foundation and tests, but no production unit or block writer is composed before T5 and T6.
+
+## M6-T9 (accepted)
+
+The owner accepted M6-T9 on 2026-11-10 and authorized documentation synchronization and its commit, explicitly without starting M6-T10. Independent reviewer `gpt-6-astra` reviewed the actual uncommitted change authored by `gpt-6.1-sol`: **Approve**, zero findings ([review](../../reviews/2026-11-10-m6-t9.md)).
+
+Delivered: a dedicated `PublicRateLimitStore` port, application admission policy and cleanup use case, `PrismaPublicRateLimitStore`, API composition, and `npm run throttles -- cleanup-public`. The existing `LoginThrottle` table and HMAC key derivation are reused. Public admission allows 60 requests per 60 second fixed window; request 61 is denied with the remaining window in `Retry-After`. Missing trusted addresses share an anonymous bucket across branch paths. Staff sign-in retains its original store, use case, and policy.
+
+Admission upserts and locks the bucket, samples decision time after locking, and checks and counts in the same short transaction. Cleanup locks and skips busy candidates and deletes at most 1,000 expired availability rows per invocation. Active windows, active locks, staff rows, and other namespaces remain intact. The command loads `.env`, reports safe outcomes and failure statuses, and disconnects before exit. Hourly app-user cron and trusted-proxy rehearsal are documented in [deployment](../../operations/deployment.md#public-throttle-cleanup-m6-t9); actual provisioning remains deployment work. There are no new dependencies, environment variables, migrations, seeds, endpoint contracts, or public routes.
+
+Verification used Node **22.23.2**, npm **11.21.0**, and PostgreSQL **18.4**:
+
+```sh
+npm exec --yes --package=node@22.23.2 -- npm run check
+TEST_DATABASE_URL=postgresql://mohamedmosilhy@127.0.0.1:5432/rivana_test npm exec --yes --package=node@22.23.2 -- npm run test:integration -- --reporter=dot
+```
+
+Passed formatting, lint, typecheck, **67 unit files / 1,373 tests**, production build, and **29 integration files / 391 tests**. The build retained the existing media-storage tracing warning. The initial parallel aggregate run hit the existing architecture boundary test's five second timeout; its focused rerun passed 10 tests and the full aggregate rerun passed. Focused concurrency alone is covered by the reviewer's public limiter rerun below: 80 concurrent requests admit exactly 60, and both admission/cleanup orderings run 20 iterations each with independent database clients and observable lock waits where applicable.
+
+The reviewer independently reran:
+
+```sh
+npm exec --yes --package=node@22.23.2 -- npm run test -- tests/unit/application/public-rate-limit.test.ts tests/unit/application/health-rate-limit.test.ts tests/unit/composition/public-client-address.test.ts tests/unit/auth/sign-in.test.ts
+TEST_DATABASE_URL=postgresql://mohamedmosilhy@127.0.0.1:5432/rivana_test npm exec --yes --package=node@22.23.2 -- npm run test:integration -- tests/integration/public-rate-limit.test.ts tests/integration/login-throttle.test.ts --reporter=dot
+```
+
+Passed **4 unit files / 22 tests** and **2 integration files / 21 tests**, including unchanged staff sign-in behavior and all public limiter race repetitions. A temporary direct runtime runner also passed using the real subsystem and existing proxy extraction: 60 admissions across changing branch paths and spoofed headers with trust disabled, denial 61 with remaining retry time, exactly 60 persisted admissions, the real npm cleanup invocation, and preservation of staff and other namespace rows. This was subsystem proof, not a live P5 route. `git diff --check` passed. E2E, schema drift, and OpenAPI regeneration were not applicable to T9. P5 exposure and its full response proof remain T10.
 
 ## M6-T8 (accepted)
 
@@ -117,7 +144,8 @@ Remaining limitations:
 - M6-T6: block repository, `ManageBlocks`, S24 to S27, accepted by the owner.
 - M6-T7: rate repository, `ManageRates`, `GetRateCalendar`, S30 to S34, accepted by the owner.
 - M6-T8: `GetAvailabilityGrid`, S20, and the `SearchAvailability` use case, accepted by the owner.
-- The public availability API (P5), its limiter, and screens remain future work. T9 and T10 have not started.
+- M6-T9: atomic public limiter admission, anonymous fallback, bounded expiry cleanup and its operator command, accepted by the owner.
+- The public availability API (P5) remains T10; staff screens remain M11 and M12.
 
 ## Files by responsibility
 
@@ -128,6 +156,8 @@ Remaining limitations:
 - Application (T4): `src/application/reservations/ports.ts`, `src/application/inventory/{ports,inventory-guard}.ts`, and their public exports; typed inventory conflict context in `src/application/shared/result.ts`.
 - Infrastructure and HTTP (T4): Prisma unit of work, inventory lock, batched reader, empty consumption adapter, SQLSTATE extraction, and the shared problem mapping.
 - Tests (T4): unit guard and HTTP tests plus real PostgreSQL unit of work, inventory reader, and concurrency suites under `tests/integration/reservations/`.
+- Application/infrastructure/operations (T9): `src/application/shared/{rate-limit,public-rate-limit-ports,public-rate-limit-policy,cleanup-public-throttles}.ts`, the Prisma public store, API and maintenance composition, and `scripts/throttles.mts`.
+- Tests (T9): public admission unit and proxy trust suites plus `tests/integration/public-rate-limit.test.ts`; existing staff sign-in suites remain regression coverage.
 - Evidence: independent task reports in `docs/reviews/`; topic documentation, test matrix, quality gates, and progress summaries synchronized on owner acceptance.
 - Durable context: root rules point to the shared values, pure rules, and guard transaction boundary. `tests/integration/reservations/AGENTS.md` records the new concurrency test conventions.
 
@@ -238,14 +268,16 @@ Direct runtime verification additionally proved that a failed result rolls back 
 
 ## Acceptance criteria and evidence
 
-| Criterion | Accepted T1 through T4 evidence and remaining scope |
+| Criterion | Accepted T1 through T9 evidence and remaining scope |
 | --- | --- |
-| AC-1 | T1 covers integer money arithmetic; T2's resolver produces 26000 cents for the worked example and 52000 cents for quantity 2. Public P5 proof remains T10 |
-| AC-3 | T-DATE-1 through T-DATE-8 cover strict dates, leap and century rules, positive ranges, adjacency, partial and contained overlap, policy limits, branch today, and Cairo DST. T3 adds block range and overlap constraints; block write workflows remain T6 |
-| AC-4 | T2 covers pure sold versus projected capacity refusal, earliest conflict date, overlapping blocks, and consuming assignments. T4 proves the shared guard order, transaction rollback, typed 409 mapping, and injected sold and assignment refusal. Concrete writers remain T5 and T6 |
-| AC-5 | T4 proves sorted complete set locking, real waiting and fresh reads, five second timeout mapping, rollback of mutation and audit, and branch independent locking. Writer versus writer cases remain T5 and T6 |
-| AC-6 | T2 covers zero or missing capacity, explicit unpriced nights, and null totals for gaps. T4's batched reader retains every requested zero capacity night and validates sparse consumption. Public response mapping remains T10 |
-| AC-2, AC-7, AC-8 | Database constraints for AC-2 arrived in T3, while coherent rate writes, authorization, audit use cases, and public disclosure remain in later tasks. No milestone completion is claimed |
+| AC-1 | Domain resolver and T8 search prove the 26000-cent worked example and quantity multiplication. Public P5 proof remains T10 |
+| AC-2 | T3 exclusions and T7 rate API tests refuse overlapping active periods with safe 409 errors |
+| AC-3 | T1/T2 date and overlap arithmetic, T3 database exclusions, and T6 block workflows cover adjacency and partial overlap |
+| AC-4 | Guard and writer tests cover projected capacity refusal, conflicting blocks, earliest unavailable night, locking, and audit rollback; sold/assignments are injected until M8 |
+| AC-5 | Real PostgreSQL races cover block versus block, block versus deactivation, locking entry points, and branch isolation with 20 repetitions |
+| AC-6 | Pure rules and T8 reads retain zero capacity and complete unpriced results. P5 response mapping remains T10 |
+| AC-7 | T7 rate API authorization, branch scope, audited before/after writes, and rollback tests passed |
+| AC-8 | T8 proves uncached staff grid reads and the search view-model allowlist. T9 proves atomic limiter admission, fallback and safe expiry lifecycle. Public route cache/disclosure proof remains T10 |
 
 ## Independent review and owner acceptance
 
@@ -261,8 +293,8 @@ M6-T4 received a fresh model review against the approved critical risk task card
 
 ## Known limitations and deferred work
 
-The values and pure rules are not yet wired into concrete inventory use cases or public APIs. M6's remaining tasks still need their own plan approvals, implementation, verification, independent review, and owner acceptance. Persisted physical unit and block repositories, rate use cases, composition, and availability endpoints have not been built. The M6 reservation consumption adapter intentionally reports no sold or assigned rows; M8 replaces it with persisted consumption inside the same transaction context. T4's harness proves the shared lock protocol, not the later block versus block or block versus deactivation writer races. Rate authoring must enforce the positive PostgreSQL `INTEGER` bound; generic `Money` and the resolver remain calculation values. Persisted snapshot immutability and manual override authorization belong to M8.
+M6-T1 through M6-T9 are accepted. Public availability API P5 remains M6-T10 and requires its own approved plan, implementation, verification, independent review, and acceptance. Hourly limiter cleanup and trusted-proxy configuration still need the deployment rehearsal. The production reservation consumption adapter intentionally reports no sold or assigned rows until M8, and the sync checkpoint reader returns null until persisted synchronization arrives. Availability reads do not hold inventory or promise a shared capacity/rate snapshot. Persisted reservation price snapshots and manual override authorization remain M8 work. Task-specific accepted limitations remain documented in the sections above.
 
 ## Next milestone
 
-M7 has not started. M6-T5 has not started; stop after the accepted T4 commit.
+M7 has not started. M6-T10 has not started; stop after the accepted T9 commit unless the owner requests separate maintenance work.

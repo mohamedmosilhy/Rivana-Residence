@@ -12,6 +12,7 @@ The versioned REST API (`/api/v1/**`). Conventions: [docs/api/rest-api-conventio
 
 - Every exported method is built from a wrapper: `export const GET = publicRoute(…)`, `staffRoute(…)`, or `webhookRoute(…)`. Never a bare `export async function`. The wrappers apply CSRF on unsafe staff methods, the 32 KB body cap, strict Zod validation (`422 VALIDATION` with `fieldErrors`), problem mapping, `Cache-Control: no-store`, `X-Request-Id`, and the log line.
 - Pass `route` as the pattern (`"/api/v1/branches/[slug]"`), never the raw path. It is what gets logged.
+- Public limiter wiring uses `RateLimiter` and `PublicRateLimitStore` for atomic fixed-window admission. Reuse `AVAILABILITY_RATE_LIMIT` for P5 across branches; missing trusted client addresses share an anonymous bucket. Staff sign-in keeps its separate throttle policy. Expired availability buckets are pruned through `npm run throttles -- cleanup-public` (see the deployment guide).
 - A handler parses, calls one use case, and maps the result with `toHttp`. Business rules, `authorize`, and `authorizeBranch` live in the use case, not here.
 - No import from `@/infrastructure/**` or the generated Prisma client. Get use cases from `@/composition/*`.
 - Each `route.ts` stays within 60 lines.

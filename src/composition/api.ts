@@ -24,7 +24,7 @@ import { NextRouteCacheInvalidator } from "@/infrastructure/cache/next-cache-inv
 import { getPrisma } from "@/infrastructure/db/prisma/client";
 import { PrismaDatabaseProbe } from "@/infrastructure/db/prisma/database-probe";
 import { PrismaBranchRepository } from "@/infrastructure/db/prisma/repositories/branches/branch-repository";
-import { PrismaLoginThrottleStore } from "@/infrastructure/db/prisma/repositories/login-throttle-store";
+import { PrismaPublicRateLimitStore } from "@/infrastructure/db/prisma/repositories/public-rate-limit-store";
 
 // Composition for `/api/v1` Route Handlers and their shared HTTP layer.
 
@@ -40,9 +40,8 @@ export const httpDependencies = {
   resolveStaff: resolveStaffFromHeaders,
   rateLimit: (namespace: string, rule: ThrottleRule, request: Request) =>
     new RateLimiter(
-      new PrismaLoginThrottleStore(getPrisma()),
+      new PrismaPublicRateLimitStore(getPrisma(), clock),
       throttleKeys(),
-      clock,
     ).consume(namespace, rule, clientAddressFrom(request.headers)),
 };
 

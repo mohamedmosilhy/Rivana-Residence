@@ -67,6 +67,20 @@ Do not run development migrations or schema push in production. Destructive migr
 - record recovery point/time objectives with the client before launch (initial target: RPO ≤ 24h, RTO ≤ 4h, improved if provider plans allow);
 - content migration source assets retained separately until acceptance.
 
+### Public throttle cleanup (M6-T9)
+
+`npm run throttles -- cleanup-public` removes at most 1,000 expired availability limiter buckets per run. It preserves active windows, active locks, busy buckets, staff sign-in rows, and other public namespaces. Concurrent admission remains safe while cleanup runs. The script prints only `{"deleted":N}` on success, exits with status 2 for invalid arguments, and reports a generic failure with status 1. It disconnects from PostgreSQL before exit.
+
+Schedule it hourly in the existing app user's cron before P5 is exposed. Run from the active `current` release with the same pinned Node 22.23 runtime and protected environment as other maintenance commands. The command loads that working directory's `.env` without overriding exported values. Do not copy secrets into the crontab. No new environment variables or secrets are needed. For example, after substituting the deployment paths and ensuring cron's `PATH` includes the pinned Node and npm:
+
+```cron
+0 * * * * cd /srv/rivana/current && npm run throttles -- cleanup-public >> /var/log/rivana/throttles.log 2>&1
+```
+
+The deployment paths above are examples, not provisioned paths. Check exit status and log output during deployment rehearsal. A result of 1,000 means more expired rows may remain; additional bounded runs are safe. Cleanup is storage maintenance, not part of request admission, so missed runs do not bypass the limit.
+
+The prepared P5 policy uses one availability bucket per trusted client across branches, allowing 60 admissions per 60 second window. P5 endpoint wiring remains M6-T10. Without a trusted address, all such requests share one anonymous bucket. Enable `AUTH_TRUST_PROXY_HEADERS` only when the edge overwrites client supplied forwarding headers and the Next.js listener cannot be reached directly. Rehearse that trust configuration before public exposure. Staff sign-in policy remains separate.
+
 ### Backup and restore tooling
 
 `scripts/backup.sh` and `scripts/restore.sh` (Phase 11) need `pg_dump`/`pg_restore`/`psql` at least as new as the server.
