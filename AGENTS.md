@@ -14,7 +14,7 @@ Hotel marketing website, CMS, and (in progress) a self-managed multi-branch rese
 
 ## Stack
 
-- **Language / Runtime**: TypeScript 5.9 (strict), Node 22.23 (CI and hosting; `.nvmrc`)
+- **Language / Runtime**: TypeScript 5.9 (strict), Node 26.13.0 LTS (local, CI, and hosting; `.nvmrc`, `.node-version`)
 - **Framework**: Next.js 16.3 App Router, React 19.2. Next.js is the **only** application framework (frontend and backend)
 - **Key dependencies**: Prisma 7.10 + `@prisma/adapter-pg` on PostgreSQL 17+/18, Better Auth 1.7.6, Zod 4, Tailwind CSS 4.3, `motion` 13, sharp, Nodemailer
 - **Tests**: Vitest 5 (unit + jsdom, integration on real PostgreSQL), Playwright 1.63 (+ axe), Lighthouse CI

@@ -200,7 +200,7 @@ sequenceDiagram
 ```mermaid
 flowchart LR
   CF["Cloudflare DNS (client account)"] --> Nginx["Nginx + TLS (Hostinger VPS)"]
-  Nginx --> Node1["Node 22: next start (systemd)"]
+  Nginx --> Node1["Node 26.13.0 LTS: next start (systemd)"]
   Node1 --> PG[("PostgreSQL 17+ on the VPS or managed, btree_gist")]
   Node1 --> FS[("/var/lib/rivana/media")]
   Node1 --> SMTP["SMTP"]

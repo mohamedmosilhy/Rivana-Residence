@@ -35,6 +35,10 @@ Each task runs the gates for its risk tier ([agent-workflow.md](../engineering/a
 
 Record exact commands and counts in the review package. If a gate cannot run, say so and why; never report it as passed.
 
+## Node 26 runtime alignment verification (accepted 2026-11-10)
+
+The owner selected Node **26.13.0 LTS** for the Mac, CI, and hosting. On macOS with npm **11.20.0**, clean `npm ci --no-audit` and `npm run check` passed (format, lint, typecheck, **67 unit files / 1,373 tests**, production build). The full PostgreSQL integration suite passed **29 files / 391 tests**; full Chromium E2E passed **175 tests**, with **30 intentionally skipped**. Independent review by `gpt-6-astra` approved with zero findings. The [runtime report](../delivery/reports/node-26-runtime-alignment.md) records exact commands, unchanged development audit findings, and the nonfatal upstream Tailwind loader deprecation under Node 26. These results do not replace the historical task acceptance evidence below or claim remote Linux CI has run.
+
 ## Latest accepted task results (2026-11-10, M6-T9)
 
 Local: Node **22.23.2** (via the pinned runtime wrapper), npm **11.21.0**, PostgreSQL **18.4**. The owner accepted M6-T9 after verification and independent review. Exact commands and the task evidence are in the [M6 report](../delivery/reports/m6-inventory-and-availability.md#m6-t9-accepted).

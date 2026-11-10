@@ -18,7 +18,8 @@ Production and staging run on a Hostinger KVM VPS ([ADR 023](../adr/023-hostinge
 
 ## Runtime
 
-- [ ] Node 22.23 (the `.nvmrc` version) installed system-wide from a pinned source; `node -v` checked as the app user.
+- [ ] Node 26.13.0 LTS (the `.nvmrc` version) installed system-wide from a pinned source; `node -v` checked as the app user.
+- [ ] Linux `libatomic` runtime library is available for the official Node 26 binary; systemd and cron use the same pinned Node and npm 11 runtime.
 - [ ] A systemd service runs `next start` on `127.0.0.1`, restarts on failure, and reads its environment from a root-owned file readable only by the app user.
 - [ ] Nginx proxies to the app, serves TLS, redirects HTTP to HTTPS, sets `X-Forwarded-For`, and allows the upload body size the media policy needs.
 - [ ] Release layout (`releases/<id>` plus a `current` symlink) and the restart command proven with a dummy release and a rollback.

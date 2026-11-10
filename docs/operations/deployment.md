@@ -5,7 +5,7 @@
 Planned in [ADR 023](../adr/023-hostinger-vps-deployment.md); not yet provisioned.
 
 - **Server:** a Hostinger KVM VPS used only for Rivana, running a current Ubuntu LTS release, in the data centre closest to Egypt.
-- **Application:** Next.js 16 production server (`next start`) on Node 22.23, one process run by a systemd service as a dedicated unprivileged user, listening on `127.0.0.1`. Nginx in front terminates TLS and sets `X-Forwarded-For` (`AUTH_TRUST_PROXY_HEADERS=true`).
+- **Application:** Next.js 16 production server (`next start`) on Node 26.13.0 LTS, one process run by a systemd service as a dedicated unprivileged user, listening on `127.0.0.1`. Nginx in front terminates TLS and sets `X-Forwarded-For` (`AUTH_TRUST_PROXY_HEADERS=true`).
 - **Database:** PostgreSQL 18.6 (17.11 fallback). The default is the same VPS, installed from the PostgreSQL project's packages; a managed service is the alternative (Q-25). Separate runtime and migration roles.
 - **Media:** persistent local directory on the VPS (for example `/var/lib/rivana/media`) behind `MediaStorage`, outside the application release tree and exposed at a controlled `/media/` URL.
 - **Email:** SMTP behind `ContactDelivery` for contact enquiries; auth reset delivery remains disabled until its provider flow is implemented.
@@ -45,6 +45,14 @@ Public content reads are cached on disk in `.next/cache/fetch-cache` and invalid
 
 Do not run development migrations or schema push in production. Destructive migrations use expand/migrate/contract steps across releases.
 
+## Runtime alignment
+
+The owner selected Node **26.13.0 LTS** on 2026-11-10 for local development, CI, and hosting. `.nvmrc` and `.node-version` pin that release; `package.json` allows Node 26 from 26.13.0 onward and keeps the existing npm 11 requirement. CI reads `.nvmrc`. When changing the runtime pin, update both version files, the package engine and lockfile, Node typings, and the hosting checklist together.
+
+Check `node --version` and `npm --version` from the project directory before installing or running gates. With nvm, `nvm install` followed by `nvm use` selects the committed version. On this Mac, Homebrew's `node` formula supplies 26.13.0 through `/opt/homebrew/bin`; the previous `node@24` remains installed for rollback. Existing terminals or IDE processes may need a new shell to pick up the linked executable.
+
+Use the same pinned release for the systemd service and cron, rather than relying on the host's default Node. The [Node 26.13.0 release notes](https://nodejs.org/en/blog/release/v26.13.0) document the Linux `libatomic` dependency; verify that library is available on the Ubuntu host before launch. Historical task reports retain the runtime each task actually used.
+
 ## Initial content
 
 `npm run db:seed` (needs `DATABASE_URL`, `MEDIA_STORAGE_ROOT`, and `SEED_ADMIN_PASSWORD`) is the one seed. On a freshly migrated database it creates the structure (settings, the `new-cairo` branch, the three pages), the administrator `admin@rivanaresidence.com`, the branch's own contact details, address, coordinates, Google Maps embed link and check-in and check-out times, and the previous rivanaresidence.com content from `prisma/initial-content/`: the three rooms, Swimming Pool and Gym (Café as an unpublished draft until it has a photo), Home/About/Contact copy, social links, and 33 full-size photos with alt text, uploaded through the normal media pipeline. The map link in `prisma/initial-content/content.ts` was built from the owner's place link; replace it with the official Share > Embed a map link when convenient.
@@ -71,7 +79,7 @@ Do not run development migrations or schema push in production. Destructive migr
 
 `npm run throttles -- cleanup-public` removes at most 1,000 expired availability limiter buckets per run. It preserves active windows, active locks, busy buckets, staff sign-in rows, and other public namespaces. Concurrent admission remains safe while cleanup runs. The script prints only `{"deleted":N}` on success, exits with status 2 for invalid arguments, and reports a generic failure with status 1. It disconnects from PostgreSQL before exit.
 
-Schedule it hourly in the existing app user's cron before P5 is exposed. Run from the active `current` release with the same pinned Node 22.23 runtime and protected environment as other maintenance commands. The command loads that working directory's `.env` without overriding exported values. Do not copy secrets into the crontab. No new environment variables or secrets are needed. For example, after substituting the deployment paths and ensuring cron's `PATH` includes the pinned Node and npm:
+Schedule it hourly in the existing app user's cron before P5 is exposed. Run from the active `current` release with the same pinned Node 26.13.0 LTS runtime and protected environment as other maintenance commands. The command loads that working directory's `.env` without overriding exported values. Do not copy secrets into the crontab. No new environment variables or secrets are needed. For example, after substituting the deployment paths and ensuring cron's `PATH` includes the pinned Node and npm:
 
 ```cron
 0 * * * * cd /srv/rivana/current && npm run throttles -- cleanup-public >> /var/log/rivana/throttles.log 2>&1
