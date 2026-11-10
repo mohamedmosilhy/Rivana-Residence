@@ -1,7 +1,7 @@
 # 0003. Inventory, date prices, and availability (M6)
 
 **Date**: 2026-11-08
-**Status**: In Progress (M6-T1 through M6-T10 accepted, 10/10 tasks; milestone closeout and acceptance pending)
+**Status**: Accepted (M6 accepted by the owner, 2026-11-10)
 **Owner approval**: Amended spec and ten task breakdown approved, 2026-11-08
 **Mode**: FEATURE
 **Branch**: `m6-inventory-and-availability`

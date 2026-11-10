@@ -1,6 +1,6 @@
 # M6: Inventory, date prices, and availability
 
-Status: **In progress (10/10 tasks accepted)**, 2026-11-10. M6-T1 through M6-T10 are accepted; milestone closeout and acceptance remain pending. The milestone has not been accepted or merged.
+Status: **Accepted by the owner, 2026-11-10.** M6-T1 through M6-T10 are accepted and the closeout gates and live verification passed. The branch is merged into `main` and pushed next, per the owner's milestone rule.
 
 Branch: `m6-inventory-and-availability`. The owner requested this spelling when accepting T1; the original local `m6-Inventory-and-availability` branch was renamed without changing its history. Build spec: [0003](../../specs/0003-m6-inventory-and-availability.md). Task status belongs to the [brief](../milestones/m6-inventory-and-availability.md#task-breakdown).
 
@@ -342,10 +342,55 @@ M6-T3 was independently reviewed by Opus (author: Sonnet; an earlier session beg
 
 M6-T4 received a fresh model review against the approved critical risk task card. The first pass found two test coverage gaps: the audit rollback case did not exercise the real guard and persistence path, and several refusal paths lacked direct coverage. The tests were expanded for real guard rollback, foreign listings, invalid consumption contributions, failed loads, and assigned units. The reviewer reran the affected unit, architecture, and integration suites and then returned **Approve** with no open findings. Full report: [2026-11-09-m6-t4.md](../../reviews/2026-11-09-m6-t4.md). The owner accepted M6-T4 on 2026-11-09 and authorized this documentation sync and task commit, explicitly without starting T5. No push or merge is authorized.
 
+## Milestone closeout verification (2026-11-10)
+
+Run on the final tree at commit `8943df1` (the T10 commit), Node **26.13.0**, npm **11.20.0**, PostgreSQL **18.4**. Verification followed `/check verify`: run the built app, prove every acceptance criterion through real requests, and collect the brief's evidence items. No application code changed during closeout.
+
+### Full gates
+
+| Gate | Command | Result |
+| --- | --- | --- |
+| Aggregate | `npm run check` | **Pass**: format, lint, typecheck, **68 unit files / 1,385 tests**, production build. No deprecation or tracing warning in the build |
+| Integration | `TEST_DATABASE_URL=postgresql://mohamedmosilhy@127.0.0.1:5432/rivana_test npm run test:integration -- --reporter=dot` | **Pass**: **30 files / 425 tests** |
+| Chromium E2E | `E2E_DATABASE_URL=postgresql://mohamedmosilhy@127.0.0.1:5432/rivana_e2e_test npm run test:e2e` | **Pass**: **176 passed, 30 intentionally skipped** |
+| Concurrency, 20 repetitions | `npm run test:integration -- --reporter=verbose tests/integration/reservations/concurrency.test.ts tests/integration/public-rate-limit.test.ts` | **Pass**: **2 files / 28 tests**, every race case repeated 20 times |
+| Audit | `npm audit --omit=dev`, `npm audit --json` | 0 production findings, 26 existing development findings (2 low, 10 moderate, 14 high), unchanged |
+| Migration drift | Not applicable | No schema change in T10 or closeout. All migrations applied cleanly to a fresh database with `npm run db:deploy` |
+
+Cross-browser (WebKit, Firefox) and Lighthouse were not rerun: M6 adds no page or visual change, and the full gate list for this milestone is the Chromium set.
+
+### Live proof of every acceptance criterion
+
+Setup: a scratch database `rivana_verify` (dropped afterward), `npm run db:deploy`, `npm run db:seed -- --demo`, three staff accounts (Admin, Receptionist on `new-cairo`, Manager on `demo-giza`), the production build served with `npm run start` on port 3300, and fictional fixtures (rooms, units, rate periods) dated 40 days ahead so the past date rule stays in force. Browser sign in through the real login form, then API calls from the signed in page. All 20 checks passed; full output is in [m6-closeout-live-verification.json](./m6-closeout-live-verification.json).
+
+| Criterion | Live evidence |
+| --- | --- |
+| AC-1 | `GET /api/v1/branches/new-cairo/availability?checkIn=…&checkOut=…&adults=2&children=0` returned 200, nightly amounts `[6000, 6000, 7000, 7000]`, total **26000** USD cents; `unitsRequested=2` returned **52000** |
+| AC-2 | `POST` of an overlapping period to S32 returned **409** `CONFLICT`; an adjacent period returned 201; the database holds three active periods with no overlap |
+| AC-3 | Blocks `[d0,d2)` and `[d2,d4)` on one unit both returned 201; `[d3,d5)` returned **409** "This unit already has a block on those dates" |
+| AC-4 | Overlapping blocks on one unit are refused live. **The sold greater than capacity refusal naming the night cannot be reached live in M6**, because sold counts are zero until M8 (the brief and spec 0003 say so). It is proven by the T4, T6 and T7 guard and writer tests with injected sold counts |
+| AC-5 | Eight simultaneous identical block requests on one unit returned one 201 and seven 409, one stored block. Writes in `new-cairo` left the `demo-giza` availability response byte identical. The 20 repetition PostgreSQL races above cover block against block, block against deactivation, and branch isolation |
+| AC-6 | A listing with rates but no active unit returned `available: false`, `SOLD_OUT`, 0 units. Four unpriced listings returned `UNPRICED`, `accommodationTotal: null`, empty nightly array. No price was invented |
+| AC-7 | Receptionist: S30 read 200, base rate write **403**. Manager: write in the assigned branch 200, in another branch 404. Two audit rows with `before` and `after` (`null` to 12000, then 12000 to 12500). Refused writes changed nothing (base rate stayed 5500) |
+| AC-8 | P5 and staff grid S20 responses carry `Cache-Control: no-store`. Changing a rate in the database changed the next response to the identical URL (26000 to 30000). The response keys are only `roomType`, `available`, `unitsAvailable`, `pricePerNight`, `accommodationTotal`; a search for unit ids, labels, capacity, blocked, and branch id found none. A blocked unit lowered `unitsAvailable` from 2 to 1 without naming it. Public limiter: 75 rapid requests produced 48 200 and 27 **429** with `Retry-After` and `no-store` |
+
+### Other brief evidence items
+
+- **Query plan.** [m6-closeout-capacity-plan.txt](./m6-closeout-capacity-plan.txt) holds `EXPLAIN (ANALYZE, BUFFERS)` of the capacity query on the demo seed plus fixtures: 1.3 ms execution, index scans on `PhysicalRoom` and the `InventoryBlock_no_overlap` index, 103 shared buffer hits. The data set is tiny, so this shows the access path, not production scale.
+- **Empty sold adapter.** M6 composes a consumption adapter that returns no sold or assigned rows until M8. The real sold query plan is deferred to M8.
+- **Worked example response.** [m6-t10-worked-example.json](./m6-t10-worked-example.json) (the Playwright capture) and the live closeout run above both show 26000.
+- **Concurrency.** 20 repetition output is the verbose run in the table above.
+
+### Closeout limits
+
+- AC-4's sold refusal is test proven, not live proven, for the reason above.
+- The optional milestone wide `/check review` was not run. Every task already had its own independent review, and no cross task interaction was found. It remains available if you want it.
+- No warnings appear in the build, tests, or runtime, and none are suppressed.
+
 ## Known limitations and deferred work
 
-M6-T1 through M6-T10 are accepted. Milestone closeout verification and owner acceptance remain separate; no milestone completion or merge is claimed. Hourly limiter cleanup and trusted-proxy configuration still need the deployment rehearsal. The production reservation consumption adapter intentionally reports no sold or assigned rows until M8, and the sync checkpoint reader returns null until persisted synchronization arrives. Availability reads do not hold inventory or promise a shared capacity/rate snapshot. Persisted reservation price snapshots and manual override authorization remain M8 work. Task-specific accepted limitations remain documented in the sections above.
+M6-T1 through M6-T10 are accepted. Closeout verification passed (see the closeout section) and the owner accepted the milestone on 2026-11-10. Hourly limiter cleanup and trusted-proxy configuration still need the deployment rehearsal. The production reservation consumption adapter intentionally reports no sold or assigned rows until M8, and the sync checkpoint reader returns null until persisted synchronization arrives. Availability reads do not hold inventory or promise a shared capacity/rate snapshot. Persisted reservation price snapshots and manual override authorization remain M8 work. Task-specific accepted limitations remain documented in the sections above.
 
 ## Next milestone
 
-M7 has not started. Stop after the accepted T10 commit; do not start another task. Milestone acceptance, push and merge remain pending.
+M7 has not started. After the merge, branch `m7-booking-quote` is created from `main` and work stops there.

@@ -1,0 +1,122 @@
+[
+  {
+    "ac": "AC-1",
+    "ok": true,
+    "what": "P5 worked example total 26000 USD cents over four nights",
+    "evidence": "GET /api/v1/branches/new-cairo/availability?checkIn=2026-12-20&checkOut=2026-12-24&adults=2&children=0 -> 200, nightly [6000,6000,7000,7000], total 26000"
+  },
+  {
+    "ac": "AC-1",
+    "ok": true,
+    "what": "quantity 2 multiplies the total",
+    "evidence": "unitsRequested=2 -> total 52000"
+  },
+  {
+    "ac": "AC-8",
+    "ok": true,
+    "what": "P5 uncached and no unit labels or raw counts",
+    "evidence": "Cache-Control: no-store; leak check clean; keys roomType,available,unitsAvailable,pricePerNight,accommodationTotal"
+  },
+  {
+    "ac": "AC-8",
+    "ok": true,
+    "what": "identical URL shows a fresh price right after a database change (no cache)",
+    "evidence": "total now 30000"
+  },
+  {
+    "ac": "AC-6",
+    "ok": true,
+    "what": "unpriced listing reported UNPRICED, null total, no invented price",
+    "evidence": "4 UNPRICED result(s); first: available=false, total=null, nights=0"
+  },
+  {
+    "ac": "AC-6",
+    "ok": true,
+    "what": "priced listing with no active unit is unavailable, not bookable",
+    "evidence": "reason SOLD_OUT, unitsAvailable 0"
+  },
+  {
+    "ac": "AC-2",
+    "ok": true,
+    "what": "overlapping active period refused",
+    "evidence": "POST /api/v1/staff/room-types/vf-priced/rate-periods (overlap) -> 409 {\"type\":\"https://rivanaresidence.com/problems/conflict\",\"title\":\"This conflicts with the current state\",\"status\":409,\"code\":\"CONFLICT\",\"detail\":\"This listing al"
+  },
+  {
+    "ac": "AC-2",
+    "ok": true,
+    "what": "adjacent period accepted",
+    "evidence": "POST adjacent -> 201"
+  },
+  {
+    "ac": "AC-2",
+    "ok": true,
+    "what": "database holds no overlapping active period (exclusion constraint)",
+    "evidence": "active periods 3"
+  },
+  {
+    "ac": "AC-3",
+    "ok": true,
+    "what": "back to back blocks do not overlap",
+    "evidence": "[d0,d2) -> 201, [d2,d4) -> 201"
+  },
+  {
+    "ac": "AC-3",
+    "ok": true,
+    "what": "partial overlap refused",
+    "evidence": "[d3,d5) -> 409 {\"type\":\"https://rivanaresidence.com/problems/conflict\",\"title\":\"This conflicts with the current state\",\"status\":409,\"code\":\"CONFLICT\",\"detail\":\"This unit already has a block on those dates.\",\"request"
+  },
+  {
+    "ac": "AC-4",
+    "ok": true,
+    "what": "overlapping blocks on one unit refused with a conflict code (sold is injected until M8, so the sold>capacity refusal is proven by integration tests, not live)",
+    "evidence": "{\"type\":\"https://rivanaresidence.com/problems/conflict\",\"title\":\"This conflicts with the current state\",\"status\":409,\"code\":\"CONFLICT\",\"detail\":\"This unit already has a block on those dates.\",\"request"
+  },
+  {
+    "ac": "AC-8",
+    "ok": true,
+    "what": "a blocked unit lowers selectable units without naming it",
+    "evidence": "unitsAvailable 1"
+  },
+  {
+    "ac": "AC-5",
+    "ok": true,
+    "what": "8 simultaneous identical blocks on one unit: exactly one wins",
+    "evidence": "statuses 409,201,409,409,409,409,409,409, stored blocks 1"
+  },
+  {
+    "ac": "AC-5",
+    "ok": true,
+    "what": "branch A writes leave branch B availability byte identical",
+    "evidence": "demo-giza response unchanged: true, length 1804"
+  },
+  {
+    "ac": "AC-7",
+    "ok": true,
+    "what": "receptionist reads rates but cannot change them",
+    "evidence": "GET -> 200, PUT -> 403"
+  },
+  {
+    "ac": "AC-7",
+    "ok": true,
+    "what": "manager changes rates only in an assigned branch",
+    "evidence": "own branch -> 200, other branch -> 404"
+  },
+  {
+    "ac": "AC-7",
+    "ok": true,
+    "what": "every rate change is audited with before and after",
+    "evidence": "audit rows [{\"action\":\"room-base-rate.updated\",\"changes\":{\"after\":{\"currency\":\"USD\",\"amountMinor\":12500},\"before\":{\"currency\":\"USD\",\"amountMinor\":12000}}},{\"action\":\"room-base-rate.updated\",\"changes\":{\"after\":{\"currency\":\"USD\",\"amountMinor\":12000},\"before\":null}}]"
+  },
+  {
+    "ac": "AC-7",
+    "ok": true,
+    "what": "refused attempts changed nothing",
+    "evidence": "base rate audit rows from refused calls: n/a; admin race write audited rows for vf-priced: 1"
+  },
+  {
+    "ac": "AC-8",
+    "ok": true,
+    "what": "staff grid S20 uncached",
+    "evidence": "GET S20 -> 200, Cache-Control no-store"
+  }
+]

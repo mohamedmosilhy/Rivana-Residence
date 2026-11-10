@@ -1,6 +1,6 @@
 # M6 — Inventory, date prices, and availability
 
-Status: **In progress (10/10 tasks accepted); M6-T10 accepted by the owner, 2026-11-10; milestone closeout and acceptance pending.** Branch: `m6-inventory-and-availability` (owner's requested commit branch). Follow the [milestone loop](./README.md#the-loop-every-milestone-follows). Approved build spec: [0003](../../specs/0003-m6-inventory-and-availability.md). Evidence and task log: [M6 report](../reports/m6-inventory-and-availability.md).
+Status: **Accepted by the owner, 2026-11-10 (10/10 tasks accepted, closeout verified).** Branch: `m6-inventory-and-availability` (owner's requested commit branch). Follow the [milestone loop](./README.md#the-loop-every-milestone-follows). Approved build spec: [0003](../../specs/0003-m6-inventory-and-availability.md). Evidence and task log: [M6 report](../reports/m6-inventory-and-availability.md).
 
 ## Objective
 
