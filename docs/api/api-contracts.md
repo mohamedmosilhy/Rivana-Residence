@@ -97,11 +97,11 @@ Authentication: staff session cookie. Authorization: listed capability **and** b
 
 | Id | Method & path | Capability | Request | Response | Notes |
 | --- | --- | --- | --- | --- | --- |
-| API-S30 | `GET /api/v1/staff/room-types/{roomTypeId}/rates?from&to` | `pricing:read` | — | `200 { baseRate: Money \| null, periods: RatePeriodDto[], calendar: NightPrice[] }` | |
-| API-S31 | `PUT /api/v1/staff/room-types/{roomTypeId}/base-rate` | `pricing:manage` | `{ amount: Money }` | `200` | Audit before and after |
-| API-S32 | `POST /api/v1/staff/room-types/{roomTypeId}/rate-periods` | `pricing:manage` | `{ startDate, endDate, amount, label? }` | `201` | `409` overlap with an active period (Q-44) |
-| API-S33 | `PATCH /api/v1/staff/rate-periods/{id}` | `pricing:manage` | partial | `200` | Audit |
-| API-S34 | `DELETE /api/v1/staff/rate-periods/{id}` | `pricing:manage` | — | `204` | Sets `active=false`; snapshots unaffected |
+| API-S30 | `GET /api/v1/staff/room-types/{roomTypeId}/rates?from&to` | `pricing:read` | — | `200 { baseRate: Money \| null, periods: RatePeriodDto[], calendar: NightPrice[] }` | Implemented (M6-T7). Window of at most 62 nights (`422` otherwise). Periods are every active or inactive period intersecting the window; the calendar has one entry per night, an active period overriding the base, and a null amount where neither applies. Hidden or foreign listing: `404` |
+| API-S31 | `PUT /api/v1/staff/room-types/{roomTypeId}/base-rate` | `pricing:manage` | `{ amount: Money }` | `200` | Audit before and after. Implemented (M6-T7). Creates or replaces the base rate (positive whole USD cents within PostgreSQL `INTEGER`); `before` is the actual locked predecessor, `null` on first creation. Repeating the same amount writes nothing and no audit. Never takes the listing inventory lock. `503 TRY_AGAIN` on lock timeout |
+| API-S32 | `POST /api/v1/staff/room-types/{roomTypeId}/rate-periods` | `pricing:manage` | `{ startDate, endDate, amount, label? }` | `201` + `Location` | `409` overlap with an active period (Q-44) with `startDate`/`endDate` field errors; adjacent and inactive overlaps are valid. Implemented (M6-T7). `503 TRY_AGAIN` (`Retry-After: 5`) when the exclusion check waits more than five seconds. PostgreSQL `40P01` between competing exclusion checks maps to the same safe `409`. Audited |
+| API-S33 | `PATCH /api/v1/staff/rate-periods/{id}` | `pricing:manage` | partial | `200` | Audit. Implemented (M6-T7). Locks the period row, then merges the patch; reactivation and date changes are checked by the exclusion constraint (`409` field errors, no partial state). An unchanged patch writes nothing |
+| API-S34 | `DELETE /api/v1/staff/rate-periods/{id}` | `pricing:manage` | — | `204` | Sets `active=false`; snapshots unaffected. Implemented (M6-T7). Repeating it returns `204` with no second audit event. Hidden or foreign id: `404` |
 
 ### Services, coupons, payments
 

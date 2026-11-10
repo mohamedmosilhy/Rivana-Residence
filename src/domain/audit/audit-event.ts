@@ -8,6 +8,14 @@ export type AuditActorType = (typeof AUDIT_ACTOR_TYPES)[number];
 type RoleChange = Readonly<{ role: Readonly<{ from: string; to: string }> }>;
 type BranchChange = Readonly<{ branchId: string }>;
 type FieldChange = Readonly<{ from: unknown; to: unknown }>;
+type AuditMoney = Readonly<{ amountMinor: number; currency: "USD" }>;
+type RatePeriodSnapshot = Readonly<{
+  startDate: string;
+  endDate: string;
+  amount: AuditMoney;
+  label: string | null;
+  active: boolean;
+}>;
 
 /** Each action and the exact shape of its `changes`. */
 export type AuditChanges = {
@@ -51,6 +59,21 @@ export type AuditChanges = {
     startDate: string;
     endDate: string;
   }>;
+  /** A base rate was created or changed under its row lock. */
+  "room-base-rate.updated": Readonly<{
+    before: AuditMoney | null;
+    after: AuditMoney;
+  }>;
+  /** A date rate period was created. */
+  "rate-period.created": Readonly<{
+    before: null;
+    after: RatePeriodSnapshot;
+  }>;
+  /** A date rate period changed, including soft deactivation. */
+  "rate-period.updated": Readonly<{
+    before: RatePeriodSnapshot;
+    after: RatePeriodSnapshot;
+  }>;
 };
 
 export type AuditAction = keyof AuditChanges;
@@ -61,7 +84,13 @@ export type AuditEvent<A extends AuditAction = AuditAction> = Readonly<{
   /** Staff user id or guest id; null for SYSTEM (the CLI, scheduled jobs). */
   actorId: string | null;
   action: A;
-  entityType: "User" | "Branch" | "PhysicalRoom" | "InventoryBlock";
+  entityType:
+    | "User"
+    | "Branch"
+    | "PhysicalRoom"
+    | "InventoryBlock"
+    | "RoomBaseRate"
+    | "RatePeriod";
   entityId: string;
   branchId: string | null;
   reason: string | null;

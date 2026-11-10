@@ -24,6 +24,14 @@ import {
   PhysicalRoomList,
   PhysicalRoomPatch,
 } from "./inventory";
+import {
+  BaseRateInput,
+  NightPrice,
+  RateCalendar,
+  RatePeriod,
+  RatePeriodInput,
+  RatePeriodPatch,
+} from "./pricing";
 import { Money, Occupancy, Problem, Stay } from "./primitives";
 import { API_ROUTES, type ApiRoute } from "./routes";
 
@@ -57,6 +65,12 @@ const COMPONENTS: Readonly<Record<string, z.ZodType>> = {
   BlockList,
   BlockInput,
   BlockPatch,
+  BaseRateInput,
+  RatePeriod,
+  NightPrice,
+  RateCalendar,
+  RatePeriodInput,
+  RatePeriodPatch,
 };
 
 function componentSchemas() {

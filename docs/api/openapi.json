@@ -724,6 +724,276 @@
           }
         }
       }
+    },
+    "/api/v1/staff/room-types/{roomTypeId}/rates": {
+      "get": {
+        "operationId": "getRates",
+        "summary": "API-S30. Base rate, intersecting periods, and resolved calendar for at most 62 nights. Needs pricing:read.",
+        "tags": [
+          "Pricing"
+        ],
+        "security": [
+          {
+            "staffSession": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "roomTypeId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "from",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+            }
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+              "description": "Exclusive end; at most 62 nights after from."
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The listing's rates.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateCalendar"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Problem details. Codes: INTERNAL, UNAUTHENTICATED, FORBIDDEN, NOT_FOUND, VALIDATION.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/staff/room-types/{roomTypeId}/base-rate": {
+      "put": {
+        "operationId": "setBaseRate",
+        "summary": "API-S31. Create or replace the base nightly rate (pricing:manage). Audited.",
+        "tags": [
+          "Pricing"
+        ],
+        "security": [
+          {
+            "staffSession": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "roomTypeId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BaseRateInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The base nightly rate.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Money"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Problem details. Codes: INTERNAL, UNAUTHENTICATED, FORBIDDEN, CROSS_SITE_REQUEST, NOT_FOUND, VALIDATION, TRY_AGAIN.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/staff/room-types/{roomTypeId}/rate-periods": {
+      "post": {
+        "operationId": "createRatePeriod",
+        "summary": "API-S32. Create an active date rate period (pricing:manage). Audited. Returns Location.",
+        "tags": [
+          "Pricing"
+        ],
+        "security": [
+          {
+            "staffSession": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "roomTypeId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RatePeriodInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "The new rate period.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RatePeriod"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Problem details. Codes: INTERNAL, UNAUTHENTICATED, FORBIDDEN, CROSS_SITE_REQUEST, NOT_FOUND, CONFLICT, VALIDATION, TRY_AGAIN.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/staff/rate-periods/{id}": {
+      "patch": {
+        "operationId": "updateRatePeriod",
+        "summary": "API-S33. Change or reactivate a date rate period (pricing:manage). Audited.",
+        "tags": [
+          "Pricing"
+        ],
+        "security": [
+          {
+            "staffSession": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RatePeriodPatch"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The changed rate period.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RatePeriod"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Problem details. Codes: INTERNAL, UNAUTHENTICATED, FORBIDDEN, CROSS_SITE_REQUEST, NOT_FOUND, CONFLICT, VALIDATION, TRY_AGAIN.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "operationId": "deactivateRatePeriod",
+        "summary": "API-S34. Soft deactivate a date rate period (pricing:manage). Repeating it succeeds without another audit. Audited.",
+        "tags": [
+          "Pricing"
+        ],
+        "security": [
+          {
+            "staffSession": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "The period is inactive."
+          },
+          "default": {
+            "description": "Problem details. Codes: INTERNAL, UNAUTHENTICATED, FORBIDDEN, CROSS_SITE_REQUEST, NOT_FOUND, TRY_AGAIN.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -1820,6 +2090,267 @@
                 "type": "null"
               }
             ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "BaseRateInput": {
+        "type": "object",
+        "properties": {
+          "amount": {
+            "type": "object",
+            "properties": {
+              "amountMinor": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 2147483647
+              },
+              "currency": {
+                "type": "string",
+                "const": "USD"
+              }
+            },
+            "required": [
+              "amountMinor",
+              "currency"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "amount"
+        ],
+        "additionalProperties": false
+      },
+      "RatePeriod": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "roomTypeId": {
+            "type": "string"
+          },
+          "startDate": {
+            "type": "string",
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+          },
+          "endDate": {
+            "type": "string",
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+          },
+          "amount": {
+            "$ref": "#/components/schemas/Money"
+          },
+          "label": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "active": {
+            "type": "boolean"
+          },
+          "createdAt": {
+            "type": "string",
+            "description": "UTC instant (ISO 8601)."
+          },
+          "updatedAt": {
+            "type": "string",
+            "description": "UTC instant (ISO 8601)."
+          }
+        },
+        "required": [
+          "id",
+          "roomTypeId",
+          "startDate",
+          "endDate",
+          "amount",
+          "label",
+          "active",
+          "createdAt",
+          "updatedAt"
+        ],
+        "additionalProperties": false
+      },
+      "NightPrice": {
+        "type": "object",
+        "properties": {
+          "night": {
+            "type": "string",
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+          },
+          "amount": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Money"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "source": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "BASE",
+                  "PERIOD"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "periodId": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "label": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "night",
+          "amount",
+          "source",
+          "periodId",
+          "label"
+        ],
+        "additionalProperties": false
+      },
+      "RateCalendar": {
+        "type": "object",
+        "properties": {
+          "baseRate": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Money"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "periods": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RatePeriod"
+            }
+          },
+          "calendar": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/NightPrice"
+            }
+          }
+        },
+        "required": [
+          "baseRate",
+          "periods",
+          "calendar"
+        ],
+        "additionalProperties": false
+      },
+      "RatePeriodInput": {
+        "type": "object",
+        "properties": {
+          "startDate": {
+            "type": "string",
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+          },
+          "endDate": {
+            "type": "string",
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+          },
+          "amount": {
+            "type": "object",
+            "properties": {
+              "amountMinor": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 2147483647
+              },
+              "currency": {
+                "type": "string",
+                "const": "USD"
+              }
+            },
+            "required": [
+              "amountMinor",
+              "currency"
+            ],
+            "additionalProperties": false
+          },
+          "label": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 80
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "startDate",
+          "endDate",
+          "amount"
+        ],
+        "additionalProperties": false
+      },
+      "RatePeriodPatch": {
+        "type": "object",
+        "properties": {
+          "startDate": {
+            "type": "string",
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+          },
+          "endDate": {
+            "type": "string",
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+          },
+          "amount": {
+            "type": "object",
+            "properties": {
+              "amountMinor": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 2147483647
+              },
+              "currency": {
+                "type": "string",
+                "const": "USD"
+              }
+            },
+            "required": [
+              "amountMinor",
+              "currency"
+            ],
+            "additionalProperties": false
+          },
+          "label": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 80
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "active": {
+            "type": "boolean"
           }
         },
         "additionalProperties": false

@@ -1,6 +1,6 @@
 # M6: Inventory, date prices, and availability
 
-Status: **In progress (6/10 tasks accepted)**, 2026-11-09. M6-T1 through M6-T6 are accepted; M6-T7 through M6-T10 have not started. The milestone has not been accepted or merged.
+Status: **In progress (7/10 tasks accepted)**, 2026-11-10. M6-T1 through M6-T7 are accepted; M6-T8 through M6-T10 have not started. The milestone has not been accepted or merged.
 
 Branch: `m6-inventory-and-availability`. The owner requested this spelling when accepting T1; the original local `m6-Inventory-and-availability` branch was renamed without changing its history. Build spec: [0003](../../specs/0003-m6-inventory-and-availability.md). Task status belongs to the [brief](../milestones/m6-inventory-and-availability.md#task-breakdown).
 
@@ -14,6 +14,7 @@ Branch: `m6-inventory-and-availability`. The owner requested this spelling when 
 | M6-T4 | Critical | Owner, 2026-11-09 | `feat(inventory): add M6-T4 transaction guard foundation` (this task commit) | [2026-11-09-m6-t4.md](../../reviews/2026-11-09-m6-t4.md) | Check passed: 59 unit files / 1,157 tests and build; integration passed: 24 files / 289 tests; concurrency: 3 cases × 20 iterations | Transaction bound ports, `READ COMMITTED` unit of work, sorted room type lock, complete inventory reader, guard, and empty M6 consumption adapter; fresh model review approved with no open findings |
 | M6-T5 | Critical | Owner, 2026-11-09 | `feat(inventory): add M6-T5 physical unit management and staff API` (this task commit) | [2026-11-09-m6-t5.md](../../reviews/2026-11-09-m6-t5.md) | Check passed: 60 unit files / 1,225 tests and build; integration passed: 25 files / 321 tests; concurrency: 6 cases (T5 adds 3 × 20 iterations); Chromium E2E: 163 passed, 30 skipped | Physical unit repository, catalog bridge, `ManagePhysicalRooms`, S21 to S23, audited and guarded deactivation; fresh model review (Opus) approved with nits, three minors fixed before acceptance |
 | M6-T6 | Critical | Owner, 2026-11-09 | `feat(inventory): add M6-T6 block management and staff API` (this task commit) | [2026-11-09-m6-t6.md](../../reviews/2026-11-09-m6-t6.md) | Check passed: 61 unit files / 1,291 tests and build; integration passed: 26 files / 347 tests; concurrency: 14 cases (T6 adds 8 × 20 iterations); Chromium E2E: 167 passed, 30 skipped | Block repository, `ManageBlocks`, S24 to S27, audited and guarded create and end date change; fresh model review (Opus) changes requested (one major, no blockers), major and minors fixed before acceptance |
+| M6-T7 | Critical | Owner, 2026-11-10 | `feat(pricing): add M6-T7 base rates, date periods, and staff API` (this task commit) | [2026-11-10-m6-t7.md](../../reviews/2026-11-10-m6-t7.md), recheck [2026-11-10-m6-t7-recheck.md](../../reviews/2026-11-10-m6-t7-recheck.md) | Check passed: 63 unit files / 1,334 tests and build; integration passed: 27 files / 368 tests; concurrency: 5 rate races × 20 iterations (T7) plus S32 and period row lock timeout cases; Chromium E2E: 171 passed, 30 skipped | Rate repository, `ManageRates`, `GetRateCalendar`, S30 to S34; first review (GPT) changes requested (four majors, all fixed), recheck (Opus) changes requested (one major, `TRY_AGAIN` on the wrong route, fixed) and two minors fixed before acceptance |
 
 Task commits identified by subject in this log can be located with `git log --oneline --fixed-strings --grep='<subject>'`.
 
@@ -30,6 +31,26 @@ T2 implements the pure inventory and pricing rules. `AvailabilityCalculator` che
 T4 adds the transaction and locking foundation used by later inventory writers. `ReservationUnitOfWork` binds only the ports a use case needs to one Prisma transaction at `READ COMMITTED`. A failed result is converted into an internal abort so Prisma rolls back instead of committing it; unexpected exceptions still propagate to the redacted HTTP failure path. `InventoryLock` deduplicates and sorts room type ids, takes `FOR NO KEY UPDATE` locks with a five second PostgreSQL timeout, verifies complete branch ownership, and maps lock timeout to `TRY_AGAIN`.
 
 The batched inventory reader returns every requested listing and night, including zero capacity, and merges checked sparse consumption contributions. M6's production consumption adapter intentionally returns none until reservation persistence arrives in M8. `InventoryGuard` enforces lock, reload, validation, mutation, and audit order inside the same unit of work. T4 provides the foundation and tests, but no production unit or block writer is composed before T5 and T6.
+
+## M6-T7 (accepted)
+
+Base rates and date periods: `PrismaRateRepository`, `ManageRates`, `GetRateCalendar`, composition, strict contracts, DTO, thin handlers, and OpenAPI for S30 to S34. The base rate write inserts with `ON CONFLICT DO NOTHING`, then locks the base row with `FOR UPDATE`, so the audit `before` is the real locked predecessor (`null` on first creation). Period creation sets a five second `lock_timeout` and relies on the exclusion constraint; period edits lock the period row, then merge the patch. Rate writes never take the listing inventory lock. Audit actions `room-base-rate.updated`, `rate-period.created`, and `rate-period.updated` (also used for deactivation) are appended in the same `READ COMMITTED` transaction. Status: accepted by the owner, 2026-11-10.
+
+Owner decisions recorded 2026-11-10:
+
+1. `40P01` on a rate period write is mapped to the same safe `409 CONFLICT` as `23P01`, only when caught directly around a `RatePeriod` mutation. Recorded in spec 0003 and pinned by a repository test; other deadlocks stay redacted server errors.
+2. Repeated deletion of a period is idempotent: `204` with no second audit event.
+3. Receptionists may read rates but never change them; Managers change only listings in assigned branches; hidden and foreign ids return `404`.
+
+Review: the first review (GPT, [2026-11-10-m6-t7.md](../../reviews/2026-11-10-m6-t7.md)) found four majors: S32 had no bounded exclusion wait (real defect, fixed), the races did not prove overlap, the authorization sweep omitted period changes, and rollback paths lacked evidence. The recheck (Opus, [2026-11-10-m6-t7-recheck.md](../../reviews/2026-11-10-m6-t7-recheck.md)) confirmed those fixes and found that `TRY_AGAIN` had been added to S22 instead of S32; moved and OpenAPI regenerated. Its two minors are fixed: a test pins the `40P01` mapping, and new 20 iteration races cover a period holder that rolls back and two writers updating an existing base rate.
+
+Remaining limitations:
+
+- The `40P01` mapping is proven with a synthetic error, not a real deadlock, which the suite cannot produce on demand.
+- Two nits from the recheck are left as is: the period wait helper accepts any backend whose query mentions `RatePeriod`, and readers refused by the unit test do not assert zero calendar reads.
+- `tests/unit/architecture/persistence-boundaries.test.ts` ("keeps reservation tables out of every other folder") timed out at its five second limit in two full runs and passed on every rerun and alone. It scans the source tree; not changed in T7.
+- The integration wiring in `tests/integration/reservations/support/rates.ts` mirrors `src/composition/pricing.ts` by hand, like the T5 and T6 support files.
+- Public availability P5, the staff grid S20, VAT, and reservation price snapshots are later tasks.
 
 ## M6-T6 (accepted)
 
@@ -73,7 +94,8 @@ Remaining limitations:
 - M6-T4: generic reservation unit of work, inventory lock and reader ports and Prisma adapters, inventory guard, safe conflict mapping, and deterministic concurrency harness, accepted by the owner.
 - M6-T5: physical unit repository and catalog bridge, `ManagePhysicalRooms`, S21 to S23, accepted by the owner.
 - M6-T6: block repository, `ManageBlocks`, S24 to S27, accepted by the owner.
-- Concrete rate and availability use cases, composition, APIs, and screens remain future work. T7 through T10 have not started.
+- M6-T7: rate repository, `ManageRates`, `GetRateCalendar`, S30 to S34, accepted by the owner.
+- Availability use cases, the staff grid, the public availability API, and screens remain future work. T8 through T10 have not started.
 
 ## Files by responsibility
 

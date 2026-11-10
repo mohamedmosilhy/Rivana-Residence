@@ -7,6 +7,7 @@ import { RateLimiter } from "@/application/shared/rate-limit";
 import { resolveStaffFromHeaders, throttleKeys } from "@/composition/auth";
 import { manageBranches } from "@/composition/content";
 import { manageBlocks, managePhysicalRooms } from "@/composition/inventory";
+import { getRateCalendar, manageRates } from "@/composition/pricing";
 import { clientAddressFrom, isSameOriginRequest } from "@/composition/http";
 import {
   getActiveBranchBySlug,
@@ -131,4 +132,42 @@ export function updateBlock(staff: StaffPrincipal, id: string, input: unknown) {
 
 export function cancelBlock(staff: StaffPrincipal, id: string) {
   return manageBlocks().cancel(staff, id);
+}
+
+// Rate API (API-S30…S34; spec 0003, M6-T7).
+
+export function readRates(
+  staff: StaffPrincipal,
+  roomTypeId: string,
+  query: unknown,
+) {
+  return getRateCalendar().execute(staff, roomTypeId, query);
+}
+
+export function setBaseRate(
+  staff: StaffPrincipal,
+  roomTypeId: string,
+  input: unknown,
+) {
+  return manageRates().setBaseRate(staff, roomTypeId, input);
+}
+
+export function createRatePeriod(
+  staff: StaffPrincipal,
+  roomTypeId: string,
+  input: unknown,
+) {
+  return manageRates().createPeriod(staff, roomTypeId, input);
+}
+
+export function updateRatePeriod(
+  staff: StaffPrincipal,
+  id: string,
+  input: unknown,
+) {
+  return manageRates().updatePeriod(staff, id, input);
+}
+
+export function deactivateRatePeriod(staff: StaffPrincipal, id: string) {
+  return manageRates().deactivatePeriod(staff, id);
 }

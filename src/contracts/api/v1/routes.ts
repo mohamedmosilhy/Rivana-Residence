@@ -23,6 +23,15 @@ import {
   PhysicalRoomList,
   PhysicalRoomPatch,
 } from "./inventory";
+import {
+  BaseRateInput,
+  RateCalendar,
+  RatePeriod,
+  RatePeriodInput,
+  RatePeriodPatch,
+  RateQuery,
+} from "./pricing";
+import { Money } from "./primitives";
 
 /** One documented endpoint. The OpenAPI document is generated from these. */
 export type ApiRoute = Readonly<{
@@ -290,6 +299,102 @@ export const API_ROUTES: readonly ApiRoute[] = [
     responses: {
       204: { description: "The block is cancelled." },
     },
+    errors: [
+      "UNAUTHENTICATED",
+      "FORBIDDEN",
+      "CROSS_SITE_REQUEST",
+      "NOT_FOUND",
+      "TRY_AGAIN",
+    ],
+  },
+  {
+    method: "get",
+    path: "/api/v1/staff/room-types/{roomTypeId}/rates",
+    operationId: "getRates",
+    summary:
+      "API-S30. Base rate, intersecting periods, and resolved calendar for at most 62 nights. Needs pricing:read.",
+    tag: "Pricing",
+    security: "staff",
+    query: RateQuery,
+    responses: {
+      200: { description: "The listing's rates.", schema: RateCalendar },
+    },
+    errors: ["UNAUTHENTICATED", "FORBIDDEN", "NOT_FOUND", "VALIDATION"],
+  },
+  {
+    method: "put",
+    path: "/api/v1/staff/room-types/{roomTypeId}/base-rate",
+    operationId: "setBaseRate",
+    summary:
+      "API-S31. Create or replace the base nightly rate (pricing:manage). Audited.",
+    tag: "Pricing",
+    security: "staff",
+    request: BaseRateInput,
+    responses: {
+      200: { description: "The base nightly rate.", schema: Money },
+    },
+    errors: [
+      "UNAUTHENTICATED",
+      "FORBIDDEN",
+      "CROSS_SITE_REQUEST",
+      "NOT_FOUND",
+      "VALIDATION",
+      "TRY_AGAIN",
+    ],
+  },
+  {
+    method: "post",
+    path: "/api/v1/staff/room-types/{roomTypeId}/rate-periods",
+    operationId: "createRatePeriod",
+    summary:
+      "API-S32. Create an active date rate period (pricing:manage). Audited. Returns Location.",
+    tag: "Pricing",
+    security: "staff",
+    request: RatePeriodInput,
+    responses: {
+      201: { description: "The new rate period.", schema: RatePeriod },
+    },
+    errors: [
+      "UNAUTHENTICATED",
+      "FORBIDDEN",
+      "CROSS_SITE_REQUEST",
+      "NOT_FOUND",
+      "CONFLICT",
+      "VALIDATION",
+      "TRY_AGAIN",
+    ],
+  },
+  {
+    method: "patch",
+    path: "/api/v1/staff/rate-periods/{id}",
+    operationId: "updateRatePeriod",
+    summary:
+      "API-S33. Change or reactivate a date rate period (pricing:manage). Audited.",
+    tag: "Pricing",
+    security: "staff",
+    request: RatePeriodPatch,
+    responses: {
+      200: { description: "The changed rate period.", schema: RatePeriod },
+    },
+    errors: [
+      "UNAUTHENTICATED",
+      "FORBIDDEN",
+      "CROSS_SITE_REQUEST",
+      "NOT_FOUND",
+      "CONFLICT",
+      "VALIDATION",
+      "TRY_AGAIN",
+    ],
+  },
+  {
+    method: "delete",
+    path: "/api/v1/staff/rate-periods/{id}",
+    operationId: "deactivateRatePeriod",
+    summary:
+      "API-S34. Soft deactivate a date rate period (pricing:manage). Repeating it succeeds without another audit. Audited.",
+    tag: "Pricing",
+    security: "staff",
+    responses: { 204: { description: "The period is inactive." } },
     errors: [
       "UNAUTHENTICATED",
       "FORBIDDEN",

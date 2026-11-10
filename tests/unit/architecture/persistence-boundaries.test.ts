@@ -60,7 +60,12 @@ describe("persistence boundaries", () => {
 // access. Only these exact declarations are exempt: a string literal that is
 // the whole value of an `entityType` property assignment, or one member of a
 // union type declared on an `entityType` property signature.
-const AUDIT_ENTITY_LABELS = ["PhysicalRoom", "InventoryBlock"];
+const AUDIT_ENTITY_LABELS = [
+  "PhysicalRoom",
+  "InventoryBlock",
+  "RoomBaseRate",
+  "RatePeriod",
+];
 
 function propertyName(node: ts.Node | undefined) {
   return node && (ts.isPropertyAssignment(node) || ts.isPropertySignature(node))
@@ -141,8 +146,10 @@ describe("reservation data boundaries", () => {
 });
 
 describe("audit entity label exemption", () => {
-  const detects = (source: string) =>
-    /\.physicalRoom\b|"PhysicalRoom"/.test(withoutAuditEntityLabels(source));
+  const detects = (source: string, model = "PhysicalRoom") =>
+    new RegExp(
+      `\\.${model[0]!.toLowerCase()}${model.slice(1)}\\b|"${model}"`,
+    ).test(withoutAuditEntityLabels(source));
 
   it("exempts only the exact audit entityType declarations", () => {
     expect(detects('const e = { entityType: "PhysicalRoom", id: 1 };')).toBe(
@@ -150,6 +157,12 @@ describe("audit entity label exemption", () => {
     );
     expect(
       detects('type E = { entityType: "User" | "Branch" | "PhysicalRoom"; };'),
+    ).toBe(false);
+    expect(
+      detects('const e = { entityType: "RoomBaseRate" };', "RoomBaseRate"),
+    ).toBe(false);
+    expect(
+      detects('type E = { entityType: "User" | "RatePeriod"; };', "RatePeriod"),
     ).toBe(false);
   });
 
