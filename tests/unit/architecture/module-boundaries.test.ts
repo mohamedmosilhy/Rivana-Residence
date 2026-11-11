@@ -32,6 +32,7 @@ const PUBLIC_SURFACE_MODULES = [
   "inventory",
   "pricing",
   "services",
+  "coupons",
   "reservations",
   "guests",
   "reporting",

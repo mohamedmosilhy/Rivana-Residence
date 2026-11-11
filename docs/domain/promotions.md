@@ -1,6 +1,6 @@
 # Promotions and coupons
 
-Status: the **promotion popup** described in the first section was built in Phases 5 and 7, **retired by the client on 2026-11-06 (Q-47)**, and **removed in M5** (2026-11-07). **Coupons** are **planned** (M7 quote, M8 redemption, M10 and M12 screens), and offers reach guests through WhatsApp broadcasts (M13). See [ADR 027](../adr/027-booking-price-composition.md) and [ADR 028](../adr/028-whatsapp-guest-messaging.md).
+Status: the **promotion popup** described in the first section was built in Phases 5 and 7, **retired by the client on 2026-11-06 (Q-47)**, and **removed in M5** (2026-11-07). **Coupons** are **partly implemented**: the pure validation rules and code handling are accepted (M7-T2, 2026-11-11); persistence, management, the quote (M7), redemption (M8), and screens (M10, M12) are planned, and offers reach guests through WhatsApp broadcasts (M13). See [ADR 027](../adr/027-booking-price-composition.md) and [ADR 028](../adr/028-whatsapp-guest-messaging.md).
 
 ## Promotion popup (removed in M5)
 

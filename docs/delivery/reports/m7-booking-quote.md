@@ -1,6 +1,6 @@
 # M7: Booking quote (services, coupons, VAT)
 
-Status: **In progress (1/6 tasks accepted).** Brief: [m7-booking-quote.md](../milestones/m7-booking-quote.md). Spec: [0004](../../specs/0004-m7-booking-quote.md), approved by the owner on 2026-11-11.
+Status: **In progress (2/6 tasks accepted).** Brief: [m7-booking-quote.md](../milestones/m7-booking-quote.md). Spec: [0004](../../specs/0004-m7-booking-quote.md), approved by the owner on 2026-11-11.
 
 Branch: `m7-booking-quote`.
 
@@ -15,5 +15,6 @@ Branch: `m7-booking-quote`.
 | Task | Risk | Accepted | Commit | Review file | Gates (counts) | Notes |
 | --- | --- | --- | --- | --- | --- | --- |
 | M7-T1 | Critical | Owner, 2026-11-11 | `feat(pricing): add M7-T1 quote arithmetic and service price units` (this task commit) | [2026-11-11-m7-t1.md](../../reviews/2026-11-11-m7-t1.md) | `npm run check` passed: format, lint, typecheck, 70 unit files / 1,454 tests, build. Integration and end to end not run: no database, route, or lock in this task | `roundHalfUpDiv`, service price unit quantities, `QuoteCalculator`; worked examples 1 to 5 to the cent. Review (Opus) found 1 major (service line shape) and 6 minors, all fixed or recorded. Later docs still saying "flat price" or "VAT unset" (M10 and M12 briefs, frontend doc, learning notes) are reconciled with those milestones; the M5 branch switch message in `src/domain/branches/branch.ts` is reworded with the task that enables the switch |
+| M7-T2 | Critical | Owner, 2026-11-11 | `feat(domain): add M7-T2 coupon and service rules` (this task commit) | [2026-11-11-m7-t2.md](../../reviews/2026-11-11-m7-t2.md) | `npm run check` passed: format, lint, typecheck, 73 unit files / 1,568 tests, build. Integration and end to end not run: no database, route, or lock in this task | `CouponPolicy` (fixed refusal order, start inclusive and end exclusive window, per phone limit only with a phone, fails closed on corrupt input), `normalizeCouponCode` (letters, digits, `-`, `_`, 3 to 32), service offering input with the child price rule, `selectRequestedServices`. Review (Opus): approve with nits; the 3 minors and 5 nits fixed, 2 nits left (description rule duplicates `optionalText`; the no-mutation test cannot detect a `Date` change). Coupon authoring schemas moved to T5. Also committed: owner decision for re-pricing per night services on stay changes (PR-11, M8 brief) |
 
 Task commits identified by subject in this log can be located with `git log --oneline --fixed-strings --grep='<subject>'`.
