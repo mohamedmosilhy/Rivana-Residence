@@ -213,6 +213,7 @@ enum PaymentMethod      { PAY_AT_HOTEL PAYMOB }
 enum ReservationPaymentStatus { NOT_REQUIRED AWAITING PAID REFUND_PENDING REFUNDED }
 enum NightRateSource    { BASE PERIOD MANUAL }
 enum ServiceKind        { BREAKFAST AIRPORT_TRANSFER }
+enum ServicePriceUnit   { PER_BOOKING PER_NIGHT PER_PERSON PER_PERSON_PER_NIGHT }   // owner decision 2026-11-11 (Q-49)
 enum CouponKind         { PERCENT FIXED }
 enum PaymentStatus      { INITIATED SUCCEEDED FAILED REFUND_PENDING REFUNDED REFUND_FAILED }
 enum CancellationRequestStatus { OPEN APPROVED REJECTED REFUND_PENDING REFUND_FAILED COMPLETED }
@@ -432,7 +433,11 @@ model PhoneVerification {
 model ReservationService {             // one line per service with its unit and quantities (SV-1…4)
   reservationId String      @db.VarChar(32)   // → Reservation CASCADE
   kind          ServiceKind
-  priceMinor    Int
+  priceUnit     ServicePriceUnit            // snapshot of the unit used
+  priceMinor    Int                         // adult price used
+  childPriceMinor Int?                      // child price used, null = children not charged
+  adults / children / nights / adultQuantity / childQuantity  Int   // the multipliers that produced amountMinor
+  amountMinor   Int
   details       String?     @db.VarChar(300) // e.g. flight number (Q-56), plain text
   @@id([reservationId, kind])
 }
@@ -441,7 +446,10 @@ model ServiceOffering {
   id          String      @id @db.VarChar(32)
   branchId    String      @db.VarChar(32)
   kind        ServiceKind
-  priceMinor  Int                              // CHECK > 0
+  priceUnit   ServicePriceUnit                 // set by staff, no default
+  priceMinor  Int                              // adult price, CHECK > 0
+  childPriceMinor Int?                         // CHECK > 0 and only for PER_PERSON / PER_PERSON_PER_NIGHT
+  currency    String      @default("USD") @db.Char(3)   // CHECK = 'USD'
   active      Boolean     @default(false)
   description String?     @db.VarChar(300)
   updatedAt / updatedById
@@ -482,7 +490,7 @@ model CouponRedemption {
 
 model CommercialSettings {              // singleton id "default"
   id                 String  @id @db.VarChar(32)
-  vatRateBasisPoints Int?                // 0–10000; entered by the Admin in the dashboard (Q-05); null until then
+  vatRateBasisPoints Int                 // NOT NULL, 0–10000; the migration inserts 1500 (15%); the Admin changes it (Q-05 amended 2026-11-11)
   updatedAt / updatedById
 }
 
@@ -611,11 +619,11 @@ ALTER TABLE "Reservation"     ADD CHECK ("checkOut" > "checkIn");
 ALTER TABLE "ReservationRoom" ADD CHECK ("checkOut" > "checkIn" AND "adults" >= 1 AND "children" >= 0);
 ALTER TABLE "InventoryBlock"  ADD CHECK ("endDate" > "startDate");  -- implemented (M6-T3)
 ALTER TABLE "RatePeriod"      ADD CHECK ("endDate" > "startDate" AND "amountMinor" > 0 AND "currency" = 'USD');  -- implemented (M6-T3)
-ALTER TABLE "ServiceOffering" ADD CHECK ("priceMinor" > 0);
+ALTER TABLE "ServiceOffering" ADD CHECK ("priceMinor" > 0 AND "currency" = 'USD' AND ("childPriceMinor" IS NULL OR ("childPriceMinor" > 0 AND "priceUnit" IN ('PER_PERSON', 'PER_PERSON_PER_NIGHT'))));
 ALTER TABLE "Coupon"          ADD CHECK (("kind" = 'PERCENT' AND "percentBasisPoints" BETWEEN 1 AND 10000 AND "amountMinor" IS NULL) OR ("kind" = 'FIXED' AND "amountMinor" > 0 AND "percentBasisPoints" IS NULL));
 ALTER TABLE "Coupon"          ADD CHECK ("endsAt" IS NULL OR "startsAt" IS NULL OR "endsAt" > "startsAt");
 CREATE UNIQUE INDEX "Coupon_code_upper_key" ON "Coupon" (upper("code"));
-ALTER TABLE "CommercialSettings" ADD CHECK ("vatRateBasisPoints" IS NULL OR "vatRateBasisPoints" BETWEEN 0 AND 10000);
+ALTER TABLE "CommercialSettings" ADD CHECK ("vatRateBasisPoints" BETWEEN 0 AND 10000);
 ALTER TABLE "Reservation"     ADD CHECK ("status" <> 'AWAITING_PAYMENT' OR ("paymentMethod" = 'PAYMOB' AND "holdExpiresAt" IS NOT NULL));
 ALTER TABLE "Reservation"     ADD CHECK ("totalMinor" IS NULL OR ("totalMinor" = "taxableMinor" + "vatMinor" AND "taxableMinor" = "subtotalMinor" - "discountMinor" AND "discountMinor" >= 0 AND "taxableMinor" >= 0));
 CREATE UNIQUE INDEX "CancellationRequest_one_open" ON "CancellationRequest" ("reservationId") WHERE "status" = 'OPEN';

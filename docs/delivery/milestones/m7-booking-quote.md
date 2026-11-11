@@ -85,7 +85,7 @@ Planned, reviewed, and accepted one task at a time ([agent-workflow.md](../../en
 
 ## Database impact
 
-One migration, additive. Demo seed: breakfast and transfer offerings with clearly fictional prices on the demo branch only, two demo coupons (one percent, one fixed), and a demo VAT rate in development seeds only, labelled as demo data.
+One migration, additive. Demo seed: breakfast and transfer offerings with clearly fictional prices on the demo branch only, two demo coupons (one percent, one fixed), The VAT rate is not demo data: the migration inserts the settings row at 15% (1500 basis points).
 
 ## API impact
 

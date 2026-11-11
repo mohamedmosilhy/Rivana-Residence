@@ -140,7 +140,7 @@ Add the line in the last column under the prompt above.
 | [M4](./m4-backend-foundations.md) Backend foundations | `m4-backend-foundations` | Nothing extra |
 | [M5](./m5-branch-websites.md) Branch websites | `m5-branch-websites` | Nothing extra (the demo seed provides a second fictional branch) |
 | [M6](./m6-inventory-and-availability.md) Inventory and availability | `m6-inventory-and-availability` | Nothing extra |
-| [M7](./m7-booking-quote.md) Booking quote | `m7-booking-quote` | Nothing extra (VAT is an Admin setting; hard-code no rate) |
+| [M7](./m7-booking-quote.md) Booking quote | `m7-booking-quote` | Nothing extra (VAT starts at 15% as migration data and is an Admin setting; no rate is hard-coded in logic) |
 | [M8](./m8-reservations.md) Reservations | `m8-reservations` | If the client has sent the WhatsApp number and token: "The WhatsApp access token is in `.env.local`; I'll enter the number in the dashboard." Otherwise: "Use the fake WhatsApp adapter; the number stays a placeholder." |
 | [M9](./m9-payments-and-cancellations.md) Payments and cancellations | `m9-payments-and-cancellations` | "The Paymob sandbox keys are in `.env.local`." (Put them there yourself first.) |
 | [M10](./m10-guest-booking-journey.md) Guest booking journey | `m10-guest-booking-journey` | Any approved wording (privacy, cancellation terms, child policy), or: "Use placeholder text flagged by the content audit." |

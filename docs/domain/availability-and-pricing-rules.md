@@ -117,7 +117,7 @@ All amounts in these examples are **illustrations**, not approved prices or rate
 | 09-17 | 7000 |
 | **Accommodation** | **26000 ($260.00)** |
 
-**Example 2 — full composition.** Two units for three nights: a room at $80 per night and an apartment at $120 per night; breakfast $30 and airport transfer $25 (flat per booking); coupon 15%; VAT rate 15%.
+**Example 2 — full composition.** Two units for three nights: a room at $80 per night and an apartment at $120 per night; breakfast $30 and airport transfer $25 (both per booking units); coupon 15%; VAT rate 15%.
 
 | Step | Calculation | Amount |
 | --- | --- | --- |

@@ -104,7 +104,7 @@ Each section states its status: **Implemented** (built and accepted in Phases 1â
 
 ## FR-TAX VAT â€” Planned (M7, UI M10 and M12)
 
-- **FR-TAX-1** Only the Admin sets the VAT percentage, one for all branches, on an Admin-only setting in the dashboard, and may change it at any time (for example 5%, 6%, or 15%; Q-05, Q-45). Until a rate is entered, online booking cannot be enabled. Guests see the line labelled "VAT (n%)".
+- **FR-TAX-1** Only the Admin sets the VAT percentage, one for all branches, on an Admin-only setting in the dashboard, and may change it at any time (for example 5%, 6%, or 15%; Q-05, Q-45). The rate is never empty: it starts at 15% and may be set from 0% to 100%; a value below 0 or above 100 is refused (Q-05 amended 2026-11-11). Guests see the line labelled "VAT (n%)".
 - **FR-TAX-2** VAT is calculated once on the final subtotal after services and the coupon, rounded half-up to the cent, and shown as a separate line at the final review and in confirmations.
 - **FR-TAX-3** Each reservation stores the rate and amount it used; later rate changes never alter it.
 

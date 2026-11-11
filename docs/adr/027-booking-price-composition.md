@@ -49,5 +49,5 @@ A single, documented order of operations makes every total reproducible from its
 
 ## Risks
 
-- Tax treatment is legally sensitive. Mitigation: the rate is entered by the client's Admin, not by developers; the label is the neutral "VAT (n%)"; changes are audited and never alter existing bookings.
+- Tax treatment is legally sensitive. Mitigation: the rate starts at 15% as seeded data and is owned and changed by the client's Admin, never hard-coded in logic; the label is the neutral "VAT (n%)"; changes are audited and never alter existing bookings.
 - Coupon abuse (guessing or sharing codes). Mitigation: rate limits on quote requests, per-phone limits, branch scope, validity windows, audit.

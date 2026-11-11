@@ -65,14 +65,14 @@ M4 (2026-11-06), M5 (2026-11-07), and accepted tasks M6-T1 through M6-T10 (lates
 | --- | --- |
 | T-DB-1…8 | Migrations apply on a copy of current data; branch backfill of rooms, facilities, pages; unique `(branchId, key)` on pages; composite FKs reject cross-branch rows; exclusion constraints; checks (totals, coupon kinds, hold); unique reference, idempotency (`NULLS NOT DISTINCT`), external reference, upper-case coupon code; drift check |
 | T-SITE-1…4 | Branch-scoped public queries; branch creation seeds three pages; cache tags per branch; inactive branch hidden |
-| T-BR-1…4 | Branch API (P1–P4, A1–A3); online booking refused without VAT or check-in time |
+| T-BR-1…4 | Branch API (P1–P4, A1–A3); online booking refused until its later release (WhatsApp, check-in time) |
 | T-CAT-1…2 | Accommodation type and apartment facts persisted and returned |
 | T-RES-1…12 | Create website pay-at-hotel (`CONFIRMED`, snapshot, redemption, audit, outbox in one transaction), staff, and external reservations end to end; several units; price changed; coupon refused; inactive branch; unpublished listing; occupancy; replay; key reuse with a different body; per-phone cap; failure leaves no rows |
 | T-INV-1…6 | Blocks refused when overselling; unit deactivation; overlap; capacity read model |
 | T-QUOTE-11…12 | API-P6 end to end with services, coupon, VAT; rate limit on coupon attempts |
 | T-CPN-6…8 | Persistence; case-insensitive uniqueness; Manager branch scope |
 | T-SVC-3…4 | Service management API and audit |
-| T-TAX-3…4 | VAT setting API (Admin only) and audit |
+| T-TAX-3…4 | VAT setting API (Admin only, 0 to 100, default 15, refusals below 0 and above 100) and audit |
 | T-PAY-5…10 | Fake gateway: checkout creation failure → `PAYMENT_FAILED`; verified success → `CONFIRMED` with messages; forged or mismatched callback ignored; duplicate ignored; hold expiry job; reconciliation job; refund pending, succeeded, failed, retry |
 | T-CXL-4…8 | Request creation and deadline; one open request; Manager and Admin decisions with branch scope; rejection keeps `CONFIRMED`; approval of paid booking cancels only after refund confirmation; audit and messages |
 | T-LKP-1…4 | Token hash lookup, expiry, rotation; guest session sees only its phone's reservations |
@@ -121,5 +121,5 @@ M4 (2026-11-06), M5 (2026-11-07), and accepted tasks M6-T1 through M6-T10 (lates
 | E2E-A-1 | Admin CMS still works per branch (existing suites updated in M5) |
 | E2E-A-2 | Receptionist and Manager get `403` / denied page on CMS routes and actions |
 | E2E-A-3 | Admin assigns branch, and the receptionist's access changes on the next request |
-| E2E-A-4 | Admin sets VAT (any rate); Manager cannot see the setting; online booking cannot be enabled before it is set; new quotes use the new rate |
+| E2E-A-4 | Admin sets VAT (0% to 100%; below 0 or above 100 is refused); the default is 15%; Manager cannot see the setting; new quotes use the new rate |
 | E2E-A-5 | Admin enters the WhatsApp number, adds a template, and sends a test message (fake adapter); with the number empty, online booking cannot be enabled and verification shows the not-configured message |

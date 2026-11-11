@@ -14,7 +14,7 @@ Launch the branch websites, online booking with Paymob and pay at hotel, staff t
 
 ## Blocking questions (must be answered before go-live)
 
-Q-13 (confirmed with legal advice), Q-21, Q-23, Q-24, Q-25, Q-30 (all guest-facing text). Setup data from the client: live Paymob keys (Q-55), the WhatsApp Business number and approved templates entered by the Admin (Q-67), and the VAT rate entered by the Admin (Q-05).
+Q-13 (confirmed with legal advice), Q-21, Q-23, Q-24, Q-25, Q-30 (all guest-facing text). Setup data from the client: live Paymob keys (Q-55), the WhatsApp Business number and approved templates entered by the Admin (Q-67), and the VAT rate confirmed or changed by the Admin (it starts at 15%, Q-05).
 
 ## Skills for this milestone
 
@@ -42,7 +42,7 @@ Planned, reviewed, and accepted one task at a time ([agent-workflow.md](../../en
 ## Tasks
 
 1. Production database migrated (`npm run db:deploy`) after a backup.
-2. Data entered: branches (content, map, check-in times), listings with type, units (Q-23), rates, services, VAT rate by the Admin (Q-05), WhatsApp number and templates by the Admin with a successful test message (Q-67), staff and assignments (Q-24).
+2. Data entered: branches (content, map, check-in times), listings with type, units (Q-23), rates, services, VAT rate confirmed by the Admin (starts at 15%, Q-05), WhatsApp number and templates by the Admin with a successful test message (Q-67), staff and assignments (Q-24).
 3. Cron jobs: outbox, hold expiry, payment reconciliation, token expiry, media cleanup.
 4. Paymob live keys (from the client) in the server environment and the callback URL registered; WhatsApp access token in the server environment and the Admin's test message delivered; SMTP verified.
 5. Training: immediate confirmation and its PMS risk; marking website bookings entered in the hotel system; handling a conflict with an already confirmed (possibly paid) guest; cancellation approvals and refunds; sync reminder; blocking numbers; broadcasts and consent.

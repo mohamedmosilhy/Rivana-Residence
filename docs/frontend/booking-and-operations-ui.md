@@ -43,7 +43,7 @@ State strategy:
 | `StaySearchForm` | Server form (GET) + small client enhancer | Native `<input type="date">` (accessible, no picker dependency), number steppers as `<input type="number">` with labels |
 | `AvailabilityResultCard` | Server | Listing summary with Room or Apartment badge, availability, price per night and stay total **before VAT**, units selector, "see breakdown" `<details>` |
 | `BranchChooser`, `BranchSwitcher` | Server + small client disclosure | Chooser cards at `/`; header switcher that keeps the page type (M5) |
-| `ServicesPicker` | Client | Breakfast and airport transfer with flat prices; nothing preselected |
+| `ServicesPicker` | Client | Breakfast and airport transfer priced by each service's unit (per booking, per night, per person, or per person per night, with child prices where set); nothing preselected |
 | `CouponField` | Client | One code; apply re-quotes; refusal reason announced |
 | `PaymentChoice` | Client | Paymob or pay at hotel; Paymob hidden when unavailable or the total is zero |
 | `PriceSummary` | Server or client | Lines, services, discount, subtotal, VAT (rate shown), total; a `<table>` with caption |

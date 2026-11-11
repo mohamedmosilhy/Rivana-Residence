@@ -20,7 +20,7 @@ free     = capacity - sold      (needs free >= requested on EVERY night)
 
 ## Pricing formula (integer cents, USD)
 1. Nightly price = date period covering the night, else base rate, else unpriced (not bookable online). Periods of a listing cannot overlap.
-2. Accommodation = sum over units and nights. Services flat per booking, only if chosen.
+2. Accommodation = sum over units and nights. Services priced by their unit (per booking, per night, per person, per person per night), only if chosen.
 3. Subtotal = accommodation + services. Coupon on whole subtotal (percent rounded half-up, or fixed capped at subtotal).
 4. Taxable = subtotal - discount. VAT = taxable x rate, rounded half-up **once** per booking. Total = taxable + VAT.
 - Example: 600 + 55 = 655; 15% coupon -98.25; VAT 15% on 556.75 = 83.51; total 640.26.

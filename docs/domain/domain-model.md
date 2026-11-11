@@ -161,7 +161,7 @@ Better Auth owns user, account, session, and verification records. Rivana adds a
 
 - `ServiceOffering` (`branchId`, `kind` `BREAKFAST|AIRPORT_TRANSFER`, `priceUnit`, `priceMinor`, `childPriceMinor?`, `active`). Price unit configurable per offering (SV-1…4).
 - `Coupon` (`code`, `kind` `PERCENT|FIXED`, value, validity, total and per-phone limits, branch scope, `active`) and `CouponRedemption` (coupon, reservation, phone). Rules CP-1…7.
-- `CommercialSettings` (`vatRateBasisPoints`, nullable until the client sets it). Rules TX-1…5.
+- `CommercialSettings` (`vatRateBasisPoints`, never null, seeded at 1500). Rules TX-1…5.
 - `QuoteCalculator` (pure): accommodation + services − discount = taxable; VAT half-up once; total.
 
 ### Payments and cancellation requests (planned, ADRs 024–025)

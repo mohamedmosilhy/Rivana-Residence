@@ -396,7 +396,7 @@ All routes use the M4 wrappers, stay under 60 lines, and are registered in `src/
 | API-A3 | `/api/v1/staff/branches/{id}` | PATCH | partial `BranchInput` without `slug` (strict) | `200 StaffBranch` | staff, `branches:manage`, CSRF | 401, 403, 404, 422 |
 
 - **Caching and headers:** P1 to P4 read through the same cached composition getters as the pages (so tag invalidation covers them) and keep the M4 wrapper headers (`Cache-Control: no-store`, `X-Request-Id`, `nosniff`). No CORS headers are added. A bad `?type=` returns the standard `422` problem body with `fieldErrors.type`.
-- `BranchInput` includes `onlineBookingEnabled`. In M5, `true` is always refused with `422 VALIDATION` and `fieldErrors.onlineBookingEnabled`: the VAT rate and WhatsApp prerequisites do not exist yet (api-contracts note on API-A3).
+- `BranchInput` includes `onlineBookingEnabled`. In M5, `true` is always refused with `422 VALIDATION` and `fieldErrors.onlineBookingEnabled`: the VAT rate and WhatsApp prerequisites do not exist yet (api-contracts note on API-A3). *Amended 2026-11-11: the VAT rate is never null (starts at 15%), so it is no longer a prerequisite; only WhatsApp remains.*
 - The sync fields are accepted and validated by M4's ranges but not shown in the CMS (M11).
 - `npm run openapi` regenerates the document, and the freshness test guards it.
 
@@ -601,7 +601,7 @@ The brief's task order (data, domain, application, infrastructure, API, UI). Eac
 ## Follow-up
 
 - [ ] Contract migration after launch: drop `Promotion` and the retired `SiteSettings` contact and map columns.
-- [ ] M10 enables `onlineBookingEnabled` once its prerequisites (VAT, WhatsApp) exist; Book Now then links to `/{branch}/book`.
+- [ ] M10 enables `onlineBookingEnabled` once its prerequisite (WhatsApp; VAT is no longer one, Q-05 amended 2026-11-11) exists; Book Now then links to `/{branch}/book`.
 - [ ] M11 adds the sync fields to the branch form; M12 builds the full branch admin.
 - [ ] After merge, `/sync` records the `[branch]` route convention in `AGENTS.md` (brief, "After merge").
 
