@@ -1,6 +1,6 @@
 # M7 — Booking quote: optional services, coupons, VAT
 
-Status: **In progress (2/6 tasks accepted).** Spec [0004](../../specs/0004-m7-booking-quote.md) and task breakdown approved 2026-11-11. Branch: `m7-booking-quote`. Follow the [milestone loop](./README.md#the-loop-every-milestone-follows).
+Status: **In progress (3/6 tasks accepted).** Spec [0004](../../specs/0004-m7-booking-quote.md) and task breakdown approved 2026-11-11. Branch: `m7-booking-quote`. Follow the [milestone loop](./README.md#the-loop-every-milestone-follows).
 
 ## Objective
 
@@ -50,7 +50,7 @@ Planned, reviewed, and accepted one task at a time ([agent-workflow.md](../../en
 | --- | --- | --- | --- | --- | --- |
 | M7-T1 | Quote arithmetic: `roundHalfUpDiv`, service price units, `QuoteCalculator` | Critical | M6 | AC 1, 2; T-QUOTE-1…10 | Accepted |
 | M7-T2 | Coupon and service rules: `CouponPolicy`, service kinds | Critical | — | AC 3, 4; T-CPN-1…5, T-SVC-1…2 | Accepted |
-| M7-T3 | Migration `commercial_rules` and demo seed | Critical | — | T-CPN-7; drift check | Not started |
+| M7-T3 | Migration `commercial_rules` and demo seed | Critical | — | T-CPN-7; drift check | Accepted |
 | M7-T4 | Services and VAT settings: audited use cases, staff API S35–S36 and A5 | Critical | T3 | AC 5, 7; T-SVC-3…4, T-TAX-1…4 | Not started |
 | M7-T5 | Coupon management: branch-scoped audited use case, staff API S37–S39 | Critical | T2, T3 | AC 5; T-CPN-6…8 | Not started |
 | M7-T6 | `QuoteBooking` use case and public API P6 with the coupon rate limit | Critical | T1, T4, T5 | AC 1, 3, 4, 6; API-P6 end to end | Not started |
@@ -85,7 +85,7 @@ Planned, reviewed, and accepted one task at a time ([agent-workflow.md](../../en
 
 ## Database impact
 
-One migration, additive. Demo seed: breakfast and transfer offerings with clearly fictional prices on the demo branch only, two demo coupons (one percent, one fixed), The VAT rate is not demo data: the migration inserts the settings row at 15% (1500 basis points).
+One migration, additive. Demo seed: breakfast and transfer offerings with clearly fictional prices on the demo branch only, two demo coupons (one percent, one fixed). The VAT rate is not demo data: the migration inserts the settings row at 15% (1500 basis points).
 
 ## API impact
 

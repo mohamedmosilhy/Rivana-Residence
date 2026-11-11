@@ -1,6 +1,6 @@
 # Promotions and coupons
 
-Status: the **promotion popup** described in the first section was built in Phases 5 and 7, **retired by the client on 2026-11-06 (Q-47)**, and **removed in M5** (2026-11-07). **Coupons** are **partly implemented**: the pure validation rules and code handling are accepted (M7-T2, 2026-11-11); persistence, management, the quote (M7), redemption (M8), and screens (M10, M12) are planned, and offers reach guests through WhatsApp broadcasts (M13). See [ADR 027](../adr/027-booking-price-composition.md) and [ADR 028](../adr/028-whatsapp-guest-messaging.md).
+Status: the **promotion popup** described in the first section was built in Phases 5 and 7, **retired by the client on 2026-11-06 (Q-47)**, and **removed in M5** (2026-11-07). **Coupons** are **partly implemented**: the pure validation rules and code handling (M7-T2) and persistence (M7-T3) are accepted (2026-11-11); management and the quote (M7), redemption (M8), and screens (M10, M12) are planned, and offers reach guests through WhatsApp broadcasts (M13). See [ADR 027](../adr/027-booking-price-composition.md) and [ADR 028](../adr/028-whatsapp-guest-messaging.md).
 
 ## Promotion popup (removed in M5)
 
@@ -14,7 +14,9 @@ What M5 removed (spec [0002](../specs/0002-m5-branch-websites.md)):
 
 What stays: the `Promotion` table and its rows, unused, until a later expand-and-contract migration drops it. The accepted Phase 5 and Phase 7 reports and screenshots keep showing the popup as it was built.
 
-## Coupons (planned)
+## Coupons (partly implemented)
+
+**Implemented storage (M7-T3):** `Coupon` and `CouponBranch` persist explicit USD currency, kind-specific values, optional windows and positive limits, activity, descriptions, and audit references. PostgreSQL enforces case-insensitive code uniqueness for inserts and edits. Demo coupons are fictional and scoped to `demo-giza` when created; seed reruns preserve staff edits. Management authorization, audited staff writes, and branch-list consistency remain T5; quote integration remains T6.
 
 A coupon is a code a guest enters while booking that **changes the quote and the total**. Coupons are distinct from date-based prices: date periods set the nightly accommodation price automatically by stay date (PR-2…4); coupons are opt-in discounts on the whole booking.
 

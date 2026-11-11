@@ -5,7 +5,7 @@ import { ensureSeedAdmin } from "./admin.ts";
 import { SEED_ADMIN } from "./admin-credentials.ts";
 import { seedBranchDetails, seedBranchHero } from "./branch.ts";
 import { SEEDED_COUNTS, seedContent } from "./content.ts";
-import { seedDemo, seedDemoInventory } from "./demo.ts";
+import { seedDemo, seedDemoInventory, seedDemoCommercial } from "./demo.ts";
 
 /**
  * The one seed, step by step. Each new feature adds its step here, with a
@@ -102,6 +102,10 @@ export async function runSeed(
               ? " To show it, set its status to Active in Admin > Branches."
               : ""
           }`,
+    );
+    const commercial = await seedDemoCommercial(client);
+    log(
+      `Demo commercial rules: created ${commercial.created} fictional service/coupon records; existing records and VAT preserved.`,
     );
     const inventory = await seedDemoInventory(client);
     log(

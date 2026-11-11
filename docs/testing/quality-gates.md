@@ -39,7 +39,23 @@ Record exact commands and counts in the review package. If a gate cannot run, sa
 
 The owner selected Node **26.13.0 LTS** for the Mac, CI, and hosting. On macOS with npm **11.20.0**, clean `npm ci --no-audit` and `npm run check` passed (format, lint, typecheck, **67 unit files / 1,373 tests**, production build). The full PostgreSQL integration suite passed **29 files / 391 tests**; full Chromium E2E passed **175 tests**, with **30 intentionally skipped**. Independent review by `gpt-6-astra` approved with zero findings. The [runtime report](../delivery/reports/node-26-runtime-alignment.md) records exact commands, unchanged development audit findings, and the nonfatal upstream Tailwind loader deprecation under Node 26. Those Tailwind and media tracing warnings were subsequently resolved in M6-T10. These results do not replace the historical task acceptance evidence below or claim remote Linux CI has run.
 
-## Latest accepted task results (2026-11-10, M6-T10)
+## Latest accepted task results (2026-11-11, M7-T3)
+
+Owner accepted M7-T3, commercial storage and demo seed. Local runtime: Node **26.13.0**, PostgreSQL **18.6**. Evidence: [M7 task log](../delivery/reports/m7-booking-quote.md#task-log) and [independent review](../reviews/2026-11-11-m7-t3.md).
+
+| Gate | Result |
+| --- | --- |
+| `npm run check` | **Pass**: format, lint, typecheck, **73 unit files / 1,568 tests**, production build |
+| `TEST_DATABASE_URL=postgresql://mohamedmosilhy@127.0.0.1:5432/rivana_test npm run test:integration -- --reporter=dot` | **Pass**: **32 files / 454 tests** on a recreated disposable database |
+| Independent review | **Approve**, zero findings, gpt-6-astra (author configured as gpt-6.1-sol); independently reran five focused integration files, **53 tests passed** |
+| Migration rehearsal and drift | **Pass**: populated M6 upgrade preserved every existing row; `npx prisma migrate diff --from-config-datasource --to-schema prisma/schema.prisma` reported no difference on fresh and upgraded disposable databases |
+| Real seed CLI | **Pass**: `npm run db:seed -- --demo` twice on a fresh disposable database; the second run preserved edited prices, disabled services/coupons, and VAT 0% exactly. Scratch database and media removed afterward |
+| `npx prisma validate`, `git diff --check` | **Pass** |
+| E2E / additional concurrency repeat | Not run: no route, UI, or locking workflow changes. Existing 20-iteration M6 races ran within the full integration suite |
+
+These results cover the accepted T3 scope; management APIs and quote integration remain T4–T6. No production deployment is claimed.
+
+## Previous accepted results (2026-11-10, M6-T10)
 
 Local: Node **26.13.0**, npm **11.20.0**, PostgreSQL **18.4**. The owner accepted M6-T10 after the public API review package, conditional on resolving the Tailwind deprecation and media tracing warnings; both fixes are verified. Exact commands and evidence are in the [M6 report](../delivery/reports/m6-inventory-and-availability.md#m6-t10-accepted).
 

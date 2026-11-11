@@ -25,7 +25,7 @@ The single delivery plan for Rivana Residence. Work is delivered as a sequence o
 | M4 | Backend foundations and branch data ownership | Accepted 2026-11-07 | [reports/m4-backend-foundations.md](./reports/m4-backend-foundations.md) |
 | M5 | Branch websites and the rooms-and-apartments catalog | Accepted 2026-11-07 | [reports/m5-branch-websites.md](./reports/m5-branch-websites.md) |
 | M6 | Inventory, date prices, and availability ([brief](./milestones/m6-inventory-and-availability.md)) | Accepted 2026-11-10 (10/10 tasks; closeout gates and live verification passed) | [reports/m6-inventory-and-availability.md](./reports/m6-inventory-and-availability.md) |
-| M7–M14 | Quote, reservations, payments, booking journey, staff tools, messaging, hardening (replanned 2026-11-06; [briefs](./milestones/README.md); task-based workflow from 2026-11-07) | In progress (M7: 2/6 tasks accepted); plan approved by the project owner 2026-11-06 | — |
+| M7–M14 | Quote, reservations, payments, booking journey, staff tools, messaging, hardening (replanned 2026-11-06; [briefs](./milestones/README.md); task-based workflow from 2026-11-07) | In progress (M7: 3/6 tasks accepted); plan approved by the project owner 2026-11-06 | — |
 | Phase 12 + M15 | Joint deployment and launch | Not started | — |
 
 The external reservation module integration once planned as Phase 13 never started. The provider supplied no module or API, and the reservation system replaces it (ADR 013).

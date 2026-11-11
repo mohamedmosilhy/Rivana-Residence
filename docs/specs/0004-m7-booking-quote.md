@@ -1,7 +1,7 @@
 # 0004. Booking quote: optional services, coupons, VAT (M7)
 
 **Date**: 2026-11-11
-**Status**: Proposed (spec approved by the owner; the status moves with the milestone)
+**Status**: In Progress (spec approved by the owner; the status moves with the milestone)
 **Owner approval**: Spec and six task breakdown approved, 2026-11-11
 **Mode**: FEATURE
 **Branch**: `m7-booking-quote`

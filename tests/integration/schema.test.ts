@@ -35,6 +35,10 @@ describe("migration from an empty database", () => {
       "InventoryBlock",
       "RoomBaseRate",
       "RatePeriod",
+      "ServiceOffering",
+      "Coupon",
+      "CouponBranch",
+      "CommercialSettings",
     ]);
   });
 
