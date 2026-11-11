@@ -53,7 +53,7 @@ Each section states its status: **Implemented** (built and accepted in Phases 1â
 
 - **FR-BR-1** Admin creates, edits, activates, and deactivates branches with the attributes in [branch-model.md](../domain/branch-model.md): content owner, contact, address, map embed, check-in and check-out times, sync reminder settings.
 - **FR-BR-2** Public branch listing shows only `ACTIVE` branches.
-- **FR-BR-3** Each branch has an `onlineBookingEnabled` switch. When it is off, Book Now keeps the honest disabled state. It cannot be turned on while the VAT rate is unset (FR-TAX-1) or WhatsApp is not configured (FR-NTF-5).
+- **FR-BR-3** Each branch has an `onlineBookingEnabled` switch. When it is off, Book Now keeps the honest disabled state. It cannot be turned on while WhatsApp is not configured (FR-NTF-5). The VAT rate is never empty (FR-TAX-1), so it does not gate the switch (Q-05 amended 2026-11-11).
 - **FR-BR-4** Deactivation hides the branch publicly, blocks new reservations, and keeps history manageable.
 
 ## FR-CAT Accommodation catalog â€” Planned (M4 columns, M5)
@@ -88,7 +88,7 @@ Each section states its status: **Implemented** (built and accepted in Phases 1â
 
 ## FR-SVC Optional services â€” Planned (M7, UI M10 and M12)
 
-- **FR-SVC-1** Each branch may offer breakfast and airport transportation, each with a flat price per booking and an on or off switch, managed by Manager (assigned branches) and Admin (Q-49).
+- **FR-SVC-1** Each branch may offer breakfast and airport transportation, each with a price unit (per booking, per night, per person, or per person per night), an adult price, an optional child price for the person units, and an on or off switch, managed by Manager (assigned branches) and Admin (Q-49).
 - **FR-SVC-2** Guests may choose services while booking. The final review may offer unchosen services as an optional cross-sell. A service is never added without the guest's explicit choice.
 - **FR-SVC-3** Chosen services are part of the subtotal, the coupon base, and the VAT base (ADR 027).
 - **FR-SVC-4** Approved prices, transfer details (flight number, direction), and post-booking additions are open (Q-56).

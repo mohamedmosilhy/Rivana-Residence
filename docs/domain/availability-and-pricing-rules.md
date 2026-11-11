@@ -44,7 +44,7 @@ available(T, stay, q) ⇔ for every night n in stay: free(T, n) ≥ q      (q = 
 | IN-1 | Only rooms of the requested branch are counted. |
 | IN-2 | Inventory-consuming statuses are `AWAITING_PAYMENT` (until its hold expires), `CONFIRMED`, `CHECKED_IN`, and `CHECKED_OUT`. `PAYMENT_FAILED`, `CANCELLED`, and `NO_SHOW` release their nights. |
 | IN-3 | Early check-out shortens the stay to the actual departure date, which releases the remaining nights. |
-| IN-4 | A listing is **bookable online** when its CMS status is `PUBLISHED`, its branch is `ACTIVE` with online booking enabled and a VAT rate configured (TX-1), it has at least one active unit, and every night of the stay has a resolvable price (PR-3). |
+| IN-4 | A listing is **bookable online** when its CMS status is `PUBLISHED`, its branch is `ACTIVE` with online booking enabled, it has at least one active unit, and every night of the stay has a resolvable price (PR-3). |
 | IN-5 | Publicly, availability is shown per listing as available or not for the requested units, plus how many more units can be added up to the per-booking maximum (never the raw capacity). Staff see `capacity`, `sold`, and `free` per night. |
 | IN-6 | Every operation that can reduce `free` runs under the room-type lock and fails with `INVENTORY_UNAVAILABLE` rather than making `free` negative. That covers bookings (including payment holds and late payment successes), date or unit changes, blocks, and unit deactivation. There is no Manager or Admin override (Q-17, accepted for M6). |
 | IN-7 | One physical room cannot have two overlapping inventory-consuming assignments, or two overlapping active blocks. It also cannot be assigned while blocked. The first two are database exclusion constraints; the block-versus-assignment check runs under the lock. |
@@ -76,10 +76,10 @@ available(T, stay, q) ⇔ for every night n in stay: free(T, n) ≥ q      (q = 
 
 | Rule | Definition |
 | --- | --- |
-| SV-1 | A branch may offer `BREAKFAST` and `AIRPORT_TRANSFER`, each with one flat price per booking (integer cents, before VAT) and an on or off switch. |
+| SV-1 | A branch may offer `BREAKFAST` and `AIRPORT_TRANSFER`, each with a **price unit** (`PER_BOOKING`, `PER_NIGHT`, `PER_PERSON`, `PER_PERSON_PER_NIGHT`), an adult price in integer cents before VAT, an optional child price (person units only; none means children are not charged), and an on or off switch. Staff set all of them per branch (Q-49 amended 2026-11-11). |
 | SV-2 | A service is added only when the guest (or staff, for a staff booking) selects it. The review may offer unselected services as a cross-sell; accepting one re-quotes. |
-| SV-3 | Each selected service appears once per booking, regardless of units, nights, or guests. |
-| SV-4 | Services are part of the subtotal, the coupon base, and the VAT base. Approved prices and transfer details are open *(Q-56)*. |
+| SV-3 | Each selected service appears once per booking as one line with its unit, quantities and amount. Quantities: `PER_BOOKING` 1; `PER_NIGHT` the stay's nights; `PER_PERSON` adults at the adult price and children at the child price; `PER_PERSON_PER_NIGHT` the same times nights. Guests are summed over every unit of the booking (OC-2). The amount is exact integer arithmetic, with no rounding. |
+| SV-4 | Services are part of the subtotal, the coupon base, and the VAT base. Approved prices, units, and child pricing are staff data and open with the client *(Q-56)*. |
 
 ## Coupons (Q-48)
 
@@ -97,7 +97,7 @@ available(T, stay, q) ⇔ for every night n in stay: free(T, n) ≥ q      (q = 
 
 | Rule | Definition |
 | --- | --- |
-| TX-1 | One VAT rate for all branches, entered and changed only by the Admin in the dashboard (any percentage, for example 5%, 6%, or 15%; Q-05), stored as integer basis points (15% = 1500). Online booking cannot be enabled while it is unset. Guests see the line labelled "VAT (n%)". |
+| TX-1 | One VAT rate for all branches, entered and changed only by the Admin in the dashboard (any percentage, for example 5%, 6%, or 15%; Q-05), stored as integer basis points (15% = 1500). The rate is never empty: it starts at 15% and the Admin may change it to any value from 0% to 100%; values below 0 or above 100 are refused (Q-05 amended 2026-11-11). Guests see the line labelled "VAT (n%)". |
 | TX-2 | `taxable = subtotal − discount` (never below zero). |
 | TX-3 | `vat = round half-up (taxable × basis points ÷ 10 000)`, computed once on the whole booking, never per night, unit, or service. |
 | TX-4 | `total = taxable + vat`. Selection screens show accommodation before VAT; the final review and confirmations show subtotal, discount, VAT (with its rate), and total. |
@@ -132,3 +132,5 @@ All amounts in these examples are **illustrations**, not approved prices or rate
 **Example 3 — half-up rounding.** Taxable 10010 ($100.10) at 15%: 10010 × 1500 ÷ 10000 = 1501.5 → **1502** ($15.02); total 11512 ($115.12). A 10% coupon on a subtotal of 33333: 3333.3 → **3333**.
 
 **Example 4 — fixed coupon above the subtotal.** Subtotal 4000 ($40.00), fixed coupon $50: discount 4000, taxable 0, VAT 0, total 0; Paymob is not offered (CP-6).
+
+**Example 5 — service units** (illustration only, not approved prices). One room at 8000 per night for three nights; 2 adults and 1 child. Breakfast per person per night, adult 1000, child 500: (2 × 1000 + 1 × 500) × 3 = 7500. Airport transfer per booking 2500. Subtotal 24000 + 7500 + 2500 = 34000; no coupon; VAT 15%: 34000 × 1500 ÷ 10000 = 5100; total 39100.

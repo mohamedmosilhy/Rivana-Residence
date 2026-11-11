@@ -16,3 +16,12 @@ export {
   type RatePeriodInput,
   type RatePeriodPatch,
 } from "./rate-authoring";
+export {
+  QuoteCalculator,
+  type Quote,
+  type QuoteCouponValue,
+  type QuoteInput,
+  type QuoteLine,
+  type QuoteServiceInput,
+  type QuoteServiceLine,
+} from "./quote-calculator";

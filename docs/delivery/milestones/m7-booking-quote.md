@@ -1,6 +1,6 @@
 # M7 — Booking quote: optional services, coupons, VAT
 
-Status: **Not started.** Branch: `m7-booking-quote`. Follow the [milestone loop](./README.md#the-loop-every-milestone-follows).
+Status: **In progress (1/6 tasks accepted).** Spec [0004](../../specs/0004-m7-booking-quote.md) and task breakdown approved 2026-11-11. Branch: `m7-booking-quote`. Follow the [milestone loop](./README.md#the-loop-every-milestone-follows).
 
 ## Objective
 
@@ -17,7 +17,7 @@ One server-side quote that composes accommodation (several units), optional serv
 ## Blocking questions
 
 - Q-56 (service details) and Q-57 (coupon details): recommendations accepted unless the client answers differently.
-- Q-05 (decided): the Admin enters the VAT rate in the dashboard. Build it as a nullable Admin-only setting; online booking cannot be enabled until a rate is entered. No rate is hard-coded anywhere.
+- Q-05 (decided, amended 2026-11-11): the VAT rate is an Admin-only setting that is **never null**. It starts at 15% (1500 basis points, seeded by the migration as data), and the Admin can change it to any value from 0% to 100%; below 0 or above 100 is a validation error. Online booking is not gated on a VAT rate.
 
 ## Skills for this milestone
 
@@ -48,31 +48,31 @@ Planned, reviewed, and accepted one task at a time ([agent-workflow.md](../../en
 
 | Task | Title | Risk | Depends on | Covers (criteria, tests) | Status |
 | --- | --- | --- | --- | --- | --- |
-| M7-T1 | Quote arithmetic: `roundHalfUpDiv`, `QuoteCalculator` | Critical | M6 | AC 1, 2; T-QUOTE-1…10 | Not started |
+| M7-T1 | Quote arithmetic: `roundHalfUpDiv`, service price units, `QuoteCalculator` | Critical | M6 | AC 1, 2; T-QUOTE-1…10 | Accepted |
 | M7-T2 | Coupon and service rules: `CouponPolicy`, service kinds | Critical | — | AC 3, 4; T-CPN-1…5, T-SVC-1…2 | Not started |
 | M7-T3 | Migration `commercial_rules` and demo seed | Critical | — | T-CPN-7; drift check | Not started |
 | M7-T4 | Services and VAT settings: audited use cases, staff API S35–S36 and A5 | Critical | T3 | AC 5, 7; T-SVC-3…4, T-TAX-1…4 | Not started |
 | M7-T5 | Coupon management: branch-scoped audited use case, staff API S37–S39 | Critical | T2, T3 | AC 5; T-CPN-6…8 | Not started |
-| M7-T6 | `QuoteBooking` use case and public API P6 with the coupon rate limit | Critical | T1, T4, T5 | AC 1, 3, 4, 6, 7; API-P6 end to end | Not started |
+| M7-T6 | `QuoteBooking` use case and public API P6 with the coupon rate limit | Critical | T1, T4, T5 | AC 1, 3, 4, 6; API-P6 end to end | Not started |
 
 ## Tasks
 
 ### 1. Domain (`src/domain/pricing`, `src/domain/coupons`, `src/domain/services`)
 
 1. `roundHalfUpDiv(numerator, denominator)` on integers (no floating point).
-2. `QuoteCalculator.compute({ lines: [{ nights: NightPrice[] }], services: [{ kind, priceMinor }], coupon?: CouponValue, vatRateBasisPoints })` returns `{ lines, accommodationMinor, servicesMinor, subtotalMinor, discountMinor, taxableMinor, vatRateBasisPoints, vatMinor, totalMinor }` following the order in ADR 027 (TX-1…5, CP-4…6).
+2. `QuoteCalculator.compute({ lines: [{ nights: NightPrice[] }], guests: { adults, children }, services: [{ kind, unit, price, childPrice }], coupon?: CouponValue, vatRateBasisPoints })` returns `{ lines, serviceLines, accommodationMinor, servicesMinor, subtotalMinor, discountMinor, taxableMinor, vatRateBasisPoints, vatMinor, totalMinor }` following the order in ADR 027 (TX-1…5, CP-4…6).
 3. `CouponPolicy.validate(coupon, { branchId, phone?, now, redemptionsTotal, redemptionsForPhone })` returns valid or a reason: `NOT_FOUND`, `INACTIVE`, `NOT_YET_VALID`, `EXPIRED`, `WRONG_BRANCH`, `LIMIT_REACHED`, `PHONE_LIMIT_REACHED` (CP-1…3). Codes normalized to upper case.
-4. Service kinds `BREAKFAST`, `AIRPORT_TRANSFER`; a service is only added when requested (SV-1…4).
+4. Service kinds `BREAKFAST`, `AIRPORT_TRANSFER`; each offering has a price unit (`PER_BOOKING`, `PER_NIGHT`, `PER_PERSON`, `PER_PERSON_PER_NIGHT`, owner decision 2026-11-11) and an optional child price for the person units; a service is only added when requested (SV-1…4 as amended).
 
 ### 2. Database (migration `commercial_rules`)
 
-1. `ServiceOffering` (`branchId`, `kind`, `priceMinor > 0`, `active`, `description?`; unique `(branchId, kind)`).
+1. `ServiceOffering` (`branchId`, `kind`, `priceUnit`, `priceMinor > 0` (adult price), `childPriceMinor?` (> 0, person units only), `active`, `description?`; unique `(branchId, kind)`).
 2. `Coupon` (`code` unique on `upper(code)`, `kind PERCENT|FIXED`, `percentBasisPoints` 1–10000 or `amountMinor > 0` by kind (CHECK), `startsAt?`, `endsAt?` with `endsAt > startsAt`, `maxRedemptions?`, `maxRedemptionsPerPhone?`, `allBranches boolean`, `CouponBranch(couponId, branchId)` join for specific branches, `active`, `description?`, audit columns).
-3. `CommercialSettings` singleton: `vatRateBasisPoints` nullable (0–10000, entered by the Admin, Q-05), `updatedAt`, `updatedById`.
+3. `CommercialSettings` singleton: `vatRateBasisPoints` NOT NULL, default row 1500, CHECK 0–10000 (Admin only, Q-05 amended), `updatedAt`, `updatedById`.
 
 ### 3. Application
 
-1. `QuoteBooking` use case: resolves branch (active), listings (published, same branch), stay and occupancy per line, units available (reads M6), nightly prices, active services requested, coupon (validated; redemption counts are zero until M8 writes them, read through a port), VAT rate. Returns the full breakdown or field errors. A missing VAT rate yields a quote flagged `vatConfigured: false` and the booking cannot proceed (`BRANCH_NOT_BOOKABLE` reason `VAT_NOT_CONFIGURED`).
+1. `QuoteBooking` use case: resolves branch (active), listings (published, same branch), stay and occupancy per line, units available (reads M6), nightly prices, active services requested, coupon (validated; redemption counts are zero until M8 writes them, read through a port), VAT rate. Returns the full breakdown or field errors. The VAT rate is always present; there is no unset state.
 2. `ManageServices` (Manager for assigned branches, Admin), `ManageCoupons` (Admin; Manager only for codes limited to their branches, never `allBranches`), `ManageCommercialSettings` (Admin, `tax:manage`). All audited with before and after values.
 3. Rate limit quote requests that include a coupon code (per client, e.g. 20 per 10 minutes) to slow code guessing.
 
@@ -99,11 +99,11 @@ P6, S35–S39, A5.
 4. Each coupon refusal reason is returned as `422 COUPON_INVALID` with `context.reason`; codes are matched case-insensitively.
 5. A Manager can create a coupon only for branches they are assigned to and can change service prices only there; VAT is Admin-only; every change is audited.
 6. The quote never trusts a client-supplied price, discount, or tax value (strict schemas reject them).
-7. With no VAT rate set, the quote says so and no booking path accepts it.
+7. The VAT rate is never null: the settings row starts at 15%, the Admin can set 0 to 100%, and any value below 0 or above 100 (or a non integer) is refused with `422`.
 
 ## Tests
 
-- Unit: T-QUOTE-1…10 (composition order, rounding at .5 cents, zero services, multi-unit, coupon caps, VAT 0 and 100% bounds), T-CPN-1…5 (validation reasons), T-SVC-1…2, T-TAX-1…2, T-AUTHZ sweep additions.
+- Unit: T-QUOTE-1…10 (composition order, service price units and child pricing (worked example 5), rounding at .5 cents, zero services, multi-unit, coupon caps, VAT 0 and 100% bounds), T-CPN-1…5 (validation reasons), T-SVC-1…2, T-TAX-1…2, T-AUTHZ sweep additions.
 - Integration: T-CPN-6…8 (persistence, case-insensitive uniqueness, branch scope), T-SVC-3…4, T-TAX-3…4, API-P6 end to end with rate limits, staff APIs with audit.
 
 ## Evidence for the report

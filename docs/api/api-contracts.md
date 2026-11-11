@@ -19,9 +19,8 @@ type Quote = {
   services: { kind: ServiceKind; price: Money }[];
   accommodation: Money; servicesTotal: Money; subtotal: Money;
   coupon: { code: string; kind: "PERCENT" | "FIXED"; value: number } | null; discount: Money;
-  taxable: Money; vatRateBasisPoints: number | null; vat: Money | null; total: Money | null;
-  vatConfigured: boolean;
-  offeredServices: { kind: ServiceKind; price: Money }[];                    // available, not chosen (cross-sell)
+  taxable: Money; vatRateBasisPoints: number; vat: Money; total: Money;      // VAT is never null (Q-05 amended)
+  offeredServices: { kind: ServiceKind; unit: ServicePriceUnit; price: Money; childPrice: Money | null }[];                    // available, not chosen (cross-sell)
 };
 type GuestInput = { fullName: string; email: string; phone: string /* E.164 */; country?: string; specialRequests?: string };
 type Image = { src: string; alt: string; width: number; height: number };   // ready, rights-confirmed library image
@@ -148,7 +147,7 @@ Authentication: staff session cookie. Authorization: listed capability **and** b
 | --- | --- | --- | --- | --- |
 | API-A1 | `GET /api/v1/staff/branches` | `inventory:read` | — | Caller's branches (Admin: all). **Implemented (M5)** |
 | API-A2 | `POST /api/v1/staff/branches` | `branches:manage` | `BranchInput` | Audit. **Implemented (M5)** |
-| API-A3 | `PATCH /api/v1/staff/branches/{id}` | `branches:manage` | partial `BranchInput` incl. `status`, `onlineBookingEnabled` (refused while VAT is unset, WhatsApp is not configured, or `checkInTime` is missing), contact, address, `mapEmbedUrl` (Google embed allowlist), `checkInTime`, `checkOutTime`, `heroMediaId`, `syncReminderIntervalMinutes` (10–240), `syncFollowUpMinutes` (5–60, below the interval) | Audit; invalidates that branch's public cache tags. **Implemented (M5)** |
+| API-A3 | `PATCH /api/v1/staff/branches/{id}` | `branches:manage` | partial `BranchInput` incl. `status`, `onlineBookingEnabled` (refused while WhatsApp is not configured, or `checkInTime` is missing), contact, address, `mapEmbedUrl` (Google embed allowlist), `checkInTime`, `checkOutTime`, `heroMediaId`, `syncReminderIntervalMinutes` (10–240), `syncFollowUpMinutes` (5–60, below the interval) | Audit; invalidates that branch's public cache tags. **Implemented (M5)** |
 | API-A5 | `GET` and `PUT /api/v1/staff/settings/commercial` | `GET`: `pricing:read`; `PUT`: `tax:manage` (Admin only) | `{ vatRateBasisPoints: number /* 0–10000; the Admin's chosen rate, Q-05 */ }` | Audit; applies to later quotes only (TX-5) |
 | API-A6 | `GET` and `PUT /api/v1/staff/settings/whatsapp` | `settings:edit` (Admin) | `{ businessPhoneNumber: string \| null /* E.164 */, providerPhoneNumberId: string \| null }`; `GET` also returns `accessTokenConfigured: boolean`, the last test result, and setup gaps (purposes without an active template) | Audit; never returns or accepts the access token (Q-67) |
 | API-A7 | `GET /api/v1/staff/whatsapp-templates`, `POST …`, `PATCH …/{id}` | `settings:edit` (Admin) | `{ purpose, language, providerName, category, variables: string[] /* allowlisted field keys */, previewText, active }` | Audit; `422` for unknown variable keys; one active template per purpose and language (except marketing) |

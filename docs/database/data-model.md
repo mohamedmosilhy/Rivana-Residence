@@ -429,7 +429,7 @@ model PhoneVerification {
   @@index([clientKey, createdAt])
 }
 
-model ReservationService {             // flat price per booking (SV-1…4)
+model ReservationService {             // one line per service with its unit and quantities (SV-1…4)
   reservationId String      @db.VarChar(32)   // → Reservation CASCADE
   kind          ServiceKind
   priceMinor    Int
