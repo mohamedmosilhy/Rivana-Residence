@@ -9,11 +9,11 @@ import type {
   ContactEnquiryDto,
   EnquiryListQuery,
   EnquiryRepository,
-  PagedResult,
-} from "@/application/ports/repositories";
+} from "@/application/enquiries/ports";
 import {
   ADMIN_PAGE_SIZE,
   parsePageNumber,
+  type PagedResult,
 } from "@/application/shared/pagination";
 import { success, type Result } from "@/application/shared/result";
 import { ENQUIRY_STATUSES, type EnquiryStatus } from "@/domain/shared/types";

@@ -3,7 +3,7 @@ import type {
   LoginThrottleStore,
   ThrottleKeyDeriver,
 } from "@/application/auth/ports";
-import type { Clock } from "@/application/ports/providers";
+import type { Clock } from "@/application/shared/providers";
 import { failure, success, type Result } from "@/application/shared/result";
 import {
   LOGIN_THROTTLE_RULES,

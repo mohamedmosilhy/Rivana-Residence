@@ -5,7 +5,7 @@ import type {
   AdminOverviewReader,
   PublicationCounts,
   RecentContentItem,
-} from "@/application/ports/repositories";
+} from "@/application/admin/ports";
 import type { PublicationStatus } from "@/domain/shared/types";
 import { getPrisma } from "@/infrastructure/db/prisma/client";
 import type { DatabaseClient } from "@/infrastructure/db/prisma/transaction";

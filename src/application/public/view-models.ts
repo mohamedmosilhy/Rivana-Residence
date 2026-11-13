@@ -5,8 +5,8 @@ import type {
   PageDto,
   RoomDto,
   SectionMediaReference,
-  SiteSettingsDto,
-} from "@/application/ports/repositories";
+} from "@/application/content/ports";
+import type { SiteSettingsDto } from "@/application/settings/ports";
 import type { PageKey, PageSectionType } from "@/domain/content/page-sections";
 import { publicMediaPath } from "@/domain/media/media-asset";
 import {

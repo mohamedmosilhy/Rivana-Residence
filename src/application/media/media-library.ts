@@ -1,20 +1,20 @@
 import { authorize } from "@/application/auth/authorize";
 import type { StaffPrincipal } from "@/application/auth/ports";
 import { CACHE_TAGS } from "@/application/cache/cache-tags";
+import type { CacheInvalidator } from "@/application/cache/ports";
 import type {
-  CacheInvalidator,
   MediaStorage,
-} from "@/application/ports/providers";
-import type {
   MediaDetailsDto,
   MediaListItem,
   MediaListQuery,
   MediaRepository,
   MediaRightsStatus,
   MediaUsage,
-  PagedResult,
-} from "@/application/ports/repositories";
-import { parsePageNumber } from "@/application/shared/pagination";
+} from "@/application/media/ports";
+import {
+  parsePageNumber,
+  type PagedResult,
+} from "@/application/shared/pagination";
 import {
   failure,
   invalid,

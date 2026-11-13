@@ -8,7 +8,7 @@ import { connection } from "next/server";
 
 import { CACHE_TAGS } from "@/application/cache/cache-tags";
 import { SubmitEnquiry } from "@/application/enquiries/submit-enquiry";
-import type { ContactDelivery } from "@/application/ports/providers";
+import type { ContactDelivery } from "@/application/enquiries/ports";
 import { PublicSite } from "@/application/public/public-site";
 import type { PageKey } from "@/domain/content/page-sections";
 import { SLUG_PATTERN } from "@/domain/shared/slug";

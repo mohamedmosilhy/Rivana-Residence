@@ -15,7 +15,7 @@ src/contracts (HTTP DTO Zod schemas) <─ src/app, src/presentation
 | --- | --- | --- |
 | D-1 | `src/domain/**` imports nothing from application, composition, infrastructure, presentation, `next/*`, or `react`, and no Prisma or `pg` | Enforced today (ESLint + persistence-boundaries test) |
 | D-1a | `src/domain/**` performs no Node I/O (`node:fs`, `node:crypto`, network) | Enforced since M4 (ESLint: `node:*` and Node built-ins banned in `src/domain`) |
-| D-2 | `src/application/**` imports only domain and its own ports. It has no composition, infrastructure, presentation, or `next/*` | Enforced today |
+| D-2 | `src/application/**` imports only domain, the ports (`@/application/<module>/ports`) and public files of other application modules, and `src/application/shared`. It has no composition, infrastructure, presentation, or `next/*` | Enforced today |
 | D-3 | `src/presentation/**` never imports infrastructure, composition, or `lib/env/server` | Enforced today |
 | D-4 | `src/app/**` never imports infrastructure directly; it uses `src/composition` | Enforced today |
 | D-5 | Prisma, `pg`, and `src/generated/prisma` are imported only under `src/infrastructure/db/**` | Enforced today |
@@ -31,7 +31,8 @@ src/contracts (HTTP DTO Zod schemas) <─ src/app, src/presentation
 
 ## Practical guidance
 
-- Need a new dependency between modules? Add a port in the consuming module's application layer and implement it in infrastructure. Do not import the other module's repository.
+- Need a new dependency between modules? Add a port in the application module that owns that capability and implement it in infrastructure. Use cases of other modules import that port, never the repository implementation.
+- Where does a port live? In the application module that owns the thing it describes (a repository next to the use cases that manage that data, a provider next to the feature that needs it): `src/application/<module>/ports.ts` (for example `content`, `media`, `settings`, `enquiries`, `admin`, `booking`, `cache` as well as the reservation-era modules). Other code imports it from `@/application/<module>/ports`. Only ports and types that many modules share live outside a module, all in `src/application/shared/`: `Clock` and `IdGenerator` (`providers.ts`), `Actor`, `PageRequest` and `PagedResult`, and `Result`. There is no `src/application/ports/` folder. Module port files never import another module's port file; the shared folder is the only common ground. `tests/unit/architecture/ports-layout.test.ts` enforces this (M8-T0).
 - Need a framework feature (cookies, headers) in a use case? Pass the value in as an argument from the handler.
 - Need the time? Inject `Clock`. Need randomness? Inject `SecureTokenGenerator` or `IdGenerator`.
 - Shared helpers go in the narrowest shared folder (`src/domain/shared`, `src/application/shared`) and only when at least two modules use them for the same reason.

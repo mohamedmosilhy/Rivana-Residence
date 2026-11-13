@@ -2,7 +2,7 @@ import { authorize } from "@/application/auth/authorize";
 import { branchScope } from "@/application/auth/authorize-branch";
 import type { StaffPrincipal } from "@/application/auth/ports";
 import type { AuditLog } from "@/application/audit";
-import type { Clock, IdGenerator } from "@/application/ports/providers";
+import type { Clock, IdGenerator } from "@/application/shared/providers";
 import type { ReservationUnitOfWork } from "@/application/reservations";
 import {
   failure,

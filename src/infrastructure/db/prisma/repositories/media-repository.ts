@@ -1,14 +1,14 @@
 import "server-only";
 
 import type {
-  Actor,
   MediaListQuery,
   MediaRepository,
   MediaRightsStatus,
   MediaUsage,
   PendingMediaInput,
   ReadyMediaInput,
-} from "@/application/ports/repositories";
+} from "@/application/media/ports";
+import type { Actor } from "@/application/shared/actor";
 import { failure, success } from "@/application/shared/result";
 import type { MediaDetailsInput } from "@/domain/media/media-asset";
 import { PAGE_SECTION_LABELS } from "@/domain/content/page-sections";

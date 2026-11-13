@@ -2,7 +2,7 @@
 
 import { useActionState, useEffect, useState } from "react";
 
-import type { MediaOption } from "@/application/ports/repositories";
+import type { MediaOption } from "@/application/media/ports";
 import { SingleImage } from "@/presentation/admin/media/image-choice";
 import {
   ErrorSummary,

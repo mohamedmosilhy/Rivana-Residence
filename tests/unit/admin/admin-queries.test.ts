@@ -6,10 +6,8 @@ import {
   ListEnquiries,
   parseEnquiryListQuery,
 } from "@/application/enquiries/list-enquiries";
-import type {
-  AdminOverviewReader,
-  EnquiryRepository,
-} from "@/application/ports/repositories";
+import type { AdminOverviewReader } from "@/application/admin/ports";
+import type { EnquiryRepository } from "@/application/enquiries/ports";
 import { pageCount, parsePageNumber } from "@/application/shared/pagination";
 
 import { branchRow, fakeBranches } from "../../support/fake-branches";

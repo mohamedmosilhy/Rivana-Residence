@@ -1,4 +1,4 @@
-import type { PageDto } from "@/application/ports/repositories";
+import type { PageDto } from "@/application/content/ports";
 import { PAGE_SECTION_LABELS } from "@/domain/content/page-sections";
 import { PublicationBadge } from "@/presentation/admin/ui/badge";
 import { RichTextView } from "@/presentation/design/rich-text-view";

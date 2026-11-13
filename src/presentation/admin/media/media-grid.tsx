@@ -1,7 +1,7 @@
 import type { Route } from "next";
 import Link from "next/link";
 
-import type { MediaListItem } from "@/application/ports/repositories";
+import type { MediaListItem } from "@/application/media/ports";
 import { Badge } from "@/presentation/admin/ui/badge";
 import {
   MIME_LABELS,

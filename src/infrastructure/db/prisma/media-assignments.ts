@@ -3,7 +3,7 @@ import "server-only";
 import type {
   MediaAssignment,
   MediaReference,
-} from "@/application/ports/repositories";
+} from "@/application/content/ports";
 import { failure, success, type Result } from "@/application/shared/result";
 import type { DatabaseClient } from "@/infrastructure/db/prisma/transaction";
 

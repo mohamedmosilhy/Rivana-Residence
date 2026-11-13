@@ -9,3 +9,16 @@ export function parsePageNumber(value: unknown) {
   const page = typeof value === "string" ? Number(value) : NaN;
   return Number.isSafeInteger(page) && page >= 1 ? page : 1;
 }
+
+export type PageRequest = Readonly<{
+  /** 1-based. */
+  page: number;
+  pageSize: number;
+}>;
+
+export type PagedResult<T> = Readonly<{
+  items: readonly T[];
+  total: number;
+  page: number;
+  pageSize: number;
+}>;

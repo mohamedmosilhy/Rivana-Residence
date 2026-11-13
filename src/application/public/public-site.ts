@@ -1,11 +1,11 @@
 import type { BranchRepository, BranchRow } from "@/application/branches";
 import type {
   FacilityRepository,
-  MediaRepository,
   PageRepository,
   RoomRepository,
-  SettingsRepository,
-} from "@/application/ports/repositories";
+} from "@/application/content/ports";
+import type { MediaRepository } from "@/application/media/ports";
+import type { SettingsRepository } from "@/application/settings/ports";
 import type { PageKey } from "@/domain/content/page-sections";
 
 import {

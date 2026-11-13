@@ -1,4 +1,4 @@
-import type { Clock } from "@/application/ports/providers";
+import type { Clock } from "@/application/shared/providers";
 import type { RateBatchReader, RateReadModel } from "@/application/pricing";
 import {
   failure,

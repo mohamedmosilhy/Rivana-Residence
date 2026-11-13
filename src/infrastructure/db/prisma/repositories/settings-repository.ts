@@ -3,11 +3,11 @@ import "server-only";
 import { createId } from "@paralleldrive/cuid2";
 
 import type {
-  Actor,
   AdminSiteSettingsDto,
   SettingsRepository,
   SiteImagesInput,
-} from "@/application/ports/repositories";
+} from "@/application/settings/ports";
+import type { Actor } from "@/application/shared/actor";
 import { failure, success, type Result } from "@/application/shared/result";
 import type {
   SiteSettingsInput,

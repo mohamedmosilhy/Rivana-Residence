@@ -3,7 +3,7 @@ import "server-only";
 import type {
   BookingLaunchDescriptor,
   BookingProvider,
-} from "@/application/ports/providers";
+} from "@/application/booking/ports";
 
 export class DisabledBookingProvider implements BookingProvider {
   async getLaunchDescriptor(): Promise<BookingLaunchDescriptor> {

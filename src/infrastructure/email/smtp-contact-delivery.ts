@@ -2,7 +2,7 @@ import "server-only";
 
 import nodemailer, { type Transporter } from "nodemailer";
 
-import type { ContactDelivery } from "@/application/ports/providers";
+import type { ContactDelivery } from "@/application/enquiries/ports";
 
 type SmtpOptions = Readonly<{
   host: string;

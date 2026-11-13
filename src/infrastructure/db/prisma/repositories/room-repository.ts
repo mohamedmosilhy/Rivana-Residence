@@ -3,11 +3,11 @@ import "server-only";
 import { createId } from "@paralleldrive/cuid2";
 
 import type {
-  Actor,
   MediaAssignment,
   RoomInput,
   RoomRepository,
-} from "@/application/ports/repositories";
+} from "@/application/content/ports";
+import type { Actor } from "@/application/shared/actor";
 import { failure, invalid, success } from "@/application/shared/result";
 import { issuesFromZod } from "@/domain/shared/domain-error";
 import { assertRoomPublishable, roomDraftSchema } from "@/domain/rooms/room";

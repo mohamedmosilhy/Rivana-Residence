@@ -3,12 +3,12 @@ import "server-only";
 import { createId } from "@paralleldrive/cuid2";
 
 import type {
-  Actor,
   PageDetailsInput,
   PageRepository,
   PageSectionInput,
   SectionMediaAssignment,
-} from "@/application/ports/repositories";
+} from "@/application/content/ports";
+import type { Actor } from "@/application/shared/actor";
 import { SECTION_MEDIA_SLOTS } from "@/domain/media/media-asset";
 import {
   failure,

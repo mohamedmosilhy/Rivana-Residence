@@ -1,8 +1,8 @@
 # M8 — Reservations, immediate confirmation, phone verification, and messages
 
-Status: **Not started.** Branch: `m8-reservations`. Follow the [milestone loop](./README.md#the-loop-every-milestone-follows).
+Status: **Not started** (the prerequisite task M8-T0 is accepted, 2026-11-13; the milestone spec and breakdown approval are still pending). Branch: `m8-reservations`. Follow the [milestone loop](./README.md#the-loop-every-milestone-follows).
 
-> **Do this first: [M8-T0, application ports consolidation](#0-prerequisite-task-m8-t0-application-ports-consolidation).** The owner decided on 2026-11-13 that the old shared `src/application/ports/` files move into their modules before any other M8 task starts, so every M8 repository and port is written in the module layout from the start. No other M8 task is planned or started until M8-T0 is accepted.
+> **Done first (accepted 2026-11-13): [M8-T0, application ports consolidation](#0-prerequisite-task-m8-t0-application-ports-consolidation).** The owner decided on 2026-11-13 that the old shared `src/application/ports/` files move into their modules before any other M8 task starts, so every M8 repository and port is written in the module layout from the start. Next: [M8-T0b](#0b-follow-up-task-m8-t0b-public-surfaces-for-the-cms-modules), then the rest of M8.
 
 ## Objective
 
@@ -58,7 +58,8 @@ Planned, reviewed, and accepted one task at a time ([agent-workflow.md](../../en
 
 | Task | Title | Risk | Depends on | Covers (criteria, tests) | Status |
 | --- | --- | --- | --- | --- | --- |
-| M8-T0 | Application ports consolidation: move the old shared ports into their modules (refactor, no behavior change) | Medium | M7 | Existing tests unchanged and green; new `ports` boundary test | Not started |
+| M8-T0 | Application ports consolidation: move the old shared ports into their modules (refactor, no behavior change) | Medium | M7 | Existing tests unchanged and green; new `ports` boundary test | Accepted |
+| M8-T0b | Public surfaces for the CMS modules: `index.ts` per old module and D-8 extended to them (refactor, no behavior change) | Medium | T0 | Existing tests unchanged and green; D-8 test extended | Not started |
 | M8-T1 | Migration `reservations`: tables, checks, composite FKs, exclusion and idempotency constraints, demo seed | Critical | T0 | T-DB-6…8; drift check | Not started |
 | M8-T2 | Reservation domain: state machine, invariants R-1…R-10, reference, `PhoneNumber`, verification and per-phone policies | Critical | T0 | T-LIFE-1…10, T-REF-1…3, T-PHONE-1…4, T-VAL-1…5 | Not started |
 | M8-T3 | Reservation and guest repositories, unit-of-work binding | Medium | T1 | repository integration tests | Not started |
@@ -95,6 +96,22 @@ Owner decision, 2026-11-13. Written as a task card; the agent still runs the nor
 10. **Tests.** No new behavior tests. Add one architecture test that fails if `src/application/ports/` grows beyond the agreed shared set or a module imports another module's `ports.ts` directly. Run the full gates.
 11. **Risk tier.** Medium: no money, lock, or authorization logic changes. It touches many files, so the review focuses on "moves only" (the reviewer checks the diff for unintended edits) and on import cycles.
 12. **Sizing note.** If the plan finds it is too large for one sitting, propose splitting by module group (for example content and media first, then settings, enquiries, admin and the rest) and wait for approval. Do not start the split without it.
+13. **As built (owner follow-up 2026-11-13).** The shared `src/application/ports/` folder no longer exists. `Clock` and `IdGenerator` moved to `src/application/shared/providers.ts`, next to the other shared application files (`result.ts`, `actor.ts`, `pagination.ts`). Module ports are `src/application/<module>/ports.ts`, imported as `@/application/<module>/ports` (the "listed ports" form of D-8). This supersedes items 3, 7, 9, and 10 wherever they mention keeping `src/application/ports/`. `Hasher` went to `media` (its only user), not `auth`; `Actor` and the paging types are in `src/application/shared/`. The old CMS modules did not get an `index.ts`, and D-8's public surface list was not extended to them: that is a separate, larger change (it would also move use case imports) left for the owner to schedule.
+
+### 0b. Follow-up task (M8-T0b): public surfaces for the CMS modules
+
+Owner decision, 2026-11-13, recommended in the M8-T0 review package and accepted. Written as a task card; the agent still runs the normal Stage 1 plan, waits for approval, and stops for acceptance. A refactor: **no behavior, schema, API, or contract change**. It should be accepted before M8-T3 (the repositories task), so the new M8 modules and the old ones follow the same rule. It does not block M8-T1 or M8-T2.
+
+1. **Objective.** Give the older CMS modules (`content`, `media`, `settings`, `enquiries`, `admin`, `booking`, `cache`, and `public` if the plan finds it needed) the same public surface the reservation-era modules have: one `index.ts` per module, and every import from outside the module goes through it (rule D-8). Today they have `ports.ts` (after M8-T0) but no `index.ts`, and D-8 does not cover them.
+2. **Scope in.** An `index.ts` per module exporting what other layers use (use cases, ports and DTO types, helpers); rewriting deep imports of those modules (`@/application/<module>/<file>`) in `src/app`, `src/presentation`, `src/composition`, `src/infrastructure`, and tests to the index; adding the modules to `PUBLIC_SURFACE_MODULES` in `tests/unit/architecture/module-boundaries.test.ts` and `eslint.config.mjs`; the docs that list D-8 (`docs/architecture/dependency-rules.md`).
+3. **Scope out.** Any change to a use case, port method, DTO field, SQL, route, or contract; the `domain` side (only `src/application` modules here unless the plan shows the domain modules are equally simple); renames; unrelated cleanups.
+4. **Behavior.** Type and import moves only. Index files must not create runtime import cycles (import ports with `import type`; check `catalog-queries`, `page-commands`, `media-library`, and `public-site`, which depend on each other's ports).
+5. **Architecture.** D-2 and D-8 hold for every module after the move; `index.ts` files re-export, they hold no logic; client bundles do not gain server code (check `src/presentation` imports of application types, rule D-13).
+6. **Expected files.** `src/application/<module>/index.ts` (new), about 40 to 60 importers (import lines only), the two enforcement files, the doc.
+7. **Dependencies.** M8-T0 accepted.
+8. **Acceptance criteria.** (a) Every module in the list has an `index.ts` and appears in `PUBLIC_SURFACE_MODULES`. (b) The D-8 test and the ESLint rule pass for them. (c) `npm run check`, the full integration suite, and the Chromium E2E suite pass with the same counts as before, plus the extended test. (d) The diff is import and file moves only, `docs/api/openapi.json` is unchanged. (e) The doc lists the modules.
+9. **Tests.** No new behavior tests; extend the D-8 architecture test and run the full gates.
+10. **Risk tier.** Medium. If the plan finds it too large, propose splitting by module group and wait for approval.
 
 ### 1. Database (migration `reservations`)
 

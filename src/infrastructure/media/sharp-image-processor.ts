@@ -1,6 +1,6 @@
 import sharp, { type Metadata } from "sharp";
 
-import type { ImageInfo, ImageProcessor } from "@/application/ports/providers";
+import type { ImageInfo, ImageProcessor } from "@/application/media/ports";
 import { MEDIA_UPLOAD_POLICY } from "@/domain/media/media-asset";
 
 // libvips refuses to allocate for images above this size, which stops

@@ -1,11 +1,11 @@
 import { authorize } from "@/application/auth/authorize";
 import type { StaffPrincipal } from "@/application/auth/ports";
 import { CACHE_TAGS } from "@/application/cache/cache-tags";
-import type { CacheInvalidator } from "@/application/ports/providers";
+import type { CacheInvalidator } from "@/application/cache/ports";
 import type {
   AdminSiteSettingsDto,
   SettingsRepository,
-} from "@/application/ports/repositories";
+} from "@/application/settings/ports";
 import { optionalMediaId } from "@/application/content/catalog-forms";
 import { failure, invalid, type Result } from "@/application/shared/result";
 import { issuesFromZod } from "@/domain/shared/domain-error";

@@ -8,13 +8,13 @@ import {
 } from "@/application/content/catalog-commands";
 import { CatalogQueries } from "@/application/content/catalog-queries";
 import { PageCommands } from "@/application/content/page-commands";
-import type { CacheInvalidator } from "@/application/ports/providers";
+import type { CacheInvalidator } from "@/application/cache/ports";
 import type {
   FacilityDto,
   FacilityInput,
   RoomDto,
   RoomInput,
-} from "@/application/ports/repositories";
+} from "@/application/content/ports";
 import { getPublicSiteSettings } from "@/composition/admin";
 import { NextCacheInvalidator } from "@/infrastructure/cache/next-cache-invalidator";
 import { PrismaBranchRepository } from "@/infrastructure/db/prisma/repositories/branches/branch-repository";
