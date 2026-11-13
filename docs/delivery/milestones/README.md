@@ -28,8 +28,9 @@ A short request such as "Start milestone 6 using docs/delivery/milestones/README
 1. Open the brief for that milestone from the table above and use the branch named for it in [Extra lines per milestone](#2-extra-lines-per-milestone). Create the branch from `main` if it does not exist (every accepted milestone is merged into `main`).
 2. Run the **milestone open** steps (0–4 below): check the blocking questions, read, write the spec with `/architect`, confirm the brief's **Task breakdown**. Then stop for the owner's approval of the spec and the task breakdown.
 3. After approval, run **one task at a time** through the 7-stage task lifecycle (step 5). Each task stops twice: for plan approval before code, and for acceptance after the review package.
-4. Apply the milestone's line in [Extra lines per milestone](#2-extra-lines-per-milestone). If it names something the owner must provide (keys, wording, templates) and it is not there, stop and ask.
-5. Never commit, push, or merge outside the Git rules, and never start the next task or milestone without the owner's explicit approval.
+4. **Milestone 8 only:** the first task is [M8-T0, application ports consolidation](./m8-reservations.md#0-prerequisite-task-m8-t0-application-ports-consolidation) (owner decision 2026-11-13). Plan and finish it before planning M8-T1 or any other M8 task.
+5. Apply the milestone's line in [Extra lines per milestone](#2-extra-lines-per-milestone). If it names something the owner must provide (keys, wording, templates) and it is not there, stop and ask.
+6. Never commit, push, or merge outside the Git rules, and never start the next task or milestone without the owner's explicit approval.
 
 ## The loop every milestone follows
 
@@ -140,7 +141,7 @@ Add the line in the last column under the prompt above.
 | [M4](./m4-backend-foundations.md) Backend foundations | `m4-backend-foundations` | Nothing extra |
 | [M5](./m5-branch-websites.md) Branch websites | `m5-branch-websites` | Nothing extra (the demo seed provides a second fictional branch) |
 | [M6](./m6-inventory-and-availability.md) Inventory and availability | `m6-inventory-and-availability` | Nothing extra |
-| [M7](./m7-booking-quote.md) Booking quote | `m7-booking-quote` | Nothing extra (VAT is an Admin setting; hard-code no rate) |
+| [M7](./m7-booking-quote.md) Booking quote | `m7-booking-quote` | Nothing extra (VAT starts at 15% as migration data and is an Admin setting; no rate is hard-coded in logic) |
 | [M8](./m8-reservations.md) Reservations | `m8-reservations` | If the client has sent the WhatsApp number and token: "The WhatsApp access token is in `.env.local`; I'll enter the number in the dashboard." Otherwise: "Use the fake WhatsApp adapter; the number stays a placeholder." |
 | [M9](./m9-payments-and-cancellations.md) Payments and cancellations | `m9-payments-and-cancellations` | "The Paymob sandbox keys are in `.env.local`." (Put them there yourself first.) |
 | [M10](./m10-guest-booking-journey.md) Guest booking journey | `m10-guest-booking-journey` | Any approved wording (privacy, cancellation terms, child policy), or: "Use placeholder text flagged by the content audit." |

@@ -218,7 +218,7 @@ function crossFieldRules(branch: CrossFieldValues, context: z.RefinementCtx) {
 export const branchSchema = branchFields.superRefine(crossFieldRules);
 
 export const ONLINE_BOOKING_NOT_READY_MESSAGE =
-  "Online booking can't be turned on yet. It needs the VAT rate and WhatsApp messaging, which arrive in later releases.";
+  "Online booking can't be turned on yet. It needs WhatsApp messaging and the booking journey, which arrive in later releases.";
 
 /** Optional whole number from a form string or a JSON number. */
 const sortOrderField = z.preprocess(

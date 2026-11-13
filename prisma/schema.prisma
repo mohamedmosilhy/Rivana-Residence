@@ -34,6 +34,23 @@ enum BlockReason {
   OTHER
 }
 
+enum ServiceKind {
+  BREAKFAST
+  AIRPORT_TRANSFER
+}
+
+enum ServicePriceUnit {
+  PER_BOOKING
+  PER_NIGHT
+  PER_PERSON
+  PER_PERSON_PER_NIGHT
+}
+
+enum CouponKind {
+  PERCENT
+  FIXED
+}
+
 enum PublicationStatus {
   DRAFT
   PUBLISHED
@@ -113,6 +130,11 @@ model User {
   createdPromotions   Promotion[]    @relation("PromotionCreatedBy")
   updatedPromotions   Promotion[]    @relation("PromotionUpdatedBy")
   updatedBranches     Branch[]       @relation("BranchUpdatedBy")
+
+  updatedServiceOfferings   ServiceOffering[]    @relation("ServiceOfferingUpdatedBy")
+  createdCoupons            Coupon[]             @relation("CouponCreatedBy")
+  updatedCoupons            Coupon[]             @relation("CouponUpdatedBy")
+  updatedCommercialSettings CommercialSettings[] @relation("CommercialSettingsUpdatedBy")
 
   branchAssignments        StaffBranchAssignment[]
   updatedPhysicalRooms     PhysicalRoom[]          @relation("PhysicalRoomUpdatedBy")
@@ -596,13 +618,15 @@ model Branch {
   updatedAt                   DateTime     @updatedAt @db.Timestamptz(3)
   updatedById                 String?      @db.VarChar(32)
 
-  heroMedia   MediaAsset?             @relation("BranchHeroMedia", fields: [heroMediaId], references: [id], onDelete: Restrict)
-  updatedBy   User?                   @relation("BranchUpdatedBy", fields: [updatedById], references: [id], onDelete: Restrict)
-  pages       Page[]
-  rooms       Room[]
-  facilities  Facility[]
-  enquiries   ContactEnquiry[]
-  assignments StaffBranchAssignment[]
+  heroMedia        MediaAsset?             @relation("BranchHeroMedia", fields: [heroMediaId], references: [id], onDelete: Restrict)
+  updatedBy        User?                   @relation("BranchUpdatedBy", fields: [updatedById], references: [id], onDelete: Restrict)
+  pages            Page[]
+  rooms            Room[]
+  facilities       Facility[]
+  enquiries        ContactEnquiry[]
+  assignments      StaffBranchAssignment[]
+  serviceOfferings ServiceOffering[]
+  couponBranches   CouponBranch[]
 
   @@index([status, sortOrder])
 }
@@ -640,4 +664,69 @@ model AuditEvent {
 
   @@index([entityType, entityId, occurredAt])
   @@index([branchId, occurredAt])
+}
+
+// Commercial rules, M7. SQL checks and the case insensitive coupon index
+// live in the commercial_rules migration.
+model ServiceOffering {
+  id              String           @id @db.VarChar(32)
+  branchId        String           @db.VarChar(32)
+  kind            ServiceKind
+  priceUnit       ServicePriceUnit
+  priceMinor      Int
+  childPriceMinor Int?
+  currency        String           @default("USD") @db.Char(3)
+  active          Boolean          @default(false)
+  description     String?          @db.VarChar(300)
+  updatedAt       DateTime         @updatedAt @db.Timestamptz(3)
+  updatedById     String?          @db.VarChar(32)
+
+  branch    Branch @relation(fields: [branchId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  updatedBy User?  @relation("ServiceOfferingUpdatedBy", fields: [updatedById], references: [id], onDelete: Restrict, onUpdate: Restrict)
+
+  @@unique([branchId, kind])
+}
+
+model Coupon {
+  id                     String     @id @db.VarChar(32)
+  code                   String     @db.VarChar(32)
+  kind                   CouponKind
+  percentBasisPoints     Int?
+  amountMinor            Int?
+  currency               String     @default("USD") @db.Char(3)
+  startsAt               DateTime?  @db.Timestamptz(3)
+  endsAt                 DateTime?  @db.Timestamptz(3)
+  maxRedemptions         Int?
+  maxRedemptionsPerPhone Int?
+  allBranches            Boolean    @default(false)
+  active                 Boolean    @default(true)
+  description            String?    @db.VarChar(300)
+  createdAt              DateTime   @default(now()) @db.Timestamptz(3)
+  updatedAt              DateTime   @updatedAt @db.Timestamptz(3)
+  createdById            String?    @db.VarChar(32)
+  updatedById            String?    @db.VarChar(32)
+
+  createdBy User?          @relation("CouponCreatedBy", fields: [createdById], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  updatedBy User?          @relation("CouponUpdatedBy", fields: [updatedById], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  branches  CouponBranch[]
+}
+
+model CouponBranch {
+  couponId String @db.VarChar(32)
+  branchId String @db.VarChar(32)
+
+  coupon Coupon @relation(fields: [couponId], references: [id], onDelete: Cascade, onUpdate: Restrict)
+  branch Branch @relation(fields: [branchId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+
+  @@id([couponId, branchId])
+  @@index([branchId])
+}
+
+model CommercialSettings {
+  id                 String   @id @db.VarChar(32)
+  vatRateBasisPoints Int
+  updatedAt          DateTime @updatedAt @db.Timestamptz(3)
+  updatedById        String?  @db.VarChar(32)
+
+  updatedBy User? @relation("CommercialSettingsUpdatedBy", fields: [updatedById], references: [id], onDelete: Restrict, onUpdate: Restrict)
 }

@@ -65,6 +65,9 @@ const AUDIT_ENTITY_LABELS = [
   "InventoryBlock",
   "RoomBaseRate",
   "RatePeriod",
+  "ServiceOffering",
+  "CommercialSettings",
+  "Coupon",
 ];
 
 function propertyName(node: ts.Node | undefined) {
@@ -164,6 +167,24 @@ describe("audit entity label exemption", () => {
     expect(
       detects('type E = { entityType: "User" | "RatePeriod"; };', "RatePeriod"),
     ).toBe(false);
+  });
+
+  it("exempts coupon audit labels while retaining coupon SQL and Prisma detection", () => {
+    expect(detects('const e = { entityType: "Coupon" };', "Coupon")).toBe(
+      false,
+    );
+    expect(
+      detects('type E = { entityType: "User" | "Coupon" };', "Coupon"),
+    ).toBe(false);
+    expect(
+      detects(
+        'db.coupon.findMany(); const e = { entityType: "Coupon" };',
+        "Coupon",
+      ),
+    ).toBe(true);
+    expect(detects('const sql = `SELECT * FROM "Coupon"`;', "Coupon")).toBe(
+      true,
+    );
   });
 
   it("still detects Prisma access inside or beside an entityType property", () => {

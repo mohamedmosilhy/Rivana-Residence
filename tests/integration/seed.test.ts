@@ -58,6 +58,10 @@ describe("the one seed (runSeed)", () => {
         base: await client.roomBaseRate.count(),
         periods: await client.ratePeriod.count(),
         blocks: await client.inventoryBlock.count(),
+        services: await client.serviceOffering.count(),
+        coupons: await client.coupon.count(),
+        couponBranches: await client.couponBranch.count(),
+        commercialSettings: await client.commercialSettings.findMany(),
       });
       const before = await state();
       // Invalid credentials also prove the production guard executes first.
@@ -188,8 +192,18 @@ describe("the one seed (runSeed)", () => {
     await rm(mediaRoot, { recursive: true, force: true });
   }, 120_000);
 
-  it("adds nothing fictional without --demo", async () => {
+  it("adds nothing fictional without --demo and preserves the configured VAT", async () => {
+    await client.commercialSettings.update({
+      where: { id: "default" },
+      data: { vatRateBasisPoints: 0 },
+    });
     await seed();
+    expect(await client.serviceOffering.count()).toBe(0);
+    expect(await client.coupon.count()).toBe(0);
+    expect(await client.couponBranch.count()).toBe(0);
+    expect(await client.commercialSettings.findMany()).toMatchObject([
+      { id: "default", vatRateBasisPoints: 0 },
+    ]);
     expect(await client.branch.count({ where: { slug: "demo-giza" } })).toBe(0);
     expect(await client.branch.count()).toBe(1);
     expect(await client.physicalRoom.count()).toBe(0);
@@ -271,9 +285,33 @@ describe("the one seed (runSeed)", () => {
       rates: await client.roomBaseRate.count(),
       periods: await client.ratePeriod.count(),
     });
+    expect(
+      await client.serviceOffering.count({ where: { branchId: giza.id } }),
+    ).toBe(2);
+    expect(
+      await client.serviceOffering.count({
+        where: { branchId: TEST_BRANCH_ID },
+      }),
+    ).toBe(0);
+    expect(await client.coupon.count()).toBe(2);
+    expect(
+      await client.couponBranch.count({ where: { branchId: giza.id } }),
+    ).toBe(2);
+    const commercialState = async () => ({
+      services: await client.serviceOffering.findMany({
+        orderBy: { id: "asc" },
+      }),
+      coupons: await client.coupon.findMany({
+        orderBy: { id: "asc" },
+        include: { branches: true },
+      }),
+      settings: await client.commercialSettings.findMany(),
+    });
+    const commercialBefore = await commercialState();
     const before = await counts();
     lines = [];
     await withDemo();
+    expect(await commercialState()).toEqual(commercialBefore);
     expect(await counts()).toEqual(before);
     expect(lines.join("\n")).toMatch(/demo-giza already exists/);
     await rm(mediaRoot, { recursive: true, force: true });

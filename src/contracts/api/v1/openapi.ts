@@ -1,3 +1,4 @@
+import { Coupon, CouponInput, CouponPatch, CouponList } from "./coupons";
 import { z } from "zod";
 
 import {
@@ -14,6 +15,14 @@ import {
   StaffBranchList,
 } from "./branches";
 import { AvailabilityResult, AvailabilityResponse } from "./availability";
+import { Quote, QuoteRequest, QuoteResponse } from "./quotes";
+import {
+  CommercialSettings,
+  CommercialSettingsInput,
+  ServiceOffering,
+  ServiceOfferingInput,
+  ServiceOfferingList,
+} from "./commercial";
 import { HealthResponse } from "./health";
 import {
   AvailabilityGrid,
@@ -43,6 +52,10 @@ import { API_ROUTES, type ApiRoute } from "./routes";
 
 /** Every named schema, in the order it appears under components. */
 const COMPONENTS: Readonly<Record<string, z.ZodType>> = {
+  Coupon,
+  CouponInput,
+  CouponPatch,
+  CouponList,
   Problem,
   Money,
   Stay,
@@ -50,6 +63,9 @@ const COMPONENTS: Readonly<Record<string, z.ZodType>> = {
   HealthResponse,
   AvailabilityResult,
   AvailabilityResponse,
+  QuoteRequest,
+  Quote,
+  QuoteResponse,
   Image,
   BranchSummary,
   BranchDetail,
@@ -76,6 +92,11 @@ const COMPONENTS: Readonly<Record<string, z.ZodType>> = {
   RateCalendar,
   RatePeriodInput,
   RatePeriodPatch,
+  ServiceOffering,
+  ServiceOfferingList,
+  ServiceOfferingInput,
+  CommercialSettings,
+  CommercialSettingsInput,
 };
 
 function componentSchemas() {

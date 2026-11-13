@@ -17,7 +17,7 @@
 Instant-confirmation booking with correct availability/price/VAT; one place per branch for receptionists; manager stats and price control; fast, accessible, SEO-friendly luxury site; minimize double bookings; room for a future PMS integration; non-technical content management; coupons, WhatsApp offers and feedback.
 
 ## Rules guests and staff notice
-- Prices per unit per night, USD only, entered before VAT; date periods override the base price. One global VAT rate shown separately. Coupons (percent/fixed) reduce the amount before VAT. Breakfast and airport transfer are flat per booking, only if chosen.
+- Prices per unit per night, USD only, entered before VAT; date periods override the base price. One global VAT rate shown separately. Coupons (percent/fixed) reduce the amount before VAT. Breakfast and airport transfer are priced by a unit each branch chooses (per booking, per night, per person, or per person per night, with an optional child price), only if chosen.
 - Phone verification via WhatsApp code for every online booking; Manager/Admin can block a number.
 - Guests *request* cancellation until 24h before check-in; Manager/Admin decides; paid bookings refunded via Paymob.
 - Pay online (Paymob) or at the hotel. Important actions audited. Data kept forever.

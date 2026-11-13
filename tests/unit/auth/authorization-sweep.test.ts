@@ -1,3 +1,4 @@
+import { ManageCoupons } from "@/application/coupons";
 import { describe, expect, it } from "vitest";
 
 import type { StaffPrincipal } from "@/application/auth/ports";
@@ -14,6 +15,8 @@ import {
   UpdateSiteImages,
   UpdateSiteSettings,
 } from "@/application/settings/site-settings";
+import { ManageCommercialSettings } from "@/application/commercial";
+import { ManageServices } from "@/application/services";
 import type { Capability } from "@/domain/auth/capabilities";
 import { roleHasCapability } from "@/domain/auth/capabilities";
 
@@ -76,7 +79,43 @@ const branches = () =>
   });
 const settingsRepo = () => tripwire("settings");
 
+const services = () =>
+  new ManageServices({
+    unitOfWork: tripwire("unitOfWork"),
+    services: tripwire("services"),
+    clock: tripwire("clock"),
+    ids: tripwire("ids"),
+  });
+const commercial = () =>
+  new ManageCommercialSettings({
+    unitOfWork: tripwire("unitOfWork"),
+    settings: tripwire("settings"),
+    clock: tripwire("clock"),
+  });
+
+const coupons = () =>
+  new ManageCoupons({
+    coupons: tripwire("coupons"),
+    unitOfWork: tripwire("unitOfWork"),
+    clock: tripwire("clock"),
+    ids: tripwire("ids"),
+  });
 const CALLS: readonly Call[] = [
+  {
+    name: "coupons.list",
+    capability: "coupons:manage",
+    run: (s) => coupons().list(s, {}),
+  },
+  {
+    name: "coupons.create",
+    capability: "coupons:manage",
+    run: (s) => coupons().create(s, {}),
+  },
+  {
+    name: "coupons.update",
+    capability: "coupons:manage",
+    run: (s) => coupons().update(s, "id", {}),
+  },
   // Rooms and facilities share CatalogCommands / CatalogQueries.
   {
     name: "catalog.create",
@@ -297,6 +336,26 @@ const CALLS: readonly Call[] = [
     run: (s) =>
       new GetAdminOverview(tripwire("reader"), tripwire("clock")).execute(s),
   },
+  {
+    name: "services.list",
+    capability: "pricing:read",
+    run: (s) => services().list(s, "branch-1"),
+  },
+  {
+    name: "services.set",
+    capability: "services:manage",
+    run: (s) => services().set(s, "branch-1", "BREAKFAST", {}),
+  },
+  {
+    name: "commercial.read",
+    capability: "pricing:read",
+    run: (s) => commercial().read(s),
+  },
+  {
+    name: "commercial.update",
+    capability: "tax:manage",
+    run: (s) => commercial().update(s, { vatRateBasisPoints: 1500 }),
+  },
 ];
 
 const editor: StaffPrincipal = {
@@ -343,6 +402,10 @@ describe("authorization sweep across protected commands", () => {
         "settings:edit",
         "branches:manage",
         "inventory:read",
+        "pricing:read",
+        "services:manage",
+        "tax:manage",
+        "coupons:manage",
       ]),
     );
   });
@@ -371,10 +434,21 @@ describe.each(["RECEPTIONIST", "MANAGER"] as const)(
       (call) => !roleHasCapability(role, call.capability),
     );
 
-    it("covers every command except their branch-scoped reads", () => {
+    it("covers every command except their branch-scoped reads and pricing", () => {
+      // M7-T4: both roles hold pricing:read; only a Manager holds
+      // services:manage. Nobody but an Admin holds tax:manage.
       expect(
         CALLS.filter((call) => !denied.includes(call)).map((call) => call.name),
-      ).toEqual(["branches.forStaff", "enquiries.list"]);
+      ).toEqual([
+        ...(role === "MANAGER"
+          ? ["coupons.list", "coupons.create", "coupons.update"]
+          : []),
+        "branches.forStaff",
+        "enquiries.list",
+        "services.list",
+        ...(role === "MANAGER" ? ["services.set"] : []),
+        "commercial.read",
+      ]);
     });
 
     it.each(denied.map((call) => [call.name, call] as const))(

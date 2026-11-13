@@ -28,6 +28,10 @@ export async function resetDatabase(client: PrismaClient) {
   // Every room, facility, and page needs a branch; a migrated database
   // always has the first one, so a reset database has it too.
   await createBranch(client, { id: TEST_BRANCH_ID, slug: "new-cairo" });
+  // Restore the required row that commercial_rules inserts on migration.
+  await client.commercialSettings.create({
+    data: { id: "default", vatRateBasisPoints: 1500 },
+  });
 }
 
 export function createBranch(

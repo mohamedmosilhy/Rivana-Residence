@@ -57,7 +57,7 @@ describe("RateLimiter (M6 AC-8)", () => {
   function setup() {
     const store: PublicRateLimitStore = {
       consume: vi.fn(async () => ({ allowed: true as const })),
-      cleanupExpiredAvailability: vi.fn(async () => 12),
+      cleanupExpired: vi.fn(async () => 12),
     };
     const keys = {
       namespaced: vi.fn((ns: string, address: string) => `rl:${ns}:${address}`),
@@ -121,8 +121,6 @@ describe("RateLimiter (M6 AC-8)", () => {
     expect(
       await new CleanupPublicThrottles(store, { now: () => now }).execute(),
     ).toEqual({ deleted: 12 });
-    expect(store.cleanupExpiredAvailability).toHaveBeenCalledExactlyOnceWith(
-      now,
-    );
+    expect(store.cleanupExpired).toHaveBeenCalledExactlyOnceWith(now);
   });
 });

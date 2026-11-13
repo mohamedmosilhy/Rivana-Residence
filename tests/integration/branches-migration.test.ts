@@ -15,6 +15,7 @@ const migrationsDir = join(__dirname, "../../prisma/migrations");
 const M4_START = "20261106";
 const M5_START = "20261107";
 const M6_START = "20261108";
+const M7_START = "20261111";
 const migrations = readdirSync(migrationsDir, { withFileTypes: true })
   .filter((entry) => entry.isDirectory())
   .map((entry) => entry.name)
@@ -22,7 +23,8 @@ const migrations = readdirSync(migrationsDir, { withFileTypes: true })
 const m3 = migrations.filter((name) => name < M4_START);
 const m4 = migrations.filter((name) => name >= M4_START && name < M5_START);
 const m5 = migrations.filter((name) => name >= M5_START && name < M6_START);
-const m6 = migrations.filter((name) => name >= M6_START);
+const m6 = migrations.filter((name) => name >= M6_START && name < M7_START);
+const m7 = migrations.filter((name) => name >= M7_START);
 
 const base = testDatabaseUrl();
 const scratchName = base.database.replace(/_test$/, "_m4_backfill_test");
@@ -238,6 +240,56 @@ describe("branches_and_staff_roles migration on M3 data", () => {
         )
       ).rows,
     ).toEqual([{ extname: "btree_gist" }]);
+  });
+
+  it("applies commercial_rules to populated M6 data with every existing row unchanged", async () => {
+    expect(m7).toEqual(["20261111120000_commercial_rules"]);
+    await db.query(`
+      INSERT INTO "User" (id,name,email,role,"updatedAt")
+        VALUES ('m7-staff','Staff','staff@example.test','ADMIN',now());
+      INSERT INTO "PhysicalRoom" (id,"branchId","roomTypeId",label,"updatedAt")
+        VALUES ('m7-unit','${DEFAULT_BRANCH_ID}','r1','101',now());
+      INSERT INTO "RoomBaseRate" ("roomTypeId","amountMinor","updatedById","updatedAt")
+        VALUES ('r1',6500,'m7-staff',now());
+      INSERT INTO "RatePeriod" (id,"roomTypeId","startDate","endDate","amountMinor","updatedAt")
+        VALUES ('m7-period','r1','2027-01-01','2027-01-05',7000,now());
+      INSERT INTO "InventoryBlock" (id,"branchId","physicalRoomId","startDate","endDate",reason,"createdById")
+        VALUES ('m7-block','${DEFAULT_BRANCH_ID}','m7-unit','2027-01-01','2027-01-03','OWNER_USE','m7-staff');
+      INSERT INTO "AuditEvent" (id,"actorType","actorId",action,"entityType","entityId","branchId")
+        VALUES ('m7-audit','STAFF','m7-staff','rate.changed','RoomBaseRate','r1','${DEFAULT_BRANCH_ID}');
+    `);
+    const { rows: tables } = await db.query<{ tablename: string }>(
+      "SELECT tablename FROM pg_tables WHERE schemaname='public' ORDER BY tablename",
+    );
+    const snapshot = async () => {
+      const result: Record<string, unknown> = {};
+      for (const { tablename } of tables) {
+        const quoted = '"' + tablename.replaceAll('"', '""') + '"';
+        result[tablename] = (
+          await db.query(
+            `SELECT to_jsonb(t) AS row FROM ${quoted} t ORDER BY to_jsonb(t)::text`,
+          )
+        ).rows;
+      }
+      return result;
+    };
+    const before = await snapshot();
+    await apply(m7);
+    expect(await snapshot()).toEqual(before);
+    expect((await db.query(`SELECT * FROM "CommercialSettings"`)).rows).toEqual(
+      [
+        expect.objectContaining({
+          id: "default",
+          vatRateBasisPoints: 1500,
+          updatedById: null,
+        }),
+      ],
+    );
+    for (const table of ["ServiceOffering", "Coupon", "CouponBranch"]) {
+      expect(
+        (await db.query(`SELECT count(*)::int AS n FROM "${table}"`)).rows,
+      ).toEqual([{ n: 0 }]);
+    }
   });
 
   it("leaves no drift between the migrated database and the Prisma schema", () => {

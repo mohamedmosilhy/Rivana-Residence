@@ -12,6 +12,12 @@ import {
   manageBlocks,
   managePhysicalRooms,
 } from "@/composition/inventory";
+import {
+  manageCoupons,
+  manageCommercialSettings,
+  manageServices,
+  quoteBooking as buildQuoteBooking,
+} from "@/composition/commercial";
 import { getRateCalendar, manageRates } from "@/composition/pricing";
 import { clientAddressFrom, isSameOriginRequest } from "@/composition/http";
 import {
@@ -186,7 +192,49 @@ export function deactivateRatePeriod(staff: StaffPrincipal, id: string) {
   return manageRates().deactivatePeriod(staff, id);
 }
 
+// Services and VAT API (API-S35, S36, A5; spec 0004, M7-T4).
+
+export function listServices(staff: StaffPrincipal, branchId: string) {
+  return manageServices().list(staff, branchId);
+}
+
+export function setService(
+  staff: StaffPrincipal,
+  branchId: string,
+  kind: string,
+  input: unknown,
+) {
+  return manageServices().set(staff, branchId, kind, input);
+}
+
+export function readCommercialSettings(staff: StaffPrincipal) {
+  return manageCommercialSettings().read(staff);
+}
+
+export function updateCommercialSettings(
+  staff: StaffPrincipal,
+  input: unknown,
+) {
+  return manageCommercialSettings().update(staff, input);
+}
+
+// API-P6: uncached public quote; nothing is written, locked, or cached.
+export function quoteBooking(input: unknown) {
+  return buildQuoteBooking().execute(input);
+}
+
 // API-P5: uncached public availability with server-resolved branch identity.
 export function searchPublicAvailability(slug: string, input: unknown) {
   return publicAvailability().execute(slug, input);
 }
+
+// API-S37…S39, audited coupon management.
+export const listCoupons = (staff: StaffPrincipal, input: unknown) =>
+  manageCoupons().list(staff, input);
+export const createCoupon = (staff: StaffPrincipal, input: unknown) =>
+  manageCoupons().create(staff, input);
+export const updateCoupon = (
+  staff: StaffPrincipal,
+  id: string,
+  input: unknown,
+) => manageCoupons().update(staff, id, input);

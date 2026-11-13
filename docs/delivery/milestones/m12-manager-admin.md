@@ -59,11 +59,11 @@ Planned, reviewed, and accepted one task at a time ([agent-workflow.md](../../en
 ## Tasks
 
 1. **Pricing** `/admin/pricing`: per listing base rate, date periods (no overlap; inline server errors), rate calendar (effective price per night).
-2. **Services** `/admin/services`: per branch breakfast and airport transfer price, on/off, description.
+2. **Services** `/admin/services`: per branch breakfast and airport transfer price unit, adult price, optional child price (person units only), on/off, description.
 3. **Coupons** `/admin/coupons`: list with redemption counts, create and edit (code, percent or fixed, validity, limits, branches, active); Managers limited to their branches.
-4. **VAT** in `/admin/settings` (Admin only, Q-05): the Admin types any rate in percent with up to two decimals (for example 5, 6, 15), stored as basis points; empty means not set; a warning that changes apply to new bookings only. Hidden from every other role.
+4. **VAT** in `/admin/settings` (Admin only, Q-05): the Admin types any rate in percent with up to two decimals (for example 5, 6, 15), stored as basis points; it starts at 15% and is never empty; values below 0 or above 100 are refused with an error; a warning that changes apply to new bookings only. Hidden from every other role.
 5. **Reports** `/admin/reports` (API-S40–S42): reservations by status, source, and payment method; room-nights sold and available; occupancy; revenue excluding VAT; VAT; discounts; online payments captured and refunded; cancellations and requests; PMS-entry ages; each figure with its definition and limitations.
-6. **Branches** `/admin/branches`: create, edit, activate and deactivate, online booking switch (refused, with the reason shown, while VAT is unset, WhatsApp is not configured, the check-in time is missing, or the branch has no published bookable listing), map, check-in and check-out times, sync settings.
+6. **Branches** `/admin/branches`: create, edit, activate and deactivate, online booking switch (refused, with the reason shown, while WhatsApp is not configured, the check-in time is missing, or the branch has no published bookable listing), map, check-in and check-out times, sync settings.
 7. **Staff** `/admin/staff`: role and branch assignment (API-A4); last-Admin rule.
 8. **Audit** `/admin/audit` (S43): filters by branch, user, entity, date.
 9. **WhatsApp settings** `/admin/settings/whatsapp` (from M8): polish the minimal screen into the final design; no new behavior.
@@ -72,7 +72,7 @@ Planned, reviewed, and accepted one task at a time ([agent-workflow.md](../../en
 
 1. Managers change prices, services, and coupons only for their branches; VAT and branches are Admin-only; every change is audited with before and after values.
 2. Report figures match the fixture dataset for every definition, and only include the caller's branches.
-3. Turning online booking on is refused with a clear reason when VAT is not set or WhatsApp is not configured; only the Admin sees the VAT setting.
+3. Turning online booking on is refused with a clear reason when WhatsApp is not configured; only the Admin sees the VAT setting.
 4. E2E-M-1/2/4 and E2E-A-1…4 pass; axe clean.
 
 ## Tests

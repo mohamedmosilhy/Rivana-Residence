@@ -53,7 +53,7 @@ Each section states its status: **Implemented** (built and accepted in Phases 1�
 
 - **FR-BR-1** Admin creates, edits, activates, and deactivates branches with the attributes in [branch-model.md](../domain/branch-model.md): content owner, contact, address, map embed, check-in and check-out times, sync reminder settings.
 - **FR-BR-2** Public branch listing shows only `ACTIVE` branches.
-- **FR-BR-3** Each branch has an `onlineBookingEnabled` switch. When it is off, Book Now keeps the honest disabled state. It cannot be turned on while the VAT rate is unset (FR-TAX-1) or WhatsApp is not configured (FR-NTF-5).
+- **FR-BR-3** Each branch has an `onlineBookingEnabled` switch. When it is off, Book Now keeps the honest disabled state. It cannot be turned on while WhatsApp is not configured (FR-NTF-5). The VAT rate is never empty (FR-TAX-1), so it does not gate the switch (Q-05 amended 2026-11-11).
 - **FR-BR-4** Deactivation hides the branch publicly, blocks new reservations, and keeps history manageable.
 
 ## FR-CAT Accommodation catalog — Planned (M4 columns, M5)
@@ -88,23 +88,23 @@ Each section states its status: **Implemented** (built and accepted in Phases 1�
 
 ## FR-SVC Optional services — Planned (M7, UI M10 and M12)
 
-- **FR-SVC-1** Each branch may offer breakfast and airport transportation, each with a flat price per booking and an on or off switch, managed by Manager (assigned branches) and Admin (Q-49).
+- **FR-SVC-1** Each branch may offer breakfast and airport transportation, each with a price unit (per booking, per night, per person, or per person per night), an adult price, an optional child price for the person units, and an on or off switch, managed by Manager (assigned branches) and Admin (Q-49).
 - **FR-SVC-2** Guests may choose services while booking. The final review may offer unchosen services as an optional cross-sell. A service is never added without the guest's explicit choice.
 - **FR-SVC-3** Chosen services are part of the subtotal, the coupon base, and the VAT base (ADR 027).
 - **FR-SVC-4** Approved prices, transfer details (flight number, direction), and post-booking additions are open (Q-56).
 
-## FR-CPN Coupons — Planned (M7, redemption M8, UI M10 and M12)
+## FR-CPN Coupons — Partly implemented (M7-T5 management API; quote M7-T6, redemption M8, UI M10 and M12 planned)
 
-- **FR-CPN-1** Admin, and Managers for codes limited to their branches, create, edit, activate, and deactivate coupon codes (Q-48).
+- **FR-CPN-1** **Implemented API (M7-T5):** Admin, and Managers for non-global codes whose entire nonempty branch list is within their assignments, create, edit, activate, and deactivate coupon codes (Q-48).
 - **FR-CPN-2** A coupon is a percentage or a fixed USD amount; it may have validity dates, a total redemption limit, and a per-phone limit; it is valid at selected branches or all branches.
 - **FR-CPN-3** Guests enter one code per booking; the server validates it in the quote and again in the booking transaction and explains a refusal (CP-1…3).
 - **FR-CPN-4** The discount applies to the whole booking subtotal (accommodation and services) before VAT; a fixed amount never makes the total negative.
 - **FR-CPN-5** Each use is recorded as a redemption with the reservation; limits hold under concurrent bookings. Release on cancellation follows Q-57.
-- **FR-CPN-6** Coupon changes and redemptions are audited. Codes are distributed by WhatsApp broadcasts (FR-MKT), not on the website.
+- **FR-CPN-6** Coupon changes are audited atomically (**implemented M7-T5**); redemptions are audited when added in M8. Codes are distributed by WhatsApp broadcasts (FR-MKT), not on the website.
 
 ## FR-TAX VAT — Planned (M7, UI M10 and M12)
 
-- **FR-TAX-1** Only the Admin sets the VAT percentage, one for all branches, on an Admin-only setting in the dashboard, and may change it at any time (for example 5%, 6%, or 15%; Q-05, Q-45). Until a rate is entered, online booking cannot be enabled. Guests see the line labelled "VAT (n%)".
+- **FR-TAX-1** Only the Admin sets the VAT percentage, one for all branches, on an Admin-only setting in the dashboard, and may change it at any time (for example 5%, 6%, or 15%; Q-05, Q-45). The rate is never empty: it starts at 15% and may be set from 0% to 100%; a value below 0 or above 100 is refused (Q-05 amended 2026-11-11). Guests see the line labelled "VAT (n%)".
 - **FR-TAX-2** VAT is calculated once on the final subtotal after services and the coupon, rounded half-up to the cent, and shown as a separate line at the final review and in confirmations.
 - **FR-TAX-3** Each reservation stores the rate and amount it used; later rate changes never alter it.
 

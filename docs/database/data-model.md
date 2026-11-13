@@ -1,12 +1,12 @@
 # Data model
 
-PostgreSQL is the system of record for content, staff identity, enquiries, promotions (retired), media metadata, and (planned) branches, inventory, prices, services, coupons, VAT, reservations, payments, and marketing consent. Card data is never stored (Paymob hosted checkout, ADR 025). Binary images live in the configured media store (a persistent server directory). Prisma is the migration and persistence adapter, not the domain model; it is imported only under `src/infrastructure/db`.
+PostgreSQL is the system of record for content, staff identity, enquiries, promotions (retired), media metadata, branches, inventory, prices, services, coupons, VAT, and (planned) reservations, payments, and marketing consent. Card data is never stored (Paymob hosted checkout, ADR 025). Binary images live in the configured media store (a persistent server directory). Prisma is the migration and persistence adapter, not the domain model; it is imported only under `src/infrastructure/db`.
 
-The implemented schema is `prisma/schema.prisma` (7 migrations; M4 added `…_staff_roles_enum` and `…_branches_and_staff_roles`, M5 `…_reserve_legacy_branch_slugs`, M6-T3 `…_inventory_and_rates`). Tables marked *planned* are specified here and added by milestone migrations ([migrations-and-seeding.md](./migrations-and-seeding.md)).
+The implemented schema is `prisma/schema.prisma` (8 migrations; M4 added `…_staff_roles_enum` and `…_branches_and_staff_roles`, M5 `…_reserve_legacy_branch_slugs`, M6-T3 `…_inventory_and_rates`, M7-T3 `20261111120000_commercial_rules`). Tables marked *planned* are specified here and added by milestone migrations ([migrations-and-seeding.md](./migrations-and-seeding.md)).
 
 ## Conventions
 
-- IDs are application-generated CUID2 strings (`VARCHAR(32)`); do not mix strategies. The `SiteSettings` singleton uses the fixed key `default`.
+- IDs are application-generated CUID2 strings (`VARCHAR(32)`); do not mix strategies. The `SiteSettings` and `CommercialSettings` singletons use the fixed key `default`.
 - Instants are `timestamptz(3)` in UTC, formatted in the presentation layer. Every Prisma connection sets `-c TimeZone=UTC`, because the pg adapter exchanges instants as zone-less UTC wall time (see `src/infrastructure/db/prisma/client.ts`).
 - Stay dates are `DATE`, never instants (ADR 020). Money is `INTEGER` minor units (cents) with a `currency` column; the currency is USD.
 - Strings are bounded `VARCHAR`s. Room size is `NUMERIC(6,2)` square metres, mapped to `number` at the repository boundary.
@@ -27,7 +27,7 @@ The implemented schema is `prisma/schema.prisma` (7 migrations; M4 added `…_st
 | Branches | `Branch`, `StaffBranchAssignment` | Implemented (M4); edited through the branch admin and API since M5; reserved slugs extended by migration `20261107120000_reserve_legacy_branch_slugs` (M5) |
 | Inventory | `PhysicalRoom`, `InventoryBlock` | Implemented (M6-T3): branch-unique labels, composite ownership FKs (`ON UPDATE/DELETE RESTRICT`), `InventoryBlock_dates_check`, `InventoryBlock_no_overlap` (GiST exclusion over uncancelled blocks per unit) |
 | Pricing | `RoomBaseRate`, `RatePeriod` (M6-T3) | Implemented: positive `INTEGER` cents, explicit `USD`, `RatePeriod_no_overlap` (GiST exclusion over active periods per listing) |
-| Commercial | `ServiceOffering`, `Coupon`, `CouponBranch`, `CommercialSettings` (M7) | Planned |
+| Commercial | `ServiceOffering`, `Coupon`, `CouponBranch`, `CommercialSettings` | Implemented (M7-T3): service price units and child pricing, positive USD amounts, case-insensitive coupon uniqueness and value/window/limit checks, branch joins, singleton VAT 0–10000 basis points inserted at 1500; service and VAT management APIs are implemented (T4), coupon management APIs are implemented (T5); quote composition remains T6 |
 | Reservations | `Reservation`, `ReservationRoom`, `ReservationNight`, `ReservationService`, `CouponRedemption`, `BranchSyncCheckpoint` | Planned (M8) |
 | Payments | `Payment`, `PaymentEvent`, `CancellationRequest` | Planned (M9) |
 | Guests | `Guest` (verified phone profiles, blocking, marketing consent), `PhoneVerification` | Planned (M8) |
@@ -186,7 +186,7 @@ Constraints/indexes: indexes `(status, createdAt desc)` and `createdAt`; field l
 
 Better Auth owns `User`, `Session`, `Account`, and `Verification` schema for its pinned version (1.7.6, migration `20260925141030_auth`). Rivana extends `User` with `role`, `active`, and audit timestamps. Important indexes include unique normalized email (with a lower-case CHECK), unique session token, session expiry, and user foreign keys (cascade). Sessions store no IP address. `LoginThrottle` holds HMAC-keyed failed sign-in counters. Public sign-up is disabled; staff are provisioned with `npm run staff`.
 
-## Operations tables (planned)
+## Operations tables (partly implemented)
 
 ### Changes to existing tables
 
@@ -202,7 +202,9 @@ Better Auth owns `User`, `Session`, `Account`, and `Verification` schema for its
 
 No existing column is renamed or dropped in these milestones.
 
-### New tables (sketch)
+### New tables (implemented and planned sketch)
+
+M4 branch, assignment, and audit tables, M6 inventory and rate tables, and M7-T3 `ServiceOffering`, `Coupon`, `CouponBranch`, and `CommercialSettings` are implemented in `prisma/schema.prisma`. Reservation, redemption, payment, guest, and messaging tables remain planned. The commercial migration adds all foreign keys with `ON UPDATE RESTRICT`; deleting a coupon cascades to its branch joins, while branch and staff references restrict deletion. Coupon branch-list consistency (`allBranches` versus joins) is enforced by the domain and management use case (M7-T5), with coupon and join changes committed alongside audit in one transaction; the database has no trigger for it. Coupon edits lock the parent before reading or replacing branch joins. Scoped list results hydrate coupon and branch data in one statement snapshot.
 
 ```prisma
 enum BranchStatus       { ACTIVE INACTIVE }
@@ -213,6 +215,7 @@ enum PaymentMethod      { PAY_AT_HOTEL PAYMOB }
 enum ReservationPaymentStatus { NOT_REQUIRED AWAITING PAID REFUND_PENDING REFUNDED }
 enum NightRateSource    { BASE PERIOD MANUAL }
 enum ServiceKind        { BREAKFAST AIRPORT_TRANSFER }
+enum ServicePriceUnit   { PER_BOOKING PER_NIGHT PER_PERSON PER_PERSON_PER_NIGHT }   // owner decision 2026-11-11 (Q-49)
 enum CouponKind         { PERCENT FIXED }
 enum PaymentStatus      { INITIATED SUCCEEDED FAILED REFUND_PENDING REFUNDED REFUND_FAILED }
 enum CancellationRequestStatus { OPEN APPROVED REJECTED REFUND_PENDING REFUND_FAILED COMPLETED }
@@ -429,10 +432,14 @@ model PhoneVerification {
   @@index([clientKey, createdAt])
 }
 
-model ReservationService {             // flat price per booking (SV-1…4)
+model ReservationService {             // one line per service with its unit and quantities (SV-1…4)
   reservationId String      @db.VarChar(32)   // → Reservation CASCADE
   kind          ServiceKind
-  priceMinor    Int
+  priceUnit     ServicePriceUnit            // snapshot of the unit used
+  priceMinor    Int                         // adult price used
+  childPriceMinor Int?                      // child price used, null = children not charged
+  adults / children / nights / adultQuantity / childQuantity  Int   // the multipliers that produced amountMinor
+  amountMinor   Int
   details       String?     @db.VarChar(300) // e.g. flight number (Q-56), plain text
   @@id([reservationId, kind])
 }
@@ -441,7 +448,10 @@ model ServiceOffering {
   id          String      @id @db.VarChar(32)
   branchId    String      @db.VarChar(32)
   kind        ServiceKind
-  priceMinor  Int                              // CHECK > 0
+  priceUnit   ServicePriceUnit                 // set by staff, no default
+  priceMinor  Int                              // adult price, CHECK > 0
+  childPriceMinor Int?                         // CHECK > 0 and only for PER_PERSON / PER_PERSON_PER_NIGHT
+  currency    String      @default("USD") @db.Char(3)   // CHECK = 'USD'
   active      Boolean     @default(false)
   description String?     @db.VarChar(300)
   updatedAt / updatedById
@@ -454,6 +464,7 @@ model Coupon {
   kind                   CouponKind
   percentBasisPoints     Int?                          // PERCENT: 1–10000
   amountMinor            Int?                          // FIXED: > 0
+  currency               String     @default("USD") @db.Char(3) // CHECK = 'USD'
   startsAt               DateTime?  @db.Timestamptz(3)
   endsAt                 DateTime?  @db.Timestamptz(3)
   maxRedemptions         Int?
@@ -468,6 +479,7 @@ model CouponBranch {
   couponId String @db.VarChar(32)   // → Coupon CASCADE
   branchId String @db.VarChar(32)   // → Branch RESTRICT
   @@id([couponId, branchId])
+  @@index([branchId])
 }
 
 model CouponRedemption {
@@ -482,7 +494,7 @@ model CouponRedemption {
 
 model CommercialSettings {              // singleton id "default"
   id                 String  @id @db.VarChar(32)
-  vatRateBasisPoints Int?                // 0–10000; entered by the Admin in the dashboard (Q-05); null until then
+  vatRateBasisPoints Int                 // NOT NULL, 0–10000; the migration inserts 1500 (15%); the Admin changes it (Q-05 amended 2026-11-11)
   updatedAt / updatedById
 }
 
@@ -611,11 +623,14 @@ ALTER TABLE "Reservation"     ADD CHECK ("checkOut" > "checkIn");
 ALTER TABLE "ReservationRoom" ADD CHECK ("checkOut" > "checkIn" AND "adults" >= 1 AND "children" >= 0);
 ALTER TABLE "InventoryBlock"  ADD CHECK ("endDate" > "startDate");  -- implemented (M6-T3)
 ALTER TABLE "RatePeriod"      ADD CHECK ("endDate" > "startDate" AND "amountMinor" > 0 AND "currency" = 'USD');  -- implemented (M6-T3)
-ALTER TABLE "ServiceOffering" ADD CHECK ("priceMinor" > 0);
-ALTER TABLE "Coupon"          ADD CHECK (("kind" = 'PERCENT' AND "percentBasisPoints" BETWEEN 1 AND 10000 AND "amountMinor" IS NULL) OR ("kind" = 'FIXED' AND "amountMinor" > 0 AND "percentBasisPoints" IS NULL));
-ALTER TABLE "Coupon"          ADD CHECK ("endsAt" IS NULL OR "startsAt" IS NULL OR "endsAt" > "startsAt");
-CREATE UNIQUE INDEX "Coupon_code_upper_key" ON "Coupon" (upper("code"));
-ALTER TABLE "CommercialSettings" ADD CHECK ("vatRateBasisPoints" IS NULL OR "vatRateBasisPoints" BETWEEN 0 AND 10000);
+ALTER TABLE "ServiceOffering" ADD CHECK ("priceMinor" > 0 AND "currency" = 'USD' AND ("childPriceMinor" IS NULL OR ("childPriceMinor" > 0 AND "priceUnit" IN ('PER_PERSON', 'PER_PERSON_PER_NIGHT')))); -- implemented as two checks (M7-T3)
+ALTER TABLE "Coupon"          ADD CHECK (("kind" = 'PERCENT' AND "percentBasisPoints" IS NOT NULL AND "percentBasisPoints" BETWEEN 1 AND 10000 AND "amountMinor" IS NULL) OR ("kind" = 'FIXED' AND "amountMinor" IS NOT NULL AND "amountMinor" > 0 AND "percentBasisPoints" IS NULL)); -- implemented (M7-T3), explicit nonnull checks prevent SQL UNKNOWN from passing
+ALTER TABLE "Coupon"          ADD CHECK ("currency" = 'USD'); -- implemented (M7-T3)
+ALTER TABLE "Coupon"          ADD CHECK (("maxRedemptions" IS NULL OR "maxRedemptions" >= 1) AND ("maxRedemptionsPerPhone" IS NULL OR "maxRedemptionsPerPhone" >= 1)); -- implemented (M7-T3)
+ALTER TABLE "Coupon"          ADD CHECK ("endsAt" IS NULL OR "startsAt" IS NULL OR "endsAt" > "startsAt"); -- implemented (M7-T3)
+CREATE UNIQUE INDEX "Coupon_code_upper_key" ON "Coupon" (upper("code")); -- implemented (M7-T3)
+ALTER TABLE "CommercialSettings" ADD CHECK ("vatRateBasisPoints" BETWEEN 0 AND 10000); -- implemented (M7-T3), column also NOT NULL
+ALTER TABLE "CommercialSettings" ADD CHECK ("id" = 'default'); -- implemented (M7-T3), migration inserts the singleton at 1500
 ALTER TABLE "Reservation"     ADD CHECK ("status" <> 'AWAITING_PAYMENT' OR ("paymentMethod" = 'PAYMOB' AND "holdExpiresAt" IS NOT NULL));
 ALTER TABLE "Reservation"     ADD CHECK ("totalMinor" IS NULL OR ("totalMinor" = "taxableMinor" + "vatMinor" AND "taxableMinor" = "subtotalMinor" - "discountMinor" AND "discountMinor" >= 0 AND "taxableMinor" >= 0));
 CREATE UNIQUE INDEX "CancellationRequest_one_open" ON "CancellationRequest" ("reservationId") WHERE "status" = 'OPEN';

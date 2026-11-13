@@ -194,7 +194,7 @@ export function BranchForm({
         <TextField
           id={id("onlineBookingEnabled")}
           label="Online booking"
-          hint="Turned on in a later release, once VAT and WhatsApp messaging are set up."
+          hint="Turned on in a later release, once WhatsApp messaging is set up."
           value="Off"
           readOnly
         />

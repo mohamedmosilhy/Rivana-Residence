@@ -2,6 +2,8 @@
 
 Status: **Not started.** Branch: `m8-reservations`. Follow the [milestone loop](./README.md#the-loop-every-milestone-follows).
 
+> **Do this first: [M8-T0, application ports consolidation](#0-prerequisite-task-m8-t0-application-ports-consolidation).** The owner decided on 2026-11-13 that the old shared `src/application/ports/` files move into their modules before any other M8 task starts, so every M8 repository and port is written in the module layout from the start. No other M8 task is planned or started until M8-T0 is accepted.
+
 ## Objective
 
 Every reservation operation through the REST API. A valid **pay-at-hotel** website booking becomes `CONFIRMED` in the transaction that reserves its inventory; invalid, unavailable, blocked, or over-limit bookings create nothing. Confirmation messages (email and WhatsApp) are queued in that same transaction and sent only after commit. Staff create, record, modify, cancel (unpaid), assign, check in and out, mark no-shows, and mark website bookings as entered in the hotel system. Online payment is M9.
@@ -42,14 +44,23 @@ Reservation tables and snapshot, website pay-at-hotel creation with immediate co
 - Broadcasts and feedback messages (M13); consent is only stored.
 - `PENDING` and `DECLINED` statuses: they must not exist anywhere.
 
+## Carried over from M7 (owner notes, 2026-11-13)
+
+Raised in the M7-T6 review and accepted by the owner. The agent who plans the named task includes the item in that task's card.
+
+1. **Verified phone for per phone coupon limits (plan in M8-T5 and M8-T7).** P6 accepts an unverified `phone` today and `CouponRedemptionReader` is a zero adapter. When M8-T7 replaces it with persisted redemptions, honour the per phone coupon limit only for a phone proved by a phone verification token (M8-T5), or stop returning `PHONE_LIMIT_REACHED` on public routes. Otherwise anyone can probe which phone used which coupon, which breaks AC-4 of M7. Add a test that an unverified phone never changes the refusal.
+2. **Slim public listing reader (plan in M8-T7, after M8-T0b).** `QuoteBooking` (and `SearchPublicAvailability`) read the full published room graph through `RoomRepository.listPublished` just to resolve slug, name, accommodation type, and occupancy limits. Add a small port (for example `PublicListingReader` returning id, slug, name, accommodation type, maxAdults, maxChildren) in the owning module and use it in both. No behavior change; the integration tests of P5 and P6 must pass unchanged.
+3. **Redemption count and the coupon row lock.** The zero reader hides a race that M8 must close: take the coupon row lock and count inside the booking transaction (spec 0004, Decision 4; plan it in M8-T7).
+
 ## Task breakdown
 
 Planned, reviewed, and accepted one task at a time ([agent-workflow.md](../../engineering/agent-workflow.md)). Rows are confirmed at milestone open; the numbered **Tasks** below hold the detail.
 
 | Task | Title | Risk | Depends on | Covers (criteria, tests) | Status |
 | --- | --- | --- | --- | --- | --- |
-| M8-T1 | Migration `reservations`: tables, checks, composite FKs, exclusion and idempotency constraints, demo seed | Critical | — | T-DB-6…8; drift check | Not started |
-| M8-T2 | Reservation domain: state machine, invariants R-1…R-10, reference, `PhoneNumber`, verification and per-phone policies | Critical | — | T-LIFE-1…10, T-REF-1…3, T-PHONE-1…4, T-VAL-1…5 | Not started |
+| M8-T0 | Application ports consolidation: move the old shared ports into their modules (refactor, no behavior change) | Medium | M7 | Existing tests unchanged and green; new `ports` boundary test | Not started |
+| M8-T1 | Migration `reservations`: tables, checks, composite FKs, exclusion and idempotency constraints, demo seed | Critical | T0 | T-DB-6…8; drift check | Not started |
+| M8-T2 | Reservation domain: state machine, invariants R-1…R-10, reference, `PhoneNumber`, verification and per-phone policies | Critical | T0 | T-LIFE-1…10, T-REF-1…3, T-PHONE-1…4, T-VAL-1…5 | Not started |
 | M8-T3 | Reservation and guest repositories, unit-of-work binding | Medium | T1 | repository integration tests | Not started |
 | M8-T4 | WhatsApp setup: settings, templates, sender port, provider and fake adapters, test message, minimal Admin screen | Critical | T1 | AC 10; T-WA-1…7 | Not started |
 | M8-T5 | Phone verification: request and confirm, limits, API P9 and P10 | Critical | T2, T3, T4 | AC 7; T-GST (verification) | Not started |
@@ -62,6 +73,28 @@ Planned, reviewed, and accepted one task at a time ([agent-workflow.md](../../en
 | M8-T12 | Sync status and checkpoints API | Medium | T7 | T-SYNCAPI-1…4 | Not started |
 
 ## Tasks
+
+### 0. Prerequisite task (M8-T0): application ports consolidation
+
+Owner decision, 2026-11-13. Written as a task card; the agent still runs the normal Stage 1 plan, waits for approval, and stops for acceptance. It is a refactor: **no behavior, schema, API, or contract change**.
+
+1. **Objective.** Make every application port live with the module that uses it, as the reservation-era modules already do (`src/application/<module>/ports.ts`: `audit`, `branches`, `inventory`, `pricing`, `reservations`, `services`, `commercial`). Retire the two shared files `src/application/ports/repositories.ts` (576 lines) and `src/application/ports/providers.ts` (99 lines), except for the ports that really are shared.
+2. **Why before M8.** M8 adds the largest set of new ports (reservations, guests, notifications, WhatsApp). They should follow one consistent layout, not two, and nothing in M8 should import from the old shared files.
+3. **Scope in.**
+   - Split `repositories.ts` and `providers.ts` into per module `ports.ts` files, with a public `index.ts` where a module has none (dependency rule D-8).
+   - Proposed placement, to be **confirmed in the Stage 1 plan**: `RoomRepository`, `FacilityRepository`, `PageRepository` and their DTOs and inputs go to `content`; `SettingsRepository` to `settings`; `MediaRepository`, `MediaStorage`, `ImageProcessor` and the media types to `media`; `EnquiryRepository` and `ContactDelivery` to `enquiries`; `AdminOverviewReader` to `admin`; `BookingProvider` to `booking`; `CacheInvalidator` to `cache`; `Hasher` to `auth`.
+   - Keep in `src/application/ports/` only what many modules share: `Clock`, `IdGenerator`, and the paging and actor types (`PageRequest`, `PagedResult`, `Actor`) unless the plan finds a better home. The plan lists them explicitly.
+   - Update every import (about 71 files: 33 of `providers`, 45 of `repositories`, plus tests), and the infrastructure adapters that implement the ports.
+   - Update the docs that mention the old location (`docs/architecture/dependency-rules.md`, `docs/engineering/engineering-standards.md`, `docs/learning/04-architecture.md`, and any spec that names the file) with a one line rule: a port lives in the module that consumes it; only truly shared ports live in `src/application/ports/`.
+4. **Scope out.** Any change to a port's methods, names, or meaning; new ports; reservation tables or code; moving ports into `src/domain` (the domain stays free of I/O); renaming modules; unrelated cleanups. If a split needs a signature change, stop and ask.
+5. **Requirements and behavior.** Type only moves: `tsc`, lint, and the whole existing test suite pass unchanged. No runtime difference. Dependency rules D-2 and D-8 hold after the move.
+6. **Architectural considerations.** Application imports only domain and its own ports; a module imports another module's ports only through that module's public files; infrastructure adapters import ports from the owning module; composition is unchanged except for import paths. No cyclic imports between modules (check the shared paging and actor types first, they are the likely cause).
+7. **Expected files.** `src/application/**/ports.ts` and `index.ts` per module, `src/application/ports/` (shrunk to the shared set), `src/infrastructure/**` adapters (imports only), `src/composition/**` (imports only), tests (imports only), the docs listed above, and `eslint` patterns or `tests/unit/architecture/module-boundaries.test.ts` extended so the old CMS modules are covered by D-8 too.
+8. **Dependencies.** M7 accepted and merged. Blocks every other M8 task.
+9. **Acceptance criteria.** (a) `src/application/ports/repositories.ts` is gone and `providers.ts` holds only shared ports, or both are gone with the shared set in one small named file. (b) No file outside the owning module imports a module's port through a deep path. (c) `npm run check`, the full integration suite, and the Chromium E2E suite pass with the same test counts as before, plus the new boundary test. (d) `git diff` shows import and file moves only: no change to any port method, DTO field, SQL, route, or contract, and `docs/api/openapi.json` is unchanged. (e) The docs state the rule.
+10. **Tests.** No new behavior tests. Add one architecture test that fails if `src/application/ports/` grows beyond the agreed shared set or a module imports another module's `ports.ts` directly. Run the full gates.
+11. **Risk tier.** Medium: no money, lock, or authorization logic changes. It touches many files, so the review focuses on "moves only" (the reviewer checks the diff for unintended edits) and on import cycles.
+12. **Sizing note.** If the plan finds it is too large for one sitting, propose splitting by module group (for example content and media first, then settings, enquiries, admin and the rest) and wait for approval. Do not start the split without it.
 
 ### 1. Database (migration `reservations`)
 
@@ -76,7 +109,7 @@ Tables as in [data-model.md](../../database/data-model.md): `WhatsAppSettings` (
 
 1. `CreateWebsiteReservation` (pay at hotel) in one unit of work: idempotency lookup → consume verification token (phone matches, not blocked) → per-phone cap check → expire overdue payment holds for these listings (no-op until M9) → lock listings in id order → availability for each line's units → nightly prices → services → lock coupon row and count redemptions → `QuoteCalculator` → compare with `expectedTotal` (`409 PRICE_CHANGED` with the new quote) → insert reservation `CONFIRMED`, lines, nights, services, redemption → upsert guest (latest name and email; marketing opt-in if ticked, with wording version) → audit → outbox (email and WhatsApp confirmation, staff alert) → commit.
 2. `CreateStaffReservation` (`CONFIRMED`, pay at hotel, optional coupon and services, manual price needs `pricing:override`), `RecordExternalReservation`.
-3. Transitions: `CancelReservation` (staff; unpaid only in M8), `ModifyReservationStay` (re-quote changed nights, services kept, VAT recomputed, old and new totals; Q-19), `UpdateReservationGuest`, `AssignPhysicalRoom`, `CheckIn`, `CheckOut` (early shortening), `MarkNoShow`, `MarkEnteredInHotelSystem` (`reservations:pms-entry`; sets `pmsEnteredAt` once, audited), `ResendManageLink`.
+3. Transitions: `CancelReservation` (staff; unpaid only in M8), `ModifyReservationStay` (re-quote changed nights, services kept, VAT recomputed, old and new totals; Q-19; services with a per night or per person per night unit keep their stored unit and child price and are recomputed for the new nights and guests, per booking services stay unchanged, owner decision 2026-11-11, PR-11), `UpdateReservationGuest`, `AssignPhysicalRoom`, `CheckIn`, `CheckOut` (early shortening), `MarkNoShow`, `MarkEnteredInHotelSystem` (`reservations:pms-entry`; sets `pmsEnteredAt` once, audited), `ResendManageLink`.
 4. Guests: `RequestPhoneVerification`, `ConfirmPhoneVerification`, `SearchGuests`, `GetGuest`, `BlockGuestPhone`, `UnblockGuestPhone`.
 5. Guest access: `GetGuestReservation` (manage token), `ListGuestReservations` and `GetGuestReservationByReference` (guest session).
 6. Sync: `GetSyncStatus`, `RecordSyncCheckpoint` (API only; the reminder UI is M11).

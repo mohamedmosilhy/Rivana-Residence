@@ -1,6 +1,6 @@
 # ADR 020 — Date-only stays, branch time zones, and integer US-dollar money
 
-Status: **Accepted** (2026-10-24). **Amended by [ADR 027](./027-booking-price-composition.md) (2026-11-06):** VAT, coupons, and services enter the price composition, with basis-point percentages rounded half-up once per amount. The VAT rate itself is still open (Q-05). Dates, time zones, and integer US-dollar money below are unchanged.
+Status: **Accepted** (2026-10-24). **Amended by [ADR 027](./027-booking-price-composition.md) (2026-11-06):** VAT, coupons, and services enter the price composition, with basis-point percentages rounded half-up once per amount. The VAT rate starts at 15% and the Admin may set 0% to 100% (Q-05, amended 2026-11-11). Dates, time zones, and integer US-dollar money below are unchanged.
 
 ## Context
 

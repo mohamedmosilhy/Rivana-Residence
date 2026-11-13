@@ -34,6 +34,11 @@ export const PROBLEMS: Readonly<Record<ProblemCode, ProblemDefinition>> = {
     status: 409,
     title: "The requested inventory is unavailable",
   },
+  SERVICE_UNAVAILABLE: {
+    status: 409,
+    title: "This service is not available",
+  },
+  COUPON_INVALID: { status: 422, title: "This coupon cannot be used" },
   REFERENCED: { status: 409, title: "This is still in use" },
   NOT_PUBLISHABLE: { status: 422, title: "This cannot be published yet" },
   RATE_LIMITED: { status: 429, title: "Too many requests" },

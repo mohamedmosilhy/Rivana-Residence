@@ -1,3 +1,10 @@
+import {
+  Coupon,
+  CouponInput,
+  CouponPatch,
+  CouponQuery,
+  CouponList,
+} from "./coupons";
 import type { z } from "zod";
 
 import {
@@ -12,6 +19,7 @@ import {
   StaffBranchList,
 } from "./branches";
 import { AvailabilityQuery, AvailabilityResponse } from "./availability";
+import { QuoteRequest, QuoteResponse } from "./quotes";
 import { HealthResponse } from "./health";
 import {
   Block,
@@ -34,6 +42,13 @@ import {
   RatePeriodPatch,
   RateQuery,
 } from "./pricing";
+import {
+  CommercialSettings,
+  CommercialSettingsInput,
+  ServiceOffering,
+  ServiceOfferingInput,
+  ServiceOfferingList,
+} from "./commercial";
 import { Money } from "./primitives";
 
 /** One documented endpoint. The OpenAPI document is generated from these. */
@@ -138,6 +153,33 @@ export const API_ROUTES: readonly ApiRoute[] = [
       },
     },
     errors: ["INVALID_QUERY", "VALIDATION", "NOT_FOUND", "RATE_LIMITED"],
+  },
+  {
+    method: "post",
+    path: "/api/v1/quotes",
+    operationId: "createQuote",
+    summary:
+      "API-P6. Server computed quote: accommodation for one to five units, requested services, an optional coupon, and VAT. Reads only: no hold, lock, or cache. The client never sends a price.",
+    tag: "Quotes",
+    security: "public",
+    request: QuoteRequest,
+    responses: {
+      200: {
+        description:
+          "The breakdown, or `available: false` with the unavailable line indexes and a null quote. 60 requests per minute per client, and 20 per 10 minutes for requests that send a coupon code.",
+        schema: QuoteResponse,
+      },
+    },
+    errors: [
+      "MALFORMED_JSON",
+      "PAYLOAD_TOO_LARGE",
+      "UNSUPPORTED_MEDIA_TYPE",
+      "VALIDATION",
+      "NOT_FOUND",
+      "COUPON_INVALID",
+      "SERVICE_UNAVAILABLE",
+      "RATE_LIMITED",
+    ],
   },
   {
     method: "get",
@@ -453,6 +495,132 @@ export const API_ROUTES: readonly ApiRoute[] = [
       "FORBIDDEN",
       "CROSS_SITE_REQUEST",
       "NOT_FOUND",
+      "TRY_AGAIN",
+    ],
+  },
+  {
+    method: "get",
+    path: "/api/v1/staff/branches/{id}/services",
+    operationId: "listServices",
+    summary:
+      "API-S35. Both service kinds for a branch; a kind with no offering is inactive with no price. Needs pricing:read in the branch.",
+    tag: "Commercial",
+    security: "staff",
+    responses: {
+      200: {
+        description: "The branch's services.",
+        schema: ServiceOfferingList,
+      },
+    },
+    errors: ["UNAUTHENTICATED", "FORBIDDEN", "NOT_FOUND"],
+  },
+  {
+    method: "put",
+    path: "/api/v1/staff/branches/{id}/services/{kind}",
+    operationId: "setService",
+    summary:
+      "API-S36. Create or replace a branch service offering (services:manage in the branch). Audited; an identical write adds no audit event.",
+    tag: "Commercial",
+    security: "staff",
+    request: ServiceOfferingInput,
+    responses: {
+      200: { description: "The stored offering.", schema: ServiceOffering },
+    },
+    errors: [
+      "UNAUTHENTICATED",
+      "FORBIDDEN",
+      "CROSS_SITE_REQUEST",
+      "NOT_FOUND",
+      "VALIDATION",
+      "TRY_AGAIN",
+    ],
+  },
+  {
+    method: "get",
+    path: "/api/v1/staff/settings/commercial",
+    operationId: "getCommercialSettings",
+    summary: "API-A5. The VAT rate in basis points. Needs pricing:read.",
+    tag: "Commercial",
+    security: "staff",
+    responses: {
+      200: {
+        description: "The commercial settings.",
+        schema: CommercialSettings,
+      },
+    },
+    errors: ["UNAUTHENTICATED", "FORBIDDEN"],
+  },
+  {
+    method: "put",
+    path: "/api/v1/staff/settings/commercial",
+    operationId: "updateCommercialSettings",
+    summary:
+      "API-A5. Set the VAT rate, an integer 0 to 10000 basis points (tax:manage, Admin only). Audited; applies to later quotes only.",
+    tag: "Commercial",
+    security: "staff",
+    request: CommercialSettingsInput,
+    responses: {
+      200: {
+        description: "The commercial settings.",
+        schema: CommercialSettings,
+      },
+    },
+    errors: [
+      "UNAUTHENTICATED",
+      "FORBIDDEN",
+      "CROSS_SITE_REQUEST",
+      "VALIDATION",
+      "TRY_AGAIN",
+    ],
+  },
+
+  {
+    method: "get",
+    path: "/api/v1/staff/coupons",
+    operationId: "listCoupons",
+    summary:
+      "API-S37. Scoped coupon list. Managers see only coupons entirely within their branches, never global coupons. Counts are zero until M8.",
+    tag: "Commercial",
+    security: "staff",
+    query: CouponQuery,
+    responses: { 200: { description: "The scoped page.", schema: CouponList } },
+    errors: ["UNAUTHENTICATED", "FORBIDDEN", "INVALID_QUERY", "VALIDATION"],
+  },
+  {
+    method: "post",
+    path: "/api/v1/staff/coupons",
+    operationId: "createCoupon",
+    summary:
+      "API-S38. Create a coupon (coupons:manage), audited atomically. Managers may choose only assigned branches. Returns Location.",
+    tag: "Commercial",
+    security: "staff",
+    request: CouponInput,
+    responses: { 201: { description: "The created coupon.", schema: Coupon } },
+    errors: [
+      "UNAUTHENTICATED",
+      "FORBIDDEN",
+      "CROSS_SITE_REQUEST",
+      "CONFLICT",
+      "VALIDATION",
+      "TRY_AGAIN",
+    ],
+  },
+  {
+    method: "patch",
+    path: "/api/v1/staff/coupons/{id}",
+    operationId: "updateCoupon",
+    summary:
+      "API-S39. Patch a coupon under its row lock, audited atomically. Code is immutable. Omitted fields retain their values; null clears optional fields. Identical changes add no audit event.",
+    tag: "Commercial",
+    security: "staff",
+    request: CouponPatch,
+    responses: { 200: { description: "The updated coupon.", schema: Coupon } },
+    errors: [
+      "UNAUTHENTICATED",
+      "FORBIDDEN",
+      "CROSS_SITE_REQUEST",
+      "NOT_FOUND",
+      "VALIDATION",
       "TRY_AGAIN",
     ],
   },

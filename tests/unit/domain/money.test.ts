@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { DomainValidationError } from "@/domain/shared/domain-error";
-import { Money } from "@/domain/shared/money";
+import { Money, roundHalfUpDiv } from "@/domain/shared/money";
 
 const usd = (amountMinor: number) =>
   Money.create({ amountMinor, currency: "USD" });
@@ -86,5 +86,43 @@ describe("Money (AC-1 foundation, ADR 020)", () => {
     const amount = Money.create(input);
     input.amountMinor = 999;
     expect(amount.amountMinor).toBe(100);
+  });
+});
+
+describe("roundHalfUpDiv (ADR 027, T-QUOTE-3)", () => {
+  it.each([
+    [0, 10000, 0],
+    [10000, 10000, 1],
+    [15015000, 10000, 1502], // 10010 x 1500 = 1501.5 cents
+    [33333000, 10000, 3333], // 33333 x 1000 = 3333.3 cents
+    [8351250, 10000, 835],
+    [55675 * 1500, 10000, 8351], // 8351.25
+    [1, 2, 1],
+    [1, 3, 0],
+    [2, 3, 1],
+    [5, 10, 1],
+    [4, 10, 0],
+  ])("rounds %i / %i to %i", (n, d, expected) => {
+    expect(roundHalfUpDiv(n, d)).toBe(expected);
+  });
+
+  it("stays exact beyond 2^53 intermediate products", () => {
+    expect(roundHalfUpDiv(Number.MAX_SAFE_INTEGER, 1)).toBe(
+      Number.MAX_SAFE_INTEGER,
+    );
+    expect(roundHalfUpDiv(Number.MAX_SAFE_INTEGER, 2)).toBe(4503599627370496);
+  });
+
+  it.each([
+    [-1, 10],
+    [1, 0],
+    [1, -5],
+    [0.5, 2],
+    [1, 0.5],
+    [NaN, 1],
+    [Infinity, 1],
+    [Number.MAX_SAFE_INTEGER + 1, 1],
+  ])("rejects %s / %s", (n, d) => {
+    expect(() => roundHalfUpDiv(n, d)).toThrow(DomainValidationError);
   });
 });

@@ -173,14 +173,14 @@ describe("public limiter expiry cleanup (M6 AC-8)", () => {
       expired("rl:other-public:hash"),
       expired("rl:availability-extra:hash"),
     ]);
-    expect(await store.cleanupExpiredAvailability(now)).toBe(2);
+    expect(await store.cleanupExpired(now)).toBe(2);
     expect(
       await client.loginThrottle.findMany({ orderBy: { key: "asc" } }),
     ).toEqual(preserved.sort((a, b) => a.key.localeCompare(b.key)));
-    expect(await store.cleanupExpiredAvailability(now)).toBe(0);
+    expect(await store.cleanupExpired(now)).toBe(0);
   });
 
-  it("deletes at most 1,000 rows per invocation", async () => {
+  it("deletes at most 1,000 rows per namespace per invocation", async () => {
     await client.loginThrottle.createMany({
       data: Array.from({ length: 1_005 }, (_, i) => ({
         key: `rl:availability:expired-${i}`,
@@ -189,9 +189,26 @@ describe("public limiter expiry cleanup (M6 AC-8)", () => {
         lockedUntil: null,
       })),
     });
-    expect(await store.cleanupExpiredAvailability(now)).toBe(1_000);
+    expect(await store.cleanupExpired(now)).toBe(1_000);
     expect(await client.loginThrottle.count()).toBe(5);
-    expect(await store.cleanupExpiredAvailability(now)).toBe(5);
+    expect(await store.cleanupExpired(now)).toBe(5);
+  });
+
+  it("bounds each public namespace separately, so quote buckets cannot starve availability", async () => {
+    const rows = (prefix: string, count: number) =>
+      Array.from({ length: count }, (_, i) => ({
+        key: `${prefix}:expired-${i}`,
+        failures: 60,
+        windowStartedAt: new Date(+start - 3_600_000),
+        lockedUntil: null,
+      }));
+    await client.loginThrottle.createMany({
+      data: [...rows("rl:quote", 1_003), ...rows("rl:availability", 4)],
+    });
+    // 1,000 from `quote` plus all 4 from `availability` in one run.
+    expect(await store.cleanupExpired(now)).toBe(1_004);
+    expect(await client.loginThrottle.count()).toBe(3);
+    expect(await store.cleanupExpired(now)).toBe(3);
   });
 
   it("skips a competing admission and cannot reset its live bucket for 20 iterations", async () => {
@@ -215,16 +232,15 @@ describe("public limiter expiry cleanup (M6 AC-8)", () => {
         try {
           await held.promise;
           expect(
-            await new PrismaPublicRateLimitStore(
-              cleaner,
-              clock,
-            ).cleanupExpiredAvailability(now),
+            await new PrismaPublicRateLimitStore(cleaner, clock).cleanupExpired(
+              now,
+            ),
           ).toBe(0);
         } finally {
           release.resolve();
           await admission;
         }
-        expect(await store.cleanupExpiredAvailability(now)).toBe(0);
+        expect(await store.cleanupExpired(now)).toBe(0);
         expect(
           (
             await client.loginThrottle.findUniqueOrThrow({
@@ -248,10 +264,7 @@ describe("public limiter expiry cleanup (M6 AC-8)", () => {
         const pid = deferred<number>();
         const cleaning = cleaner.$transaction(async (tx) => {
           expect(
-            await new PrismaPublicRateLimitStore(
-              tx,
-              clock,
-            ).cleanupExpiredAvailability(now),
+            await new PrismaPublicRateLimitStore(tx, clock).cleanupExpired(now),
           ).toBe(1);
           held.resolve();
           await release.promise;

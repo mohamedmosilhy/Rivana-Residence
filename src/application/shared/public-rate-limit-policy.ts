@@ -8,6 +8,25 @@ export const AVAILABILITY_RATE_LIMIT = {
   rule: { maxFailures: 60, windowMs: 60_000, lockMs: 60_000 },
 } as const;
 
+/** API-P6: every quote request, with or without a coupon code. */
+export const QUOTE_RATE_LIMIT = {
+  name: "quote",
+  rule: { maxFailures: 60, windowMs: 60_000, lockMs: 60_000 },
+} as const;
+
+/** API-P6: extra limit for requests that send a code, to slow code guessing. */
+export const QUOTE_COUPON_RATE_LIMIT = {
+  name: "quote-coupon",
+  rule: { maxFailures: 20, windowMs: 600_000, lockMs: 600_000 },
+} as const;
+
+/** Every public limiter namespace; cleanup prunes the expired buckets of each. */
+export const PUBLIC_RATE_LIMITS = [
+  AVAILABILITY_RATE_LIMIT,
+  QUOTE_RATE_LIMIT,
+  QUOTE_COUPON_RATE_LIMIT,
+] as const;
+
 export const PUBLIC_THROTTLE_CLEANUP_LIMIT = 1_000;
 
 /** Called with the bucket locked. Denials never extend a window or lock. */

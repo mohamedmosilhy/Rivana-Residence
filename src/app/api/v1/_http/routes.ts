@@ -224,7 +224,17 @@ export function createRoutes(deps: HttpDependencies) {
   /** No principal. Optional per-client rate limit. */
   function publicRoute<Body = undefined, Query = undefined>(
     options: RouteOptions<Body, Query> &
-      Readonly<{ rateLimit?: Readonly<{ name: string; rule: ThrottleRule }> }>,
+      Readonly<{
+        rateLimit?: Readonly<{ name: string; rule: ThrottleRule }>;
+        /**
+         * A second limit chosen from the parsed body (for example only when a
+         * coupon code is sent). Runs after the body is validated, and takes
+         * the same 429 path as `rateLimit`.
+         */
+        rateLimitAfterBody?: (
+          body: Body,
+        ) => Readonly<{ name: string; rule: ThrottleRule }> | null;
+      }>,
     handler: (context: BaseContext<Body, Query>) => Promise<HandlerResult>,
   ): RouteHandler {
     return (request: Request, context?: NextContext) =>
@@ -242,6 +252,15 @@ export function createRoutes(deps: HttpDependencies) {
           }
         }
         const { body, query } = await input(request, options, state.requestId);
+        const extra = options.rateLimitAfterBody?.(body);
+        if (extra) {
+          const outcome = await deps.rateLimit(extra.name, extra.rule, request);
+          if (!outcome.allowed) {
+            refuse("RATE_LIMITED", state.requestId, {
+              retryAfter: outcome.retryAfterSeconds,
+            });
+          }
+        }
         return handler({
           request,
           requestId: state.requestId,

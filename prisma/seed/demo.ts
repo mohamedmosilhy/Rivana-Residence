@@ -102,6 +102,71 @@ export async function seedDemoInventory(client: PrismaClient) {
   });
 }
 
+/** M7 commercial fixtures for new and existing demo branches only. */
+export async function seedDemoCommercial(client: PrismaClient) {
+  return client.$transaction(async (tx) => {
+    const branch = await tx.branch.findUniqueOrThrow({
+      where: { slug: DEMO_BRANCH_SLUG },
+      select: { id: true },
+    });
+    const offerings = await tx.serviceOffering.createMany({
+      data: [
+        {
+          id: "zpcjlpacqrgstnaqwvkbbgxa",
+          branchId: branch.id,
+          kind: "BREAKFAST",
+          priceUnit: "PER_PERSON_PER_NIGHT",
+          priceMinor: 1000,
+          childPriceMinor: 500,
+          active: true,
+          description:
+            "Fictional demo breakfast prices, USD 10 adult / USD 5 child.",
+        },
+        {
+          id: "vyxzpjrqblkqwznstafmgcde",
+          branchId: branch.id,
+          kind: "AIRPORT_TRANSFER",
+          priceUnit: "PER_BOOKING",
+          priceMinor: 3000,
+          active: true,
+          description: "Fictional demo transfer price, USD 30 per booking.",
+        },
+      ],
+      skipDuplicates: true,
+    });
+    let created = offerings.count;
+    for (const fixture of [
+      {
+        id: "qnstbvgcfalkrmwxpzhedjua",
+        code: "DEMO_PERCENT",
+        kind: "PERCENT" as const,
+        percentBasisPoints: 1000,
+        description: "Fictional demo coupon, 10 percent at demo-giza only.",
+      },
+      {
+        id: "pxwkqbjvntcsgzlafmherdua",
+        code: "DEMO_FIXED",
+        kind: "FIXED" as const,
+        amountMinor: 1500,
+        description: "Fictional demo coupon, USD 15 at demo-giza only.",
+      },
+    ]) {
+      // Do not restore edited values or branch links. A conflicting code
+      // owned by another record fails the transaction, never adopts that code.
+      if (await tx.coupon.findUnique({ where: { id: fixture.id } })) continue;
+      await tx.coupon.create({
+        data: {
+          ...fixture,
+          allBranches: false,
+          branches: { create: { branchId: branch.id } },
+        },
+      });
+      created += 1;
+    }
+    return { created };
+  });
+}
+
 // The photos the demo uses, all from the real seeded library.
 const DEMO_PHOTOS = [
   "exteriorWide",
@@ -130,8 +195,8 @@ function ok<T>(
  * media library (the demo only needs to prove the features work).
  *
  * M6 units and rates run separately via seedDemoInventory, including for
- * existing branches. Later milestones add services and coupons in M7,
- * guests and reservations in M8 and M9, each with a test.
+ * existing branches. M7 services and coupons run through seedDemoCommercial. Later milestones
+ * add guests and reservations in M8 and M9, each with a test.
  * Returns whether it created the branch; an existing one is left alone.
  */
 export async function seedDemo(

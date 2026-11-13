@@ -58,3 +58,31 @@ export class Money {
     });
   }
 }
+
+/**
+ * Integer division rounded half up, for nonnegative values only (ADR 027).
+ * The division uses BigInt, so no floating point is involved: 1501.5 becomes
+ * 1502 and 3333.3 becomes 3333. Both inputs must already be safe integers;
+ * callers that multiply first (the quote calculator) form the product with
+ * BigInt and check it before calling.
+ */
+export function roundHalfUpDiv(numerator: number, denominator: number): number {
+  if (
+    !Number.isSafeInteger(numerator) ||
+    numerator < 0 ||
+    !Number.isSafeInteger(denominator) ||
+    denominator <= 0
+  ) {
+    throw new DomainValidationError("The division input is invalid.", [
+      {
+        path: "division",
+        message:
+          "Use a nonnegative safe integer numerator and a positive safe integer denominator.",
+      },
+    ]);
+  }
+  // The result never exceeds the numerator, so it is always a safe integer.
+  return Number(
+    (2n * BigInt(numerator) + BigInt(denominator)) / (2n * BigInt(denominator)),
+  );
+}

@@ -177,7 +177,7 @@ Acceptance criteria (AC) are written so they can become tests. Stories for the w
 **US-A1 Manage branches.** As an admin, I create branches with their content, contact, map, and check-in time, and switch online booking on or off.
 - AC1: A branch with booking off still shows its site, with the honest disabled Book Now.
 - AC2: Deactivation behaves as in the branch model.
-- AC3: Online booking cannot be switched on while the VAT rate is unset.
+- AC3: The VAT rate is never empty (it starts at 15%); the Admin can set 0% to 100%, and a value below 0 or above 100 is refused (Q-05 amended 2026-11-11).
 
 **US-A2 Manage staff access.** As an admin, I create staff with roles and assign them to branches.
 - AC1: Receptionists and managers can access only their assigned branches.

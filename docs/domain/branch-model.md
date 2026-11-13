@@ -26,7 +26,7 @@ Status: design accepted 2026-10-24 (ADR 017) and extended on 2026-11-06 (ADR 026
 | `name` | "Rivana Residence New Cairo" |
 | `summary` | Short public description |
 | `status` | `ACTIVE` or `INACTIVE` |
-| `onlineBookingEnabled` | If false, Book Now for this branch keeps today's disabled behavior, while staff can still record reservations. Cannot be turned on while the VAT rate is unset (TX-1), WhatsApp is not configured (Q-67; verification codes need it), or `checkInTime` is missing |
+| `onlineBookingEnabled` | If false, Book Now for this branch keeps today's disabled behavior, while staff can still record reservations. Cannot be turned on while WhatsApp is not configured (Q-67; verification codes need it), or `checkInTime` is missing |
 | `timeZone` | IANA zone, default `Africa/Cairo`; defines the branch's "today" |
 | `currency` | `USD` (one currency for all branches) |
 | Contact | `phone`, `email`, `addressLine1/2`, `city`, `country`, `latitude`, `longitude` |
