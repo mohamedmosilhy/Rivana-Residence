@@ -12,6 +12,9 @@ import { PrismaServiceOfferingRepository } from "@/infrastructure/db/prisma/repo
 import { PrismaReservationUnitOfWork } from "@/infrastructure/db/prisma/unit-of-work";
 import { Cuid2IdGenerator } from "@/infrastructure/ids/cuid2-id-generator";
 
+import { ManageCoupons, type CouponContext } from "@/application/coupons";
+import { PrismaCouponRepository } from "@/infrastructure/db/prisma/repositories/reservations/commercial/coupon-repository";
+
 const clock = { now: () => new Date() };
 
 export function manageServices() {
@@ -42,5 +45,21 @@ export function manageCommercialSettings() {
     ),
     settings: new PrismaCommercialSettingsRepository(client),
     clock,
+  });
+}
+
+export function manageCoupons() {
+  const client = getPrisma();
+  return new ManageCoupons({
+    unitOfWork: new PrismaReservationUnitOfWork<CouponContext>(
+      client,
+      (transaction) => ({
+        coupons: new PrismaCouponRepository(transaction),
+        audit: new PrismaAuditLog(transaction),
+      }),
+    ),
+    coupons: new PrismaCouponRepository(client),
+    clock,
+    ids: new Cuid2IdGenerator(),
   });
 }

@@ -25,6 +25,20 @@ type ServiceSnapshot = Readonly<{
   active: boolean;
 }>;
 
+type CouponSnapshot = Readonly<{
+  code: string;
+  kind: "PERCENT" | "FIXED";
+  percentBasisPoints: number | null;
+  amount: AuditMoney | null;
+  startsAt: string | null;
+  endsAt: string | null;
+  maxRedemptions: number | null;
+  maxRedemptionsPerPhone: number | null;
+  allBranches: boolean;
+  branchIds: readonly string[];
+  active: boolean;
+}>;
+
 /** Each action and the exact shape of its `changes`. */
 export type AuditChanges = {
   "staff.role-changed": RoleChange;
@@ -91,6 +105,16 @@ export type AuditChanges = {
     descriptionChanged: boolean;
   }>;
   /** The VAT rate changed under the settings row lock (M7-T4). */
+  "coupon.create": Readonly<{
+    before: null;
+    after: CouponSnapshot;
+    descriptionChanged: boolean;
+  }>;
+  "coupon.update": Readonly<{
+    before: CouponSnapshot;
+    after: CouponSnapshot;
+    descriptionChanged: boolean;
+  }>;
   "commercial.update": Readonly<{
     vatRateBasisPoints: Readonly<{ from: number; to: number }>;
   }>;
@@ -112,7 +136,8 @@ export type AuditEvent<A extends AuditAction = AuditAction> = Readonly<{
     | "RoomBaseRate"
     | "RatePeriod"
     | "ServiceOffering"
-    | "CommercialSettings";
+    | "CommercialSettings"
+    | "Coupon";
   entityId: string;
   branchId: string | null;
   reason: string | null;

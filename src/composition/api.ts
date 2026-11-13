@@ -13,6 +13,7 @@ import {
   managePhysicalRooms,
 } from "@/composition/inventory";
 import {
+  manageCoupons,
   manageCommercialSettings,
   manageServices,
 } from "@/composition/commercial";
@@ -220,3 +221,14 @@ export function updateCommercialSettings(
 export function searchPublicAvailability(slug: string, input: unknown) {
   return publicAvailability().execute(slug, input);
 }
+
+// API-S37…S39, audited coupon management.
+export const listCoupons = (staff: StaffPrincipal, input: unknown) =>
+  manageCoupons().list(staff, input);
+export const createCoupon = (staff: StaffPrincipal, input: unknown) =>
+  manageCoupons().create(staff, input);
+export const updateCoupon = (
+  staff: StaffPrincipal,
+  id: string,
+  input: unknown,
+) => manageCoupons().update(staff, id, input);

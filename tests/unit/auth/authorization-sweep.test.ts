@@ -1,3 +1,4 @@
+import { ManageCoupons } from "@/application/coupons";
 import { describe, expect, it } from "vitest";
 
 import type { StaffPrincipal } from "@/application/auth/ports";
@@ -92,7 +93,29 @@ const commercial = () =>
     clock: tripwire("clock"),
   });
 
+const coupons = () =>
+  new ManageCoupons({
+    coupons: tripwire("coupons"),
+    unitOfWork: tripwire("unitOfWork"),
+    clock: tripwire("clock"),
+    ids: tripwire("ids"),
+  });
 const CALLS: readonly Call[] = [
+  {
+    name: "coupons.list",
+    capability: "coupons:manage",
+    run: (s) => coupons().list(s, {}),
+  },
+  {
+    name: "coupons.create",
+    capability: "coupons:manage",
+    run: (s) => coupons().create(s, {}),
+  },
+  {
+    name: "coupons.update",
+    capability: "coupons:manage",
+    run: (s) => coupons().update(s, "id", {}),
+  },
   // Rooms and facilities share CatalogCommands / CatalogQueries.
   {
     name: "catalog.create",
@@ -382,6 +405,7 @@ describe("authorization sweep across protected commands", () => {
         "pricing:read",
         "services:manage",
         "tax:manage",
+        "coupons:manage",
       ]),
     );
   });
@@ -416,6 +440,9 @@ describe.each(["RECEPTIONIST", "MANAGER"] as const)(
       expect(
         CALLS.filter((call) => !denied.includes(call)).map((call) => call.name),
       ).toEqual([
+        ...(role === "MANAGER"
+          ? ["coupons.list", "coupons.create", "coupons.update"]
+          : []),
         "branches.forStaff",
         "enquiries.list",
         "services.list",

@@ -27,7 +27,7 @@ The implemented schema is `prisma/schema.prisma` (8 migrations; M4 added `…_st
 | Branches | `Branch`, `StaffBranchAssignment` | Implemented (M4); edited through the branch admin and API since M5; reserved slugs extended by migration `20261107120000_reserve_legacy_branch_slugs` (M5) |
 | Inventory | `PhysicalRoom`, `InventoryBlock` | Implemented (M6-T3): branch-unique labels, composite ownership FKs (`ON UPDATE/DELETE RESTRICT`), `InventoryBlock_dates_check`, `InventoryBlock_no_overlap` (GiST exclusion over uncancelled blocks per unit) |
 | Pricing | `RoomBaseRate`, `RatePeriod` (M6-T3) | Implemented: positive `INTEGER` cents, explicit `USD`, `RatePeriod_no_overlap` (GiST exclusion over active periods per listing) |
-| Commercial | `ServiceOffering`, `Coupon`, `CouponBranch`, `CommercialSettings` | Implemented (M7-T3): service price units and child pricing, positive USD amounts, case-insensitive coupon uniqueness and value/window/limit checks, branch joins, singleton VAT 0–10000 basis points inserted at 1500; management APIs and quote composition remain planned for T4–T6 |
+| Commercial | `ServiceOffering`, `Coupon`, `CouponBranch`, `CommercialSettings` | Implemented (M7-T3): service price units and child pricing, positive USD amounts, case-insensitive coupon uniqueness and value/window/limit checks, branch joins, singleton VAT 0–10000 basis points inserted at 1500; service and VAT management APIs are implemented (T4), coupon management APIs are implemented (T5); quote composition remains T6 |
 | Reservations | `Reservation`, `ReservationRoom`, `ReservationNight`, `ReservationService`, `CouponRedemption`, `BranchSyncCheckpoint` | Planned (M8) |
 | Payments | `Payment`, `PaymentEvent`, `CancellationRequest` | Planned (M9) |
 | Guests | `Guest` (verified phone profiles, blocking, marketing consent), `PhoneVerification` | Planned (M8) |
@@ -204,7 +204,7 @@ No existing column is renamed or dropped in these milestones.
 
 ### New tables (implemented and planned sketch)
 
-M4 branch, assignment, and audit tables, M6 inventory and rate tables, and M7-T3 `ServiceOffering`, `Coupon`, `CouponBranch`, and `CommercialSettings` are implemented in `prisma/schema.prisma`. Reservation, redemption, payment, guest, and messaging tables remain planned. The commercial migration adds all foreign keys with `ON UPDATE RESTRICT`; deleting a coupon cascades to its branch joins, while branch and staff references restrict deletion. Coupon branch-list consistency (`allBranches` versus joins) will be enforced by the domain and management use case in T5; the database has no trigger for it.
+M4 branch, assignment, and audit tables, M6 inventory and rate tables, and M7-T3 `ServiceOffering`, `Coupon`, `CouponBranch`, and `CommercialSettings` are implemented in `prisma/schema.prisma`. Reservation, redemption, payment, guest, and messaging tables remain planned. The commercial migration adds all foreign keys with `ON UPDATE RESTRICT`; deleting a coupon cascades to its branch joins, while branch and staff references restrict deletion. Coupon branch-list consistency (`allBranches` versus joins) is enforced by the domain and management use case (M7-T5), with coupon and join changes committed alongside audit in one transaction; the database has no trigger for it. Coupon edits lock the parent before reading or replacing branch joins. Scoped list results hydrate coupon and branch data in one statement snapshot.
 
 ```prisma
 enum BranchStatus       { ACTIVE INACTIVE }

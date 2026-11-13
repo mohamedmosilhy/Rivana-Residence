@@ -1,3 +1,5 @@
+import { ManageCoupons, type CouponContext } from "@/application/coupons";
+import { PrismaCouponRepository } from "@/infrastructure/db/prisma/repositories/reservations/commercial/coupon-repository";
 import type { AuditLog } from "@/application/audit";
 import {
   ManageCommercialSettings,
@@ -62,6 +64,19 @@ export function commercialUseCases(
 ) {
   const clock = { now: () => new Date() };
   return {
+    coupons: new ManageCoupons({
+      unitOfWork: withBackendProbe<CouponContext>(
+        client,
+        options,
+        (transaction, audit) => ({
+          coupons: new PrismaCouponRepository(transaction),
+          audit,
+        }),
+      ),
+      coupons: new PrismaCouponRepository(client),
+      clock,
+      ids: new Cuid2IdGenerator(),
+    }),
     services: new ManageServices({
       unitOfWork: withBackendProbe<ServiceContext>(
         client,

@@ -12,3 +12,10 @@ export {
   type CouponValidation,
   type CouponValue,
 } from "./coupon-policy";
+export {
+  parseCouponInput,
+  parseCouponPatch,
+  couponInputData,
+  type CouponInput,
+  type CouponPatch,
+} from "./coupon-schema";

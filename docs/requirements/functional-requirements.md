@@ -93,14 +93,14 @@ Each section states its status: **Implemented** (built and accepted in Phases 1�
 - **FR-SVC-3** Chosen services are part of the subtotal, the coupon base, and the VAT base (ADR 027).
 - **FR-SVC-4** Approved prices, transfer details (flight number, direction), and post-booking additions are open (Q-56).
 
-## FR-CPN Coupons — Planned (M7, redemption M8, UI M10 and M12)
+## FR-CPN Coupons — Partly implemented (M7-T5 management API; quote M7-T6, redemption M8, UI M10 and M12 planned)
 
-- **FR-CPN-1** Admin, and Managers for codes limited to their branches, create, edit, activate, and deactivate coupon codes (Q-48).
+- **FR-CPN-1** **Implemented API (M7-T5):** Admin, and Managers for non-global codes whose entire nonempty branch list is within their assignments, create, edit, activate, and deactivate coupon codes (Q-48).
 - **FR-CPN-2** A coupon is a percentage or a fixed USD amount; it may have validity dates, a total redemption limit, and a per-phone limit; it is valid at selected branches or all branches.
 - **FR-CPN-3** Guests enter one code per booking; the server validates it in the quote and again in the booking transaction and explains a refusal (CP-1…3).
 - **FR-CPN-4** The discount applies to the whole booking subtotal (accommodation and services) before VAT; a fixed amount never makes the total negative.
 - **FR-CPN-5** Each use is recorded as a redemption with the reservation; limits hold under concurrent bookings. Release on cancellation follows Q-57.
-- **FR-CPN-6** Coupon changes and redemptions are audited. Codes are distributed by WhatsApp broadcasts (FR-MKT), not on the website.
+- **FR-CPN-6** Coupon changes are audited atomically (**implemented M7-T5**); redemptions are audited when added in M8. Codes are distributed by WhatsApp broadcasts (FR-MKT), not on the website.
 
 ## FR-TAX VAT — Planned (M7, UI M10 and M12)
 

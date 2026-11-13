@@ -1,3 +1,10 @@
+import {
+  Coupon,
+  CouponInput,
+  CouponPatch,
+  CouponQuery,
+  CouponList,
+} from "./coupons";
 import type { z } from "zod";
 
 import {
@@ -534,6 +541,57 @@ export const API_ROUTES: readonly ApiRoute[] = [
       "UNAUTHENTICATED",
       "FORBIDDEN",
       "CROSS_SITE_REQUEST",
+      "VALIDATION",
+      "TRY_AGAIN",
+    ],
+  },
+
+  {
+    method: "get",
+    path: "/api/v1/staff/coupons",
+    operationId: "listCoupons",
+    summary:
+      "API-S37. Scoped coupon list. Managers see only coupons entirely within their branches, never global coupons. Counts are zero until M8.",
+    tag: "Commercial",
+    security: "staff",
+    query: CouponQuery,
+    responses: { 200: { description: "The scoped page.", schema: CouponList } },
+    errors: ["UNAUTHENTICATED", "FORBIDDEN", "INVALID_QUERY", "VALIDATION"],
+  },
+  {
+    method: "post",
+    path: "/api/v1/staff/coupons",
+    operationId: "createCoupon",
+    summary:
+      "API-S38. Create a coupon (coupons:manage), audited atomically. Managers may choose only assigned branches. Returns Location.",
+    tag: "Commercial",
+    security: "staff",
+    request: CouponInput,
+    responses: { 201: { description: "The created coupon.", schema: Coupon } },
+    errors: [
+      "UNAUTHENTICATED",
+      "FORBIDDEN",
+      "CROSS_SITE_REQUEST",
+      "CONFLICT",
+      "VALIDATION",
+      "TRY_AGAIN",
+    ],
+  },
+  {
+    method: "patch",
+    path: "/api/v1/staff/coupons/{id}",
+    operationId: "updateCoupon",
+    summary:
+      "API-S39. Patch a coupon under its row lock, audited atomically. Code is immutable. Omitted fields retain their values; null clears optional fields. Identical changes add no audit event.",
+    tag: "Commercial",
+    security: "staff",
+    request: CouponPatch,
+    responses: { 200: { description: "The updated coupon.", schema: Coupon } },
+    errors: [
+      "UNAUTHENTICATED",
+      "FORBIDDEN",
+      "CROSS_SITE_REQUEST",
+      "NOT_FOUND",
       "VALIDATION",
       "TRY_AGAIN",
     ],

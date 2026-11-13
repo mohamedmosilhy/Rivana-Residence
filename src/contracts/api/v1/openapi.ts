@@ -1,3 +1,4 @@
+import { Coupon, CouponInput, CouponPatch, CouponList } from "./coupons";
 import { z } from "zod";
 
 import {
@@ -50,6 +51,10 @@ import { API_ROUTES, type ApiRoute } from "./routes";
 
 /** Every named schema, in the order it appears under components. */
 const COMPONENTS: Readonly<Record<string, z.ZodType>> = {
+  Coupon,
+  CouponInput,
+  CouponPatch,
+  CouponList,
   Problem,
   Money,
   Stay,
