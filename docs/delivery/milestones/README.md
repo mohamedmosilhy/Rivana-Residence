@@ -28,8 +28,9 @@ A short request such as "Start milestone 6 using docs/delivery/milestones/README
 1. Open the brief for that milestone from the table above and use the branch named for it in [Extra lines per milestone](#2-extra-lines-per-milestone). Create the branch from `main` if it does not exist (every accepted milestone is merged into `main`).
 2. Run the **milestone open** steps (0–4 below): check the blocking questions, read, write the spec with `/architect`, confirm the brief's **Task breakdown**. Then stop for the owner's approval of the spec and the task breakdown.
 3. After approval, run **one task at a time** through the 7-stage task lifecycle (step 5). Each task stops twice: for plan approval before code, and for acceptance after the review package.
-4. Apply the milestone's line in [Extra lines per milestone](#2-extra-lines-per-milestone). If it names something the owner must provide (keys, wording, templates) and it is not there, stop and ask.
-5. Never commit, push, or merge outside the Git rules, and never start the next task or milestone without the owner's explicit approval.
+4. **Milestone 8 only:** the first task is [M8-T0, application ports consolidation](./m8-reservations.md#0-prerequisite-task-m8-t0-application-ports-consolidation) (owner decision 2026-11-13). Plan and finish it before planning M8-T1 or any other M8 task.
+5. Apply the milestone's line in [Extra lines per milestone](#2-extra-lines-per-milestone). If it names something the owner must provide (keys, wording, templates) and it is not there, stop and ask.
+6. Never commit, push, or merge outside the Git rules, and never start the next task or milestone without the owner's explicit approval.
 
 ## The loop every milestone follows
 

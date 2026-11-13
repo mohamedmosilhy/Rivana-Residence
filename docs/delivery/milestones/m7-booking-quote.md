@@ -117,4 +117,4 @@ The worked examples' API responses; audit rows for each change type; the rate-li
 
 ## Handoff
 
-Close the milestone ([README steps 8–15](./README.md#the-loop-every-milestone-follows)), report, then stop. M8 has not started.
+Close the milestone ([README steps 8–15](./README.md#the-loop-every-milestone-follows)), report, then stop. M8 has not started. **Before any other M8 work, the owner wants [M8-T0, application ports consolidation](./m8-reservations.md#0-prerequisite-task-m8-t0-application-ports-consolidation) done first** (decision 2026-11-13).
