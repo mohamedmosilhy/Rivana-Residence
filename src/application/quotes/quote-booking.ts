@@ -1,4 +1,4 @@
-import type { Clock } from "@/application/ports/providers";
+import type { Clock } from "@/application/shared/providers";
 import {
   couponInvalid,
   failure,
@@ -36,7 +36,7 @@ import {
 import type { AccommodationType } from "@/domain/shared/types";
 import { localDateAt } from "@/domain/shared/zoned-time";
 
-import type { QuoteBookingReaders } from "./ports";
+import type { QuoteBookingReaders } from "./quote-readers";
 
 export type QuoteLineView = Readonly<{
   roomSlug: string;

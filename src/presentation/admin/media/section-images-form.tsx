@@ -2,7 +2,7 @@
 
 import { useActionState, useEffect, useState } from "react";
 
-import type { MediaOption } from "@/application/ports/repositories";
+import type { MediaOption } from "@/application/media/ports";
 import type { SectionMediaSlot } from "@/domain/media/media-asset";
 import {
   ImageList,

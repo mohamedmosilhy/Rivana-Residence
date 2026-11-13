@@ -9,8 +9,8 @@ import {
 } from "@/application/branches";
 import type { StaffPrincipal } from "@/application/auth/ports";
 import { CACHE_TAGS } from "@/application/cache/cache-tags";
-import type { CacheInvalidator } from "@/application/ports/providers";
-import type { PageDto, PageRepository } from "@/application/ports/repositories";
+import type { CacheInvalidator } from "@/application/cache/ports";
+import type { PageDto, PageRepository } from "@/application/content/ports";
 import {
   failure,
   invalid,

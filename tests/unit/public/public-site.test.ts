@@ -6,7 +6,7 @@ import {
   type FormTokens,
 } from "@/application/enquiries/submit-enquiry";
 import { publicBranch, publicImage } from "@/application/public/view-models";
-import type { EnquiryRepository } from "@/application/ports/repositories";
+import type { EnquiryRepository } from "@/application/enquiries/ports";
 import { success } from "@/application/shared/result";
 import { HmacFormTokens } from "@/infrastructure/email/hmac-form-tokens";
 import { headerText } from "@/infrastructure/email/smtp-contact-delivery";

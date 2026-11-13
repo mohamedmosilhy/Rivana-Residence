@@ -1,15 +1,12 @@
 import type {
-  Clock,
   Hasher,
-  IdGenerator,
   ImageProcessor,
   MediaStorage,
-} from "@/application/ports/providers";
-import type {
   MediaAssetDto,
   MediaRepository,
   MediaRightsStatus,
-} from "@/application/ports/repositories";
+} from "@/application/media/ports";
+import type { Clock, IdGenerator } from "@/application/shared/providers";
 import { failure, type Result } from "@/application/shared/result";
 import {
   MEDIA_UPLOAD_POLICY,

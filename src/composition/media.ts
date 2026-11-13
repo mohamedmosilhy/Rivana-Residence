@@ -5,7 +5,7 @@ import path from "node:path";
 
 import type { IngestDependencies } from "@/application/media/ingest-image";
 import { MediaLibrary } from "@/application/media/media-library";
-import type { ByteRange } from "@/application/ports/providers";
+import type { ByteRange } from "@/application/media/ports";
 import { isSafeStorageKey } from "@/domain/media/media-asset";
 import { NextCacheInvalidator } from "@/infrastructure/cache/next-cache-invalidator";
 import { PrismaMediaRepository } from "@/infrastructure/db/prisma/repositories/media-repository";

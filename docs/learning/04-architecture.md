@@ -5,7 +5,7 @@
 | --- | --- | --- |
 | Domain (entities, rules, errors) | `src/domain/<module>` | `domain/branches/branch.ts` |
 | Use cases | `src/application/<module>`, one class each | `ListBranches`, `ManageBranches` |
-| Repository ports | `ports.ts` per module + `application/ports/` | `BranchRepository` |
+| Repository ports | `ports.ts` in the module that uses them; only `Clock` and `IdGenerator` are shared, in `application/shared/providers.ts` | `BranchRepository` |
 | Port implementations | `src/infrastructure/db/prisma/repositories/` | `PrismaBranchRepository` |
 | Mappers | `infrastructure/db/prisma/mappers/` | `content-mappers.ts` |
 | Service adapters | `infrastructure/email, media, auth, cache` | `NextRouteCacheInvalidator` |

@@ -1,6 +1,6 @@
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
 
-import type { RoomInput } from "@/application/ports/repositories";
+import type { RoomInput } from "@/application/content/ports";
 import { PrismaFacilityRepository } from "@/infrastructure/db/prisma/repositories/facility-repository";
 import { PrismaPageRepository } from "@/infrastructure/db/prisma/repositories/page-repository";
 import { PrismaRoomRepository } from "@/infrastructure/db/prisma/repositories/room-repository";

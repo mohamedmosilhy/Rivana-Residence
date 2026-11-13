@@ -4,7 +4,7 @@ import type { StaffPrincipal } from "@/application/auth/ports";
 import type {
   AdminSiteSettingsDto,
   SettingsRepository,
-} from "@/application/ports/repositories";
+} from "@/application/settings/ports";
 import { failure, success } from "@/application/shared/result";
 import {
   ReplaceSocialLinks,

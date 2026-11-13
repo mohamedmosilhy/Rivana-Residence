@@ -1,4 +1,4 @@
-import type { ContactEnquiryDto } from "@/application/ports/repositories";
+import type { ContactEnquiryDto } from "@/application/enquiries/ports";
 import { formatDateTime } from "@/presentation/admin/format";
 import { EnquiryBadge } from "@/presentation/admin/ui/badge";
 import { DataTable } from "@/presentation/admin/ui/data-table";

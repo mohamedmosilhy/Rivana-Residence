@@ -4,7 +4,7 @@ import type {
   SearchAvailability,
   SearchAvailabilityResult,
 } from "@/application/inventory";
-import type { RoomRepository } from "@/application/ports/repositories";
+import type { RoomRepository } from "@/application/content/ports";
 import { failure, success, type Result } from "@/application/shared/result";
 
 import { publicRoom, type PublicRoomCard } from "./view-models";

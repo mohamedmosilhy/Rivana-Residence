@@ -1,13 +1,13 @@
 import "server-only";
 
 import type {
-  ContactEnquiryDto,
   FacilityDto,
-  MediaAssetDto,
   PageDto,
   RoomDto,
-  SiteSettingsDto,
-} from "@/application/ports/repositories";
+} from "@/application/content/ports";
+import type { ContactEnquiryDto } from "@/application/enquiries/ports";
+import type { MediaAssetDto } from "@/application/media/ports";
+import type { SiteSettingsDto } from "@/application/settings/ports";
 import {
   SOCIAL_PLATFORMS,
   type SocialPlatform,

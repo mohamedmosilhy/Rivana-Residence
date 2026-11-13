@@ -5,4 +5,4 @@ export {
   type QuoteResult,
   type QuoteView,
 } from "./quote-booking";
-export type { QuoteBookingReaders } from "./ports";
+export type { QuoteBookingReaders } from "./quote-readers";

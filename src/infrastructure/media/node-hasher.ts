@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 
-import type { Hasher } from "@/application/ports/providers";
+import type { Hasher } from "@/application/media/ports";
 
 export class NodeHasher implements Hasher {
   sha256(bytes: Uint8Array) {

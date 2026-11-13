@@ -1,7 +1,7 @@
 import type { Route } from "next";
 import Link from "next/link";
 
-import type { MediaReference } from "@/application/ports/repositories";
+import type { MediaReference } from "@/application/content/ports";
 import type { PublicationStatus } from "@/domain/shared/types";
 import { OrderControls } from "@/presentation/admin/content/order-controls";
 import { formatDateTime } from "@/presentation/admin/format";

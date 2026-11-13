@@ -6,14 +6,11 @@ import {
   type BranchRecord,
   type BranchRepository,
 } from "@/application/branches";
-import type {
-  MediaOption,
-  MediaRepository,
-  PagedResult,
-} from "@/application/ports/repositories";
+import type { MediaOption, MediaRepository } from "@/application/media/ports";
 import {
   ADMIN_PAGE_SIZE,
   parsePageNumber,
+  type PagedResult,
 } from "@/application/shared/pagination";
 import { success, type Result } from "@/application/shared/result";
 import { DomainValidationError } from "@/domain/shared/domain-error";

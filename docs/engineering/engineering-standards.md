@@ -16,7 +16,7 @@ The authoritative coding standards for Rivana Residence, for humans and coding a
 ## TypeScript
 
 - Strict mode with `noUncheckedIndexedAccess` and `exactOptionalPropertyTypes` (already on). No `any`. Avoid `as` casts; parse with Zod instead. Non-null `!` only where an invariant was just checked, and then prefer narrowing.
-- `Readonly<…>` DTOs and `readonly` arrays at module boundaries, as in `src/application/ports/repositories.ts`.
+- `Readonly<…>` DTOs and `readonly` arrays at module boundaries, as in the module port files (`src/application/<module>/ports.ts`).
 - String-literal unions over TypeScript `enum`. Mirror Prisma enums with `as const` arrays in `src/domain/shared/types.ts`.
 - Use the `@/` import alias. No circular imports.
 

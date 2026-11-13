@@ -2,7 +2,7 @@ import { fireEvent, render, screen, within } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { describe, expect, it, vi } from "vitest";
 
-import type { MediaOption } from "@/application/ports/repositories";
+import type { MediaOption } from "@/application/media/ports";
 import {
   ImageList,
   SingleImage,

@@ -3,11 +3,11 @@ import "server-only";
 import { createId } from "@paralleldrive/cuid2";
 
 import type {
-  Actor,
   ContactEnquiryDto,
   EnquiryListQuery,
   EnquiryRepository,
-} from "@/application/ports/repositories";
+} from "@/application/enquiries/ports";
+import type { Actor } from "@/application/shared/actor";
 import { invalid, success } from "@/application/shared/result";
 import { contactEnquirySchema } from "@/domain/enquiries/contact-enquiry";
 import { issuesFromZod } from "@/domain/shared/domain-error";

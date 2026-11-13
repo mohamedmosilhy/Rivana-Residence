@@ -5,7 +5,7 @@
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 
-import type { Actor } from "../../../src/application/ports/repositories.ts";
+import type { Actor } from "../../../src/application/shared/actor.ts";
 import {
   importReferenceAssets,
   type ManifestEntry,

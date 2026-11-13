@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import type { MediaStorage } from "@/application/ports/providers";
+import type { MediaStorage } from "@/application/media/ports";
 
 async function* chunks(...parts: string[]) {
   for (const part of parts) yield new TextEncoder().encode(part);

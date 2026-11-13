@@ -6,7 +6,7 @@ src/
   presentation/     React components: admin/, design/, site/
   contracts/api/v1/ Zod DTO schemas + openapi.ts
   composition/      only place repos + use cases are built
-  application/      use cases per module; ports/, shared/ (Result, rate limit)
+  application/      use cases per module, each with its `ports.ts`; shared/ (Result, Actor, paging, Clock, IdGenerator, rate limit)
   domain/           pure rules per module; shared/ (slug, zoned-time, domain-error)
   infrastructure/   db/prisma (repositories, mappers, transaction, client), auth, cache, email, media, http, ids
   lib/env/          validated env config

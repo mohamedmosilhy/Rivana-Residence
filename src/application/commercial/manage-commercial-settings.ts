@@ -1,7 +1,7 @@
 import type { AuditLog } from "@/application/audit";
 import { authorize } from "@/application/auth/authorize";
 import type { StaffPrincipal } from "@/application/auth/ports";
-import type { Clock } from "@/application/ports/providers";
+import type { Clock } from "@/application/shared/providers";
 import type { ReservationUnitOfWork } from "@/application/reservations";
 import { invalid, success, type Result } from "@/application/shared/result";
 import { auditEvent } from "@/domain/audit";

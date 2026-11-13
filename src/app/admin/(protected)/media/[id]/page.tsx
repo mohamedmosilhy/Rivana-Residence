@@ -2,7 +2,7 @@ import type { Metadata, Route } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
-import type { MediaUsage } from "@/application/ports/repositories";
+import type { MediaUsage } from "@/application/media/ports";
 import { requireStaff } from "@/composition/auth";
 import { mediaLibrary } from "@/composition/media";
 import { propertyTimeZone } from "@/composition/content";

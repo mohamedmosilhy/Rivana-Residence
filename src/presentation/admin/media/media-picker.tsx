@@ -2,7 +2,7 @@
 
 import { useId, useMemo, useRef, useState } from "react";
 
-import type { MediaOption } from "@/application/ports/repositories";
+import type { MediaOption } from "@/application/media/ports";
 import { mediaUrl } from "@/presentation/admin/media/media-url";
 import {
   button,

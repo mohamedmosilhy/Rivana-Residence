@@ -10,7 +10,7 @@ import { CleanupMedia } from "@/application/media/cleanup-media";
 import { importReferenceAssets } from "@/application/media/import-reference-assets";
 import type { IngestDependencies } from "@/application/media/ingest-image";
 import { MediaLibrary } from "@/application/media/media-library";
-import type { MediaStorage } from "@/application/ports/providers";
+import type { MediaStorage } from "@/application/media/ports";
 import { PrismaMediaRepository } from "@/infrastructure/db/prisma/repositories/media-repository";
 import { PrismaRoomRepository } from "@/infrastructure/db/prisma/repositories/room-repository";
 import { Cuid2IdGenerator } from "@/infrastructure/ids/cuid2-id-generator";

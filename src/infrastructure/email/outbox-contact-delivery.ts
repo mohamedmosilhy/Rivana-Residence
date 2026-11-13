@@ -3,7 +3,7 @@ import "server-only";
 import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 
-import type { ContactDelivery } from "@/application/ports/providers";
+import type { ContactDelivery } from "@/application/enquiries/ports";
 
 /**
  * Development and test delivery: writes each message as JSON to a

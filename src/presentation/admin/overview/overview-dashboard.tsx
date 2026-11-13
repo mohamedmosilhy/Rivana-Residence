@@ -5,7 +5,7 @@ import type {
   AdminOverviewDto,
   PublicationCounts,
   RecentContentKind,
-} from "@/application/ports/repositories";
+} from "@/application/admin/ports";
 import { formatDateTime, plural } from "@/presentation/admin/format";
 import { Badge, PublicationBadge } from "@/presentation/admin/ui/badge";
 import { EmptyState } from "@/presentation/admin/ui/states";

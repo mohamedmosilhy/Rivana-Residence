@@ -1,6 +1,6 @@
 import "server-only";
 
-import type { Clock } from "@/application/ports/providers";
+import type { Clock } from "@/application/shared/providers";
 import type {
   PublicRateLimitRule,
   PublicRateLimitStore,
