@@ -44,6 +44,14 @@ Reservation tables and snapshot, website pay-at-hotel creation with immediate co
 - Broadcasts and feedback messages (M13); consent is only stored.
 - `PENDING` and `DECLINED` statuses: they must not exist anywhere.
 
+## Carried over from M7 (owner notes, 2026-11-13)
+
+Raised in the M7-T6 review and accepted by the owner. The agent who plans the named task includes the item in that task's card.
+
+1. **Verified phone for per phone coupon limits (plan in M8-T5 and M8-T7).** P6 accepts an unverified `phone` today and `CouponRedemptionReader` is a zero adapter. When M8-T7 replaces it with persisted redemptions, honour the per phone coupon limit only for a phone proved by a phone verification token (M8-T5), or stop returning `PHONE_LIMIT_REACHED` on public routes. Otherwise anyone can probe which phone used which coupon, which breaks AC-4 of M7. Add a test that an unverified phone never changes the refusal.
+2. **Slim public listing reader (plan in M8-T7, after M8-T0b).** `QuoteBooking` (and `SearchPublicAvailability`) read the full published room graph through `RoomRepository.listPublished` just to resolve slug, name, accommodation type, and occupancy limits. Add a small port (for example `PublicListingReader` returning id, slug, name, accommodation type, maxAdults, maxChildren) in the owning module and use it in both. No behavior change; the integration tests of P5 and P6 must pass unchanged.
+3. **Redemption count and the coupon row lock.** The zero reader hides a race that M8 must close: take the coupon row lock and count inside the booking transaction (spec 0004, Decision 4; plan it in M8-T7).
+
 ## Task breakdown
 
 Planned, reviewed, and accepted one task at a time ([agent-workflow.md](../../engineering/agent-workflow.md)). Rows are confirmed at milestone open; the numbered **Tasks** below hold the detail.

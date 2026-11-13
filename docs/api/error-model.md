@@ -51,8 +51,8 @@ The application layer already returns `Result<T>` with `ApplicationErrorCode` (`
 | `VERIFICATION_CODE_INVALID` | 422 | `context.attemptsLeft` |
 | `VERIFICATION_EXPIRED` | 410 | Code expired or attempts used up; request a new code |
 | `VERIFICATION_UNAVAILABLE` | 503 | WhatsApp could not deliver the code; `Retry-After` |
-| `COUPON_INVALID` | 422 | `context.reason`: `NOT_FOUND`, `INACTIVE`, `NOT_YET_VALID`, `EXPIRED`, `WRONG_BRANCH`, `LIMIT_REACHED`, `PHONE_LIMIT_REACHED`; `fieldErrors.couponCode`. The message never confirms whether a code exists at another branch beyond `WRONG_BRANCH` |
-| `SERVICE_UNAVAILABLE` | 409 | `context.kind`; the service is off at this branch |
+| `COUPON_INVALID` | 422 | `context.reason`: `NOT_FOUND`, `INACTIVE`, `NOT_YET_VALID`, `EXPIRED`, `WRONG_BRANCH`, `LIMIT_REACHED`, `PHONE_LIMIT_REACHED`; `fieldErrors.couponCode`. The message never confirms whether a code exists at another branch beyond `WRONG_BRANCH` **Implemented (M7-T6)**: the same message for every reason, a malformed or over long code is `NOT_FOUND`. |
+| `SERVICE_UNAVAILABLE` | 409 | `context.kind`; the service is off at this branch. **Implemented (M7-T6).** |
 | `BOOKING_LIMIT_REACHED` | 429 | Per-phone cap on upcoming pay-at-hotel bookings or open payment holds (Q-60); `detail` asks the guest to contact the hotel |
 | `PAYMENT_METHOD_UNAVAILABLE` | 409 | Paymob not configured for the branch, or the total is zero (CP-6) |
 | `PAYMENT_UNAVAILABLE` | 503 | The Paymob checkout could not be created; the booking is `PAYMENT_FAILED` and nothing is held |

@@ -25,3 +25,9 @@ export {
   type QuoteServiceInput,
   type QuoteServiceLine,
 } from "./quote-calculator";
+export {
+  QUOTE_MAX_LINES,
+  parseQuoteRequest,
+  type ParsedQuoteRequest,
+  type QuoteRequest,
+} from "./quote-request";

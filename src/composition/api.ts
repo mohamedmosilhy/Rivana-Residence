@@ -16,6 +16,7 @@ import {
   manageCoupons,
   manageCommercialSettings,
   manageServices,
+  quoteBooking as buildQuoteBooking,
 } from "@/composition/commercial";
 import { getRateCalendar, manageRates } from "@/composition/pricing";
 import { clientAddressFrom, isSameOriginRequest } from "@/composition/http";
@@ -215,6 +216,11 @@ export function updateCommercialSettings(
   input: unknown,
 ) {
   return manageCommercialSettings().update(staff, input);
+}
+
+// API-P6: uncached public quote; nothing is written, locked, or cached.
+export function quoteBooking(input: unknown) {
+  return buildQuoteBooking().execute(input);
 }
 
 // API-P5: uncached public availability with server-resolved branch identity.

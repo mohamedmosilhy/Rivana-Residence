@@ -1,6 +1,6 @@
 # M7 — Booking quote: optional services, coupons, VAT
 
-Status: **In progress (5/6 tasks accepted).** Spec [0004](../../specs/0004-m7-booking-quote.md) and task breakdown approved 2026-11-11. Branch: `m7-booking-quote`. Follow the [milestone loop](./README.md#the-loop-every-milestone-follows).
+Status: **In progress (6/6 tasks accepted; milestone close pending).** Spec [0004](../../specs/0004-m7-booking-quote.md) and task breakdown approved 2026-11-11. Branch: `m7-booking-quote`. Follow the [milestone loop](./README.md#the-loop-every-milestone-follows).
 
 ## Objective
 
@@ -53,7 +53,7 @@ Planned, reviewed, and accepted one task at a time ([agent-workflow.md](../../en
 | M7-T3 | Migration `commercial_rules` and demo seed | Critical | — | T-CPN-7; drift check | Accepted |
 | M7-T4 | Services and VAT settings: audited use cases, staff API S35–S36 and A5 | Critical | T3 | AC 5, 7; T-SVC-3…4, T-TAX-1…4 | Accepted |
 | M7-T5 | Coupon management: branch-scoped audited use case, staff API S37–S39 | Critical | T2, T3 | AC 5; T-CPN-6…8 | Accepted |
-| M7-T6 | `QuoteBooking` use case and public API P6 with the coupon rate limit | Critical | T1, T4, T5 | AC 1, 3, 4, 6; API-P6 end to end | Not started |
+| M7-T6 | `QuoteBooking` use case and public API P6 with the coupon rate limit | Critical | T1, T4, T5 | AC 1, 3, 4, 6; API-P6 end to end | Accepted |
 
 ## Tasks
 
@@ -117,4 +117,4 @@ The worked examples' API responses; audit rows for each change type; the rate-li
 
 ## Handoff
 
-Close the milestone ([README steps 8–15](./README.md#the-loop-every-milestone-follows)), report, then stop. M8 has not started. **Before any other M8 work, the owner wants [M8-T0, application ports consolidation](./m8-reservations.md#0-prerequisite-task-m8-t0-application-ports-consolidation) done first** (decision 2026-11-13).
+Close the milestone ([README steps 8–15](./README.md#the-loop-every-milestone-follows)), report, then stop. M8 has not started. Owner notes carried to M8 (2026-11-13): see [Carried over from M7](./m8-reservations.md#carried-over-from-m7-owner-notes-2026-11-13). **Before any other M8 work, the owner wants [M8-T0, application ports consolidation](./m8-reservations.md#0-prerequisite-task-m8-t0-application-ports-consolidation) done first** (decision 2026-11-13).

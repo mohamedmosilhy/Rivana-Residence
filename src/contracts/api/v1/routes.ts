@@ -19,6 +19,7 @@ import {
   StaffBranchList,
 } from "./branches";
 import { AvailabilityQuery, AvailabilityResponse } from "./availability";
+import { QuoteRequest, QuoteResponse } from "./quotes";
 import { HealthResponse } from "./health";
 import {
   Block,
@@ -152,6 +153,33 @@ export const API_ROUTES: readonly ApiRoute[] = [
       },
     },
     errors: ["INVALID_QUERY", "VALIDATION", "NOT_FOUND", "RATE_LIMITED"],
+  },
+  {
+    method: "post",
+    path: "/api/v1/quotes",
+    operationId: "createQuote",
+    summary:
+      "API-P6. Server computed quote: accommodation for one to five units, requested services, an optional coupon, and VAT. Reads only: no hold, lock, or cache. The client never sends a price.",
+    tag: "Quotes",
+    security: "public",
+    request: QuoteRequest,
+    responses: {
+      200: {
+        description:
+          "The breakdown, or `available: false` with the unavailable line indexes and a null quote. 60 requests per minute per client, and 20 per 10 minutes for requests that send a coupon code.",
+        schema: QuoteResponse,
+      },
+    },
+    errors: [
+      "MALFORMED_JSON",
+      "PAYLOAD_TOO_LARGE",
+      "UNSUPPORTED_MEDIA_TYPE",
+      "VALIDATION",
+      "NOT_FOUND",
+      "COUPON_INVALID",
+      "SERVICE_UNAVAILABLE",
+      "RATE_LIMITED",
+    ],
   },
   {
     method: "get",

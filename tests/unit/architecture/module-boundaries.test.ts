@@ -31,6 +31,7 @@ const PUBLIC_SURFACE_MODULES = [
   "health",
   "inventory",
   "pricing",
+  "quotes",
   "services",
   "coupons",
   "reservations",

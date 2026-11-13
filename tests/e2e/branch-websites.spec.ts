@@ -518,3 +518,144 @@ test("P5 exposes the $260 worked example and fresh public availability", async (
     await sql('DELETE FROM "Branch" WHERE id = $1', [branch]);
   }
 });
+
+// P6 runs here for the same reason as P5: a temporary second branch with its
+// own fictional listing, services, and coupon, removed afterwards.
+test("P6 quotes the $391 worked example from server owned prices", async ({
+  page,
+}, testInfo) => {
+  const branch = "e2e-p6-branch";
+  const room = "e2e-p6-room";
+  const baseDate = new Date();
+  baseDate.setUTCDate(baseDate.getUTCDate() + 30);
+  const day = (offset: number) =>
+    new Date(+baseDate + offset * 86_400_000).toISOString().slice(0, 10);
+  const line = (adults: number, children: number) => ({
+    roomSlug: "e2e-p6-room",
+    occupancy: { adults, children },
+  });
+  const quote = (overrides: Record<string, unknown> = {}) => ({
+    branchSlug: "e2e-p6",
+    stay: { checkIn: day(0), checkOut: day(3) },
+    lines: [line(2, 1)],
+    services: ["BREAKFAST", "AIRPORT_TRANSFER"],
+    ...overrides,
+  });
+  await sql(
+    'INSERT INTO "Branch" (id, slug, name, status, "sortOrder", "onlineBookingEnabled", "updatedAt") VALUES ($1, $2, $3, \'ACTIVE\', 99, true, now())',
+    [branch, "e2e-p6", "Fictional P6 evidence branch"],
+  );
+  try {
+    await sql(
+      'INSERT INTO "Room" (id, "branchId", name, slug, "shortDescription", description, "maxAdults", "maxChildren", status, "sortOrder", "updatedAt") VALUES ($1, $2, $3, $4, $5, $6::jsonb, 3, 2, \'PUBLISHED\', 99, now())',
+      [
+        room,
+        branch,
+        "Fictional P6 worked example",
+        "e2e-p6-room",
+        "Fictional quote test listing",
+        JSON.stringify({ type: "doc", content: [] }),
+      ],
+    );
+    await sql(
+      'INSERT INTO "PhysicalRoom" (id, "branchId", "roomTypeId", label, "updatedAt") VALUES ($1, $2, $3, $1, now())',
+      ["e2e-p6-u1", branch, room],
+    );
+    await sql(
+      'INSERT INTO "RoomBaseRate" ("roomTypeId", "amountMinor", "updatedAt") VALUES ($1, 8000, now())',
+      [room],
+    );
+    await sql(
+      'INSERT INTO "ServiceOffering" (id, "branchId", kind, "priceUnit", "priceMinor", "childPriceMinor", active, "updatedAt") VALUES ($1, $3, \'BREAKFAST\', \'PER_PERSON_PER_NIGHT\', 1000, 500, true, now()), ($2, $3, \'AIRPORT_TRANSFER\', \'PER_BOOKING\', 2500, NULL, true, now())',
+      ["e2e-p6-breakfast", "e2e-p6-transfer", branch],
+    );
+    await sql(
+      'INSERT INTO "Coupon" (id, code, kind, "amountMinor", "allBranches", active, "updatedAt") VALUES ($1, $2, \'FIXED\', 99999, true, true, now())',
+      ["e2e-p6-coupon", "E2E-P6-FIXED"],
+    );
+    await page.goto("/new-cairo");
+    const call = (body: unknown) =>
+      page.evaluate(async (payload) => {
+        const response = await fetch("/api/v1/quotes", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+        return {
+          status: response.status,
+          headers: Object.fromEntries(response.headers.entries()),
+          body: await response.json(),
+        };
+      }, body);
+
+    const first = await call(quote());
+    expect(first.status).toBe(200);
+    expect(first.headers["cache-control"]).toBe("no-store");
+    expect(first.body).toMatchObject({
+      available: true,
+      bookable: true,
+      quote: {
+        accommodation: { amountMinor: 24000 },
+        servicesTotal: { amountMinor: 10000 },
+        subtotal: { amountMinor: 34000 },
+        vat: { amountMinor: 5100 },
+        total: { amountMinor: 39100, currency: "USD" },
+      },
+    });
+    expect(JSON.stringify(first.body)).not.toMatch(
+      /roomTypeId|branchId|physicalRoom|e2e-p6-u1|periodId/,
+    );
+    await testInfo.attach("p6-worked-example.json", {
+      body: JSON.stringify(first, null, 2),
+      contentType: "application/json",
+    });
+
+    // A fixed coupon above the subtotal gives total 0 (worked example 4 rule).
+    const free = await call(quote({ couponCode: "e2e-p6-fixed" }));
+    expect(free.body.quote).toMatchObject({
+      discount: { amountMinor: 34000 },
+      taxable: { amountMinor: 0 },
+      total: { amountMinor: 0 },
+    });
+    expect(
+      (await call(quote({ couponCode: "NOT-A-CODE" }))).body,
+    ).toMatchObject({
+      code: "COUPON_INVALID",
+      context: { reason: "NOT_FOUND" },
+    });
+    // Services are only added when requested; a client price is refused.
+    expect(
+      (await call(quote({ services: [] }))).body.quote.total,
+    ).toMatchObject({
+      amountMinor: 27600,
+    });
+    expect(
+      (await call(quote({ total: { amountMinor: 1, currency: "USD" } })))
+        .status,
+    ).toBe(422);
+    // Only one unit exists, so two units are unavailable and nothing is quoted.
+    expect(
+      await call(quote({ lines: [line(1, 0), line(1, 0)] })).then(
+        (r) => r.body,
+      ),
+    ).toMatchObject({
+      available: false,
+      unavailableLines: [0, 1],
+      quote: null,
+    });
+    await sql('UPDATE "ServiceOffering" SET active = false WHERE id = $1', [
+      "e2e-p6-transfer",
+    ]);
+    expect((await call(quote())).body).toMatchObject({
+      code: "SERVICE_UNAVAILABLE",
+      context: { kind: "AIRPORT_TRANSFER" },
+    });
+  } finally {
+    await sql('DELETE FROM "ServiceOffering" WHERE "branchId" = $1', [branch]);
+    await sql('DELETE FROM "Coupon" WHERE id = $1', ["e2e-p6-coupon"]);
+    await sql('DELETE FROM "RoomBaseRate" WHERE "roomTypeId" = $1', [room]);
+    await sql('DELETE FROM "PhysicalRoom" WHERE "branchId" = $1', [branch]);
+    await sql('DELETE FROM "Room" WHERE id = $1', [room]);
+    await sql('DELETE FROM "Branch" WHERE id = $1', [branch]);
+  }
+});

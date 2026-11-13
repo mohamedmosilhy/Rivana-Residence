@@ -7,7 +7,7 @@ import type {
 } from "@/application/shared/public-rate-limit-ports";
 import {
   admitPublicRequest,
-  AVAILABILITY_RATE_LIMIT,
+  PUBLIC_RATE_LIMITS,
   PUBLIC_THROTTLE_CLEANUP_LIMIT,
 } from "@/application/shared/public-rate-limit-policy";
 import type { ThrottleState } from "@/domain/auth/login-throttle";
@@ -48,11 +48,19 @@ export class PrismaPublicRateLimitStore implements PublicRateLimitStore {
     });
   }
 
-  cleanupExpiredAvailability(now: Date) {
-    const prefix = `rl:${AVAILABILITY_RATE_LIMIT.name}:%`;
-    const expiredBefore = new Date(
-      now.getTime() - AVAILABILITY_RATE_LIMIT.rule.windowMs,
-    );
+  async cleanupExpired(now: Date) {
+    let deleted = 0;
+    for (const limit of PUBLIC_RATE_LIMITS) {
+      deleted += await this.cleanupNamespace(
+        `rl:${limit.name}:%`,
+        new Date(now.getTime() - limit.rule.windowMs),
+        now,
+      );
+    }
+    return deleted;
+  }
+
+  private cleanupNamespace(prefix: string, expiredBefore: Date, now: Date) {
     // SELECT locks and rechecks candidates before DELETE. Admissions either
     // keep their locked row, or insert a fresh bucket after deletion commits.
     return this.client.$executeRaw`

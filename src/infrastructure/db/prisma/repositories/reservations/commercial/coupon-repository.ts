@@ -2,13 +2,14 @@ import "server-only";
 
 import type { BranchScope } from "@/application/auth/authorize-branch";
 import type {
+  CouponLookup,
   CouponRepository,
   CouponQuery,
   ManagedCoupon,
 } from "@/application/coupons";
 import { ADMIN_PAGE_SIZE } from "@/application/shared/pagination";
 import { failure, success, type Result } from "@/application/shared/result";
-import type { CouponInput } from "@/domain/coupons";
+import type { CouponInput, CouponRecord } from "@/domain/coupons";
 import { Money } from "@/domain/shared/money";
 import { Prisma } from "@/generated/prisma/client";
 import {
@@ -82,8 +83,28 @@ function data(input: CouponInput) {
   };
 }
 
-export class PrismaCouponRepository implements CouponRepository {
+export class PrismaCouponRepository implements CouponRepository, CouponLookup {
   constructor(private readonly client: DatabaseClient) {}
+
+  async findByCode(code: string): Promise<CouponRecord | null> {
+    // One statement hydrates the coupon and its branch joins, like `list`.
+    // The match uses the unique `upper(code)` index, never a pattern.
+    type LookupRow = Omit<Row, "branches"> & Readonly<{ branchIds: string[] }>;
+    const [row] = await this.client.$queryRaw<LookupRow[]>(Prisma.sql`
+      SELECT c.id, c.code, c.kind, c."percentBasisPoints", c."amountMinor", c.currency,
+        c."startsAt", c."endsAt", c."maxRedemptions", c."maxRedemptionsPerPhone",
+        c."allBranches", c.active, c.description, c."createdAt", c."updatedAt",
+        ARRAY(SELECT cb."branchId" FROM "CouponBranch" cb
+          WHERE cb."couponId" = c.id ORDER BY cb."branchId") AS "branchIds"
+      FROM "Coupon" c WHERE upper(c.code) = upper(${code})
+    `);
+    return row
+      ? record({
+          ...row,
+          branches: row.branchIds.map((branchId) => ({ branchId })),
+        })
+      : null;
+  }
 
   async list(scope: BranchScope, query: CouponQuery) {
     const filters: Prisma.Sql[] = [];

@@ -126,7 +126,7 @@ All checks run inside the use case before any repository call. The branch always
 
 ### Decision 9. Rate limit
 
-A second public limiter rule, name `quote-coupon`, 20 requests per 10 minutes per client, using the existing `PublicRateLimitStore` and bucket cleanup job. It is consumed only for requests that include `couponCode`; a quote without a code is not limited by it (the brief limits coupon attempts). Quotes without a code fall under a general P6 limit, a local safety choice: reuse the availability rule shape, `quote`, 60 per minute per client, because P6 reads inventory like P5. Owner approved the general limit 2026-11-11. A denied request returns `429 RATE_LIMITED` with `Retry-After`. The limiter keys on the client identity the existing wrapper derives (`publicRoute`), with no personal data stored.
+A second public limiter rule, name `quote-coupon`, 20 requests per 10 minutes per client, using the existing `PublicRateLimitStore` and bucket cleanup job. It is consumed only for requests that include `couponCode`; a quote without a code is not limited by it (the brief limits coupon attempts). Quotes without a code fall under a general P6 limit, a local safety choice: reuse the availability rule shape, `quote`, 60 per minute per client, because P6 reads inventory like P5. Owner approved the general limit 2026-11-11. Owner confirmed 2026-11-13: a request with a code takes both limits (the general `quote` limit and `quote-coupon`), the stricter reading. The coupon limit is chosen after the body validates, so an invalid body does not consume it. A denied request returns `429 RATE_LIMITED` with `Retry-After`. The limiter keys on the client identity the existing wrapper derives (`publicRoute`), with no personal data stored.
 
 ### Decision 10. Order of checks inside `QuoteBooking`
 
@@ -234,6 +234,7 @@ Order follows the brief (domain first, then persistence, then use cases, then th
 
 ## Follow-up
 
+- **Carried to M8 (owner notes, 2026-11-13, from the M7-T6 review):** (1) `phone` in P6 is unverified. When M8 replaces the zero `CouponRedemptionReader`, honour the per phone coupon limit only for a phone proved by a verification token, or stop returning `PHONE_LIMIT_REACHED` publicly, so nobody can probe which phone used which coupon. (2) `QuoteBooking` reads the full published room graph just to resolve a slug; replace it with a slim public listing reader (id, slug, name, accommodation type, occupancy limits) shared with P5. Both are tracked in the M8 brief.
 - All earlier flags are resolved by the owner's answers of 2026-11-11. Reconciliation: ADR 027, TX-1, FR-TAX-1, FR-BR-3, and `error-model.md` carry no stale VAT gating text after T3 and T4; `api-contracts.md` A5, S35, and S36 are done (T4); only the S37 wording remains for T5.
 - Spec 0005 (M8) must cite this one for the redemption reader and the quote snapshot.
 - Reconcile `docs/database/data-model.md` and `docs/domain/promotions.md` in T3 and T5.

@@ -1,3 +1,4 @@
+import type { CouponRefusal } from "@/domain/coupons";
 import type {
   DomainIssue,
   DomainValidationError,
@@ -5,6 +6,7 @@ import type {
 
 export type ApplicationErrorCode =
   | "CONFLICT"
+  | "COUPON_INVALID"
   | "FORBIDDEN"
   | "INVENTORY_UNAVAILABLE"
   | "RATE_LIMITED"
@@ -13,12 +15,13 @@ export type ApplicationErrorCode =
   | "NOT_FOUND"
   | "NOT_PUBLISHABLE"
   | "REFERENCED"
+  | "SERVICE_UNAVAILABLE"
   | "TRY_AGAIN"
   | "VALIDATION";
 
 type StandardApplicationErrorCode = Exclude<
   ApplicationErrorCode,
-  "INVENTORY_UNAVAILABLE"
+  "INVENTORY_UNAVAILABLE" | "COUPON_INVALID" | "SERVICE_UNAVAILABLE"
 >;
 
 type StandardApplicationError = Readonly<{
@@ -38,9 +41,26 @@ export type InventoryUnavailableError = Readonly<{
   fieldErrors?: never;
 }>;
 
+/** One message for every refusal; only `context.reason` tells them apart. */
+export type CouponInvalidError = Readonly<{
+  code: "COUPON_INVALID";
+  message: string;
+  context: Readonly<{ reason: CouponRefusal }>;
+  fieldErrors: Readonly<Record<string, readonly string[]>>;
+}>;
+
+export type ServiceUnavailableError = Readonly<{
+  code: "SERVICE_UNAVAILABLE";
+  message: string;
+  context: Readonly<{ kind: string }>;
+  fieldErrors?: never;
+}>;
+
 export type ApplicationError =
   | StandardApplicationError
-  | InventoryUnavailableError;
+  | InventoryUnavailableError
+  | CouponInvalidError
+  | ServiceUnavailableError;
 
 export type Result<T, E = ApplicationError> =
   | Readonly<{ ok: true; value: T }>
@@ -75,6 +95,31 @@ export function inventoryUnavailable(
       code: "INVENTORY_UNAVAILABLE",
       message: "The requested inventory is no longer available.",
       context: { firstUnavailableNight, roomTypeId },
+    },
+  };
+}
+
+const COUPON_MESSAGE = "This coupon code cannot be used for this booking.";
+
+export function couponInvalid(reason: CouponRefusal): Result<never> {
+  return {
+    ok: false,
+    error: {
+      code: "COUPON_INVALID",
+      message: COUPON_MESSAGE,
+      context: { reason },
+      fieldErrors: { couponCode: [COUPON_MESSAGE] },
+    },
+  };
+}
+
+export function serviceUnavailable(kind: string): Result<never> {
+  return {
+    ok: false,
+    error: {
+      code: "SERVICE_UNAVAILABLE",
+      message: "This service is not available at this branch.",
+      context: { kind },
     },
   };
 }

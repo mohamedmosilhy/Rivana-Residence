@@ -90,6 +90,7 @@ async function read(response: Response) {
 describe("problem mapping", () => {
   const applicationCodes: readonly ApplicationErrorCode[] = [
     "CONFLICT",
+    "COUPON_INVALID",
     "FORBIDDEN",
     "INVENTORY_UNAVAILABLE",
     "RATE_LIMITED",
@@ -98,6 +99,7 @@ describe("problem mapping", () => {
     "NOT_FOUND",
     "NOT_PUBLISHABLE",
     "REFERENCED",
+    "SERVICE_UNAVAILABLE",
     "TRY_AGAIN",
     "VALIDATION",
   ];
@@ -115,6 +117,8 @@ describe("problem mapping", () => {
     ["NOT_FOUND", 404],
     ["CONFLICT", 409],
     ["INVENTORY_UNAVAILABLE", 409],
+    ["SERVICE_UNAVAILABLE", 409],
+    ["COUPON_INVALID", 422],
     ["RATE_LIMITED", 429],
     ["TRY_AGAIN", 503],
     ["MALFORMED_JSON", 400],
@@ -435,6 +439,82 @@ describe("publicRoute rate limit", () => {
     expect(response.status).toBe(429);
     expect(response.headers.get("retry-after")).toBe("90");
     expect(handler).not.toHaveBeenCalled();
+  });
+});
+
+describe("publicRoute rateLimitAfterBody", () => {
+  const second = {
+    name: "second",
+    rule: { maxFailures: 1, windowMs: 1000, lockMs: 1000 },
+  };
+  const first = {
+    name: "first",
+    rule: { maxFailures: 5, windowMs: 1000, lockMs: 1000 },
+  };
+  const schema = z.object({ code: z.string().optional() }).strict();
+
+  function build(rateLimit: HttpDependencies["rateLimit"]) {
+    const { publicRoute } = setup({ rateLimit });
+    const handler = vi.fn(async () => json(200, {}));
+    const POST = publicRoute(
+      {
+        route: "/api/v1/test",
+        body: schema,
+        rateLimit: first,
+        rateLimitAfterBody: (parsed) => (parsed.code ? second : null),
+      },
+      handler,
+    );
+    return { POST, handler };
+  }
+  const send = (body: unknown) =>
+    new Request(URL_BASE, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(body),
+    });
+
+  it("skips the second limit when the chooser returns null", async () => {
+    const rateLimit = vi.fn<HttpDependencies["rateLimit"]>(async () => ({
+      allowed: true,
+    }));
+    const { POST, handler } = build(rateLimit);
+    expect((await POST(send({}))).status).toBe(200);
+    expect(rateLimit.mock.calls.map(([name]) => name)).toEqual(["first"]);
+    expect(handler).toHaveBeenCalledOnce();
+  });
+
+  it("takes both limits when the body asks for the second", async () => {
+    const rateLimit = vi.fn<HttpDependencies["rateLimit"]>(async () => ({
+      allowed: true,
+    }));
+    const { POST } = build(rateLimit);
+    expect((await POST(send({ code: "X" }))).status).toBe(200);
+    expect(rateLimit.mock.calls.map(([name]) => name)).toEqual([
+      "first",
+      "second",
+    ]);
+  });
+
+  it("answers 429 with Retry-After from the second limit and never runs the handler", async () => {
+    const { POST, handler } = build(async (name) =>
+      name === "second"
+        ? { allowed: false, retryAfterSeconds: 321 }
+        : { allowed: true },
+    );
+    const response = await POST(send({ code: "X" }));
+    expect(response.status).toBe(429);
+    expect(response.headers.get("retry-after")).toBe("321");
+    expect(handler).not.toHaveBeenCalled();
+  });
+
+  it("does not consume the second limit for an invalid body", async () => {
+    const rateLimit = vi.fn<HttpDependencies["rateLimit"]>(async () => ({
+      allowed: true,
+    }));
+    const { POST } = build(rateLimit);
+    expect((await POST(send({ code: "X", price: 1 }))).status).toBe(422);
+    expect(rateLimit.mock.calls.map(([name]) => name)).toEqual(["first"]);
   });
 });
 

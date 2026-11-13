@@ -15,6 +15,7 @@ import {
   StaffBranchList,
 } from "./branches";
 import { AvailabilityResult, AvailabilityResponse } from "./availability";
+import { Quote, QuoteRequest, QuoteResponse } from "./quotes";
 import {
   CommercialSettings,
   CommercialSettingsInput,
@@ -62,6 +63,9 @@ const COMPONENTS: Readonly<Record<string, z.ZodType>> = {
   HealthResponse,
   AvailabilityResult,
   AvailabilityResponse,
+  QuoteRequest,
+  Quote,
+  QuoteResponse,
   Image,
   BranchSummary,
   BranchDetail,
