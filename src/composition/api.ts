@@ -12,6 +12,10 @@ import {
   manageBlocks,
   managePhysicalRooms,
 } from "@/composition/inventory";
+import {
+  manageCommercialSettings,
+  manageServices,
+} from "@/composition/commercial";
 import { getRateCalendar, manageRates } from "@/composition/pricing";
 import { clientAddressFrom, isSameOriginRequest } from "@/composition/http";
 import {
@@ -184,6 +188,32 @@ export function updateRatePeriod(
 
 export function deactivateRatePeriod(staff: StaffPrincipal, id: string) {
   return manageRates().deactivatePeriod(staff, id);
+}
+
+// Services and VAT API (API-S35, S36, A5; spec 0004, M7-T4).
+
+export function listServices(staff: StaffPrincipal, branchId: string) {
+  return manageServices().list(staff, branchId);
+}
+
+export function setService(
+  staff: StaffPrincipal,
+  branchId: string,
+  kind: string,
+  input: unknown,
+) {
+  return manageServices().set(staff, branchId, kind, input);
+}
+
+export function readCommercialSettings(staff: StaffPrincipal) {
+  return manageCommercialSettings().read(staff);
+}
+
+export function updateCommercialSettings(
+  staff: StaffPrincipal,
+  input: unknown,
+) {
+  return manageCommercialSettings().update(staff, input);
 }
 
 // API-P5: uncached public availability with server-resolved branch identity.

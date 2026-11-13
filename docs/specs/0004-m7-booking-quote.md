@@ -160,7 +160,7 @@ Staff bookings reuse `QuoteBooking` in M8; M7 exposes only P6. `onlineBookingEna
 
 ### Domain, application, and API layout
 
-Domain: `src/domain/pricing/quote-calculator.ts`, `src/domain/shared/money.ts` (rounding helper), `src/domain/coupons/` (`coupon-policy.ts`, `coupon-code.ts`, `coupon-schema.ts`), `src/domain/services/` (`service-kind.ts`, schema). Application: `src/application/quotes/quote-booking.ts`, `src/application/services/manage-services.ts`, `src/application/coupons/manage-coupons.ts`, `src/application/settings/manage-commercial-settings.ts` (or `src/application/commercial/`), ports beside them. Infrastructure: SQL only under `src/infrastructure/db/prisma/repositories/reservations/commercial/` (nested like M6, to stay inside the dependency boundary). Composition: `src/composition/commercial.ts`. API: `src/app/api/v1/quotes/route.ts`, `staff/branches/[branchId]/services/...`, `staff/coupons/...`, `staff/settings/commercial/route.ts`, contracts in `src/contracts/api/v1/`, then `npm run openapi`.
+Domain: `src/domain/pricing/quote-calculator.ts`, `src/domain/shared/money.ts` (rounding helper), `src/domain/coupons/` (`coupon-policy.ts`, `coupon-code.ts`, `coupon-schema.ts`), `src/domain/services/` (`service-kind.ts`, schema). Application: `src/application/quotes/quote-booking.ts`, `src/application/services/manage-services.ts`, `src/application/coupons/manage-coupons.ts`, `src/application/settings/manage-commercial-settings.ts` (or `src/application/commercial/`), ports beside them. Infrastructure: SQL only under `src/infrastructure/db/prisma/repositories/reservations/commercial/` (nested like M6, to stay inside the dependency boundary). Composition: `src/composition/commercial.ts`. API: `src/app/api/v1/quotes/route.ts`, `staff/branches/[id]/services/...` (the segment is `[id]` because Next.js refuses two different dynamic names at one level and the M6 branch routes use `[id]`; owner accepted 2026-11-13), `staff/coupons/...`, `staff/settings/commercial/route.ts`, contracts in `src/contracts/api/v1/`, then `npm run openapi`.
 
 New typed errors: `COUPON_INVALID`, `SERVICE_UNAVAILABLE` join the application error union and the single problem table (422, 409). `BRANCH_NOT_BOOKABLE` is not added in M7 (M8 uses it); P6 returns the flag instead. Audit actions added: `service.update`, `coupon.create`, `coupon.update`, `commercial.update` with the exact `changes` keys, no personal data.
 
@@ -169,8 +169,8 @@ New typed errors: `COUPON_INVALID`, `SERVICE_UNAVAILABLE` join the application e
 | Id | Method and path | Success | Key errors |
 | --- | --- | --- | --- |
 | P6 | `POST /api/v1/quotes` | `200 { available, unavailableLines, bookable, quote \| null }` (`quote` is null only when a line is unavailable), `Cache-Control: no-store` | 400/415 transport, 404 branch, 422 stay, occupancy, coupon, 409 `SERVICE_UNAVAILABLE`, 429 |
-| S35 | `GET /staff/branches/{branchId}/services` | `{ items }` for both kinds, including kinds with no row (shown as inactive, no price) | 403, 404 |
-| S36 | `PUT /staff/branches/{branchId}/services/{kind}` | `200`; body `{ priceUnit, price, childPrice?, active, description? }` | 403, 404, 422 (price `> 0` within `INTEGER`; `childPrice` only with `PER_PERSON` or `PER_PERSON_PER_NIGHT`) |
+| S35 | `GET /staff/branches/{id}/services` | `{ items }` for both kinds, including kinds with no row (shown as inactive, no price) | 403, 404 |
+| S36 | `PUT /staff/branches/{id}/services/{kind}` | `200`; body `{ priceUnit, price, childPrice?, active, description? }` | 403, 404, 422 (price `> 0` within `INTEGER`; `childPrice` only with `PER_PERSON` or `PER_PERSON_PER_NIGHT`) |
 | S37 | `GET /staff/coupons?branchId&active&q&page` | `Paged<CouponDto>`, redemption counts are 0 until M8 | 403 |
 | S38 | `POST /staff/coupons` | `201` plus `Location` | 403, 409 duplicate code (case insensitive), 422 |
 | S39 | `PATCH /staff/coupons/{id}` | `200` | 403, 404, 409, 422 |
@@ -234,7 +234,7 @@ Order follows the brief (domain first, then persistence, then use cases, then th
 
 ## Follow-up
 
-- All earlier flags are resolved by the owner's answers of 2026-11-11. Remaining reconciliation: ADR 027, TX-1, FR-TAX-1, FR-BR-3, `error-model.md`, and `api-contracts.md` (A5 and S37 wording) change with T3, T4, and T5.
+- All earlier flags are resolved by the owner's answers of 2026-11-11. Reconciliation: ADR 027, TX-1, FR-TAX-1, FR-BR-3, and `error-model.md` carry no stale VAT gating text after T3 and T4; `api-contracts.md` A5, S35, and S36 are done (T4); only the S37 wording remains for T5.
 - Spec 0005 (M8) must cite this one for the redemption reader and the quote snapshot.
 - Reconcile `docs/database/data-model.md` and `docs/domain/promotions.md` in T3 and T5.
 

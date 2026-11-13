@@ -65,6 +65,8 @@ const AUDIT_ENTITY_LABELS = [
   "InventoryBlock",
   "RoomBaseRate",
   "RatePeriod",
+  "ServiceOffering",
+  "CommercialSettings",
 ];
 
 function propertyName(node: ts.Node | undefined) {

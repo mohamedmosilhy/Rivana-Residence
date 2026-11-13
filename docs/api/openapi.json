@@ -1146,6 +1146,196 @@
           }
         }
       }
+    },
+    "/api/v1/staff/branches/{id}/services": {
+      "get": {
+        "operationId": "listServices",
+        "summary": "API-S35. Both service kinds for a branch; a kind with no offering is inactive with no price. Needs pricing:read in the branch.",
+        "tags": [
+          "Commercial"
+        ],
+        "security": [
+          {
+            "staffSession": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The branch's services.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServiceOfferingList"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Problem details. Codes: INTERNAL, UNAUTHENTICATED, FORBIDDEN, NOT_FOUND.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/staff/branches/{id}/services/{kind}": {
+      "put": {
+        "operationId": "setService",
+        "summary": "API-S36. Create or replace a branch service offering (services:manage in the branch). Audited; an identical write adds no audit event.",
+        "tags": [
+          "Commercial"
+        ],
+        "security": [
+          {
+            "staffSession": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "kind",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ServiceOfferingInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The stored offering.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServiceOffering"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Problem details. Codes: INTERNAL, UNAUTHENTICATED, FORBIDDEN, CROSS_SITE_REQUEST, NOT_FOUND, VALIDATION, TRY_AGAIN.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/staff/settings/commercial": {
+      "get": {
+        "operationId": "getCommercialSettings",
+        "summary": "API-A5. The VAT rate in basis points. Needs pricing:read.",
+        "tags": [
+          "Commercial"
+        ],
+        "security": [
+          {
+            "staffSession": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The commercial settings.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommercialSettings"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Problem details. Codes: INTERNAL, UNAUTHENTICATED, FORBIDDEN.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "operationId": "updateCommercialSettings",
+        "summary": "API-A5. Set the VAT rate, an integer 0 to 10000 basis points (tax:manage, Admin only). Audited; applies to later quotes only.",
+        "tags": [
+          "Commercial"
+        ],
+        "security": [
+          {
+            "staffSession": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CommercialSettingsInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The commercial settings.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommercialSettings"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Problem details. Codes: INTERNAL, UNAUTHENTICATED, FORBIDDEN, CROSS_SITE_REQUEST, VALIDATION, TRY_AGAIN.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -2656,6 +2846,211 @@
             "type": "boolean"
           }
         },
+        "additionalProperties": false
+      },
+      "ServiceOffering": {
+        "type": "object",
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "BREAKFAST",
+              "AIRPORT_TRANSFER"
+            ]
+          },
+          "priceUnit": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "PER_BOOKING",
+                  "PER_NIGHT",
+                  "PER_PERSON",
+                  "PER_PERSON_PER_NIGHT"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "price": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Money"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "childPrice": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Money"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "active": {
+            "type": "boolean"
+          },
+          "description": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "updatedAt": {
+            "description": "UTC instant (ISO 8601).",
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "kind",
+          "priceUnit",
+          "price",
+          "childPrice",
+          "active",
+          "description",
+          "updatedAt"
+        ],
+        "additionalProperties": false
+      },
+      "ServiceOfferingList": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ServiceOffering"
+            },
+            "description": "Both kinds; a kind with no offering is inactive with no price."
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "additionalProperties": false
+      },
+      "ServiceOfferingInput": {
+        "type": "object",
+        "properties": {
+          "priceUnit": {
+            "type": "string",
+            "enum": [
+              "PER_BOOKING",
+              "PER_NIGHT",
+              "PER_PERSON",
+              "PER_PERSON_PER_NIGHT"
+            ]
+          },
+          "price": {
+            "type": "object",
+            "properties": {
+              "amountMinor": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 2147483647
+              },
+              "currency": {
+                "type": "string",
+                "const": "USD"
+              }
+            },
+            "required": [
+              "amountMinor",
+              "currency"
+            ],
+            "additionalProperties": false,
+            "description": "The adult price."
+          },
+          "childPrice": {
+            "description": "Only for the per person units.",
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "amountMinor": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 2147483647
+                  },
+                  "currency": {
+                    "type": "string",
+                    "const": "USD"
+                  }
+                },
+                "required": [
+                  "amountMinor",
+                  "currency"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "active": {
+            "type": "boolean"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 300
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "priceUnit",
+          "price",
+          "active"
+        ],
+        "additionalProperties": false
+      },
+      "CommercialSettings": {
+        "type": "object",
+        "properties": {
+          "vatRateBasisPoints": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "updatedAt": {
+            "type": "string",
+            "description": "UTC instant (ISO 8601)."
+          }
+        },
+        "required": [
+          "vatRateBasisPoints",
+          "updatedAt"
+        ],
+        "additionalProperties": false
+      },
+      "CommercialSettingsInput": {
+        "type": "object",
+        "properties": {
+          "vatRateBasisPoints": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 10000,
+            "description": "VAT in basis points: 1500 is 15%. 0 to 10000."
+          }
+        },
+        "required": [
+          "vatRateBasisPoints"
+        ],
         "additionalProperties": false
       }
     },

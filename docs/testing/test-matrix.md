@@ -72,8 +72,8 @@ M4 (2026-11-06), M5 (2026-11-07), M6-T1 through M6-T10 (latest 2026-11-10), and 
 | T-INV-1…6 | Blocks refused when overselling; unit deactivation; overlap; capacity read model |
 | T-QUOTE-11…12 | API-P6 end to end with services, coupon, VAT; rate limit on coupon attempts |
 | T-CPN-6…8 | **M7-T3 storage foundation implemented**, including T-CPN-7 mixed-case uniqueness on inserts and edits in `tests/integration/commercial-constraints.test.ts`; management persistence and Manager branch scope remain T5 |
-| T-SVC-3…4 | Service management API and audit |
-| T-TAX-3…4 | VAT setting API (Admin only, 0 to 100, default 15, refusals below 0 and above 100) and audit |
+| T-SVC-3…4 | Service management API and audit. **Implemented (M7-T4)** `tests/integration/reservations/commercial.test.ts`, `tests/unit/application/manage-services.test.ts`, authorization sweep additions |
+| T-TAX-3…4 | VAT setting API (Admin only, integer 0 to 10000 basis points, seeded 1500, refusals below 0, above 10000, fractional, null, and missing) and audit. **Implemented (M7-T4)** `tests/integration/reservations/commercial.test.ts`, `tests/unit/domain/vat-rate.test.ts`, `tests/unit/application/manage-commercial-settings.test.ts`. Also guarded: observed lock waits and audit chains over 20 races, `TRY_AGAIN` at 5 seconds, rollback on audit failure |
 | T-PAY-5…10 | Fake gateway: checkout creation failure → `PAYMENT_FAILED`; verified success → `CONFIRMED` with messages; forged or mismatched callback ignored; duplicate ignored; hold expiry job; reconciliation job; refund pending, succeeded, failed, retry |
 | T-CXL-4…8 | Request creation and deadline; one open request; Manager and Admin decisions with branch scope; rejection keeps `CONFIRMED`; approval of paid booking cancels only after refund confirmation; audit and messages |
 | T-LKP-1…4 | Token hash lookup, expiry, rotation; guest session sees only its phone's reservations |

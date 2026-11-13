@@ -1,0 +1,46 @@
+import "server-only";
+
+import {
+  ManageCommercialSettings,
+  type CommercialSettingsContext,
+} from "@/application/commercial";
+import { ManageServices, type ServiceContext } from "@/application/services";
+import { getPrisma } from "@/infrastructure/db/prisma/client";
+import { PrismaAuditLog } from "@/infrastructure/db/prisma/repositories/audit/audit-log";
+import { PrismaCommercialSettingsRepository } from "@/infrastructure/db/prisma/repositories/reservations/commercial/commercial-settings-repository";
+import { PrismaServiceOfferingRepository } from "@/infrastructure/db/prisma/repositories/reservations/commercial/service-repository";
+import { PrismaReservationUnitOfWork } from "@/infrastructure/db/prisma/unit-of-work";
+import { Cuid2IdGenerator } from "@/infrastructure/ids/cuid2-id-generator";
+
+const clock = { now: () => new Date() };
+
+export function manageServices() {
+  const client = getPrisma();
+  return new ManageServices({
+    unitOfWork: new PrismaReservationUnitOfWork<ServiceContext>(
+      client,
+      (transaction) => ({
+        services: new PrismaServiceOfferingRepository(transaction),
+        audit: new PrismaAuditLog(transaction),
+      }),
+    ),
+    services: new PrismaServiceOfferingRepository(client),
+    clock,
+    ids: new Cuid2IdGenerator(),
+  });
+}
+
+export function manageCommercialSettings() {
+  const client = getPrisma();
+  return new ManageCommercialSettings({
+    unitOfWork: new PrismaReservationUnitOfWork<CommercialSettingsContext>(
+      client,
+      (transaction) => ({
+        settings: new PrismaCommercialSettingsRepository(transaction),
+        audit: new PrismaAuditLog(transaction),
+      }),
+    ),
+    settings: new PrismaCommercialSettingsRepository(client),
+    clock,
+  });
+}

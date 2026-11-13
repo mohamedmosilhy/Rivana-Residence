@@ -17,6 +17,14 @@ type RatePeriodSnapshot = Readonly<{
   active: boolean;
 }>;
 
+/** Prices and flags only; the free text description is never copied. */
+type ServiceSnapshot = Readonly<{
+  priceUnit: string;
+  price: AuditMoney;
+  childPrice: AuditMoney | null;
+  active: boolean;
+}>;
+
 /** Each action and the exact shape of its `changes`. */
 export type AuditChanges = {
   "staff.role-changed": RoleChange;
@@ -74,6 +82,18 @@ export type AuditChanges = {
     before: RatePeriodSnapshot;
     after: RatePeriodSnapshot;
   }>;
+  /** A branch service offering was created or changed (M7-T4). */
+  "service.update": Readonly<{
+    kind: string;
+    before: ServiceSnapshot | null;
+    after: ServiceSnapshot;
+    /** The free text itself is never stored; only that it changed. */
+    descriptionChanged: boolean;
+  }>;
+  /** The VAT rate changed under the settings row lock (M7-T4). */
+  "commercial.update": Readonly<{
+    vatRateBasisPoints: Readonly<{ from: number; to: number }>;
+  }>;
 };
 
 export type AuditAction = keyof AuditChanges;
@@ -90,7 +110,9 @@ export type AuditEvent<A extends AuditAction = AuditAction> = Readonly<{
     | "PhysicalRoom"
     | "InventoryBlock"
     | "RoomBaseRate"
-    | "RatePeriod";
+    | "RatePeriod"
+    | "ServiceOffering"
+    | "CommercialSettings";
   entityId: string;
   branchId: string | null;
   reason: string | null;

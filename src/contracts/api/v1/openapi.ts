@@ -14,6 +14,13 @@ import {
   StaffBranchList,
 } from "./branches";
 import { AvailabilityResult, AvailabilityResponse } from "./availability";
+import {
+  CommercialSettings,
+  CommercialSettingsInput,
+  ServiceOffering,
+  ServiceOfferingInput,
+  ServiceOfferingList,
+} from "./commercial";
 import { HealthResponse } from "./health";
 import {
   AvailabilityGrid,
@@ -76,6 +83,11 @@ const COMPONENTS: Readonly<Record<string, z.ZodType>> = {
   RateCalendar,
   RatePeriodInput,
   RatePeriodPatch,
+  ServiceOffering,
+  ServiceOfferingList,
+  ServiceOfferingInput,
+  CommercialSettings,
+  CommercialSettingsInput,
 };
 
 function componentSchemas() {

@@ -34,6 +34,13 @@ import {
   RatePeriodPatch,
   RateQuery,
 } from "./pricing";
+import {
+  CommercialSettings,
+  CommercialSettingsInput,
+  ServiceOffering,
+  ServiceOfferingInput,
+  ServiceOfferingList,
+} from "./commercial";
 import { Money } from "./primitives";
 
 /** One documented endpoint. The OpenAPI document is generated from these. */
@@ -453,6 +460,81 @@ export const API_ROUTES: readonly ApiRoute[] = [
       "FORBIDDEN",
       "CROSS_SITE_REQUEST",
       "NOT_FOUND",
+      "TRY_AGAIN",
+    ],
+  },
+  {
+    method: "get",
+    path: "/api/v1/staff/branches/{id}/services",
+    operationId: "listServices",
+    summary:
+      "API-S35. Both service kinds for a branch; a kind with no offering is inactive with no price. Needs pricing:read in the branch.",
+    tag: "Commercial",
+    security: "staff",
+    responses: {
+      200: {
+        description: "The branch's services.",
+        schema: ServiceOfferingList,
+      },
+    },
+    errors: ["UNAUTHENTICATED", "FORBIDDEN", "NOT_FOUND"],
+  },
+  {
+    method: "put",
+    path: "/api/v1/staff/branches/{id}/services/{kind}",
+    operationId: "setService",
+    summary:
+      "API-S36. Create or replace a branch service offering (services:manage in the branch). Audited; an identical write adds no audit event.",
+    tag: "Commercial",
+    security: "staff",
+    request: ServiceOfferingInput,
+    responses: {
+      200: { description: "The stored offering.", schema: ServiceOffering },
+    },
+    errors: [
+      "UNAUTHENTICATED",
+      "FORBIDDEN",
+      "CROSS_SITE_REQUEST",
+      "NOT_FOUND",
+      "VALIDATION",
+      "TRY_AGAIN",
+    ],
+  },
+  {
+    method: "get",
+    path: "/api/v1/staff/settings/commercial",
+    operationId: "getCommercialSettings",
+    summary: "API-A5. The VAT rate in basis points. Needs pricing:read.",
+    tag: "Commercial",
+    security: "staff",
+    responses: {
+      200: {
+        description: "The commercial settings.",
+        schema: CommercialSettings,
+      },
+    },
+    errors: ["UNAUTHENTICATED", "FORBIDDEN"],
+  },
+  {
+    method: "put",
+    path: "/api/v1/staff/settings/commercial",
+    operationId: "updateCommercialSettings",
+    summary:
+      "API-A5. Set the VAT rate, an integer 0 to 10000 basis points (tax:manage, Admin only). Audited; applies to later quotes only.",
+    tag: "Commercial",
+    security: "staff",
+    request: CommercialSettingsInput,
+    responses: {
+      200: {
+        description: "The commercial settings.",
+        schema: CommercialSettings,
+      },
+    },
+    errors: [
+      "UNAUTHENTICATED",
+      "FORBIDDEN",
+      "CROSS_SITE_REQUEST",
+      "VALIDATION",
       "TRY_AGAIN",
     ],
   },
