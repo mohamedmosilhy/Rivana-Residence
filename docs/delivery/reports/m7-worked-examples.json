@@ -1,0 +1,610 @@
+{
+  "example1": {
+    "available": true,
+    "unavailableLines": [],
+    "bookable": true,
+    "quote": {
+      "stay": {
+        "checkIn": "2026-12-13",
+        "checkOut": "2026-12-17"
+      },
+      "lines": [
+        {
+          "roomSlug": "v7-ex1",
+          "roomName": "V7 ex1",
+          "accommodationType": "ROOM",
+          "occupancy": {
+            "adults": 2,
+            "children": 0
+          },
+          "nights": [
+            {
+              "night": "2026-12-13",
+              "amount": {
+                "amountMinor": 6000,
+                "currency": "USD"
+              },
+              "label": null
+            },
+            {
+              "night": "2026-12-14",
+              "amount": {
+                "amountMinor": 6000,
+                "currency": "USD"
+              },
+              "label": null
+            },
+            {
+              "night": "2026-12-15",
+              "amount": {
+                "amountMinor": 7000,
+                "currency": "USD"
+              },
+              "label": null
+            },
+            {
+              "night": "2026-12-16",
+              "amount": {
+                "amountMinor": 7000,
+                "currency": "USD"
+              },
+              "label": null
+            }
+          ],
+          "accommodation": {
+            "amountMinor": 26000,
+            "currency": "USD"
+          }
+        }
+      ],
+      "services": [],
+      "coupon": null,
+      "accommodation": {
+        "amountMinor": 26000,
+        "currency": "USD"
+      },
+      "servicesTotal": {
+        "amountMinor": 0,
+        "currency": "USD"
+      },
+      "subtotal": {
+        "amountMinor": 26000,
+        "currency": "USD"
+      },
+      "discount": {
+        "amountMinor": 0,
+        "currency": "USD"
+      },
+      "taxable": {
+        "amountMinor": 26000,
+        "currency": "USD"
+      },
+      "vatRateBasisPoints": 1500,
+      "vat": {
+        "amountMinor": 3900,
+        "currency": "USD"
+      },
+      "total": {
+        "amountMinor": 29900,
+        "currency": "USD"
+      }
+    }
+  },
+  "example2": {
+    "available": true,
+    "unavailableLines": [],
+    "bookable": true,
+    "quote": {
+      "stay": {
+        "checkIn": "2026-12-13",
+        "checkOut": "2026-12-16"
+      },
+      "lines": [
+        {
+          "roomSlug": "v7-garden",
+          "roomName": "V7 garden",
+          "accommodationType": "ROOM",
+          "occupancy": {
+            "adults": 2,
+            "children": 0
+          },
+          "nights": [
+            {
+              "night": "2026-12-13",
+              "amount": {
+                "amountMinor": 8000,
+                "currency": "USD"
+              },
+              "label": null
+            },
+            {
+              "night": "2026-12-14",
+              "amount": {
+                "amountMinor": 8000,
+                "currency": "USD"
+              },
+              "label": null
+            },
+            {
+              "night": "2026-12-15",
+              "amount": {
+                "amountMinor": 8000,
+                "currency": "USD"
+              },
+              "label": null
+            }
+          ],
+          "accommodation": {
+            "amountMinor": 24000,
+            "currency": "USD"
+          }
+        },
+        {
+          "roomSlug": "v7-apartment",
+          "roomName": "V7 apartment",
+          "accommodationType": "APARTMENT",
+          "occupancy": {
+            "adults": 2,
+            "children": 0
+          },
+          "nights": [
+            {
+              "night": "2026-12-13",
+              "amount": {
+                "amountMinor": 12000,
+                "currency": "USD"
+              },
+              "label": null
+            },
+            {
+              "night": "2026-12-14",
+              "amount": {
+                "amountMinor": 12000,
+                "currency": "USD"
+              },
+              "label": null
+            },
+            {
+              "night": "2026-12-15",
+              "amount": {
+                "amountMinor": 12000,
+                "currency": "USD"
+              },
+              "label": null
+            }
+          ],
+          "accommodation": {
+            "amountMinor": 36000,
+            "currency": "USD"
+          }
+        }
+      ],
+      "services": [
+        {
+          "kind": "BREAKFAST",
+          "unit": "PER_BOOKING",
+          "price": {
+            "amountMinor": 3000,
+            "currency": "USD"
+          },
+          "childPrice": null,
+          "adults": 4,
+          "children": 0,
+          "nights": 3,
+          "adultQuantity": 1,
+          "childQuantity": 0,
+          "amount": {
+            "amountMinor": 3000,
+            "currency": "USD"
+          }
+        },
+        {
+          "kind": "AIRPORT_TRANSFER",
+          "unit": "PER_BOOKING",
+          "price": {
+            "amountMinor": 2500,
+            "currency": "USD"
+          },
+          "childPrice": null,
+          "adults": 4,
+          "children": 0,
+          "nights": 3,
+          "adultQuantity": 1,
+          "childQuantity": 0,
+          "amount": {
+            "amountMinor": 2500,
+            "currency": "USD"
+          }
+        }
+      ],
+      "coupon": {
+        "code": "V7SAVE15",
+        "kind": "PERCENT",
+        "percentBasisPoints": 1500,
+        "amount": null
+      },
+      "accommodation": {
+        "amountMinor": 60000,
+        "currency": "USD"
+      },
+      "servicesTotal": {
+        "amountMinor": 5500,
+        "currency": "USD"
+      },
+      "subtotal": {
+        "amountMinor": 65500,
+        "currency": "USD"
+      },
+      "discount": {
+        "amountMinor": 9825,
+        "currency": "USD"
+      },
+      "taxable": {
+        "amountMinor": 55675,
+        "currency": "USD"
+      },
+      "vatRateBasisPoints": 1500,
+      "vat": {
+        "amountMinor": 8351,
+        "currency": "USD"
+      },
+      "total": {
+        "amountMinor": 64026,
+        "currency": "USD"
+      }
+    }
+  },
+  "example3_vat": {
+    "available": true,
+    "unavailableLines": [],
+    "bookable": true,
+    "quote": {
+      "stay": {
+        "checkIn": "2026-12-13",
+        "checkOut": "2026-12-14"
+      },
+      "lines": [
+        {
+          "roomSlug": "v7-r10010",
+          "roomName": "V7 r10010",
+          "accommodationType": "ROOM",
+          "occupancy": {
+            "adults": 2,
+            "children": 0
+          },
+          "nights": [
+            {
+              "night": "2026-12-13",
+              "amount": {
+                "amountMinor": 10010,
+                "currency": "USD"
+              },
+              "label": null
+            }
+          ],
+          "accommodation": {
+            "amountMinor": 10010,
+            "currency": "USD"
+          }
+        }
+      ],
+      "services": [],
+      "coupon": null,
+      "accommodation": {
+        "amountMinor": 10010,
+        "currency": "USD"
+      },
+      "servicesTotal": {
+        "amountMinor": 0,
+        "currency": "USD"
+      },
+      "subtotal": {
+        "amountMinor": 10010,
+        "currency": "USD"
+      },
+      "discount": {
+        "amountMinor": 0,
+        "currency": "USD"
+      },
+      "taxable": {
+        "amountMinor": 10010,
+        "currency": "USD"
+      },
+      "vatRateBasisPoints": 1500,
+      "vat": {
+        "amountMinor": 1502,
+        "currency": "USD"
+      },
+      "total": {
+        "amountMinor": 11512,
+        "currency": "USD"
+      }
+    }
+  },
+  "example3_percent": {
+    "available": true,
+    "unavailableLines": [],
+    "bookable": true,
+    "quote": {
+      "stay": {
+        "checkIn": "2026-12-13",
+        "checkOut": "2026-12-16"
+      },
+      "lines": [
+        {
+          "roomSlug": "v7-r11111",
+          "roomName": "V7 r11111",
+          "accommodationType": "ROOM",
+          "occupancy": {
+            "adults": 2,
+            "children": 0
+          },
+          "nights": [
+            {
+              "night": "2026-12-13",
+              "amount": {
+                "amountMinor": 11111,
+                "currency": "USD"
+              },
+              "label": null
+            },
+            {
+              "night": "2026-12-14",
+              "amount": {
+                "amountMinor": 11111,
+                "currency": "USD"
+              },
+              "label": null
+            },
+            {
+              "night": "2026-12-15",
+              "amount": {
+                "amountMinor": 11111,
+                "currency": "USD"
+              },
+              "label": null
+            }
+          ],
+          "accommodation": {
+            "amountMinor": 33333,
+            "currency": "USD"
+          }
+        }
+      ],
+      "services": [],
+      "coupon": {
+        "code": "V7TEN",
+        "kind": "PERCENT",
+        "percentBasisPoints": 1000,
+        "amount": null
+      },
+      "accommodation": {
+        "amountMinor": 33333,
+        "currency": "USD"
+      },
+      "servicesTotal": {
+        "amountMinor": 0,
+        "currency": "USD"
+      },
+      "subtotal": {
+        "amountMinor": 33333,
+        "currency": "USD"
+      },
+      "discount": {
+        "amountMinor": 3333,
+        "currency": "USD"
+      },
+      "taxable": {
+        "amountMinor": 30000,
+        "currency": "USD"
+      },
+      "vatRateBasisPoints": 1500,
+      "vat": {
+        "amountMinor": 4500,
+        "currency": "USD"
+      },
+      "total": {
+        "amountMinor": 34500,
+        "currency": "USD"
+      }
+    }
+  },
+  "example4": {
+    "available": true,
+    "unavailableLines": [],
+    "bookable": true,
+    "quote": {
+      "stay": {
+        "checkIn": "2026-12-13",
+        "checkOut": "2026-12-14"
+      },
+      "lines": [
+        {
+          "roomSlug": "v7-r4000",
+          "roomName": "V7 r4000",
+          "accommodationType": "ROOM",
+          "occupancy": {
+            "adults": 2,
+            "children": 0
+          },
+          "nights": [
+            {
+              "night": "2026-12-13",
+              "amount": {
+                "amountMinor": 4000,
+                "currency": "USD"
+              },
+              "label": null
+            }
+          ],
+          "accommodation": {
+            "amountMinor": 4000,
+            "currency": "USD"
+          }
+        }
+      ],
+      "services": [],
+      "coupon": {
+        "code": "V7FIXED5K",
+        "kind": "FIXED",
+        "percentBasisPoints": null,
+        "amount": {
+          "amountMinor": 5000,
+          "currency": "USD"
+        }
+      },
+      "accommodation": {
+        "amountMinor": 4000,
+        "currency": "USD"
+      },
+      "servicesTotal": {
+        "amountMinor": 0,
+        "currency": "USD"
+      },
+      "subtotal": {
+        "amountMinor": 4000,
+        "currency": "USD"
+      },
+      "discount": {
+        "amountMinor": 4000,
+        "currency": "USD"
+      },
+      "taxable": {
+        "amountMinor": 0,
+        "currency": "USD"
+      },
+      "vatRateBasisPoints": 1500,
+      "vat": {
+        "amountMinor": 0,
+        "currency": "USD"
+      },
+      "total": {
+        "amountMinor": 0,
+        "currency": "USD"
+      }
+    }
+  },
+  "example5": {
+    "available": true,
+    "unavailableLines": [],
+    "bookable": true,
+    "quote": {
+      "stay": {
+        "checkIn": "2026-12-13",
+        "checkOut": "2026-12-16"
+      },
+      "lines": [
+        {
+          "roomSlug": "v7-garden",
+          "roomName": "V7 garden",
+          "accommodationType": "ROOM",
+          "occupancy": {
+            "adults": 2,
+            "children": 1
+          },
+          "nights": [
+            {
+              "night": "2026-12-13",
+              "amount": {
+                "amountMinor": 8000,
+                "currency": "USD"
+              },
+              "label": null
+            },
+            {
+              "night": "2026-12-14",
+              "amount": {
+                "amountMinor": 8000,
+                "currency": "USD"
+              },
+              "label": null
+            },
+            {
+              "night": "2026-12-15",
+              "amount": {
+                "amountMinor": 8000,
+                "currency": "USD"
+              },
+              "label": null
+            }
+          ],
+          "accommodation": {
+            "amountMinor": 24000,
+            "currency": "USD"
+          }
+        }
+      ],
+      "services": [
+        {
+          "kind": "BREAKFAST",
+          "unit": "PER_PERSON_PER_NIGHT",
+          "price": {
+            "amountMinor": 1000,
+            "currency": "USD"
+          },
+          "childPrice": {
+            "amountMinor": 500,
+            "currency": "USD"
+          },
+          "adults": 2,
+          "children": 1,
+          "nights": 3,
+          "adultQuantity": 6,
+          "childQuantity": 3,
+          "amount": {
+            "amountMinor": 7500,
+            "currency": "USD"
+          }
+        },
+        {
+          "kind": "AIRPORT_TRANSFER",
+          "unit": "PER_BOOKING",
+          "price": {
+            "amountMinor": 2500,
+            "currency": "USD"
+          },
+          "childPrice": null,
+          "adults": 2,
+          "children": 1,
+          "nights": 3,
+          "adultQuantity": 1,
+          "childQuantity": 0,
+          "amount": {
+            "amountMinor": 2500,
+            "currency": "USD"
+          }
+        }
+      ],
+      "coupon": null,
+      "accommodation": {
+        "amountMinor": 24000,
+        "currency": "USD"
+      },
+      "servicesTotal": {
+        "amountMinor": 10000,
+        "currency": "USD"
+      },
+      "subtotal": {
+        "amountMinor": 34000,
+        "currency": "USD"
+      },
+      "discount": {
+        "amountMinor": 0,
+        "currency": "USD"
+      },
+      "taxable": {
+        "amountMinor": 34000,
+        "currency": "USD"
+      },
+      "vatRateBasisPoints": 1500,
+      "vat": {
+        "amountMinor": 5100,
+        "currency": "USD"
+      },
+      "total": {
+        "amountMinor": 39100,
+        "currency": "USD"
+      }
+    }
+  }
+}

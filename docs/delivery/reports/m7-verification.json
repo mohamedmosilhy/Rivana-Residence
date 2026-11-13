@@ -1,0 +1,265 @@
+{
+  "verifiedAt": "2026-11-13",
+  "method": "real Next.js dev server against the disposable rivana_e2e_test database; staff sessions through the real admin login (Admin, Manager, Receptionist); API calls from the signed in browser page; database state by SQL",
+  "behaviours": [
+    {
+      "ac": "AC-7",
+      "label": "settings row starts at 15% (never null)",
+      "pass": true,
+      "evidence": "SQL v=1500; GET /staff/settings/commercial 200 {\"vatRateBasisPoints\":1500,\"updatedAt\":\"2026-11-13T14:46:39.538Z\"}"
+    },
+    {
+      "ac": "AC-1",
+      "label": "example 1: 6000,6000,7000,7000 = 26000 (+15% VAT = 29900)",
+      "pass": true,
+      "evidence": "POST /quotes 200 no-store=no-store total=29900"
+    },
+    {
+      "ac": "AC-1",
+      "label": "example 2: two units, two services, 15% coupon, 15% VAT = 64026",
+      "pass": true,
+      "evidence": "200 acc/svc/sub/disc/taxable/vat/total=60000/5500/65500/9825/55675/8351/64026; coupon matched as 'v7save15'"
+    },
+    {
+      "ac": "AC-2",
+      "label": "example 3: VAT 1501.5 rounds half up to 1502 once on taxable",
+      "pass": true,
+      "evidence": "taxable=10010 vat=1502 total=11512"
+    },
+    {
+      "ac": "AC-2",
+      "label": "example 3: 10% coupon on subtotal 33333 = 3333 (half up, once)",
+      "pass": true,
+      "evidence": "subtotal=33333 discount=3333"
+    },
+    {
+      "ac": "AC-2",
+      "label": "example 4: fixed 5000 coupon above subtotal 4000 -> discount 4000, taxable 0, total 0",
+      "pass": true,
+      "evidence": "discount=4000 taxable=0 total=0"
+    },
+    {
+      "ac": "AC-1",
+      "label": "example 5: per person per night breakfast with child price = 39100",
+      "pass": true,
+      "evidence": "subtotal=34000 vat=5100 total=39100; breakfast line {\"kind\":\"BREAKFAST\",\"unit\":\"PER_PERSON_PER_NIGHT\",\"price\":{\"amountMinor\":1000,\"currency\":\"USD\"},\"childPrice\":{\"amountMinor\":500,\"currency\":\"USD\"},\"adults\":2,\"children\":1,\"nights\":3,\"adultQuantity\":6,\"childQuantity\":3,\"amount\":{\"amountMinor\":7500,\"currency\":\"USD\"}}"
+    },
+    {
+      "ac": "AC-3",
+      "label": "a service is added only when requested (both active, none asked)",
+      "pass": true,
+      "evidence": "services=[] servicesTotal=0 (status 200)"
+    },
+    {
+      "ac": "AC-3",
+      "label": "an inactive service returns 409 SERVICE_UNAVAILABLE with context.kind",
+      "pass": true,
+      "evidence": "409 {\"code\":\"SERVICE_UNAVAILABLE\",\"context\":{\"kind\":\"AIRPORT_TRANSFER\"}}"
+    },
+    {
+      "ac": "AC-4",
+      "label": "reason NOT_FOUND -> 422 COUPON_INVALID with context.reason",
+      "pass": true,
+      "evidence": "422 {\"code\":\"COUPON_INVALID\",\"context\":{\"reason\":\"NOT_FOUND\"}}"
+    },
+    {
+      "ac": "AC-4",
+      "label": "reason INACTIVE -> 422 COUPON_INVALID with context.reason",
+      "pass": true,
+      "evidence": "422 {\"code\":\"COUPON_INVALID\",\"context\":{\"reason\":\"INACTIVE\"}}"
+    },
+    {
+      "ac": "AC-4",
+      "label": "reason NOT_YET_VALID -> 422 COUPON_INVALID with context.reason",
+      "pass": true,
+      "evidence": "422 {\"code\":\"COUPON_INVALID\",\"context\":{\"reason\":\"NOT_YET_VALID\"}}"
+    },
+    {
+      "ac": "AC-4",
+      "label": "reason EXPIRED -> 422 COUPON_INVALID with context.reason",
+      "pass": true,
+      "evidence": "422 {\"code\":\"COUPON_INVALID\",\"context\":{\"reason\":\"EXPIRED\"}}"
+    },
+    {
+      "ac": "AC-4",
+      "label": "reason WRONG_BRANCH -> 422 COUPON_INVALID with context.reason",
+      "pass": true,
+      "evidence": "422 {\"code\":\"COUPON_INVALID\",\"context\":{\"reason\":\"WRONG_BRANCH\"}}"
+    },
+    {
+      "ac": "AC-4",
+      "label": "all refusals share one message (nothing else leaks)",
+      "pass": true,
+      "evidence": "distinct detail messages=1: This coupon code cannot be used for this booking."
+    },
+    {
+      "ac": "AC-4",
+      "label": "codes match case-insensitively and trimmed",
+      "pass": true,
+      "evidence": "200 coupon={\"code\":\"V7SAVE15\",\"kind\":\"PERCENT\",\"percentBasisPoints\":1500,\"amount\":null}"
+    },
+    {
+      "ac": "AC-6",
+      "label": "client supplied total is refused (422, nothing quoted)",
+      "pass": true,
+      "evidence": "422 VALIDATION"
+    },
+    {
+      "ac": "AC-6",
+      "label": "client supplied discount is refused (422, nothing quoted)",
+      "pass": true,
+      "evidence": "422 VALIDATION"
+    },
+    {
+      "ac": "AC-6",
+      "label": "client supplied vatRateBasisPoints is refused (422, nothing quoted)",
+      "pass": true,
+      "evidence": "422 VALIDATION"
+    },
+    {
+      "ac": "AC-6",
+      "label": "client supplied a price on a line is refused (422, nothing quoted)",
+      "pass": true,
+      "evidence": "422 VALIDATION"
+    },
+    {
+      "ac": "AC-5",
+      "label": "Manager can create a coupon for an assigned branch",
+      "pass": true,
+      "evidence": "POST /staff/coupons (new-cairo) 201"
+    },
+    {
+      "ac": "AC-5",
+      "label": "Manager cannot create an all-branches coupon or one for an unassigned branch",
+      "pass": true,
+      "evidence": "all-branches 403 FORBIDDEN; demo-giza 403 FORBIDDEN"
+    },
+    {
+      "ac": "AC-5",
+      "label": "Manager changes service prices only at an assigned branch",
+      "pass": true,
+      "evidence": "new-cairo 200; demo-giza 403 FORBIDDEN"
+    },
+    {
+      "ac": "AC-5",
+      "label": "Receptionist may read services but not change them",
+      "pass": true,
+      "evidence": "GET 200 (2 items); PUT 403"
+    },
+    {
+      "ac": "AC-5",
+      "label": "VAT is Admin only to change (Manager 403, may read)",
+      "pass": true,
+      "evidence": "Manager PUT 403; GET 200"
+    },
+    {
+      "ac": "AC-7",
+      "label": "VAT -1 refused 422, stored rate unchanged",
+      "pass": true,
+      "evidence": "422 VALIDATION; stored=1500"
+    },
+    {
+      "ac": "AC-7",
+      "label": "VAT 10001 refused 422, stored rate unchanged",
+      "pass": true,
+      "evidence": "422 VALIDATION; stored=1500"
+    },
+    {
+      "ac": "AC-7",
+      "label": "VAT 14.5 refused 422, stored rate unchanged",
+      "pass": true,
+      "evidence": "422 VALIDATION; stored=1500"
+    },
+    {
+      "ac": "AC-7",
+      "label": "VAT null refused 422, stored rate unchanged",
+      "pass": true,
+      "evidence": "422 VALIDATION; stored=1500"
+    },
+    {
+      "ac": "AC-7",
+      "label": "VAT \"15\" refused 422, stored rate unchanged",
+      "pass": true,
+      "evidence": "422 VALIDATION; stored=1500"
+    },
+    {
+      "ac": "AC-7",
+      "label": "VAT missing refused 422, stored rate unchanged",
+      "pass": true,
+      "evidence": "422 VALIDATION; stored=1500"
+    },
+    {
+      "ac": "AC-7",
+      "label": "0% and 100% are accepted and used by the quote",
+      "pass": true,
+      "evidence": "0%: vat=0; 100%: vat=24000 taxable=24000"
+    },
+    {
+      "ac": "AC-7",
+      "label": "VAT back to 15% and the same value twice adds no audit row (checked below)",
+      "pass": true,
+      "evidence": "repeat PUT 200"
+    },
+    {
+      "ac": "AC-5",
+      "label": "every change type wrote an audit row (service, coupon create, VAT)",
+      "pass": true,
+      "evidence": "[{\"action\":\"commercial.update\",\"n\":3,\"staff\":true,\"has_changes\":true},{\"action\":\"coupon.create\",\"n\":8,\"staff\":true,\"has_changes\":true},{\"action\":\"service.update\",\"n\":7,\"staff\":true,\"has_changes\":true}]"
+    },
+    {
+      "ac": "AC-7",
+      "label": "VAT audit chain is 1500->0->10000->1500 and the repeat adds none",
+      "pass": true,
+      "evidence": "[{\"vatRateBasisPoints\":{\"to\":0,\"from\":1500}},{\"vatRateBasisPoints\":{\"to\":10000,\"from\":0}},{\"vatRateBasisPoints\":{\"to\":1500,\"from\":10000}}]"
+    },
+    {
+      "ac": "AC-RL",
+      "label": "61st code-free quote in a minute -> 429 with Retry-After",
+      "pass": true,
+      "evidence": "60x200 then 429; retry-after=60s {\"code\":\"RATE_LIMITED\"}"
+    },
+    {
+      "ac": "AC-RL",
+      "label": "21st coupon attempt in 10 minutes -> 429; code-free quotes still served",
+      "pass": true,
+      "evidence": "20x422 then 429; code-free 200; retry-after=600s"
+    },
+    {
+      "ac": "AC-RL",
+      "label": "limiter keys hold a hashed client only (no code, no phone)",
+      "pass": true,
+      "evidence": "keys=[\"rl:quote-coupon:klI4xch4sQwzeNRRB6dn7Tqk__q5VE-oDJh0dDg3WaU\",\"rl:quote:4owF3R1Y-6ln3bchGG2mPJ9DpqW3_gG1WUkB-vudCrw\"]",
+      "note": "The first run reported FAIL because the verifier regex assumed hex; the hash is base64url (HMAC). Re-checked from the database afterwards: both keys match ^rl:quote(-coupon)?:[A-Za-z0-9_-]{43}$, none contains the guessed code text or a long digit run."
+    },
+    {
+      "ac": "surface",
+      "label": "migration commercial_rules is live: ServiceOffering, Coupon, CouponBranch, CommercialSettings exist; settings row id=default seeded at 1500",
+      "pass": true,
+      "evidence": "to_regclass on the disposable database returned all four tables; SELECT id, vatRateBasisPoints -> default|1500; prisma migrate deploy on a scratch database applied 8 migrations and 'prisma migrate diff --from-config-datasource --to-schema prisma/schema.prisma --exit-code' printed 'No difference detected.'"
+    },
+    {
+      "ac": "surface",
+      "label": "bucket cleanup job prunes expired quote and quote-coupon buckets",
+      "pass": true,
+      "evidence": "aged the two quote buckets by 2 days, ran 'npm run throttles -- cleanup-public' -> {\"deleted\":3}; remaining rl:quote% rows = 0"
+    },
+    {
+      "ac": "surface",
+      "label": "demo seed: fictional breakfast and transfer for the demo branch only, DEMO_PERCENT and DEMO_FIXED, VAT preserved",
+      "pass": true,
+      "evidence": "npm run db:seed -- --demo -> 'created 4 fictional service/coupon records; existing records and VAT preserved'; demo-giza BREAKFAST PER_PERSON_PER_NIGHT 1000/500, AIRPORT_TRANSFER PER_BOOKING 3000; DEMO_FIXED 1500; DEMO_PERCENT 10%; VAT 1500"
+    },
+    {
+      "ac": "surface",
+      "label": "demo quote through the running API: 3 nights garden room + breakfast + DEMO_PERCENT",
+      "pass": true,
+      "evidence": "accommodation 18000, services 6000, subtotal 24000, discount 2400, taxable 21600, vat 3240, total 24840; DEMO_FIXED: discount 1500, taxable 22500, vat 3375, total 25875; bookable=false because the demo branch switch is off"
+    },
+    {
+      "ac": "AC-4",
+      "label": "LIMIT_REACHED and PHONE_LIMIT_REACHED through the running app",
+      "pass": null,
+      "evidence": "NOT EXERCISED LIVE by design: redemption counts are zero until M8 (spec 0004 Decision 4), so the API cannot reach those two reasons. Covered by unit tests only: tests/unit/domain/coupon-policy.test.ts and tests/unit/application/quote-booking.test.ts."
+    }
+  ]
+}

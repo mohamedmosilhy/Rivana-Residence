@@ -1,6 +1,6 @@
 # M7 — Booking quote: optional services, coupons, VAT
 
-Status: **In progress (6/6 tasks accepted; milestone close pending).** Spec [0004](../../specs/0004-m7-booking-quote.md) and task breakdown approved 2026-11-11. Branch: `m7-booking-quote`. Follow the [milestone loop](./README.md#the-loop-every-milestone-follows).
+Status: **Accepted (2026-11-13): 6/6 tasks accepted, close gates and runtime verification complete.** Evidence: [report](../reports/m7-booking-quote.md). Spec [0004](../../specs/0004-m7-booking-quote.md) and task breakdown approved 2026-11-11. Branch: `m7-booking-quote`. Follow the [milestone loop](./README.md#the-loop-every-milestone-follows).
 
 ## Objective
 

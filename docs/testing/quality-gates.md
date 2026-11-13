@@ -39,21 +39,19 @@ Record exact commands and counts in the review package. If a gate cannot run, sa
 
 The owner selected Node **26.13.0 LTS** for the Mac, CI, and hosting. On macOS with npm **11.20.0**, clean `npm ci --no-audit` and `npm run check` passed (format, lint, typecheck, **67 unit files / 1,373 tests**, production build). The full PostgreSQL integration suite passed **29 files / 391 tests**; full Chromium E2E passed **175 tests**, with **30 intentionally skipped**. Independent review by `gpt-6-astra` approved with zero findings. The [runtime report](../delivery/reports/node-26-runtime-alignment.md) records exact commands, unchanged development audit findings, and the nonfatal upstream Tailwind loader deprecation under Node 26. Those Tailwind and media tracing warnings were subsequently resolved in M6-T10. These results do not replace the historical task acceptance evidence below or claim remote Linux CI has run.
 
-## Latest accepted task results (2026-11-13, M7-T5)
+## Latest results (2026-11-13, M7 milestone close)
 
-Owner accepted M7-T5, coupon management APIs S37–S39. Evidence: [M7 task log](../delivery/reports/m7-booking-quote.md#task-log) and [independent review](../reviews/2026-11-13-m7-t5.md). All results below cover the corrected implementation after the list snapshot regression was fixed.
+M7 (booking quote: services, coupons, VAT) was accepted by the owner on 2026-11-13. Full evidence: [M7 report](../delivery/reports/m7-booking-quote.md#commands-and-results-exact-commands-counts-durations) and [runtime verification ledger](../delivery/reports/m7-verification.json). Results are for the final tree.
 
 | Gate | Result |
 | --- | --- |
-| `npm run check` | **Pass**: format, lint, typecheck, **79 unit files / 1,680 tests**, production build |
-| `TEST_DATABASE_URL=postgresql://mohamedmosilhy@127.0.0.1:5432/rivana_test npm run test:integration -- --reporter=dot` | **Pass**: **34 files / 506 tests** on a recreated disposable database |
-| `E2E_DATABASE_URL=postgresql://mohamedmosilhy@127.0.0.1:5432/rivana_e2e_test npm run test:e2e` | **Pass**: Chromium **178 passed / 30 intentional skips**; includes real-session Admin/Manager coupon API journeys on desktop and mobile |
-| `TEST_DATABASE_URL=postgresql://mohamedmosilhy@127.0.0.1:5432/rivana_test npm run test:integration -- tests/integration/reservations/coupons.test.ts tests/integration/reservations/concurrency.test.ts --reporter=dot` | **Pass**: **2 files / 42 tests**; observed-lock races repeat 20 times, plus read-snapshot isolation regression |
-| Independent review | **Approve**, gpt-6-astra (author gpt-6.1-sol). One blocker reproduced and fixed: separate Prisma relation hydration could disclose foreign branches during a scope edit. Retained regression fails before the fix and passes afterward. Reviewer independently reran **4 unit files / 200 tests** and **1 integration file / 28 tests**; no unresolved findings |
-| OpenAPI and whitespace | `npm run openapi` regenerated the document; freshness is covered by unit tests. `git diff --check` passed |
-| Migration drift / WebKit / Lighthouse | Not run: no schema or migration changes, public page changes, or UI changes |
-
-Public quote integration remains M7-T6; redemption persistence remains M8. These are task results, not milestone-close acceptance.
+| `npm run check` | **Pass** in 26 s: format, lint (no warnings), typecheck, **80 unit files / 1,728 tests**, production build |
+| `TEST_DATABASE_URL=postgresql://<user>@127.0.0.1:5432/rivana_test npm run test:integration` | **Pass** in 143 s: **35 files / 534 tests** |
+| `vitest run --config vitest.integration.config.ts tests/integration/reservations/concurrency.test.ts` | **Pass**: 1 file / 14 tests (races repeat 20 times inside the suite) |
+| `E2E_DATABASE_URL=postgresql://<user>@127.0.0.1:5432/rivana_e2e_test npm run test:e2e` | **Pass** in 75 s: Chromium **179 passed / 30 intentional skips** |
+| Migration drift | **No difference detected** after `prisma migrate deploy` of 8 migrations on a scratch database (`prisma migrate diff --from-config-datasource --to-schema prisma/schema.prisma --exit-code`) |
+| Runtime verification (`/check verify`) | **42 of 43 behaviours verified live**; 1 not exercised live by design (coupon reasons `LIMIT_REACHED` and `PHONE_LIMIT_REACHED` need persisted redemptions from M8) |
+| WebKit / Lighthouse | Not run: no UI or public page changes in M7 |
 
 ## Previous accepted task results (2026-11-11, M7-T3)
 

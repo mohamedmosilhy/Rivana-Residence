@@ -1,0 +1,91 @@
+{
+  "audit": [
+    {
+      "action": "commercial.update",
+      "n": 3,
+      "staff": true,
+      "has_changes": true
+    },
+    {
+      "action": "coupon.create",
+      "n": 8,
+      "staff": true,
+      "has_changes": true
+    },
+    {
+      "action": "service.update",
+      "n": 7,
+      "staff": true,
+      "has_changes": true
+    }
+  ],
+  "vatRows": [
+    {
+      "changes": {
+        "vatRateBasisPoints": {
+          "to": 0,
+          "from": 1500
+        }
+      }
+    },
+    {
+      "changes": {
+        "vatRateBasisPoints": {
+          "to": 10000,
+          "from": 0
+        }
+      }
+    },
+    {
+      "changes": {
+        "vatRateBasisPoints": {
+          "to": 1500,
+          "from": 10000
+        }
+      }
+    }
+  ],
+  "svcRow": [
+    {
+      "actorId": "ij1rp96kg1gpeoluuqe2ng7j",
+      "branchId": "cwiuqp6uf1q5i1ic4vhawnmw",
+      "changes": {
+        "kind": "BREAKFAST",
+        "after": {
+          "price": {
+            "currency": "USD",
+            "amountMinor": 3000
+          },
+          "active": true,
+          "priceUnit": "PER_BOOKING",
+          "childPrice": null
+        },
+        "before": null,
+        "descriptionChanged": false
+      }
+    }
+  ],
+  "cpnRow": [
+    {
+      "actorId": "ij1rp96kg1gpeoluuqe2ng7j",
+      "branchId": null,
+      "changes": {
+        "after": {
+          "code": "V7SAVE15",
+          "kind": "PERCENT",
+          "active": true,
+          "amount": null,
+          "endsAt": null,
+          "startsAt": null,
+          "branchIds": [],
+          "allBranches": true,
+          "maxRedemptions": null,
+          "percentBasisPoints": 1500,
+          "maxRedemptionsPerPhone": null
+        },
+        "before": null,
+        "descriptionChanged": false
+      }
+    }
+  ]
+}
