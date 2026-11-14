@@ -5,11 +5,10 @@ import {
   entityMediaFromForm,
   sectionMediaFromForm,
   roomInputFromForm,
-} from "@/application/content/catalog-forms";
-import {
   pageKeyFromSegment,
   sectionPayloadFromForm,
-} from "@/application/content/page-commands";
+} from "@/application/content";
+
 import { facilityDraftSchema } from "@/domain/facilities/facility";
 import { roomDraftSchema } from "@/domain/rooms/room";
 

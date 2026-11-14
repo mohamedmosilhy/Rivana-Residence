@@ -7,7 +7,7 @@ import type {
   MediaUsage,
   PendingMediaInput,
   ReadyMediaInput,
-} from "@/application/media/ports";
+} from "@/application/media";
 import type { Actor } from "@/application/shared/actor";
 import { failure, success } from "@/application/shared/result";
 import type { MediaDetailsInput } from "@/domain/media/media-asset";

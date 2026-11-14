@@ -2,17 +2,17 @@ import "server-only";
 
 import { unstable_cache } from "next/cache";
 
-import { GetAdminOverview } from "@/application/admin/get-overview";
-import { ResolveBooking } from "@/application/booking/resolve-booking";
-import { CACHE_TAGS } from "@/application/cache/cache-tags";
-import { ListEnquiries } from "@/application/enquiries/list-enquiries";
+import { GetAdminOverview } from "@/application/admin";
+import { ResolveBooking } from "@/application/booking";
+import { CACHE_TAGS } from "@/application/cache";
+import { ListEnquiries } from "@/application/enquiries";
 import {
   GetAdminSiteSettings,
   GetPublicSiteSettings,
   ReplaceSocialLinks,
   UpdateSiteImages,
   UpdateSiteSettings,
-} from "@/application/settings/site-settings";
+} from "@/application/settings";
 import { getCurrentStaff } from "@/composition/auth";
 import { DisabledBookingProvider } from "@/infrastructure/booking/disabled-booking-provider";
 import { NextCacheInvalidator } from "@/infrastructure/cache/next-cache-invalidator";

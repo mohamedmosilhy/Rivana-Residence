@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 
-import { hotelJsonLd } from "@/application/public/seo";
+import { hotelJsonLd } from "@/application/public";
 import {
   getActiveBranches,
   getPublicOrigin,

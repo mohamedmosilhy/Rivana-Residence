@@ -4,7 +4,7 @@ import type { Route } from "next";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
-import { formDataValues } from "@/application/content/form-values";
+import { formDataValues } from "@/application/content";
 import { getCurrentStaff } from "@/composition/auth";
 import { manageBranches } from "@/composition/content";
 import { BRANCH_FORM_FIELDS } from "@/presentation/admin/branches/fields";

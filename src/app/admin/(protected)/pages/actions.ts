@@ -1,6 +1,6 @@
 "use server";
 
-import { formDataValues } from "@/application/content/form-values";
+import { formDataValues } from "@/application/content";
 import { getCurrentStaff } from "@/composition/auth";
 import { pageCommands } from "@/composition/content";
 import type { PageKey } from "@/domain/content/page-sections";

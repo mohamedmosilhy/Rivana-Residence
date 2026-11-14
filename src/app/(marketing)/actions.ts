@@ -1,6 +1,6 @@
 "use server";
 
-import { formDataValues } from "@/application/content/form-values";
+import { formDataValues } from "@/application/content";
 import { submitEnquiry } from "@/composition/public";
 import { errorState, type FormState } from "@/presentation/admin/ui/form-state";
 

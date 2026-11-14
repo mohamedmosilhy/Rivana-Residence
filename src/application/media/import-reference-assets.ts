@@ -1,4 +1,4 @@
-import type { MediaAssetDto } from "@/application/media/ports";
+import type { MediaAssetDto } from "./ports";
 
 import { ingestImage, type IngestDependencies } from "./ingest-image";
 

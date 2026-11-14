@@ -16,6 +16,7 @@ const restrictedCompositionImports = {
 
 // D-8: reservation-era modules are imported only through their public
 // index.ts, never their internals (docs/architecture/dependency-rules.md).
+// Keep both lists in sync with tests/unit/architecture/module-boundaries.test.ts.
 const PUBLIC_SURFACE_MODULES = [
   "branches",
   "audit",
@@ -23,17 +24,37 @@ const PUBLIC_SURFACE_MODULES = [
   "inventory",
   "pricing",
   "quotes",
+  "services",
+  "coupons",
+  "commercial",
   "reservations",
   "guests",
   "reporting",
   "notifications",
 ];
-const moduleInternals = ["domain", "application"].flatMap((layer) =>
-  PUBLIC_SURFACE_MODULES.map((module) => ({
-    group: [`@/${layer}/${module}/*`, `!@/${layer}/${module}/index`],
-    message: `Import @/${layer}/${module} through its index.ts (D-8).`,
-  })),
-);
+// M8-T0b: the older CMS modules follow D-8 on the application side only.
+const APPLICATION_SURFACE_MODULES = [
+  "content",
+  "media",
+  "settings",
+  "enquiries",
+  "admin",
+  "booking",
+  "cache",
+  "public",
+];
+const surfacePattern = (layer, module) => ({
+  group: [`@/${layer}/${module}/*`, `!@/${layer}/${module}/index`],
+  message: `Import @/${layer}/${module} through its index.ts (D-8).`,
+});
+const moduleInternals = [
+  ...["domain", "application"].flatMap((layer) =>
+    PUBLIC_SURFACE_MODULES.map((module) => surfacePattern(layer, module)),
+  ),
+  ...APPLICATION_SURFACE_MODULES.map((module) =>
+    surfacePattern("application", module),
+  ),
+];
 
 // D-1a: domain code performs no Node I/O.
 const NODE_BUILTINS = [

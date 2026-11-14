@@ -6,7 +6,7 @@ import type {
   MediaAssignment,
   RoomInput,
   RoomRepository,
-} from "@/application/content/ports";
+} from "@/application/content";
 import type { Actor } from "@/application/shared/actor";
 import { failure, invalid, success } from "@/application/shared/result";
 import { issuesFromZod } from "@/domain/shared/domain-error";

@@ -1,8 +1,8 @@
 # M8 — Reservations, immediate confirmation, phone verification, and messages
 
-Status: **Not started** (the prerequisite task M8-T0 is accepted, 2026-11-13; the milestone spec and breakdown approval are still pending). Branch: `m8-reservations`. Follow the [milestone loop](./README.md#the-loop-every-milestone-follows).
+Status: **In progress** (2/15 tasks accepted: M8-T0 on 2026-11-13, M8-T0b on 2026-11-14; spec [0005](../../specs/0005-m8-reservations.md) and the task breakdown approved, 2026-11-14). Branch: `m8-reservations`. Follow the [milestone loop](./README.md#the-loop-every-milestone-follows).
 
-> **Done first (accepted 2026-11-13): [M8-T0, application ports consolidation](#0-prerequisite-task-m8-t0-application-ports-consolidation).** The owner decided on 2026-11-13 that the old shared `src/application/ports/` files move into their modules before any other M8 task starts, so every M8 repository and port is written in the module layout from the start. Next: [M8-T0b](#0b-follow-up-task-m8-t0b-public-surfaces-for-the-cms-modules), then the rest of M8.
+> **Done first (accepted 2026-11-13): [M8-T0, application ports consolidation](#0-prerequisite-task-m8-t0-application-ports-consolidation).** The owner decided on 2026-11-13 that the old shared `src/application/ports/` files move into their modules before any other M8 task starts, so every M8 repository and port is written in the module layout from the start. [M8-T0b](#0b-follow-up-task-m8-t0b-public-surfaces-for-the-cms-modules) was accepted on 2026-11-14. Next: the rest of M8, task by task.
 
 ## Objective
 
@@ -59,18 +59,19 @@ Planned, reviewed, and accepted one task at a time ([agent-workflow.md](../../en
 | Task | Title | Risk | Depends on | Covers (criteria, tests) | Status |
 | --- | --- | --- | --- | --- | --- |
 | M8-T0 | Application ports consolidation: move the old shared ports into their modules (refactor, no behavior change) | Medium | M7 | Existing tests unchanged and green; new `ports` boundary test | Accepted |
-| M8-T0b | Public surfaces for the CMS modules: `index.ts` per old module and D-8 extended to them (refactor, no behavior change) | Medium | T0 | Existing tests unchanged and green; D-8 test extended | Not started |
+| M8-T0b | Public surfaces for the CMS modules: `index.ts` per old module and D-8 extended to them (refactor, no behavior change) | Medium | T0 | Existing tests unchanged and green; D-8 test extended | Accepted |
 | M8-T1 | Migration `reservations`: tables, checks, composite FKs, exclusion and idempotency constraints, demo seed | Critical | T0 | T-DB-6…8; drift check | Not started |
 | M8-T2 | Reservation domain: state machine, invariants R-1…R-10, reference, `PhoneNumber`, verification and per-phone policies | Critical | T0 | T-LIFE-1…10, T-REF-1…3, T-PHONE-1…4, T-VAL-1…5 | Not started |
-| M8-T3 | Reservation and guest repositories, unit-of-work binding | Medium | T1 | repository integration tests | Not started |
-| M8-T4 | WhatsApp setup: settings, templates, sender port, provider and fake adapters, test message, minimal Admin screen | Critical | T1 | AC 10; T-WA-1…7 | Not started |
+| M8-T3 | Reservation and guest repositories, unit-of-work binding, real sold consumption adapter | Medium | T1 | repository integration tests | Not started |
+| M8-T4 | WhatsApp setup: settings, templates, sender port, provider and fake adapters, test message, minimal Admin screen | Critical | T1, T2 | AC 10; T-WA-1…7 | Not started |
 | M8-T5 | Phone verification: request and confirm, limits, API P9 and P10 | Critical | T2, T3, T4 | AC 7; T-GST (verification) | Not started |
 | M8-T6 | Notifications: outbox, dispatcher, email templates, token expiry job | Critical | T3, T4 | AC 4; T-NTF-1…3 | Not started |
-| M8-T7 | `CreateWebsiteReservation` (pay at hotel) and API P7 | Critical | T5, T6, M7 | AC 1–4, 8; T-RES, C-1…C-3, C-11 | Not started |
-| M8-T8 | Staff and external reservations: `CreateStaffReservation`, `RecordExternalReservation` | Critical | T7 | AC 9; T-RES, T-AUTHZ-2 | Not started |
-| M8-T9 | Inventory-changing transitions: staff cancellation with coupon release, `ModifyReservationStay` | Critical | T8 | AC 6; C-4 (block vs booking), C-5…C-7 | Not started |
-| M8-T10 | Operational transitions: guest edit, unit assignment, check-in, check-out, no-show, `MarkEnteredInHotelSystem`, resend link | Critical | T8 | AC 5; T-PMS-1…2, C-9, C-10 | Not started |
-| M8-T11 | Guests and guest access: search, profile, block and unblock; manage-token and guest-session reads | Critical | T5, T7 | AC 7, 8; T-GST, T-LKP-1…4 | Not started |
+| M8-T7 | `CreateWebsiteReservation` (pay at hotel): persistence, per phone caps, coupon lock and redemption, guest upsert, audit, outbox, `PublicListingReader` | Critical | T5, T6, M7 | AC 1–4; T-RES, C-1…C-3, C-11 | Not started |
+| M8-T7b | Public API P7, idempotency replay over HTTP, P6 per phone limit change, OpenAPI, captured log test, mid-milestone security review | Critical | T7 | AC 1, 8; T-HTTP, C-9 | Not started |
+| M8-T8 | Staff and external reservations: `CreateStaffReservation`, `RecordExternalReservation`, plus the reads S1, S2, S15 | Critical | T7 | AC 9; T-RES, T-AUTHZ-2, C-5, C-8 | Not started |
+| M8-T9 | Inventory-changing transitions: staff cancellation with coupon release, `ModifyReservationStay` | Critical | T8 | AC 6; C-4 (block vs booking), C-10 | Not started |
+| M8-T10 | Operational transitions: guest edit, unit assignment, check-in, check-out, no-show, `MarkEnteredInHotelSystem`, resend link | Critical | T8 | AC 5; T-PMS-1…2, C-7, C-9 | Not started |
+| M8-T11 | Guests and guest access: search, profile, block and unblock; manage-token and guest-session reads | Critical | T5, T7b | AC 7, 8; T-GST, T-LKP-1…4 | Not started |
 | M8-T12 | Sync status and checkpoints API | Medium | T7 | T-SYNCAPI-1…4 | Not started |
 
 ## Tasks
@@ -112,6 +113,7 @@ Owner decision, 2026-11-13, recommended in the M8-T0 review package and accepted
 8. **Acceptance criteria.** (a) Every module in the list has an `index.ts` and appears in `PUBLIC_SURFACE_MODULES`. (b) The D-8 test and the ESLint rule pass for them. (c) `npm run check`, the full integration suite, and the Chromium E2E suite pass with the same counts as before, plus the extended test. (d) The diff is import and file moves only, `docs/api/openapi.json` is unchanged. (e) The doc lists the modules.
 9. **Tests.** No new behavior tests; extend the D-8 architecture test and run the full gates.
 10. **Risk tier.** Medium. If the plan finds it too large, propose splitting by module group and wait for approval.
+11. **As built (accepted 2026-11-14).** All eight modules (`content`, `media`, `settings`, `enquiries`, `admin`, `booking`, `cache`, `public`) have an `index.ts` exporting exactly the symbols used outside them. They are enforced on the application side only, through a second list (`APPLICATION_SURFACE_MODULES`) in the architecture test and ESLint, so acceptance criterion (a)'s "appears in `PUBLIC_SURFACE_MODULES`" reads as "appears in the enforcement lists". The domain side and `auth` stay outside D-8; they are scheduled as [M9-T0](./m9-payments-and-cancellations.md#task-breakdown) (`auth`) and [M14-T11](./m14-hardening.md#task-breakdown) (domain CMS modules). The ESLint list also gained `services`, `coupons`, and `commercial`, which had drifted from the test. The architecture test now also scans dynamic `import()`. One test keeps a documented dynamic deep import of the internal helper `contentGaps`.
 
 ### 1. Database (migration `reservations`)
 

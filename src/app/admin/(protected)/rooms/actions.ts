@@ -1,6 +1,6 @@
 "use server";
 
-import { roomInputFromForm } from "@/application/content/catalog-forms";
+import { roomInputFromForm } from "@/application/content";
 import { roomCommands } from "@/composition/content";
 import type { FormState } from "@/presentation/admin/ui/form-state";
 

@@ -10,10 +10,7 @@ import {
   mediaDetailsSchema,
   storageKeyFor,
 } from "@/domain/media/media-asset";
-import {
-  parseMediaListQuery,
-  tagsForUsage,
-} from "@/application/media/media-library";
+import { parseMediaListQuery, tagsForUsage } from "@/application/media";
 import { assertRoomPublishable } from "@/domain/rooms/room";
 import { assertPagePublishable } from "@/domain/content/page-sections";
 

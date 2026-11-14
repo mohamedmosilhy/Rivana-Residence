@@ -1,7 +1,7 @@
 import { authorize } from "@/application/auth/authorize";
 import type { StaffPrincipal } from "@/application/auth/ports";
-import { CACHE_TAGS } from "@/application/cache/cache-tags";
-import type { CacheInvalidator } from "@/application/cache/ports";
+import { CACHE_TAGS, type CacheInvalidator } from "@/application/cache";
+
 import type {
   MediaStorage,
   MediaDetailsDto,
@@ -10,7 +10,7 @@ import type {
   MediaRepository,
   MediaRightsStatus,
   MediaUsage,
-} from "@/application/media/ports";
+} from "./ports";
 import {
   parsePageNumber,
   type PagedResult,

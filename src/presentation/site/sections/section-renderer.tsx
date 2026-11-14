@@ -7,7 +7,7 @@ import type {
   PublicImage,
   PublicRoomCard,
   PublicSection,
-} from "@/application/public/view-models";
+} from "@/application/public";
 import { RichTextView } from "@/presentation/design/rich-text-view";
 import { CardGrid, FacilityCard, RoomCard } from "@/presentation/site/cards";
 import { CtaLink } from "@/presentation/site/cta-link";

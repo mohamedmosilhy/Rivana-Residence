@@ -1,7 +1,7 @@
 import type { Metadata, Route } from "next";
 import Link from "next/link";
 
-import { pagePath } from "@/application/public/seo";
+import { pagePath } from "@/application/public";
 import { getCurrentStaff, requireStaff } from "@/composition/auth";
 import { pageCommands, propertyTimeZone } from "@/composition/content";
 import {

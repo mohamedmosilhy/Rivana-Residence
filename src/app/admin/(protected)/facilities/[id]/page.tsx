@@ -1,8 +1,8 @@
 import type { Metadata, Route } from "next";
 import { notFound } from "next/navigation";
 
-import { readinessIssues } from "@/application/content/catalog-queries";
-import type { MediaReference } from "@/application/content/ports";
+import { readinessIssues, type MediaReference } from "@/application/content";
+
 import { requireStaff } from "@/composition/auth";
 import { propertyTimeZone, facilityQueries } from "@/composition/content";
 import { roleHasCapability } from "@/domain/auth/capabilities";

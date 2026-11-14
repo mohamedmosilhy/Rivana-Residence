@@ -1,8 +1,4 @@
-import type {
-  PublicBranch,
-  PublicRoom,
-  PublicSettings,
-} from "@/application/public/view-models";
+import type { PublicBranch, PublicRoom, PublicSettings } from "./view-models";
 import type { PageKey } from "@/domain/content/page-sections";
 
 export type JsonLd = Readonly<Record<string, unknown>>;

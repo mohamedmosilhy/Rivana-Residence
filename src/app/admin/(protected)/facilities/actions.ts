@@ -1,6 +1,6 @@
 "use server";
 
-import { facilityInputFromForm } from "@/application/content/catalog-forms";
+import { facilityInputFromForm } from "@/application/content";
 import { facilityCommands } from "@/composition/content";
 import type { FormState } from "@/presentation/admin/ui/form-state";
 

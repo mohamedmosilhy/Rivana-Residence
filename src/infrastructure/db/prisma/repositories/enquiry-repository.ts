@@ -6,7 +6,7 @@ import type {
   ContactEnquiryDto,
   EnquiryListQuery,
   EnquiryRepository,
-} from "@/application/enquiries/ports";
+} from "@/application/enquiries";
 import type { Actor } from "@/application/shared/actor";
 import { invalid, success } from "@/application/shared/result";
 import { contactEnquirySchema } from "@/domain/enquiries/contact-enquiry";

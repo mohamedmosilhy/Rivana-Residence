@@ -5,7 +5,7 @@ import {
   GetPublicSiteSettings,
   ReplaceSocialLinks,
   UpdateSiteSettings,
-} from "@/application/settings/site-settings";
+} from "@/application/settings";
 import { PrismaSettingsRepository } from "@/infrastructure/db/prisma/repositories/settings-repository";
 
 import {

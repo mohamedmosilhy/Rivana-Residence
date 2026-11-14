@@ -58,6 +58,19 @@ The client decisions of **2026-11-06** (two batches: the main decisions, then Q-
 | Q-69 | **Maximum 5 units per booking**, across all its listings. Adopt the existing OC-3 recommendation in M6 rather than defer the choice to M10. P5 caps `unitsAvailable` at 5 | Owner, 2026-11-08; quantity validation and disclosure in M6, whole-booking enforcement when reservations arrive |
 | Q-70 | **Availability search is allowed for active branches while online booking is disabled.** Search returns inventory and accommodation prices; it neither enables booking nor bypasses the reservation readiness checks | Owner, 2026-11-08; P5 is usable before VAT and WhatsApp setup exists. Inactive or missing branches still return 404 |
 
+### Decided 2026-11-14 (M8 open)
+
+| Id | Decision | Source and effect |
+| --- | --- | --- |
+| Q-71 | **"WhatsApp configured" means** business number, provider phone-number id, the server access token, and an active `en` template for both *verification code* and *booking confirmed*. Other purposes missing are setup gaps that do not block booking. An Admin may clear the number while branches have online booking on: P9 then returns `503 WHATSAPP_NOT_CONFIGURED` and P7 `409 BRANCH_NOT_BOOKABLE` (reason WhatsApp not configured) | Owner, 2026-11-14; spec [0005](../specs/0005-m8-reservations.md); M8-T4, T5, T7b |
+| Q-72 | **Template language is `en` in M8**, from configuration; no language column on the reservation until the booking form offers a choice | Owner, 2026-11-14; M8-T4, T6 |
+| Q-73 | **Consent versions are server constants** (current privacy notice version, current marketing wording version), placeholders until the client approves the text (Q-30, Q-58). P7 refuses a mismatched version with a `422` field error. A new opt-in after an opt-out sets a fresh `marketingOptInAt`, clears `marketingOptOutAt`, and is audited | Owner, 2026-11-14; M8-T2, T7 |
+| Q-74 | **P7 and P9 details:** `paymentMethod: PAYMOB` returns `409 PAYMENT_METHOD_UNAVAILABLE` in M8; a filled honeypot returns a generic `422` and writes nothing; per-client limits are 10 per hour on P9 and 20 per 10 minutes on P10, on top of the per-phone limits (GV-1) | Owner, 2026-11-14; M8-T5, T7b |
+| Q-75 | **Blocking after a token was issued:** guest sessions (G3, G4) stop working at once (GV-3); the manage link (G1) keeps working, view only (ADR 019: existing reservations are not changed automatically) | Owner, 2026-11-14; M8-T11 |
+| Q-76 | **Money on staff changes:** a stay change prices changed nights at current rates (Q-19), uses the VAT rate stored on the reservation (TX-5), keeps the coupon without re-checking dates or limits (percent recomputed on the new subtotal, fixed capped at it), and the override needs `pricing:override`. An early check-out shortens the stay and inventory but not the price snapshot; the difference is settled at the desk. External amounts are given for all nights or none (`422` otherwise) and follow the ADR 027 order (no services or coupon, VAT at the current rate). A staff price override replaces nightly amounts only; services, coupon, and VAT apply on top in the ADR 027 order | Owner, 2026-11-14; M8-T8, T9, T10 |
+| Q-77 | **Sync count and due time:** "not entered in hotel system" counts `WEBSITE` bookings with `pmsEnteredAt` empty and status `CONFIRMED` or `CHECKED_IN`. `dueAt` is the last `COMPLETED` time plus the interval, or, when a newer `STARTED` exists, that time plus the follow-up delay; a branch with no checkpoint is due now (Q-20) | Owner, 2026-11-14; M8-T12 |
+| Q-78 | **The per-phone cap (Q-60) counts across all branches**, like the global guest profile and blocking (Q-29). Each reservation counts as upcoming by its own branch's today | Owner, 2026-11-14; M8-T2, T7 |
+
 ## Superseded decisions
 
 Kept as the record of the earlier approved design (accepted M1–M3 documents and ADRs describe them).

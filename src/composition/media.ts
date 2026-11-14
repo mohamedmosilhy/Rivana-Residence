@@ -3,9 +3,12 @@ import "server-only";
 import os from "node:os";
 import path from "node:path";
 
-import type { IngestDependencies } from "@/application/media/ingest-image";
-import { MediaLibrary } from "@/application/media/media-library";
-import type { ByteRange } from "@/application/media/ports";
+import {
+  type IngestDependencies,
+  MediaLibrary,
+  type ByteRange,
+} from "@/application/media";
+
 import { isSafeStorageKey } from "@/domain/media/media-asset";
 import { NextCacheInvalidator } from "@/infrastructure/cache/next-cache-invalidator";
 import { PrismaMediaRepository } from "@/infrastructure/db/prisma/repositories/media-repository";

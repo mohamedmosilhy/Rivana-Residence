@@ -1,9 +1,6 @@
 import { authorize } from "@/application/auth/authorize";
 import type { StaffPrincipal } from "@/application/auth/ports";
-import type {
-  AdminOverviewDto,
-  AdminOverviewReader,
-} from "@/application/admin/ports";
+import type { AdminOverviewDto, AdminOverviewReader } from "./ports";
 import type { Clock } from "@/application/shared/providers";
 import { success, type Result } from "@/application/shared/result";
 

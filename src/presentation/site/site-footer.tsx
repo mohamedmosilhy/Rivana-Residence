@@ -1,10 +1,7 @@
 import type { Route } from "next";
 import Link from "next/link";
 
-import type {
-  PublicBranch,
-  PublicSettings,
-} from "@/application/public/view-models";
+import type { PublicBranch, PublicSettings } from "@/application/public";
 import { stayLabel } from "@/domain/catalog";
 import { BrandLogo } from "@/presentation/site/brand-logo";
 import { Icon } from "@/presentation/site/icons";

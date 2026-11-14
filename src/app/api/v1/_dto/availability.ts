@@ -1,4 +1,4 @@
-import type { PublicAvailability } from "@/application/public/search-public-availability";
+import type { PublicAvailability } from "@/application/public";
 import type { AvailabilityResponseDto } from "@/contracts/api/v1/availability";
 
 import { roomTypeSummary } from "./branches";

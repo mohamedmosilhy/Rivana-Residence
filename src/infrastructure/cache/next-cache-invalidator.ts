@@ -2,7 +2,7 @@ import "server-only";
 
 import { revalidateTag, updateTag } from "next/cache";
 
-import type { CacheInvalidator } from "@/application/cache/ports";
+import type { CacheInvalidator } from "@/application/cache";
 
 // `updateTag` expires the tag immediately (read-your-own-writes), which is
 // what an editor expects after pressing Save. It only works inside Server

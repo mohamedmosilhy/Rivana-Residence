@@ -1,4 +1,4 @@
-import type { BookingProvider } from "@/application/booking/ports";
+import type { BookingProvider } from "./ports";
 
 export class ResolveBooking {
   constructor(private readonly bookingProvider: BookingProvider) {}

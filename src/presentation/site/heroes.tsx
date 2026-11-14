@@ -2,7 +2,7 @@ import type { Route } from "next";
 import Link from "next/link";
 import type { ReactNode } from "react";
 
-import type { PublicImage } from "@/application/public/view-models";
+import type { PublicImage } from "@/application/public";
 import {
   actions,
   brushEdge,

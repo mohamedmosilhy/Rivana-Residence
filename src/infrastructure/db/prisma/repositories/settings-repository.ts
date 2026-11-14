@@ -6,7 +6,7 @@ import type {
   AdminSiteSettingsDto,
   SettingsRepository,
   SiteImagesInput,
-} from "@/application/settings/ports";
+} from "@/application/settings";
 import type { Actor } from "@/application/shared/actor";
 import { failure, success, type Result } from "@/application/shared/result";
 import type {

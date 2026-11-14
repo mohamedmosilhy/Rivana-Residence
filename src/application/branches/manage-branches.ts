@@ -1,7 +1,7 @@
 import { authorize } from "@/application/auth/authorize";
 import type { StaffPrincipal } from "@/application/auth/ports";
-import { CACHE_TAGS } from "@/application/cache/cache-tags";
-import type { CacheInvalidator } from "@/application/cache/ports";
+import { CACHE_TAGS, type CacheInvalidator } from "@/application/cache";
+
 import type { Clock } from "@/application/shared/providers";
 import {
   failure,

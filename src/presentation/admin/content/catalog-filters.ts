@@ -1,4 +1,4 @@
-import type { CatalogListQuery } from "@/application/content/catalog-queries";
+import type { CatalogListQuery } from "@/application/content";
 
 export function catalogFilters(query: CatalogListQuery) {
   return [

@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
-import { formDataValues } from "@/application/content/form-values";
+import { formDataValues } from "@/application/content";
 import {
   replaceSocialLinks,
   updateSiteImages,

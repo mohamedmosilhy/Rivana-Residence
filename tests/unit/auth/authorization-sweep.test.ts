@@ -2,19 +2,22 @@ import { ManageCoupons } from "@/application/coupons";
 import { describe, expect, it } from "vitest";
 
 import type { StaffPrincipal } from "@/application/auth/ports";
-import { GetAdminOverview } from "@/application/admin/get-overview";
-import { CatalogCommands } from "@/application/content/catalog-commands";
-import { CatalogQueries } from "@/application/content/catalog-queries";
-import { PageCommands } from "@/application/content/page-commands";
-import { ListEnquiries } from "@/application/enquiries/list-enquiries";
-import { MediaLibrary } from "@/application/media/media-library";
+import { GetAdminOverview } from "@/application/admin";
+import {
+  CatalogCommands,
+  CatalogQueries,
+  PageCommands,
+} from "@/application/content";
+
+import { ListEnquiries } from "@/application/enquiries";
+import { MediaLibrary } from "@/application/media";
 import { ListBranches, ManageBranches } from "@/application/branches";
 import {
   GetAdminSiteSettings,
   ReplaceSocialLinks,
   UpdateSiteImages,
   UpdateSiteSettings,
-} from "@/application/settings/site-settings";
+} from "@/application/settings";
 import { ManageCommercialSettings } from "@/application/commercial";
 import { ManageServices } from "@/application/services";
 import type { Capability } from "@/domain/auth/capabilities";

@@ -4,9 +4,10 @@ import { describe, expect, it, vi } from "vitest";
 import {
   SubmitEnquiry,
   type FormTokens,
-} from "@/application/enquiries/submit-enquiry";
-import { publicBranch, publicImage } from "@/application/public/view-models";
-import type { EnquiryRepository } from "@/application/enquiries/ports";
+  type EnquiryRepository,
+} from "@/application/enquiries";
+import { publicBranch, publicImage } from "@/application/public";
+
 import { success } from "@/application/shared/result";
 import { HmacFormTokens } from "@/infrastructure/email/hmac-form-tokens";
 import { headerText } from "@/infrastructure/email/smtp-contact-delivery";

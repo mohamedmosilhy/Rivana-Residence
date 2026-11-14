@@ -3,9 +3,9 @@ import type {
   FacilityRepository,
   PageRepository,
   RoomRepository,
-} from "@/application/content/ports";
-import type { MediaRepository } from "@/application/media/ports";
-import type { SettingsRepository } from "@/application/settings/ports";
+} from "@/application/content";
+import type { MediaRepository } from "@/application/media";
+import type { SettingsRepository } from "@/application/settings";
 import type { PageKey } from "@/domain/content/page-sections";
 
 import {

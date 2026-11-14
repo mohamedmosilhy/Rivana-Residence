@@ -5,7 +5,7 @@ import type {
   MediaAssetDto,
   MediaRepository,
   MediaRightsStatus,
-} from "@/application/media/ports";
+} from "./ports";
 import type { Clock, IdGenerator } from "@/application/shared/providers";
 import { failure, type Result } from "@/application/shared/result";
 import {

@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 
-import { breadcrumbJsonLd } from "@/application/public/seo";
+import { breadcrumbJsonLd } from "@/application/public";
 import { getPublicOrigin, getPublishedFacilities } from "@/composition/public";
 import { CardGrid, FacilityCard } from "@/presentation/site/cards";
 import { PageHero } from "@/presentation/site/heroes";

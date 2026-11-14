@@ -1,6 +1,6 @@
 import type { MetadataRoute } from "next";
 
-import { absoluteUrl, pagePath } from "@/application/public/seo";
+import { absoluteUrl, pagePath } from "@/application/public";
 import { getPublicOrigin, getPublicSitemap } from "@/composition/public";
 
 function latest(values: readonly string[]) {

@@ -16,7 +16,7 @@ import { AvailabilityResponse } from "@/contracts/api/v1/availability";
 import { HmacThrottleKeys } from "@/infrastructure/auth/throttle-keys";
 import { getPrisma } from "@/infrastructure/db/prisma/client";
 import { PrismaRoomRepository } from "@/infrastructure/db/prisma/repositories/room-repository";
-import { SearchPublicAvailability } from "@/application/public/search-public-availability";
+import { SearchPublicAvailability } from "@/application/public";
 import { PrismaBranchRepository } from "@/infrastructure/db/prisma/repositories/branches/branch-repository";
 import { StayRange } from "@/domain/shared/stay-range";
 import { LocalDate } from "@/domain/shared/local-date";

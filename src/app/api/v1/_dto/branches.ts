@@ -4,7 +4,7 @@ import type {
   PublicImage,
   PublicRoom,
   PublicRoomCard,
-} from "@/application/public/view-models";
+} from "@/application/public";
 import type {
   BranchDetailDto,
   BranchSummaryDto,

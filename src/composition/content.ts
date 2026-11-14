@@ -5,16 +5,16 @@ import {
   CatalogCommands,
   FACILITY_KIND,
   ROOM_KIND,
-} from "@/application/content/catalog-commands";
-import { CatalogQueries } from "@/application/content/catalog-queries";
-import { PageCommands } from "@/application/content/page-commands";
-import type { CacheInvalidator } from "@/application/cache/ports";
-import type {
-  FacilityDto,
-  FacilityInput,
-  RoomDto,
-  RoomInput,
-} from "@/application/content/ports";
+  CatalogQueries,
+  PageCommands,
+  type FacilityDto,
+  type FacilityInput,
+  type RoomDto,
+  type RoomInput,
+} from "@/application/content";
+
+import type { CacheInvalidator } from "@/application/cache";
+
 import { getPublicSiteSettings } from "@/composition/admin";
 import { NextCacheInvalidator } from "@/infrastructure/cache/next-cache-invalidator";
 import { PrismaBranchRepository } from "@/infrastructure/db/prisma/repositories/branches/branch-repository";

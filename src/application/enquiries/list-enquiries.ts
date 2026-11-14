@@ -9,7 +9,7 @@ import type {
   ContactEnquiryDto,
   EnquiryListQuery,
   EnquiryRepository,
-} from "@/application/enquiries/ports";
+} from "./ports";
 import {
   ADMIN_PAGE_SIZE,
   parsePageNumber,

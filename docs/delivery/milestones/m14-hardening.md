@@ -46,7 +46,8 @@ Planned, reviewed, and accepted one task at a time ([agent-workflow.md](../../en
 | M14-T7 | Restore drill including all new tables | Critical | — | AC 4 | Not started |
 | M14-T8 | Paymob sandbox end to end | Critical | — | AC 4 | Not started |
 | M14-T9 | Second sign-in step for Admin and Manager (only if Q-33 is approved) | Critical | — | AC 2 | Not started |
-| M14-T10 | Release-candidate report and Phase 12 release checklist | Low | T1–T9 | AC 1–4 | Not started |
+| M14-T10 | Release-candidate report and Phase 12 release checklist | Low | T1–T9, T11 | AC 1–4 | Not started |
+| M14-T11 | D-8 public surfaces for the domain CMS modules (`src/domain/content`, `media`, `settings`, `enquiries`): `index.ts` each and the modules moved to the both-layers D-8 list (refactor, no behavior change; recommended in the M8-T0b review package, owner decision 2026-11-14) | Medium | — | Existing tests unchanged and green; D-8 test extended | Not started |
 
 ## Tasks
 
@@ -60,6 +61,7 @@ Planned, reviewed, and accepted one task at a time ([agent-workflow.md](../../en
 8. Paymob sandbox end-to-end (pay, fail, abandon, late success, refund).
 9. Second sign-in step for Admin and Manager if Q-33 is approved.
 10. Release-candidate report modeled on Phase 11, with residual risks owned and the Phase 12 release checklist drafted.
+11. Domain CMS modules under D-8 (from the M8-T0b review, owner decision 2026-11-14): give `src/domain/content`, `media`, `settings`, and `enquiries` an `index.ts` exporting what other layers use (about 50 import lines at M8-T0b), move those four from the application-only list to the both-layers list in the D-8 test and ESLint, and update the D-8 row. Client components import these domain values directly, so confirm each index re-exports only pure domain code. Moves only, same gates and mutation checks as M8-T0b.
 
 ## Acceptance criteria
 

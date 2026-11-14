@@ -1,8 +1,12 @@
 import { describe, expect, it, vi } from "vitest";
 
 import type { StaffPrincipal } from "@/application/auth/ports";
-import { PageCommands } from "@/application/content/page-commands";
-import type { PageDto, PageRepository } from "@/application/content/ports";
+import {
+  PageCommands,
+  type PageDto,
+  type PageRepository,
+} from "@/application/content";
+
 import { success } from "@/application/shared/result";
 
 import { branchRow, fakeBranches } from "../../support/fake-branches";

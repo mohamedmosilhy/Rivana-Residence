@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
-import { pagePath } from "@/application/public/seo";
+import { pagePath } from "@/application/public";
 import { getPublishedPage } from "@/composition/public";
 import { Icon } from "@/presentation/site/icons";
 import { LocationMap } from "@/presentation/site/location-map";

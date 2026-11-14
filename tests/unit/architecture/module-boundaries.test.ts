@@ -18,13 +18,17 @@ function sourceFiles(directory: string): string[] {
 
 const importPattern =
   /(?:^|\n)\s*(?:import|export)[^;]*?from\s+["']([^"']+)["']/g;
+const dynamicImportPattern = /\bimport\(\s*["']([^"']+)["']\s*\)/g;
 
 function importsOf(file: string) {
-  return [...readFileSync(file, "utf8").matchAll(importPattern)].map(
-    (match) => match[1]!,
-  );
+  const source = readFileSync(file, "utf8");
+  return [
+    ...source.matchAll(importPattern),
+    ...source.matchAll(dynamicImportPattern),
+  ].map((match) => match[1]!);
 }
 
+// Keep both module lists in sync with the same lists in eslint.config.mjs.
 const PUBLIC_SURFACE_MODULES = [
   "branches",
   "audit",
@@ -34,11 +38,57 @@ const PUBLIC_SURFACE_MODULES = [
   "quotes",
   "services",
   "coupons",
+  "commercial",
   "reservations",
   "guests",
   "reporting",
   "notifications",
 ];
+
+// M8-T0b: the older CMS modules follow D-8 on the application side only. Their
+// domain folders (`src/domain/content`, `media`, …) are not covered yet.
+const APPLICATION_SURFACE_MODULES = [
+  "content",
+  "media",
+  "settings",
+  "enquiries",
+  "admin",
+  "booking",
+  "cache",
+  "public",
+];
+
+function deepImportsOf(pattern: RegExp) {
+  return sourceFiles(join(root, "src"))
+    .filter((file) => !file.includes("/src/generated/"))
+    .flatMap((file) =>
+      importsOf(file)
+        .filter((target) => pattern.test(target))
+        .map((target) => `${relative(root, file)} → ${target}`),
+    );
+}
+
+function missingIndexes(layers: string[], modules: string[]) {
+  return layers.flatMap((layer) =>
+    modules
+      .filter((module) => {
+        try {
+          return statSync(join(root, "src", layer, module)).isDirectory();
+        } catch {
+          return false;
+        }
+      })
+      .filter((module) => {
+        try {
+          statSync(join(root, "src", layer, module, "index.ts"));
+          return false;
+        } catch {
+          return true;
+        }
+      })
+      .map((module) => `src/${layer}/${module}`),
+  );
+}
 
 describe("D-7: HTTP contracts", () => {
   it("import only zod and sibling contract files", () => {
@@ -55,38 +105,33 @@ describe("D-8: module public surfaces", () => {
   it.each(PUBLIC_SURFACE_MODULES)(
     "%s is imported only through its index from outside the module",
     (module) => {
-      const deep = new RegExp(`^@/(domain|application)/${module}/(?!index$)`);
-      const offenders = sourceFiles(join(root, "src"))
-        .filter((file) => !file.includes("/src/generated/"))
-        .flatMap((file) =>
-          importsOf(file)
-            .filter((target) => deep.test(target))
-            .map((target) => `${relative(root, file)} → ${target}`),
-        );
-      expect(offenders).toEqual([]);
+      expect(
+        deepImportsOf(
+          new RegExp(`^@/(domain|application)/${module}/(?!index$)`),
+        ),
+      ).toEqual([]);
     },
   );
 
   it("gives every existing module of that list an index.ts", () => {
-    const missing = ["domain", "application"].flatMap((layer) =>
-      PUBLIC_SURFACE_MODULES.filter((module) => {
-        try {
-          return statSync(join(root, "src", layer, module)).isDirectory();
-        } catch {
-          return false;
-        }
-      })
-        .filter((module) => {
-          try {
-            statSync(join(root, "src", layer, module, "index.ts"));
-            return false;
-          } catch {
-            return true;
-          }
-        })
-        .map((module) => `src/${layer}/${module}`),
-    );
-    expect(missing).toEqual([]);
+    expect(
+      missingIndexes(["domain", "application"], PUBLIC_SURFACE_MODULES),
+    ).toEqual([]);
+  });
+
+  it.each(APPLICATION_SURFACE_MODULES)(
+    "application/%s is imported only through its index from outside the module",
+    (module) => {
+      expect(
+        deepImportsOf(new RegExp(`^@/application/${module}/(?!index$)`)),
+      ).toEqual([]);
+    },
+  );
+
+  it("gives every application CMS module an index.ts", () => {
+    expect(
+      missingIndexes(["application"], APPLICATION_SURFACE_MODULES),
+    ).toEqual([]);
   });
 });
 

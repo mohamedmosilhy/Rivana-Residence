@@ -6,11 +6,14 @@ import sharp from "sharp";
 import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { StaffPrincipal } from "@/application/auth/ports";
-import { CleanupMedia } from "@/application/media/cleanup-media";
-import { importReferenceAssets } from "@/application/media/import-reference-assets";
-import type { IngestDependencies } from "@/application/media/ingest-image";
-import { MediaLibrary } from "@/application/media/media-library";
-import type { MediaStorage } from "@/application/media/ports";
+import {
+  CleanupMedia,
+  importReferenceAssets,
+  type IngestDependencies,
+  MediaLibrary,
+  type MediaStorage,
+} from "@/application/media";
+
 import { PrismaMediaRepository } from "@/infrastructure/db/prisma/repositories/media-repository";
 import { PrismaRoomRepository } from "@/infrastructure/db/prisma/repositories/room-repository";
 import { Cuid2IdGenerator } from "@/infrastructure/ids/cuid2-id-generator";

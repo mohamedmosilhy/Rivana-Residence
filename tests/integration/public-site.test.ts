@@ -1,7 +1,7 @@
 import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { SubmitEnquiry } from "@/application/enquiries/submit-enquiry";
-import { PublicSite } from "@/application/public/public-site";
+import { SubmitEnquiry } from "@/application/enquiries";
+import { PublicSite } from "@/application/public";
 import { PrismaEnquiryRepository } from "@/infrastructure/db/prisma/repositories/enquiry-repository";
 import { PrismaFacilityRepository } from "@/infrastructure/db/prisma/repositories/facility-repository";
 import { PrismaLoginThrottleStore } from "@/infrastructure/db/prisma/repositories/login-throttle-store";

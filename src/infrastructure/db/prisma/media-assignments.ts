@@ -1,9 +1,6 @@
 import "server-only";
 
-import type {
-  MediaAssignment,
-  MediaReference,
-} from "@/application/content/ports";
+import type { MediaAssignment, MediaReference } from "@/application/content";
 import { failure, success, type Result } from "@/application/shared/result";
 import type { DatabaseClient } from "@/infrastructure/db/prisma/transaction";
 

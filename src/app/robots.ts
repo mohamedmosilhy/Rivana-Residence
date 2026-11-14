@@ -1,6 +1,6 @@
 import type { MetadataRoute } from "next";
 
-import { absoluteUrl } from "@/application/public/seo";
+import { absoluteUrl } from "@/application/public";
 import { getPublicOrigin } from "@/composition/public";
 
 export default function robots(): MetadataRoute.Robots {

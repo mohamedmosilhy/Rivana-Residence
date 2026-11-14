@@ -12,7 +12,7 @@ import {
   type PointerEvent,
 } from "react";
 
-import type { PublicImage } from "@/application/public/view-models";
+import type { PublicImage } from "@/application/public";
 import { Icon } from "@/presentation/site/icons";
 import {
   EASE_OUT_SOFT,

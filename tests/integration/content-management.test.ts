@@ -5,12 +5,11 @@ import {
   CatalogCommands,
   FACILITY_KIND,
   ROOM_KIND,
-} from "@/application/content/catalog-commands";
-import {
   facilityInputFromForm,
   roomInputFromForm,
-} from "@/application/content/catalog-forms";
-import { PageCommands } from "@/application/content/page-commands";
+  PageCommands,
+} from "@/application/content";
+
 import { PrismaFacilityRepository } from "@/infrastructure/db/prisma/repositories/facility-repository";
 import { PrismaMediaRepository } from "@/infrastructure/db/prisma/repositories/media-repository";
 import { PrismaPageRepository } from "@/infrastructure/db/prisma/repositories/page-repository";

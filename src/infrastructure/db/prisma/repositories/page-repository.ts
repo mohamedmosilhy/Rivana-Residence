@@ -7,7 +7,7 @@ import type {
   PageRepository,
   PageSectionInput,
   SectionMediaAssignment,
-} from "@/application/content/ports";
+} from "@/application/content";
 import type { Actor } from "@/application/shared/actor";
 import { SECTION_MEDIA_SLOTS } from "@/domain/media/media-asset";
 import {

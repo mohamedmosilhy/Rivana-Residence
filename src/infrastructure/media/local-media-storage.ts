@@ -17,7 +17,7 @@ import type {
   ByteRange,
   MediaStorage,
   StoredObject,
-} from "@/application/media/ports";
+} from "@/application/media";
 import { isSafeStorageKey } from "@/domain/media/media-asset";
 
 const QUARANTINE_DIR = "quarantine";

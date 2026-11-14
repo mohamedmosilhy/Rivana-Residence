@@ -6,7 +6,7 @@ import {
   type BranchRecord,
   type BranchRepository,
 } from "@/application/branches";
-import type { MediaOption, MediaRepository } from "@/application/media/ports";
+import type { MediaOption, MediaRepository } from "@/application/media";
 import {
   ADMIN_PAGE_SIZE,
   parsePageNumber,

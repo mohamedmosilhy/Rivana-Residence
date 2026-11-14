@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 
-import { pagePath } from "@/application/public/seo";
+import { pagePath } from "@/application/public";
 import { getPublishedPage, getSiteSettings } from "@/composition/public";
 import { BranchLocation } from "@/presentation/site/branch-location";
 import { PageHero } from "@/presentation/site/heroes";

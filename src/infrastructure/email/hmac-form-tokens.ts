@@ -2,7 +2,7 @@ import "server-only";
 
 import { createHmac, timingSafeEqual } from "node:crypto";
 
-import type { FormTokens } from "@/application/enquiries/submit-enquiry";
+import type { FormTokens } from "@/application/enquiries";
 
 // Tokens are "<issued-ms>.<signature>". They carry no visitor data; they only
 // prove the form was rendered by this server and when.

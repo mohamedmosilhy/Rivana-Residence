@@ -1,6 +1,6 @@
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
 
-import { PublicSite } from "@/application/public/public-site";
+import { PublicSite } from "@/application/public";
 import { PrismaBranchRepository } from "@/infrastructure/db/prisma/repositories/branches/branch-repository";
 import { PrismaFacilityRepository } from "@/infrastructure/db/prisma/repositories/facility-repository";
 import { PrismaMediaRepository } from "@/infrastructure/db/prisma/repositories/media-repository";

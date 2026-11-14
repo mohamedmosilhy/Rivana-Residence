@@ -8,7 +8,7 @@ import {
   type BlockContext,
   type PhysicalRoomContext,
 } from "@/application/inventory";
-import { SearchPublicAvailability } from "@/application/public/search-public-availability";
+import { SearchPublicAvailability } from "@/application/public";
 import { PrismaBranchRepository } from "@/infrastructure/db/prisma/repositories/branches/branch-repository";
 import { PrismaRoomRepository } from "@/infrastructure/db/prisma/repositories/room-repository";
 import { PrismaRateRepository } from "@/infrastructure/db/prisma/repositories/reservations/pricing/rate-repository";

@@ -1,13 +1,16 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { GetAdminOverview } from "@/application/admin/get-overview";
+import {
+  GetAdminOverview,
+  type AdminOverviewReader,
+} from "@/application/admin";
 import type { StaffPrincipal } from "@/application/auth/ports";
 import {
   ListEnquiries,
   parseEnquiryListQuery,
-} from "@/application/enquiries/list-enquiries";
-import type { AdminOverviewReader } from "@/application/admin/ports";
-import type { EnquiryRepository } from "@/application/enquiries/ports";
+  type EnquiryRepository,
+} from "@/application/enquiries";
+
 import { pageCount, parsePageNumber } from "@/application/shared/pagination";
 
 import { branchRow, fakeBranches } from "../../support/fake-branches";

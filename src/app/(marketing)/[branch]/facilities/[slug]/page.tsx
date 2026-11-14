@@ -2,7 +2,7 @@ import type { Metadata, Route } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
-import { breadcrumbJsonLd } from "@/application/public/seo";
+import { breadcrumbJsonLd } from "@/application/public";
 import {
   getPublicOrigin,
   getPublishedFacility,

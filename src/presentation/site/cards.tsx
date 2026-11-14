@@ -5,7 +5,7 @@ import type {
   PublicFacilityCard,
   PublicRoomCard,
   PublicRoomFacts,
-} from "@/application/public/view-models";
+} from "@/application/public";
 import type { AccommodationType } from "@/domain/shared/types";
 import { Icon } from "@/presentation/site/icons";
 import { Reveal, RevealItem } from "@/presentation/site/motion/reveal";

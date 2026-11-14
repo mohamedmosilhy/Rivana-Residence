@@ -1,9 +1,6 @@
 import type { LoginThrottleStore } from "@/application/auth/ports";
 import type { BranchRepository } from "@/application/branches";
-import type {
-  ContactDelivery,
-  EnquiryRepository,
-} from "@/application/enquiries/ports";
+import type { ContactDelivery, EnquiryRepository } from "./ports";
 import type { Clock } from "@/application/shared/providers";
 import {
   failure,

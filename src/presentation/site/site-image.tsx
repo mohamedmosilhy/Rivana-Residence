@@ -1,6 +1,6 @@
 import Image from "next/image";
 
-import type { PublicImage } from "@/application/public/view-models";
+import type { PublicImage } from "@/application/public";
 
 type SiteImageProps = Readonly<{
   image: PublicImage;

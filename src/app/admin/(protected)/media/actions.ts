@@ -4,7 +4,7 @@ import type { Route } from "next";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
-import { formDataValues } from "@/application/content/form-values";
+import { formDataValues } from "@/application/content";
 import { getCurrentStaff } from "@/composition/auth";
 import { mediaLibrary } from "@/composition/media";
 import type { FormState } from "@/presentation/admin/ui/form-state";

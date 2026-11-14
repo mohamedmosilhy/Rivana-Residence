@@ -6,10 +6,10 @@ import { unstable_cache } from "next/cache";
 import { headers } from "next/headers";
 import { connection } from "next/server";
 
-import { CACHE_TAGS } from "@/application/cache/cache-tags";
-import { SubmitEnquiry } from "@/application/enquiries/submit-enquiry";
-import type { ContactDelivery } from "@/application/enquiries/ports";
-import { PublicSite } from "@/application/public/public-site";
+import { CACHE_TAGS } from "@/application/cache";
+import { SubmitEnquiry, type ContactDelivery } from "@/application/enquiries";
+
+import { PublicSite } from "@/application/public";
 import type { PageKey } from "@/domain/content/page-sections";
 import { SLUG_PATTERN } from "@/domain/shared/slug";
 import { getPrisma } from "@/infrastructure/db/prisma/client";

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { ResolveBooking } from "@/application/booking/resolve-booking";
+import { ResolveBooking } from "@/application/booking";
 import {
   failure,
   inventoryUnavailable,

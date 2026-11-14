@@ -1,15 +1,13 @@
 import { describe, expect, it, vi } from "vitest";
 
 import type { StaffPrincipal } from "@/application/auth/ports";
-import type {
-  AdminSiteSettingsDto,
-  SettingsRepository,
-} from "@/application/settings/ports";
-import { failure, success } from "@/application/shared/result";
 import {
+  type AdminSiteSettingsDto,
+  type SettingsRepository,
   ReplaceSocialLinks,
   UpdateSiteSettings,
-} from "@/application/settings/site-settings";
+} from "@/application/settings";
+import { failure, success } from "@/application/shared/result";
 
 const admin: StaffPrincipal = {
   id: "admin-1",

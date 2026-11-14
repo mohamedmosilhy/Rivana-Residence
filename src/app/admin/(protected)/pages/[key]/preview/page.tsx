@@ -1,7 +1,7 @@
 import type { Metadata, Route } from "next";
 import { notFound } from "next/navigation";
 
-import { pageKeyFromSegment } from "@/application/content/page-commands";
+import { pageKeyFromSegment } from "@/application/content";
 import { requireStaff } from "@/composition/auth";
 import { pageCommands } from "@/composition/content";
 import { DeniedPage } from "@/presentation/admin/denied-page";

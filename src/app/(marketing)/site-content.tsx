@@ -8,7 +8,7 @@ import type {
   PublicImage,
   PublicPage,
   PublicSettings,
-} from "@/application/public/view-models";
+} from "@/application/public";
 import {
   getActiveBranchBySlug,
   getActiveBranches,

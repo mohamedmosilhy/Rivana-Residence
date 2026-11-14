@@ -1,7 +1,7 @@
 import type { Route } from "next";
 import Link from "next/link";
 
-import type { PublicBranch } from "@/application/public/view-models";
+import type { PublicBranch } from "@/application/public";
 import { Icon } from "@/presentation/site/icons";
 import { SiteImage } from "@/presentation/site/site-image";
 import {

@@ -1,11 +1,11 @@
 import { authorize } from "@/application/auth/authorize";
 import type { StaffPrincipal } from "@/application/auth/ports";
 import type { BranchRepository } from "@/application/branches";
-import { CACHE_TAGS } from "@/application/cache/cache-tags";
-import type { CacheInvalidator } from "@/application/cache/ports";
-import type { MediaAssignment } from "@/application/content/ports";
+import { CACHE_TAGS, type CacheInvalidator } from "@/application/cache";
+
+import type { MediaAssignment } from "./ports";
 import type { Actor } from "@/application/shared/actor";
-import type { EntityMediaSelection } from "@/application/content/catalog-forms";
+import type { EntityMediaSelection } from "./catalog-forms";
 import { failure, success, type Result } from "@/application/shared/result";
 import type { Capability } from "@/domain/auth/capabilities";
 import type { PublicationStatus } from "@/domain/shared/types";

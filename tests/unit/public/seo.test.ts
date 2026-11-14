@@ -7,12 +7,10 @@ import {
   pagePath,
   roomJsonLd,
   serializeJsonLd,
-} from "@/application/public/seo";
-import type {
-  PublicBranch,
-  PublicRoom,
-  PublicSettings,
-} from "@/application/public/view-models";
+  type PublicBranch,
+  type PublicRoom,
+  type PublicSettings,
+} from "@/application/public";
 
 const image = {
   src: "/media/rivana/hero.jpg",

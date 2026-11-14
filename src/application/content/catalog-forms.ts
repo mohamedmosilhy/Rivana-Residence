@@ -3,7 +3,7 @@ import type {
   MediaAssignment,
   RoomInput,
   SectionMediaAssignment,
-} from "@/application/content/ports";
+} from "./ports";
 import { failure, success, type Result } from "@/application/shared/result";
 import { richTextFromEditorText } from "@/domain/shared/rich-text";
 

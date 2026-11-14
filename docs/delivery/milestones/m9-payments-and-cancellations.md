@@ -48,6 +48,7 @@ Planned, reviewed, and accepted one task at a time ([agent-workflow.md](../../en
 
 | Task | Title | Risk | Depends on | Covers (criteria, tests) | Status |
 | --- | --- | --- | --- | --- | --- |
+| M9-T0 | Public surface for `src/application/auth`: one `index.ts` and D-8 extended to it (refactor, no behavior change; recommended in the M8-T0b review package, owner decision 2026-11-14) | Medium | M8 | Existing tests unchanged and green; D-8 test extended | Not started |
 | M9-T1 | Migration `payments_and_cancellations` | Critical | — | drift check | Not started |
 | M9-T2 | Domain: payment transitions, `CancellationDeadline`, PY and CX rules | Critical | — | T-PAY-1…4, T-CXL-1…3 | Not started |
 | M9-T3 | `PaymentGateway` port, fake adapter, Paymob adapter (server-only) | Critical | — | AC 9; adapter tests, bundle check | Not started |
@@ -61,6 +62,17 @@ Planned, reviewed, and accepted one task at a time ([agent-workflow.md](../../en
 AC 10 (the Paymob sandbox run) is recorded at milestone close.
 
 ## Tasks
+
+### 0. Prerequisite task (M9-T0): public surface for `auth`
+
+Owner decision 2026-11-14, from the M8-T0b review package. Same shape as [M8-T0b](./m8-reservations.md#0b-follow-up-task-m8-t0b-public-surfaces-for-the-cms-modules): a refactor with **no behavior, schema, API, or contract change**. Done first so the M9 use cases (which all authorize) import `auth` through its index from the start.
+
+1. **Objective.** `src/application/auth/index.ts` exports exactly the symbols used outside the module (`authorize`, `authorizeBranch`, the auth ports and types, `return-path`, `sign-in`), and every outside import (about 97 at M8-T0b, more after M8) goes through it.
+2. **Scope in.** The index; rewriting importers (import lines only); adding `auth` to the application-only D-8 list in `tests/unit/architecture/module-boundaries.test.ts` and `eslint.config.mjs`; the D-8 row in `docs/architecture/dependency-rules.md`. `src/domain/auth` is included only if the plan shows it is equally simple.
+3. **Watch.** `return-path` may be used by client components: keep those imports type only, or confirm the exported helper is pure and pulls no server code (D-13). Check for runtime cycles, since almost every module imports `authorize`.
+4. **Acceptance.** Same as M8-T0b: moves only (import-stripped comparison), gates with unchanged counts plus the new D-8 cases, mutation checks, `openapi.json` unchanged.
+5. **Risk.** Medium.
+
 
 ### 1. Database (migration `payments_and_cancellations`)
 

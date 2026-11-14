@@ -1,5 +1,4 @@
-import type { JsonLd } from "@/application/public/seo";
-import { serializeJsonLd } from "@/application/public/seo";
+import { type JsonLd, serializeJsonLd } from "@/application/public";
 
 export function StructuredData({
   id,

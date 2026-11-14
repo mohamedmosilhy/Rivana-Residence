@@ -1,7 +1,7 @@
 import type { Metadata, Route } from "next";
 import { notFound } from "next/navigation";
 
-import { pageKeyFromSegment } from "@/application/content/page-commands";
+import { pageKeyFromSegment } from "@/application/content";
 import { requireStaff } from "@/composition/auth";
 import { pageCommands } from "@/composition/content";
 import { mediaLibrary } from "@/composition/media";
@@ -10,7 +10,7 @@ import {
   PAGE_SECTION_LABELS,
   isSectionPinned,
 } from "@/domain/content/page-sections";
-import { pagePath } from "@/application/public/seo";
+import { pagePath } from "@/application/public";
 import { BranchSelector } from "@/presentation/admin/content/branch-selector";
 import { OrderControls } from "@/presentation/admin/content/order-controls";
 import { PublicationPanel } from "@/presentation/admin/content/publication-panel";

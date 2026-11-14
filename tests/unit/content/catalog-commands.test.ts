@@ -5,11 +5,10 @@ import {
   CatalogCommands,
   ROOM_KIND,
   type CatalogRepository,
-} from "@/application/content/catalog-commands";
-import {
   filterCatalog,
   parseCatalogListQuery,
-} from "@/application/content/catalog-queries";
+} from "@/application/content";
+
 import { failure, success } from "@/application/shared/result";
 import type { PublicationStatus } from "@/domain/shared/types";
 
@@ -309,6 +308,8 @@ describe("catalog list filtering", () => {
 
 describe("content gaps", () => {
   it("flags missing and shared galleries without blocking anything", async () => {
+    // Deliberate deep import (D-8 checks src only): contentGaps is internal to
+    // the content module, so it is tested here rather than made public.
     const { contentGaps } = await import(
       "@/application/content/catalog-queries"
     );
