@@ -16,6 +16,7 @@ const M4_START = "20261106";
 const M5_START = "20261107";
 const M6_START = "20261108";
 const M7_START = "20261111";
+const M8_START = "20261115";
 const migrations = readdirSync(migrationsDir, { withFileTypes: true })
   .filter((entry) => entry.isDirectory())
   .map((entry) => entry.name)
@@ -24,7 +25,8 @@ const m3 = migrations.filter((name) => name < M4_START);
 const m4 = migrations.filter((name) => name >= M4_START && name < M5_START);
 const m5 = migrations.filter((name) => name >= M5_START && name < M6_START);
 const m6 = migrations.filter((name) => name >= M6_START && name < M7_START);
-const m7 = migrations.filter((name) => name >= M7_START);
+const m7 = migrations.filter((name) => name >= M7_START && name < M8_START);
+const m8 = migrations.filter((name) => name >= M8_START);
 
 const base = testDatabaseUrl();
 const scratchName = base.database.replace(/_test$/, "_m4_backfill_test");
@@ -286,6 +288,57 @@ describe("branches_and_staff_roles migration on M3 data", () => {
       ],
     );
     for (const table of ["ServiceOffering", "Coupon", "CouponBranch"]) {
+      expect(
+        (await db.query(`SELECT count(*)::int AS n FROM "${table}"`)).rows,
+      ).toEqual([{ n: 0 }]);
+    }
+  });
+
+  it("T-DB-6: applies reservations to populated M7 data without changing existing rows", async () => {
+    expect(m8).toEqual(["20261115120000_reservations"]);
+    await db.query(`
+      INSERT INTO "ServiceOffering" (id,"branchId",kind,"priceUnit","priceMinor","updatedAt") VALUES ('m8-service','${DEFAULT_BRANCH_ID}','BREAKFAST','PER_BOOKING',1000,now());
+      INSERT INTO "Coupon" (id,code,kind,"percentBasisPoints","updatedAt") VALUES ('m8-coupon','UPGRADE','PERCENT',1000,now());
+      INSERT INTO "CouponBranch" ("couponId","branchId") VALUES ('m8-coupon','${DEFAULT_BRANCH_ID}');
+      UPDATE "CommercialSettings" SET "vatRateBasisPoints"=0;
+    `);
+    const { rows: tables } = await db.query<{ tablename: string }>(
+      "SELECT tablename FROM pg_tables WHERE schemaname='public' ORDER BY tablename",
+    );
+    const snapshot = async () => {
+      const result: Record<string, unknown> = {};
+      for (const { tablename } of tables) {
+        const quoted = '"' + tablename.replaceAll('"', '""') + '"';
+        result[tablename] = (
+          await db.query(
+            `SELECT to_jsonb(t) AS row FROM ${quoted} t ORDER BY to_jsonb(t)::text`,
+          )
+        ).rows;
+      }
+      return result;
+    };
+    const before = await snapshot();
+    await apply(m8);
+    expect(await snapshot()).toEqual(before);
+    expect((await db.query('SELECT * FROM "WhatsAppSettings"')).rows).toEqual([
+      expect.objectContaining({
+        id: "default",
+        businessPhoneNumber: null,
+        providerPhoneNumberId: null,
+      }),
+    ]);
+    for (const table of [
+      "Reservation",
+      "ReservationRoom",
+      "ReservationNight",
+      "ReservationService",
+      "Guest",
+      "PhoneVerification",
+      "CouponRedemption",
+      "NotificationOutbox",
+      "BranchSyncCheckpoint",
+      "WhatsAppTemplate",
+    ]) {
       expect(
         (await db.query(`SELECT count(*)::int AS n FROM "${table}"`)).rows,
       ).toEqual([{ n: 0 }]);

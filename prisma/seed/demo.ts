@@ -195,8 +195,8 @@ function ok<T>(
  * media library (the demo only needs to prove the features work).
  *
  * M6 units and rates run separately via seedDemoInventory, including for
- * existing branches. M7 services and coupons run through seedDemoCommercial. Later milestones
- * add guests and reservations in M8 and M9, each with a test.
+ * existing branches. M7 services and coupons use seedDemoCommercial; M8
+ * guests and reservations use seedDemoReservations, each with a test.
  * Returns whether it created the branch; an existing one is left alone.
  */
 export async function seedDemo(
@@ -445,4 +445,225 @@ export async function seedDemo(
     ok(await pages.publish(branchId, key, actor), `Demo ${key} publish`);
   }
   return { created: true, status: "ACTIVE" };
+}
+
+// M8 fixtures are create only and confined to the fictional branch. Fixed
+// identities make a rerun preserve edited reservations, guests and templates.
+const RESERVATION_FIXTURES = [
+  {
+    id: "qvmrseeddemobookingaaaaaa",
+    reference: "RR-DEM00001",
+    status: "CONFIRMED",
+    source: "WEBSITE",
+    day: "2027-03-01",
+    entered: false,
+  },
+  {
+    id: "qvmrseeddemobookingaaaaab",
+    reference: "RR-DEM00002",
+    status: "CONFIRMED",
+    source: "WEBSITE",
+    day: "2027-03-03",
+    entered: true,
+  },
+  {
+    id: "qvmrseeddemobookingaaaaac",
+    reference: "RR-DEM00003",
+    status: "CHECKED_IN",
+    source: "STAFF",
+    day: "2027-03-05",
+    entered: false,
+  },
+  {
+    id: "qvmrseeddemobookingaaaaad",
+    reference: "RR-DEM00004",
+    status: "CHECKED_OUT",
+    source: "STAFF",
+    day: "2027-03-07",
+    entered: false,
+  },
+  {
+    id: "qvmrseeddemobookingaaaaae",
+    reference: "RR-DEM00005",
+    status: "CANCELLED",
+    source: "STAFF",
+    day: "2027-03-09",
+    entered: false,
+  },
+  {
+    id: "qvmrseeddemobookingaaaaaf",
+    reference: "RR-DEM00006",
+    status: "NO_SHOW",
+    source: "EXTERNAL",
+    day: "2027-03-11",
+    entered: false,
+  },
+] as const;
+
+export async function seedDemoReservations(
+  client: PrismaClient,
+  staffId: string,
+) {
+  return client.$transaction(async (tx) => {
+    const branch = await tx.branch.findUniqueOrThrow({
+      where: { slug: DEMO_BRANCH_SLUG },
+    });
+    const room = await tx.room.findFirstOrThrow({
+      where: { branchId: branch.id, slug: "giza-garden-room" },
+    });
+    const unit = await tx.physicalRoom.findFirstOrThrow({
+      where: { branchId: branch.id, roomTypeId: room.id },
+      orderBy: { id: "asc" },
+    });
+    // Resolve prerequisites before any fixture write; collisions roll back all.
+    const coupon = await tx.coupon.findUniqueOrThrow({
+      where: { id: "qnstbvgcfalkrmwxpzhedjua" },
+    });
+    const vat = await tx.commercialSettings.findUniqueOrThrow({
+      where: { id: "default" },
+    });
+    const guestId = "qvmrseeddemoguestaaaaaaa";
+    await tx.guest.upsert({
+      where: { id: guestId },
+      update: {},
+      create: {
+        id: guestId,
+        phone: "+12025550101",
+        name: "Fictional demo guest",
+        email: "guest1@example.test",
+        phoneVerifiedAt: new Date("2026-11-01T00:00:00Z"),
+      },
+    });
+    await tx.guest.upsert({
+      where: { id: "qvmrseeddemoguestaaaaaab" },
+      update: {},
+      create: {
+        id: "qvmrseeddemoguestaaaaaab",
+        phone: "+12025550102",
+        name: "Fictional blocked guest",
+        blockedAt: new Date("2026-11-01T00:00:00Z"),
+        blockedById: staffId,
+        blockReason: "Fictional demo block",
+      },
+    });
+    let created = 0;
+    for (const [index, fixture] of RESERVATION_FIXTURES.entries()) {
+      if (await tx.reservation.findUnique({ where: { id: fixture.id } }))
+        continue;
+      const checkIn = new Date(`${fixture.day}T00:00:00Z`);
+      const checkOut = new Date(checkIn.getTime() + 86_400_000);
+      const unpriced = fixture.source === "EXTERNAL";
+      const accommodation = 6000;
+      const discount = index === 0 ? 600 : 0;
+      const taxable = accommodation - discount;
+      const vatMinor = Math.floor(
+        (taxable * vat.vatRateBasisPoints + 5000) / 10000,
+      );
+      await tx.reservation.create({
+        data: {
+          id: fixture.id,
+          reference: fixture.reference,
+          branchId: branch.id,
+          source: fixture.source,
+          status: fixture.status,
+          checkIn,
+          checkOut,
+          guestId,
+          guestName: "Fictional demo guest",
+          guestEmail: "guest1@example.test",
+          guestPhone: "+12025550101",
+          internalNotes: "Fictional demo reservation for local review only.",
+          externalReference: unpriced ? "FICTIONAL-EXT-1" : null,
+          accommodationMinor: unpriced ? null : accommodation,
+          servicesMinor: 0,
+          subtotalMinor: unpriced ? null : accommodation,
+          discountMinor: discount,
+          taxableMinor: unpriced ? null : taxable,
+          vatRateBasisPoints: unpriced ? null : vat.vatRateBasisPoints,
+          vatMinor: unpriced ? null : vatMinor,
+          totalMinor: unpriced ? null : taxable + vatMinor,
+          couponId: index === 0 ? coupon.id : null,
+          couponCode: index === 0 ? "DEMO_PERCENT" : null,
+          couponKind: index === 0 ? "PERCENT" : null,
+          couponValue: index === 0 ? 1000 : null,
+          createdById: fixture.source === "WEBSITE" ? null : staffId,
+          pmsEnteredAt: fixture.entered
+            ? new Date("2026-11-01T00:00:00Z")
+            : null,
+          pmsEnteredById: fixture.entered ? staffId : null,
+          statusChangedAt: new Date("2026-11-01T00:00:00Z"),
+          rooms: {
+            create: {
+              id: `qvmrseeddemoroomaaaaaaa${index}`,
+              roomTypeId: room.id,
+              physicalRoomId:
+                fixture.status === "CHECKED_IN" ||
+                fixture.status === "CHECKED_OUT"
+                  ? unit.id
+                  : null,
+              checkIn,
+              checkOut,
+              adults: 2,
+              children: 0,
+              consumesInventory:
+                fixture.status === "CONFIRMED" ||
+                fixture.status === "CHECKED_IN" ||
+                fixture.status === "CHECKED_OUT",
+              subtotalMinor: unpriced ? null : accommodation,
+              nights: {
+                create: {
+                  night: checkIn,
+                  amountMinor: unpriced ? null : accommodation,
+                  rateSource: unpriced ? null : "BASE",
+                },
+              },
+            },
+          },
+          ...(index === 0
+            ? {
+                redemption: {
+                  create: { couponId: coupon.id, phone: "+12025550101" },
+                },
+              }
+            : {}),
+        },
+      });
+      created++;
+    }
+    for (const [index, kind] of ["STARTED", "COMPLETED"].entries()) {
+      await tx.branchSyncCheckpoint.upsert({
+        where: { id: `qvmrseeddemosyncaaaaaaa${index}` },
+        update: {},
+        create: {
+          id: `qvmrseeddemosyncaaaaaaa${index}`,
+          branchId: branch.id,
+          kind: kind === "STARTED" ? "STARTED" : "COMPLETED",
+          recordedById: staffId,
+          recordedAt: new Date(`2026-11-01T0${index}:00:00Z`),
+          note: "Fictional demo sync",
+        },
+      });
+    }
+    for (const [index, purpose] of [
+      "VERIFICATION_CODE",
+      "BOOKING_CONFIRMED",
+    ].entries()) {
+      await tx.whatsAppTemplate.upsert({
+        where: { id: `qvmrseeddemotemplaaaaaa${index}` },
+        update: {},
+        create: {
+          id: `qvmrseeddemotemplaaaaaa${index}`,
+          purpose,
+          language: "en",
+          providerName: `fictional_demo_${purpose.toLowerCase()}`,
+          category:
+            purpose === "VERIFICATION_CODE" ? "AUTHENTICATION" : "UTILITY",
+          variables: [],
+          previewText: "Fictional demo template, not approved by Meta.",
+          active: false,
+        },
+      });
+    }
+    return { created };
+  });
 }

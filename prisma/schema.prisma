@@ -142,6 +142,12 @@ model User {
   cancelledInventoryBlocks InventoryBlock[]        @relation("InventoryBlockCancelledBy")
   updatedBaseRates         RoomBaseRate[]          @relation("RoomBaseRateUpdatedBy")
   updatedRatePeriods       RatePeriod[]            @relation("RatePeriodUpdatedBy")
+  createdReservations      Reservation[]           @relation("ReservationCreatedBy")
+  pmsEnteredReservations   Reservation[]           @relation("ReservationPmsEnteredBy")
+  blockedGuests            Guest[]                 @relation("GuestBlockedBy")
+  whatsAppSettingsUpdates  WhatsAppSettings[]      @relation("WhatsAppSettingsUpdatedBy")
+  whatsAppTemplateUpdates  WhatsAppTemplate[]      @relation("WhatsAppTemplateUpdatedBy")
+  syncCheckpoints          BranchSyncCheckpoint[]
 }
 
 // Better Auth 1.7 core tables. Field names follow the library schema; the app
@@ -335,14 +341,15 @@ model Room {
   updatedAt         DateTime          @updatedAt @db.Timestamptz(3)
   updatedById       String?           @db.VarChar(32)
 
-  branch        Branch         @relation(fields: [branchId], references: [id], onDelete: Restrict)
-  ogMedia       MediaAsset?    @relation("RoomOgMedia", fields: [ogMediaId], references: [id], onDelete: Restrict)
-  updatedBy     User?          @relation("RoomUpdatedBy", fields: [updatedById], references: [id], onDelete: Restrict)
-  features      RoomFeature[]
-  media         RoomMedia[]
-  physicalRooms PhysicalRoom[]
-  baseRate      RoomBaseRate?
-  ratePeriods   RatePeriod[]
+  branch           Branch            @relation(fields: [branchId], references: [id], onDelete: Restrict)
+  ogMedia          MediaAsset?       @relation("RoomOgMedia", fields: [ogMediaId], references: [id], onDelete: Restrict)
+  updatedBy        User?             @relation("RoomUpdatedBy", fields: [updatedById], references: [id], onDelete: Restrict)
+  features         RoomFeature[]
+  media            RoomMedia[]
+  physicalRooms    PhysicalRoom[]
+  baseRate         RoomBaseRate?
+  ratePeriods      RatePeriod[]
+  reservationRooms ReservationRoom[]
 
   // Composite target for same-branch foreign keys from inventory and
   // reservations (ADR 017).
@@ -363,9 +370,10 @@ model PhysicalRoom {
   updatedAt   DateTime @updatedAt @db.Timestamptz(3)
   updatedById String?  @db.VarChar(32)
 
-  roomType  Room             @relation(fields: [roomTypeId, branchId], references: [id, branchId], onDelete: Restrict, onUpdate: Restrict)
-  updatedBy User?            @relation("PhysicalRoomUpdatedBy", fields: [updatedById], references: [id], onDelete: Restrict)
-  blocks    InventoryBlock[]
+  roomType         Room              @relation(fields: [roomTypeId, branchId], references: [id, branchId], onDelete: Restrict, onUpdate: Restrict)
+  updatedBy        User?             @relation("PhysicalRoomUpdatedBy", fields: [updatedById], references: [id], onDelete: Restrict)
+  blocks           InventoryBlock[]
+  reservationRooms ReservationRoom[]
 
   @@unique([branchId, label])
   @@unique([id, roomTypeId])
@@ -418,8 +426,9 @@ model RatePeriod {
   updatedAt   DateTime @updatedAt @db.Timestamptz(3)
   updatedById String?  @db.VarChar(32)
 
-  roomType  Room  @relation(fields: [roomTypeId], references: [id], onDelete: Restrict, onUpdate: Restrict)
-  updatedBy User? @relation("RatePeriodUpdatedBy", fields: [updatedById], references: [id], onDelete: Restrict)
+  roomType          Room               @relation(fields: [roomTypeId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  updatedBy         User?              @relation("RatePeriodUpdatedBy", fields: [updatedById], references: [id], onDelete: Restrict)
+  reservationNights ReservationNight[]
 
   @@index([roomTypeId, startDate])
 }
@@ -627,6 +636,8 @@ model Branch {
   assignments      StaffBranchAssignment[]
   serviceOfferings ServiceOffering[]
   couponBranches   CouponBranch[]
+  reservations     Reservation[]
+  syncCheckpoints  BranchSyncCheckpoint[]
 
   @@index([status, sortOrder])
 }
@@ -706,9 +717,11 @@ model Coupon {
   createdById            String?    @db.VarChar(32)
   updatedById            String?    @db.VarChar(32)
 
-  createdBy User?          @relation("CouponCreatedBy", fields: [createdById], references: [id], onDelete: Restrict, onUpdate: Restrict)
-  updatedBy User?          @relation("CouponUpdatedBy", fields: [updatedById], references: [id], onDelete: Restrict, onUpdate: Restrict)
-  branches  CouponBranch[]
+  createdBy    User?              @relation("CouponCreatedBy", fields: [createdById], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  updatedBy    User?              @relation("CouponUpdatedBy", fields: [updatedById], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  branches     CouponBranch[]
+  reservations Reservation[]
+  redemptions  CouponRedemption[]
 }
 
 model CouponBranch {
@@ -729,4 +742,288 @@ model CommercialSettings {
   updatedById        String?  @db.VarChar(32)
 
   updatedBy User? @relation("CommercialSettingsUpdatedBy", fields: [updatedById], references: [id], onDelete: Restrict, onUpdate: Restrict)
+}
+
+enum ReservationStatus {
+  AWAITING_PAYMENT
+  CONFIRMED
+  PAYMENT_FAILED
+  CANCELLED
+  CHECKED_IN
+  CHECKED_OUT
+  NO_SHOW
+}
+
+enum ReservationSource {
+  WEBSITE
+  STAFF
+  EXTERNAL
+}
+
+enum PaymentMethod {
+  PAY_AT_HOTEL
+  PAYMOB
+}
+
+enum ReservationPaymentStatus {
+  NOT_REQUIRED
+  AWAITING
+  PAID
+  REFUND_PENDING
+  REFUNDED
+}
+
+enum NightRateSource {
+  BASE
+  PERIOD
+  MANUAL
+}
+
+enum OutboxStatus {
+  PENDING
+  SENT
+  FAILED
+}
+
+enum OutboxChannel {
+  EMAIL
+  WHATSAPP
+}
+
+enum VerificationPurpose {
+  BOOKING
+  GUEST_SESSION
+}
+
+enum SyncCheckpointKind {
+  STARTED
+  COMPLETED
+}
+
+// M8 storage foundation. SQL checks, partial uniqueness and exclusion constraints
+// live in the reservations migration. Payment flows remain M9.
+model Reservation {
+  id                   String                   @id @db.VarChar(32)
+  reference            String                   @unique @db.VarChar(16)
+  branchId             String                   @db.VarChar(32)
+  source               ReservationSource
+  status               ReservationStatus
+  version              Int                      @default(1)
+  checkIn              DateTime                 @db.Date
+  checkOut             DateTime                 @db.Date
+  guestId              String?                  @db.VarChar(32) // → Guest RESTRICT; required for WEBSITE (CHECK)
+  guestName            String                   @db.VarChar(120)
+  guestEmail           String?                  @db.VarChar(320) // required for WEBSITE (app rule)
+  guestPhone           String?                  @db.VarChar(32)
+  guestCountry         String?                  @db.VarChar(2)
+  specialRequests      String?                  @db.VarChar(1000)
+  internalNotes        String?                  @db.VarChar(2000)
+  externalReference    String?                  @db.VarChar(80)
+  currency             String                   @default("USD") @db.Char(3)
+  accommodationMinor   Int? // price snapshot (ADR 027); null only for unpriced EXTERNAL
+  servicesMinor        Int                      @default(0)
+  subtotalMinor        Int?
+  discountMinor        Int                      @default(0)
+  taxableMinor         Int?
+  vatRateBasisPoints   Int? // stored rate used (TX-5)
+  vatMinor             Int?
+  totalMinor           Int? // taxable + vat
+  couponId             String?                  @db.VarChar(32) // → Coupon RESTRICT
+  couponCode           String?                  @db.VarChar(32) // as entered, normalized
+  couponKind           CouponKind?
+  couponValue          Int? // basis points or cents
+  paymentMethod        PaymentMethod            @default(PAY_AT_HOTEL)
+  paymentStatus        ReservationPaymentStatus @default(NOT_REQUIRED)
+  holdExpiresAt        DateTime?                @db.Timestamptz(3) // AWAITING_PAYMENT only
+  pmsEnteredAt         DateTime?                @db.Timestamptz(3) // WEBSITE only (Q-40)
+  pmsEnteredById       String?                  @db.VarChar(32)
+  privacyNoticeVersion String?                  @db.VarChar(40)
+  manageTokenHash      String?                  @unique @db.VarChar(64)
+  manageTokenExpiresAt DateTime?                @db.Timestamptz(3)
+  idempotencyKeyHash   String?                  @db.VarChar(64)
+  requestFingerprint   String?                  @db.VarChar(64)
+  statusChangedAt      DateTime                 @db.Timestamptz(3)
+  createdAt            DateTime                 @default(now()) @db.Timestamptz(3)
+  updatedAt            DateTime                 @updatedAt @db.Timestamptz(3)
+  createdById          String?                  @db.VarChar(32) // staff; null for WEBSITE
+  branch               Branch                   @relation(fields: [branchId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  guest                Guest?                   @relation(fields: [guestId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  coupon               Coupon?                  @relation(fields: [couponId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  createdBy            User?                    @relation("ReservationCreatedBy", fields: [createdById], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  pmsEnteredBy         User?                    @relation("ReservationPmsEnteredBy", fields: [pmsEnteredById], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  rooms                ReservationRoom[]
+  services             ReservationService[]
+  redemption           CouponRedemption?
+  notifications        NotificationOutbox[]
+
+  @@unique([id, branchId]) // composite-FK target for ReservationRoom
+  @@unique([branchId, externalReference])
+  @@index([branchId, status, checkIn])
+  @@index([branchId, checkIn, checkOut])
+  @@index([guestEmail])
+  @@index([guestId, checkIn])
+  @@index([status, holdExpiresAt]) // hold expiry job
+  @@index([branchId, source, pmsEnteredAt])
+}
+
+model ReservationRoom {
+  id                String             @id @db.VarChar(32)
+  reservationId     String             @db.VarChar(32) // → Reservation CASCADE
+  branchId          String             @db.VarChar(32) // (roomTypeId, branchId) → Room(id, branchId)
+  roomTypeId        String             @db.VarChar(32)
+  physicalRoomId    String?            @db.VarChar(32) // (physicalRoomId, roomTypeId) → PhysicalRoom(id, roomTypeId)
+  checkIn           DateTime           @db.Date // = reservation stay (v1), kept for constraints/queries
+  checkOut          DateTime           @db.Date
+  adults            Int
+  children          Int                @default(0)
+  consumesInventory Boolean
+  subtotalMinor     Int?
+  reservation       Reservation        @relation(fields: [reservationId, branchId], references: [id, branchId], onDelete: Cascade, onUpdate: Restrict)
+  roomType          Room               @relation(fields: [roomTypeId, branchId], references: [id, branchId], onDelete: Restrict, onUpdate: Restrict)
+  physicalRoom      PhysicalRoom?      @relation(fields: [physicalRoomId, roomTypeId], references: [id, roomTypeId], onDelete: Restrict, onUpdate: Restrict)
+  nights            ReservationNight[]
+
+  @@index([branchId, roomTypeId, consumesInventory, checkIn, checkOut])
+}
+
+model ReservationNight {
+  reservationRoomId String           @db.VarChar(32) // → ReservationRoom CASCADE
+  night             DateTime         @db.Date
+  amountMinor       Int?
+  rateSource        NightRateSource?
+  ratePeriodId      String?          @db.VarChar(32) // historical pointer, SET NULL
+  label             String?          @db.VarChar(80)
+  room              ReservationRoom  @relation(fields: [reservationRoomId], references: [id], onDelete: Cascade, onUpdate: Restrict)
+  ratePeriod        RatePeriod?      @relation(fields: [ratePeriodId], references: [id], onDelete: SetNull, onUpdate: Restrict)
+
+  @@id([reservationRoomId, night])
+}
+
+model ReservationService {
+  reservationId   String           @db.VarChar(32) // → Reservation CASCADE
+  kind            ServiceKind
+  priceUnit       ServicePriceUnit // snapshot of the unit used
+  priceMinor      Int // adult price used
+  childPriceMinor Int? // child price used, null = children not charged
+  adults          Int
+  children        Int
+  nights          Int
+  adultQuantity   Int
+  childQuantity   Int
+  amountMinor     Int
+  details         String?          @db.VarChar(300) // e.g. flight number (Q-56), plain text
+  reservation     Reservation      @relation(fields: [reservationId], references: [id], onDelete: Cascade, onUpdate: Restrict)
+
+  @@id([reservationId, kind])
+}
+
+model Guest {
+  id                      String        @id @db.VarChar(32)
+  phone                   String        @unique @db.VarChar(20) // normalized E.164
+  name                    String        @db.VarChar(120) // latest used
+  email                   String?       @db.VarChar(320) // latest used
+  phoneVerifiedAt         DateTime?     @db.Timestamptz(3) // null for staff-entered profiles
+  marketingOptInAt        DateTime?     @db.Timestamptz(3) // Q-58
+  marketingConsentVersion String?       @db.VarChar(40)
+  marketingOptOutAt       DateTime?     @db.Timestamptz(3)
+  blockedAt               DateTime?     @db.Timestamptz(3)
+  blockedById             String?       @db.VarChar(32)
+  blockReason             String?       @db.VarChar(500)
+  createdAt               DateTime      @default(now()) @db.Timestamptz(3)
+  updatedAt               DateTime      @updatedAt @db.Timestamptz(3)
+  reservations            Reservation[]
+  blockedBy               User?         @relation("GuestBlockedBy", fields: [blockedById], references: [id], onDelete: Restrict, onUpdate: Restrict)
+
+  @@index([blockedAt])
+  @@index([name])
+}
+
+model PhoneVerification {
+  id             String              @id @db.VarChar(32)
+  phone          String              @db.VarChar(20)
+  purpose        VerificationPurpose
+  codeHash       String              @db.VarChar(64)
+  attempts       Int                 @default(0)
+  expiresAt      DateTime            @db.Timestamptz(3) // created + 10 minutes
+  verifiedAt     DateTime?           @db.Timestamptz(3)
+  tokenHash      String?             @unique @db.VarChar(64) // verification token / guest session (30 minutes)
+  tokenExpiresAt DateTime?           @db.Timestamptz(3)
+  consumedAt     DateTime?           @db.Timestamptz(3) // BOOKING token used by a reservation
+  clientKey      String              @db.VarChar(80) // HMAC of the client address, for limits
+  createdAt      DateTime            @default(now()) @db.Timestamptz(3)
+
+  @@index([phone, createdAt])
+  @@index([clientKey, createdAt])
+}
+
+model CouponRedemption {
+  couponId      String      @db.VarChar(32) // → Coupon RESTRICT
+  reservationId String      @id @db.VarChar(32) // one coupon per reservation
+  phone         String?     @db.VarChar(20)
+  releasedAt    DateTime?   @db.Timestamptz(3) // payment failed / cancelled (CP-2)
+  createdAt     DateTime    @default(now()) @db.Timestamptz(3)
+  reservation   Reservation @relation(fields: [reservationId], references: [id], onDelete: Cascade, onUpdate: Restrict)
+  coupon        Coupon      @relation(fields: [couponId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+
+  @@index([couponId, releasedAt])
+  @@index([couponId, phone, releasedAt])
+}
+
+model WhatsAppSettings {
+  id                    String    @id @db.VarChar(32)
+  businessPhoneNumber   String?   @db.VarChar(20) // E.164; empty placeholder until the client supplies it
+  providerPhoneNumberId String?   @db.VarChar(64) // e.g. Meta Cloud API phone-number id; the access token is a server secret, not stored here
+  lastTestAt            DateTime? @db.Timestamptz(3)
+  lastTestOk            Boolean?
+  lastTestError         String?   @db.VarChar(200)
+  updatedAt             DateTime  @updatedAt @db.Timestamptz(3)
+  updatedById           String?   @db.VarChar(32)
+  updatedBy             User?     @relation("WhatsAppSettingsUpdatedBy", fields: [updatedById], references: [id], onDelete: Restrict, onUpdate: Restrict)
+}
+
+model WhatsAppTemplate {
+  id           String   @id @db.VarChar(32)
+  purpose      String   @db.VarChar(40) // VERIFICATION_CODE, BOOKING_CONFIRMED, PAYMENT_NOT_COMPLETED, CANCELLATION_RECEIVED, CANCELLATION_APPROVED, CANCELLATION_REJECTED, REFUND_COMPLETED, CANCELLED_BY_HOTEL, MANAGE_LINK, FEEDBACK_REQUEST, MARKETING, TEST
+  language     String   @db.VarChar(10) // e.g. en, ar
+  providerName String   @db.VarChar(120) // template name exactly as approved in Meta
+  category     String   @db.VarChar(20) // AUTHENTICATION, UTILITY, MARKETING
+  variables    Json // ordered list of allowlisted field keys, e.g. ["guestFirstName","reference","checkIn"]
+  previewText  String   @db.VarChar(1024) // staff-facing preview, not sent
+  active       Boolean  @default(true)
+  createdAt    DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt    DateTime @updatedAt @db.Timestamptz(3)
+  updatedById  String?  @db.VarChar(32)
+  // unique active template per (purpose, language) except MARKETING (several allowed): partial unique index in SQL
+  updatedBy    User?    @relation("WhatsAppTemplateUpdatedBy", fields: [updatedById], references: [id], onDelete: Restrict, onUpdate: Restrict)
+}
+
+model NotificationOutbox {
+  id            String        @id @db.VarChar(32)
+  channel       OutboxChannel
+  kind          String        @db.VarChar(60) // reservation.confirmed, payment.failed, cancellation.approved, feedback.request, marketing.broadcast, …
+  reservationId String?       @db.VarChar(32)
+  recipient     String        @db.VarChar(320) // email address or E.164 phone
+  payload       Json // template data, no secrets except manage URL
+  status        OutboxStatus  @default(PENDING)
+  attempts      Int           @default(0)
+  lastError     String?       @db.VarChar(200)
+  availableAt   DateTime      @db.Timestamptz(3)
+  sentAt        DateTime?     @db.Timestamptz(3)
+  createdAt     DateTime      @default(now()) @db.Timestamptz(3)
+  reservation   Reservation?  @relation(fields: [reservationId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+
+  @@index([status, availableAt])
+}
+
+model BranchSyncCheckpoint {
+  id           String             @id @db.VarChar(32)
+  branchId     String             @db.VarChar(32)
+  kind         SyncCheckpointKind
+  recordedAt   DateTime           @default(now()) @db.Timestamptz(3)
+  recordedById String             @db.VarChar(32)
+  note         String?            @db.VarChar(500)
+  branch       Branch             @relation(fields: [branchId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  recordedBy   User               @relation(fields: [recordedById], references: [id], onDelete: Restrict, onUpdate: Restrict)
+
+  @@index([branchId, recordedAt])
 }

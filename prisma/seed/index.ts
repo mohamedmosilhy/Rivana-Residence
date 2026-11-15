@@ -2,10 +2,16 @@ import type { StaffPrincipal } from "../../src/application/auth/ports.ts";
 import type { PrismaClient } from "../../src/generated/prisma/client.ts";
 import { seedDatabase } from "../seed-data.ts";
 import { ensureSeedAdmin } from "./admin.ts";
+import { seedWhatsAppSettings } from "./whatsapp.ts";
 import { SEED_ADMIN } from "./admin-credentials.ts";
 import { seedBranchDetails, seedBranchHero } from "./branch.ts";
 import { SEEDED_COUNTS, seedContent } from "./content.ts";
-import { seedDemo, seedDemoInventory, seedDemoCommercial } from "./demo.ts";
+import {
+  seedDemo,
+  seedDemoInventory,
+  seedDemoCommercial,
+  seedDemoReservations,
+} from "./demo.ts";
 
 /**
  * The one seed, step by step. Each new feature adds its step here, with a
@@ -16,7 +22,8 @@ import { seedDemo, seedDemoInventory, seedDemoCommercial } from "./demo.ts";
  *   3. branch     the branch's contact, address, map, and check-in times
  *               (its hero image is set after the content step)
  *   4. content    the old site's rooms, facilities, photos, and page text
- *   5. demo       only with --demo, never in production: fictional data
+ *   5. WhatsApp   required empty setup, existing configuration preserved
+ *   6. demo       only with --demo, never in production: fictional data
  */
 export async function runSeed(
   client: PrismaClient,
@@ -92,6 +99,11 @@ export async function runSeed(
     "Inventory: units and rates need approved hotel data; no real inventory or prices were seeded.",
   );
 
+  await seedWhatsAppSettings(client);
+  log(
+    "WhatsApp: required settings are in place; existing configuration preserved.",
+  );
+
   if (options.demo) {
     const demo = await seedDemo(client, { staffId: user.id });
     log(
@@ -110,6 +122,10 @@ export async function runSeed(
     const inventory = await seedDemoInventory(client);
     log(
       `Demo inventory: created ${inventory.created} fictional unit/rate records; existing records preserved.`,
+    );
+    const reservations = await seedDemoReservations(client, user.id);
+    log(
+      `Demo reservations: created ${reservations.created} fictional bookings; existing records preserved.`,
     );
   }
   return { branchId, contentSeeded };

@@ -1,6 +1,6 @@
 # M8 — Reservations, immediate confirmation, phone verification, and messages
 
-Status: **In progress** (2/15 tasks accepted: M8-T0 on 2026-11-13, M8-T0b on 2026-11-14; spec [0005](../../specs/0005-m8-reservations.md) and the task breakdown approved, 2026-11-14). Branch: `m8-reservations`. Follow the [milestone loop](./README.md#the-loop-every-milestone-follows).
+Status: **In progress** (3/15 tasks accepted: M8-T0 on 2026-11-13, M8-T0b on 2026-11-14, M8-T1 on 2026-11-15; spec [0005](../../specs/0005-m8-reservations.md) and the task breakdown approved, 2026-11-14). Branch: `m8-reservations`. Follow the [milestone loop](./README.md#the-loop-every-milestone-follows).
 
 > **Done first (accepted 2026-11-13): [M8-T0, application ports consolidation](#0-prerequisite-task-m8-t0-application-ports-consolidation).** The owner decided on 2026-11-13 that the old shared `src/application/ports/` files move into their modules before any other M8 task starts, so every M8 repository and port is written in the module layout from the start. [M8-T0b](#0b-follow-up-task-m8-t0b-public-surfaces-for-the-cms-modules) was accepted on 2026-11-14. Next: the rest of M8, task by task.
 
@@ -60,7 +60,7 @@ Planned, reviewed, and accepted one task at a time ([agent-workflow.md](../../en
 | --- | --- | --- | --- | --- | --- |
 | M8-T0 | Application ports consolidation: move the old shared ports into their modules (refactor, no behavior change) | Medium | M7 | Existing tests unchanged and green; new `ports` boundary test | Accepted |
 | M8-T0b | Public surfaces for the CMS modules: `index.ts` per old module and D-8 extended to them (refactor, no behavior change) | Medium | T0 | Existing tests unchanged and green; D-8 test extended | Accepted |
-| M8-T1 | Migration `reservations`: tables, checks, composite FKs, exclusion and idempotency constraints, demo seed | Critical | T0 | T-DB-6…8; drift check | Not started |
+| M8-T1 | Migration `reservations`: tables, checks, composite FKs, exclusion and idempotency constraints, demo seed | Critical | T0 | T-DB-6…8; drift check | Accepted |
 | M8-T2 | Reservation domain: state machine, invariants R-1…R-10, reference, `PhoneNumber`, verification and per-phone policies | Critical | T0 | T-LIFE-1…10, T-REF-1…3, T-PHONE-1…4, T-VAL-1…5 | Not started |
 | M8-T3 | Reservation and guest repositories, unit-of-work binding, real sold consumption adapter | Medium | T1 | repository integration tests | Not started |
 | M8-T4 | WhatsApp setup: settings, templates, sender port, provider and fake adapters, test message, minimal Admin screen | Critical | T1, T2 | AC 10; T-WA-1…7 | Not started |

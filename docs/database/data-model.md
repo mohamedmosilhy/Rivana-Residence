@@ -1,12 +1,12 @@
 # Data model
 
-PostgreSQL is the system of record for content, staff identity, enquiries, promotions (retired), media metadata, branches, inventory, prices, services, coupons, VAT, and (planned) reservations, payments, and marketing consent. Card data is never stored (Paymob hosted checkout, ADR 025). Binary images live in the configured media store (a persistent server directory). Prisma is the migration and persistence adapter, not the domain model; it is imported only under `src/infrastructure/db`.
+PostgreSQL is the system of record for content, staff identity, enquiries, promotions (retired), media metadata, branches, inventory, prices, services, coupons, VAT, reservation and guest storage (including marketing consent), and (planned) payments. Reservation workflows remain planned beyond M8-T1. Card data is never stored (Paymob hosted checkout, ADR 025). Binary images live in the configured media store (a persistent server directory). Prisma is the migration and persistence adapter, not the domain model; it is imported only under `src/infrastructure/db`.
 
-The implemented schema is `prisma/schema.prisma` (8 migrations; M4 added `…_staff_roles_enum` and `…_branches_and_staff_roles`, M5 `…_reserve_legacy_branch_slugs`, M6-T3 `…_inventory_and_rates`, M7-T3 `20261111120000_commercial_rules`). Tables marked *planned* are specified here and added by milestone migrations ([migrations-and-seeding.md](./migrations-and-seeding.md)).
+The implemented schema is `prisma/schema.prisma` (9 migrations; M4 added `…_staff_roles_enum` and `…_branches_and_staff_roles`, M5 `…_reserve_legacy_branch_slugs`, M6-T3 `…_inventory_and_rates`, M7-T3 `20261111120000_commercial_rules`, M8-T1 `20261115120000_reservations`). Tables marked *planned* are specified here and added by milestone migrations ([migrations-and-seeding.md](./migrations-and-seeding.md)).
 
 ## Conventions
 
-- IDs are application-generated CUID2 strings (`VARCHAR(32)`); do not mix strategies. The `SiteSettings` and `CommercialSettings` singletons use the fixed key `default`.
+- IDs are application-generated CUID2 strings (`VARCHAR(32)`); do not mix strategies. The `SiteSettings`, `CommercialSettings`, and `WhatsAppSettings` singletons use the fixed key `default`.
 - Instants are `timestamptz(3)` in UTC, formatted in the presentation layer. Every Prisma connection sets `-c TimeZone=UTC`, because the pg adapter exchanges instants as zone-less UTC wall time (see `src/infrastructure/db/prisma/client.ts`).
 - Stay dates are `DATE`, never instants (ADR 020). Money is `INTEGER` minor units (cents) with a `currency` column; the currency is USD.
 - Strings are bounded `VARCHAR`s. Room size is `NUMERIC(6,2)` square metres, mapped to `number` at the repository boundary.
@@ -28,12 +28,12 @@ The implemented schema is `prisma/schema.prisma` (8 migrations; M4 added `…_st
 | Inventory | `PhysicalRoom`, `InventoryBlock` | Implemented (M6-T3): branch-unique labels, composite ownership FKs (`ON UPDATE/DELETE RESTRICT`), `InventoryBlock_dates_check`, `InventoryBlock_no_overlap` (GiST exclusion over uncancelled blocks per unit) |
 | Pricing | `RoomBaseRate`, `RatePeriod` (M6-T3) | Implemented: positive `INTEGER` cents, explicit `USD`, `RatePeriod_no_overlap` (GiST exclusion over active periods per listing) |
 | Commercial | `ServiceOffering`, `Coupon`, `CouponBranch`, `CommercialSettings` | Implemented (M7-T3): service price units and child pricing, positive USD amounts, case-insensitive coupon uniqueness and value/window/limit checks, branch joins, singleton VAT 0–10000 basis points inserted at 1500; service and VAT management APIs are implemented (T4), coupon management APIs are implemented (T5); quote composition remains T6 |
-| Reservations | `Reservation`, `ReservationRoom`, `ReservationNight`, `ReservationService`, `CouponRedemption`, `BranchSyncCheckpoint` | Planned (M8) |
+| Reservations | `Reservation`, `ReservationRoom`, `ReservationNight`, `ReservationService`, `CouponRedemption`, `BranchSyncCheckpoint` | Storage implemented (M8-T1); repositories, domain rules, and workflows remain planned |
 | Payments | `Payment`, `PaymentEvent`, `CancellationRequest` | Planned (M9) |
-| Guests | `Guest` (verified phone profiles, blocking, marketing consent), `PhoneVerification` | Planned (M8) |
-| Messaging settings | `WhatsAppSettings`, `WhatsAppTemplate` (Admin-managed, Q-67) | Planned (M8) |
+| Guests | `Guest` (verified phone profiles, blocking, marketing consent), `PhoneVerification` | Storage implemented (M8-T1); verification and guest-access workflows remain planned |
+| Messaging settings | `WhatsAppSettings`, `WhatsAppTemplate` (Admin-managed, Q-67) | Storage implemented (M8-T1), empty settings singleton; setup API and UI remain planned (T4) |
 | Marketing | `Broadcast` | Planned (M13) |
-| Cross-cutting | `AuditEvent` (implemented, M4), `NotificationOutbox` (M8) | `AuditEvent` implemented; outbox planned |
+| Cross-cutting | `AuditEvent` (implemented, M4), `NotificationOutbox` (M8) | `AuditEvent` implemented; outbox storage implemented (M8-T1), dispatcher remains planned (T6) |
 
 ## Content and identity tables
 
@@ -204,7 +204,7 @@ No existing column is renamed or dropped in these milestones.
 
 ### New tables (implemented and planned sketch)
 
-M4 branch, assignment, and audit tables, M6 inventory and rate tables, and M7-T3 `ServiceOffering`, `Coupon`, `CouponBranch`, and `CommercialSettings` are implemented in `prisma/schema.prisma`. Reservation, redemption, payment, guest, and messaging tables remain planned. The commercial migration adds all foreign keys with `ON UPDATE RESTRICT`; deleting a coupon cascades to its branch joins, while branch and staff references restrict deletion. Coupon branch-list consistency (`allBranches` versus joins) is enforced by the domain and management use case (M7-T5), with coupon and join changes committed alongside audit in one transaction; the database has no trigger for it. Coupon edits lock the parent before reading or replacing branch joins. Scoped list results hydrate coupon and branch data in one statement snapshot.
+M4 branch, assignment, and audit tables, M6 inventory and rate tables, and M7-T3 `ServiceOffering`, `Coupon`, `CouponBranch`, and `CommercialSettings` are implemented in `prisma/schema.prisma`. M8-T1 implements the eleven reservation, redemption, guest, verification, messaging, and sync storage tables; their application workflows remain planned. Payment and marketing tables remain planned for M9 and M13. The commercial migration adds all foreign keys with `ON UPDATE RESTRICT`; deleting a coupon cascades to its branch joins, while branch and staff references restrict deletion. Coupon branch-list consistency (`allBranches` versus joins) is enforced by the domain and management use case (M7-T5), with coupon and join changes committed alongside audit in one transaction; the database has no trigger for it. Coupon edits lock the parent before reading or replacing branch joins. Scoped list results hydrate coupon and branch data in one statement snapshot.
 
 ```prisma
 enum BranchStatus       { ACTIVE INACTIVE }
@@ -349,7 +349,7 @@ model Reservation {
   createdById          String?           @db.VarChar(32)   // staff; null for WEBSITE
   @@unique([id, branchId])              // composite-FK target for ReservationRoom
   @@unique([branchId, externalReference])
-  @@unique([source, createdById, idempotencyKeyHash])  // see note
+  // SQL-only partial NULLS NOT DISTINCT index on (source, createdById, idempotencyKeyHash); see note
   @@index([branchId, status, checkIn])
   @@index([branchId, checkIn, checkOut])
   @@index([guestEmail])
@@ -582,7 +582,7 @@ model NotificationOutbox {
   id            String       @id @db.VarChar(32)
   channel       OutboxChannel
   kind          String       @db.VarChar(60)    // reservation.confirmed, payment.failed, cancellation.approved, feedback.request, marketing.broadcast, …
-  broadcastId   String?      @db.VarChar(32)
+  broadcastId   String?      @db.VarChar(32)   // planned M13, absent from the M8 schema
   reservationId String?      @db.VarChar(32)
   recipient     String       @db.VarChar(320)   // email address or E.164 phone
   payload       Json                            // template data, no secrets except manage URL
@@ -609,12 +609,14 @@ model BranchSyncCheckpoint {           // Q-20
 Notes:
 
 - **Idempotency uniqueness.** Postgres treats `NULL`s as distinct in unique constraints. The migration instead creates `UNIQUE NULLS NOT DISTINCT ("source", "createdById", "idempotencyKeyHash")` (PostgreSQL 15+), so public (`createdById IS NULL`) keys are also unique. Rows without a key (none in v1) are excluded with a partial index.
-- **Manage token in outbox payload.** The token appears only inside the queued email payload until the email is sent. The dispatcher then replaces it with `null`. Never log payloads.
+- **Manage token in outbox payload (dispatcher planned, M8-T6).** A manage link may appear in queued email and WhatsApp payloads. Every payload holding it is scrubbed when its row reaches `SENT` or `FAILED` (spec 0005, Decision 4). Never log payloads.
 - **The manage token is not stored in plaintext anywhere else.**
 - **Verification codes** are sent by WhatsApp directly from the verification use case, not through the outbox, because they must arrive within seconds and no other write depends on them. Only the code's hash is stored.
 - **Retention:** guest and reservation rows are kept indefinitely (Q-13). Verification rows are also kept, as evidence for abuse investigations; their code and token hashes are useless after expiry.
 
 ### SQL-only constraints (migration)
+
+M8-T1 implements the reservation date, occupancy, USD, version, complete snapshot, external/website requirements, hold, nightly amount, service value, verification/outbox attempt, singleton, and active-template checks in `20261115120000_reservations`, plus the assignment exclusion and partial idempotency index. Composite ownership FKs are also modelled in Prisma. Cross-row rules (line stay equality, aggregate night/service totals, and status-to-consumption consistency) remain responsibilities of later domain and repository tasks. The SQL below mixes implemented constraints with the planned M9 cancellation constraint; the migration and `schema.prisma` are authoritative.
 
 ```sql
 CREATE EXTENSION IF NOT EXISTS btree_gist;
@@ -632,7 +634,20 @@ CREATE UNIQUE INDEX "Coupon_code_upper_key" ON "Coupon" (upper("code")); -- impl
 ALTER TABLE "CommercialSettings" ADD CHECK ("vatRateBasisPoints" BETWEEN 0 AND 10000); -- implemented (M7-T3), column also NOT NULL
 ALTER TABLE "CommercialSettings" ADD CHECK ("id" = 'default'); -- implemented (M7-T3), migration inserts the singleton at 1500
 ALTER TABLE "Reservation"     ADD CHECK ("status" <> 'AWAITING_PAYMENT' OR ("paymentMethod" = 'PAYMOB' AND "holdExpiresAt" IS NOT NULL));
-ALTER TABLE "Reservation"     ADD CHECK ("totalMinor" IS NULL OR ("totalMinor" = "taxableMinor" + "vatMinor" AND "taxableMinor" = "subtotalMinor" - "discountMinor" AND "discountMinor" >= 0 AND "taxableMinor" >= 0));
+ALTER TABLE "Reservation"
+  ADD CONSTRAINT "Reservation_snapshot_check" CHECK (
+    ("source" = 'EXTERNAL' AND "accommodationMinor" IS NULL AND "subtotalMinor" IS NULL
+      AND "taxableMinor" IS NULL AND "vatRateBasisPoints" IS NULL AND "vatMinor" IS NULL
+      AND "totalMinor" IS NULL AND "servicesMinor" = 0 AND "discountMinor" = 0)
+    OR
+    ("accommodationMinor" IS NOT NULL AND "subtotalMinor" IS NOT NULL AND "taxableMinor" IS NOT NULL
+      AND "vatRateBasisPoints" IS NOT NULL AND "vatMinor" IS NOT NULL AND "totalMinor" IS NOT NULL
+      AND "accommodationMinor" >= 0 AND "servicesMinor" >= 0 AND "discountMinor" >= 0
+      AND "taxableMinor" >= 0 AND "vatMinor" >= 0 AND "vatRateBasisPoints" BETWEEN 0 AND 10000
+      AND "subtotalMinor"::bigint = "accommodationMinor"::bigint + "servicesMinor"::bigint
+      AND "taxableMinor"::bigint = "subtotalMinor"::bigint - "discountMinor"::bigint
+      AND "totalMinor"::bigint = "taxableMinor"::bigint + "vatMinor"::bigint)
+  );
 CREATE UNIQUE INDEX "CancellationRequest_one_open" ON "CancellationRequest" ("reservationId") WHERE "status" = 'OPEN';
 -- Implemented as "Branch_slug_check" (M4, extended in M5): format, the reserved list, and no *.html.
 ALTER TABLE "Branch"          ADD CHECK ("slug" NOT IN ('admin','api','media','reservations','book','sitemap.xml','robots.txt','about','contact','rooms','facilities') AND "slug" NOT LIKE '%.html');
@@ -662,7 +677,7 @@ ALTER TABLE "RatePeriod" ADD CONSTRAINT "RatePeriod_no_overlap"
   WHERE ("active");
 ```
 
-Prisma does not model exclusion constraints. The project already keeps `CHECK` constraints in SQL migrations, and `prisma migrate diff` reported no drift with them in Phase 11. Verified in M6-T3: `migrate diff` reports no difference after the migration (tested on a migrated M3→M6 database and on a fresh one) with the exclusion constraints in SQL and the composite FKs in `schema.prisma`. If Prisma insists on modelling the composite FKs, they move into `schema.prisma` as `@relation(fields: [roomTypeId, branchId], references: [id, branchId])`.
+Prisma does not model exclusion constraints. The project already keeps `CHECK` constraints in SQL migrations, and `prisma migrate diff` reported no drift with them in Phase 11. Verified in M6-T3: `migrate diff` reports no difference after the migration (tested on a migrated M3→M6 database and on a fresh one) with the exclusion constraints in SQL and the composite FKs in `schema.prisma`. M8-T1 also verifies no drift on fresh and populated M7 upgrades, with composite FKs modelled in `schema.prisma` and the partial `NULLS NOT DISTINCT` index kept only in migration SQL.
 
 ## Entity-relationship diagram
 

@@ -39,6 +39,17 @@ describe("migration from an empty database", () => {
       "Coupon",
       "CouponBranch",
       "CommercialSettings",
+      "Reservation",
+      "ReservationRoom",
+      "ReservationNight",
+      "ReservationService",
+      "CouponRedemption",
+      "BranchSyncCheckpoint",
+      "Guest",
+      "PhoneVerification",
+      "WhatsAppSettings",
+      "WhatsAppTemplate",
+      "NotificationOutbox",
     ]);
   });
 

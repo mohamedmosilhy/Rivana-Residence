@@ -155,6 +155,7 @@ describe("the one seed (runSeed)", () => {
       "Content",
       "Branch",
       "Inventory",
+      "WhatsApp",
     ]);
     await rm(mediaRoot, { recursive: true, force: true });
   }, 120_000);
@@ -198,6 +199,13 @@ describe("the one seed (runSeed)", () => {
       data: { vatRateBasisPoints: 0 },
     });
     await seed();
+    expect(await client.reservation.count()).toBe(0);
+    expect(await client.guest.count()).toBe(0);
+    expect(await client.whatsAppTemplate.count()).toBe(0);
+    expect(await client.notificationOutbox.count()).toBe(0);
+    expect(await client.whatsAppSettings.findMany()).toMatchObject([
+      { id: "default", businessPhoneNumber: null, providerPhoneNumberId: null },
+    ]);
     expect(await client.serviceOffering.count()).toBe(0);
     expect(await client.coupon.count()).toBe(0);
     expect(await client.couponBranch.count()).toBe(0);
