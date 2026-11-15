@@ -260,7 +260,7 @@ PhoneVerification
 
 Rules:
 
-- GV-1: A code is valid for 10 minutes and 5 attempts. At most 3 codes per phone per 15 minutes and 10 per day, plus per-client limits.
+- GV-1: A code is valid for 10 minutes and 5 attempts. At most 3 codes per phone in a rolling 15 minutes and 10 in a rolling 24 hours (Q-80), plus per-client limits. These policies remain planned for M8-T2/T5.
 - GV-2: A correct `BOOKING` code yields a verification token valid for 30 minutes and one reservation. A correct `GUEST_SESSION` code yields a 30-minute guest session for that phone.
 - GV-3: A blocked phone gets no code or broadcast, and its open verifications are invalid. The message the guest sees does not reveal more than "please contact the hotel".
 - GV-4: Blocking and unblocking need `guests:block` (Manager, Admin) and a reason. They apply to all branches and are audited. Existing reservations are not changed automatically.

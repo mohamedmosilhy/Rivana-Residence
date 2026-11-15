@@ -61,7 +61,7 @@ Planned, reviewed, and accepted one task at a time ([agent-workflow.md](../../en
 | M8-T0 | Application ports consolidation: move the old shared ports into their modules (refactor, no behavior change) | Medium | M7 | Existing tests unchanged and green; new `ports` boundary test | Accepted |
 | M8-T0b | Public surfaces for the CMS modules: `index.ts` per old module and D-8 extended to them (refactor, no behavior change) | Medium | T0 | Existing tests unchanged and green; D-8 test extended | Accepted |
 | M8-T1 | Migration `reservations`: tables, checks, composite FKs, exclusion and idempotency constraints, demo seed | Critical | T0 | T-DB-6…8; drift check | Accepted |
-| M8-T2 | Reservation domain: state machine, invariants R-1…R-10, reference, `PhoneNumber`, verification and per-phone policies | Critical | T0 | T-LIFE-1…10, T-REF-1…3, T-PHONE-1…4, T-VAL-1…5 | Not started |
+| M8-T2 | Reservation domain: state machine, invariants R-1…R-10, reference, `PhoneNumber`, verification and per-phone policies | Critical | T0 | T-LIFE-1…10, T-REF-1…3, T-PHONE-1…4; T-VAL domain fields (HTTP checks stay with endpoint tasks) | Planned |
 | M8-T3 | Reservation and guest repositories, unit-of-work binding, real sold consumption adapter | Medium | T1 | repository integration tests | Not started |
 | M8-T4 | WhatsApp setup: settings, templates, sender port, provider and fake adapters, test message, minimal Admin screen | Critical | T1, T2 | AC 10; T-WA-1…7 | Not started |
 | M8-T5 | Phone verification: request and confirm, limits, API P9 and P10 | Critical | T2, T3, T4 | AC 7; T-GST (verification) | Not started |
@@ -120,6 +120,8 @@ Owner decision, 2026-11-13, recommended in the M8-T0 review package and accepted
 Tables as in [data-model.md](../../database/data-model.md): `WhatsAppSettings` (singleton, number empty), `WhatsAppTemplate`, `Reservation` (status enum without `PENDING`/`DECLINED`, price snapshot columns, `vatRateBasisPoints`, `couponId`, `couponCode`, `pmsEnteredAt`, `pmsEnteredById`, `paymentMethod` enum with `PAY_AT_HOTEL` and `PAYMOB`, `paymentStatus` enum), `ReservationRoom` (several per reservation, same stay), `ReservationNight`, `ReservationService`, `CouponRedemption`, `Guest` (with `marketingOptInAt`, `marketingConsentVersion`, `marketingOptOutAt`), `PhoneVerification`, `NotificationOutbox`, `BranchSyncCheckpoint`; checks, composite FKs, the double-assignment exclusion constraint, `UNIQUE NULLS NOT DISTINCT` idempotency key.
 
 ### 2. Domain (`src/domain/reservations`, `src/domain/guests`)
+
+The task card and approach were approved on 2026-11-15; implementation has not started. [Spec 0005, Decision 2a](../../specs/0005-m8-reservations.md#decision-2a-m8-t2-plan-approved-2026-11-15) records the plan and approved Q-79 (no arrival-day checkout), Q-80 (rolling verification windows), and Q-81 (upcoming-booking predicate). This approval does not accept the task as implemented. T-VAL covers domain field checks here; HTTP body/header checks remain with the endpoint tasks.
 
 1. `ReservationStateMachine` with the states and transitions in the lifecycle document (create → `CONFIRMED` for website pay-at-hotel, staff, and external; cancel; check in; check out with early shortening; no-show). Pure, given branch "today".
 2. Reservation invariants R-1…R-10; `ReservationReference` generator rules; `PhoneNumber` (E.164 via `libphonenumber-js`, confirm the dependency in the spec); verification rules GV-1…6; per-phone caps (Q-60) as a policy.

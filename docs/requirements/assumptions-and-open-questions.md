@@ -71,6 +71,14 @@ The client decisions of **2026-11-06** (two batches: the main decisions, then Q-
 | Q-77 | **Sync count and due time:** "not entered in hotel system" counts `WEBSITE` bookings with `pmsEnteredAt` empty and status `CONFIRMED` or `CHECKED_IN`. `dueAt` is the last `COMPLETED` time plus the interval, or, when a newer `STARTED` exists, that time plus the follow-up delay; a branch with no checkpoint is due now (Q-20) | Owner, 2026-11-14; M8-T12 |
 | Q-78 | **The per-phone cap (Q-60) counts across all branches**, like the global guest profile and blocking (Q-29). Each reservation counts as upcoming by its own branch's today | Owner, 2026-11-14; M8-T2, T7 |
 
+### Decided 2026-11-15 (M8-T2 plan approval; implementation not started)
+
+| Id | Decision | Source and effect |
+| --- | --- | --- |
+| Q-79 | **Checkout on the arrival date is refused** with the existing `INVALID_TRANSITION`, leaving the reservation unchanged. Checkout must keep a positive stay; supporting a zero-night stay would require a separately approved model and schema change | Owner approved the M8-T2 plan; M8-T2 and T10; preserves `StayRange` and the reservation/line date checks. Early checkout on a later date still follows IN-3 and preserves the price snapshot (Q-76) |
+| Q-80 | **Phone verification request limits use rolling windows:** 3 codes per phone over 15 minutes and 10 over 24 hours. The global phone rule does not reset at a branch's calendar midnight | Owner approved the M8-T2 plan; GV-1, M8-T2 and T5. Counts are supplied to pure policies and enforced in PostgreSQL by the verification use case |
+| Q-81 | **Upcoming pay-at-hotel bookings** for the global phone cap are `WEBSITE`, `PAY_AT_HOTEL`, `CONFIRMED` reservations whose check-in is on or after their own branch's today. A new such booking is refused when two already count. Staff and external reservations do not count | Owner approved the M8-T2 plan; refines Q-60 and Q-78, M8-T2 and T7. The open payment hold limit remains a future M9 flow |
+
 ## Superseded decisions
 
 Kept as the record of the earlier approved design (accepted M1–M3 documents and ADRs describe them).

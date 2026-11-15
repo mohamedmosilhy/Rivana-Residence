@@ -60,7 +60,7 @@ M4 (2026-11-06), M5 (2026-11-07), M6-T1 through M6-T10 (latest 2026-11-10), and 
 | T-SITE-5…8 | Branch site rules | Navigation label rule (Rooms / Apartments / Rooms & Apartments); switch target mapping; reserved slugs; map embed allowlist |
 | T-AUTHZ-1 | Capability matrix | Table-driven against [user-roles-and-permissions.md](../requirements/user-roles-and-permissions.md) |
 | T-AUTHZ-2 | Authorization sweep (extended) | Every reservation, payment, cancellation, commercial, and marketing use case × role × branch refuses before any port call |
-| T-VAL-1…5 | Contract schemas | Strict unknown-field rejection (including price, discount, VAT on public create); guest field limits; control characters; idempotency key format |
+| T-VAL-1…5 | Contract schemas (HTTP checks in M8 endpoint tasks T5/T7b/T8; domain field checks in T2, plan approved 2026-11-15, not implemented) | Strict unknown-field rejection (including price, discount, VAT on public create); guest field limits; control characters; idempotency key format |
 | T-ARCH-1…4 | Boundaries | D-7, D-8, D-9, D-11 from [dependency-rules.md](../architecture/dependency-rules.md); OpenAPI freshness |
 
 ## Integration (real PostgreSQL)

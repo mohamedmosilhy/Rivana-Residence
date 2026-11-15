@@ -54,7 +54,7 @@ stateDiagram-v2
 | assign unit | `reservations:front-desk` | Unit of the same listing and branch, active, unblocked, not assigned to an overlapping stay | Exclusion constraint is the final guard; audit |
 | check in | `reservations:front-desk` | `CONFIRMED`; branch today ≥ check-in; every line assigned | Audit |
 | no-show | `reservations:front-desk` | `CONFIRMED`; branch today ≥ check-in | Inventory released; no automatic refund (Q-65); audit |
-| check out | `reservations:front-desk` | `CHECKED_IN` | If branch today < check-out, the stay is shortened to today (IN-3); feedback request queued (M13, ADR 028); audit |
+| check out | `reservations:front-desk` | `CHECKED_IN`; branch today > check-in (arrival-day checkout is refused with `INVALID_TRANSITION`, Q-79) | If branch today < check-out, shorten the operational stay to today (IN-3) and keep the price snapshot unchanged (Q-76); feedback request queued (M13, ADR 028); audit |
 
 Every transition:
 
