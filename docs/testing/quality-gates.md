@@ -39,21 +39,19 @@ Record exact commands and counts in the review package. If a gate cannot run, sa
 
 The owner selected Node **26.13.0 LTS** for the Mac, CI, and hosting. On macOS with npm **11.20.0**, clean `npm ci --no-audit` and `npm run check` passed (format, lint, typecheck, **67 unit files / 1,373 tests**, production build). The full PostgreSQL integration suite passed **29 files / 391 tests**; full Chromium E2E passed **175 tests**, with **30 intentionally skipped**. Independent review by `gpt-6-astra` approved with zero findings. The [runtime report](../delivery/reports/node-26-runtime-alignment.md) records exact commands, unchanged development audit findings, and the nonfatal upstream Tailwind loader deprecation under Node 26. Those Tailwind and media tracing warnings were subsequently resolved in M6-T10. These results do not replace the historical task acceptance evidence below or claim remote Linux CI has run.
 
-## Latest accepted task results (2026-11-15, M8-T1)
+## Latest accepted task results (2026-11-15, M8-T2)
 
-The owner accepted reservation storage and seeds on 2026-11-15. Local runtime: Node 26.13.0, PostgreSQL 18.7. [Task evidence and exact commands](../delivery/reports/m8-reservations.md#m8-t1-verification) and [independent review](../reviews/2026-11-15-m8-t1.md).
+The owner accepted the reservation and guest domain on 2026-11-15. Local runtime: Node 26.13.0, PostgreSQL 18.7. [Task evidence and exact commands](../delivery/reports/m8-reservations.md#m8-t2-verification) and [independent review](../reviews/2026-11-15-m8-t2.md). M8-T1 results are in [its evidence](../delivery/reports/m8-reservations.md#m8-t1-verification).
 
 | Gate | Result |
 | --- | --- |
-| Final `npm run check` | **Pass:** format, lint, typecheck, **81 unit files / 1,741 tests**, production build |
-| Full PostgreSQL integration | **Pass:** **38 files / 588 tests**, 165.06 s; final fixture reference correction additionally rechecked with **2 seed files / 18 tests**, 39.25 s |
-| Dedicated concurrency suites | **Pass:** **2 files / 16 tests**, including 20 observed waits each for duplicate-key and overlapping-assignment races |
-| Migration and seed runtime | **Pass:** 9 migrations from empty; populated M7 upgrade preserved every existing row; no drift; real demo seed CLI twice preserved all persisted rows and left outbox empty |
-| Independent review | **Approve**, gpt-6-astra; **5 files / 66 tests** independently passed, then **5 seed tests** passed after the resolved reference-format issue; zero open findings |
-| Prisma validation / diff hygiene | **Pass:** `npx prisma validate`, `git diff --check` |
-| E2E / browser / Lighthouse | Not run: no route or UI change |
+| Final `npm run check` | **Pass:** format, lint, typecheck, **88 unit files / 1,886 tests** (7 new domain files / 145 tests), production build |
+| Full PostgreSQL integration | **Pass:** **38 files / 588 tests**, 167.14 s, run alone. An earlier run alongside `npm run check` had 33 fixture-setup failures in 4 files that do not exercise T2 code |
+| Independent review | **Changes requested**, gpt-6-astra: 2 Majors (Q-76 external services and coupon, Q-73 consent versions), both fixed with regression tests and a mutation check; the reviewer did not re-review the fixes |
+| Diff hygiene | **Pass:** `git diff --check` |
+| Concurrency / E2E / browser / Lighthouse | Not run: no locks, writes, routes, or UI |
 
-These results cover storage only. Reservation workflows, real inventory consumption, and message delivery remain later tasks. The historical M7 milestone-close results below remain unchanged.
+These results cover pure domain rules only. Persistence, token handling, authorization, transactions, and endpoints remain later tasks.
 
 ## Previous milestone results (2026-11-13, M7 milestone close)
 

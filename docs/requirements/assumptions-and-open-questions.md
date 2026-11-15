@@ -71,7 +71,7 @@ The client decisions of **2026-11-06** (two batches: the main decisions, then Q-
 | Q-77 | **Sync count and due time:** "not entered in hotel system" counts `WEBSITE` bookings with `pmsEnteredAt` empty and status `CONFIRMED` or `CHECKED_IN`. `dueAt` is the last `COMPLETED` time plus the interval, or, when a newer `STARTED` exists, that time plus the follow-up delay; a branch with no checkpoint is due now (Q-20) | Owner, 2026-11-14; M8-T12 |
 | Q-78 | **The per-phone cap (Q-60) counts across all branches**, like the global guest profile and blocking (Q-29). Each reservation counts as upcoming by its own branch's today | Owner, 2026-11-14; M8-T2, T7 |
 
-### Decided 2026-11-15 (M8-T2 plan approval; implementation not started)
+### Decided 2026-11-15 (M8-T2 plan approval; domain rules implemented and accepted 2026-11-15)
 
 | Id | Decision | Source and effect |
 | --- | --- | --- |

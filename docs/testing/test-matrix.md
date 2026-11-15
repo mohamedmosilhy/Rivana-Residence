@@ -51,16 +51,16 @@ M4 (2026-11-06), M5 (2026-11-07), M6-T1 through M6-T10 (latest 2026-11-10), and 
 | T-CPN-1…5 | `CouponPolicy`, coupon codes (**implemented M7-T2**: `tests/unit/domain/coupon-policy.test.ts`, `coupon-code.test.ts`) | Each refusal reason (`NOT_FOUND`, `INACTIVE`, `NOT_YET_VALID`, `EXPIRED`, `WRONG_BRANCH`, `LIMIT_REACHED`, `PHONE_LIMIT_REACHED`); case-insensitive match; all-branches vs listed branches |
 | T-SVC-1…2 | Services | Added only when requested; inactive service refused; unit quantities for all four price units; child price only for person units. **Implemented (M7-T2)** `tests/unit/domain/service-offering.test.ts` |
 | T-TAX-1…2 | VAT rules | Computed once on taxable; stored rate used on modification |
-| T-LIFE-1…10 | `ReservationStateMachine` | Each allowed transition (pay at hotel → `CONFIRMED`; Paymob → `AWAITING_PAYMENT` → `CONFIRMED` / `PAYMENT_FAILED`); each forbidden one (no `PENDING`, no `DECLINED`); date preconditions for check-in and no-show; early check-out shortening; paid cancellation requires refund path |
+| T-LIFE-1…10 | `ReservationStateMachine` | Each allowed transition (pay at hotel → `CONFIRMED`; Paymob → `AWAITING_PAYMENT` → `CONFIRMED` / `PAYMENT_FAILED`); each forbidden one (no `PENDING`, no `DECLINED`); date preconditions for check-in and no-show; early check-out shortening; paid cancellation requires refund path. **M8 transitions implemented (M8-T2)** `tests/unit/domain/reservation-state-machine.test.ts`, `reservation-invariants.test.ts`; Paymob and refund transitions M9 |
 | T-PAY-1…4 | Payment rules | Amount and currency must match; late success decision (PY-5); hold expiry; zero-total booking cannot choose Paymob |
 | T-CXL-1…3 | `CancellationDeadline`, request rules | 24 hours before branch check-in time in the branch zone, across DST; booking made inside the window; one open request |
-| T-REF-1…3 | Reference generator | Alphabet, length, normalization of ambiguous characters |
-| T-PHONE-1…4 | `PhoneNumber` | Normalization to E.164, invalid numbers, equality across formats |
+| T-REF-1…3 | Reference generator | Alphabet, length, normalization of ambiguous characters. **Implemented (M8-T2)** `tests/unit/domain/reservation-reference.test.ts` |
+| T-PHONE-1…4 | `PhoneNumber` | Normalization to E.164, invalid numbers, equality across formats. **Implemented (M8-T2)** `tests/unit/domain/guest-values.test.ts`; verification and booking-cap policies in `phone-verification-policy.test.ts`, `phone-booking-cap.test.ts` |
 | T-SYNC-1…5 | Sync due calculation | Due at last completed + interval; `STARTED` moves the next reminder; a new `COMPLETED` clears it; interval change applies next time; settings bounds |
 | T-SITE-5…8 | Branch site rules | Navigation label rule (Rooms / Apartments / Rooms & Apartments); switch target mapping; reserved slugs; map embed allowlist |
 | T-AUTHZ-1 | Capability matrix | Table-driven against [user-roles-and-permissions.md](../requirements/user-roles-and-permissions.md) |
 | T-AUTHZ-2 | Authorization sweep (extended) | Every reservation, payment, cancellation, commercial, and marketing use case × role × branch refuses before any port call |
-| T-VAL-1…5 | Contract schemas (HTTP checks in M8 endpoint tasks T5/T7b/T8; domain field checks in T2, plan approved 2026-11-15, not implemented) | Strict unknown-field rejection (including price, discount, VAT on public create); guest field limits; control characters; idempotency key format |
+| T-VAL-1…5 | Contract schemas (HTTP checks in M8 endpoint tasks T5/T7b/T8; domain field checks implemented in M8-T2: `guest-values.test.ts`, `guest-consent.test.ts`, `reservation-invariants.test.ts`) | Strict unknown-field rejection (including price, discount, VAT on public create); guest field limits; control characters; idempotency key format |
 | T-ARCH-1…4 | Boundaries | D-7, D-8, D-9, D-11 from [dependency-rules.md](../architecture/dependency-rules.md); OpenAPI freshness |
 
 ## Integration (real PostgreSQL)

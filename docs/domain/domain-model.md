@@ -227,12 +227,14 @@ Invariants:
 - R-9: A `WEBSITE` reservation has a guest profile whose phone was verified for this booking (GV-2), and the phone is not blocked at creation.
 - R-10: A reservation is `CONFIRMED` only when its inventory is held in the same database state and, for `PAYMOB`, a verified success has been processed. Confirmation messages are written only in the transaction that sets `CONFIRMED`.
 
+The structural and snapshot parts of R-1…R-10 are implemented as pure checks in `src/domain/reservations/reservation.ts` (M8-T2). They include Q-76 for `EXTERNAL` snapshots: nightly amounts entered for all nights or none, and no services or coupon. Facts that need the database (uniqueness, verified-phone match, blocked phone, inventory held) are supplied by the transactional use cases in later tasks; a pure check does not prove them.
+
 Domain services (pure M6-T2 rules accepted 2026-11-08; the reservation state machine and full quote remain planned):
 
 - `AvailabilityCalculator`: given capacity and sold counts per night, checks every requested night and returns the earliest failure (implemented in `src/domain/inventory/`).
 - `checkInventoryReduction`: checks block/assignment overlaps and sparse sold dates against projected capacity, with replacement and deactivation semantics (implemented in `src/domain/inventory/`). Callers must scope inputs and load current state under the listing lock; no persistence or locking is implemented by this calculation.
 - `NightlyPriceResolver`: given base rate and active periods, produces immutable nightly prices and an exact accommodation total, or a null total for any unpriced night (implemented in `src/domain/pricing/`, PR-3).
-- `ReservationStateMachine`: allowed transitions plus preconditions (pure, given "today" in the branch zone).
+- `ReservationStateMachine`: allowed transitions plus preconditions (pure, given "today" in the branch zone). M8 transitions implemented in `src/domain/reservations/state-machine.ts` (M8-T2); payment transitions arrive in M9.
 - `QuoteCalculator`: total composition (pure, ADR 027).
 - `CancellationDeadline`: 24 hours before the branch check-in time on the arrival date (pure, CX-1).
 
@@ -260,12 +262,14 @@ PhoneVerification
 
 Rules:
 
-- GV-1: A code is valid for 10 minutes and 5 attempts. At most 3 codes per phone in a rolling 15 minutes and 10 in a rolling 24 hours (Q-80), plus per-client limits. These policies remain planned for M8-T2/T5.
+- GV-1: A code is valid for 10 minutes and 5 attempts. At most 3 codes per phone in a rolling 15 minutes and 10 in a rolling 24 hours (Q-80), plus per-client limits. The pure policies are implemented in `src/domain/guests/verification-policy.ts` (M8-T2); the PostgreSQL counts, code hashing, and endpoints remain M8-T5.
 - GV-2: A correct `BOOKING` code yields a verification token valid for 30 minutes and one reservation. A correct `GUEST_SESSION` code yields a 30-minute guest session for that phone.
 - GV-3: A blocked phone gets no code or broadcast, and its open verifications are invalid. The message the guest sees does not reveal more than "please contact the hotel".
 - GV-4: Blocking and unblocking need `guests:block` (Manager, Admin) and a reason. They apply to all branches and are audited. Existing reservations are not changed automatically.
 - GV-5: Staff-created and external reservations link to the guest with the same normalized phone, or create an unverified profile. Staff entry never marks a phone verified.
 - GV-6: Guest data is never deleted automatically (Q-13).
+
+Consent versions (Q-73) are server constants, placeholders until the privacy and marketing wording is approved (Q-30, Q-58). `GUEST_CONSENT_VERSIONS` and the pure check `validateGuestConsent` are implemented in `src/domain/guests/consent-policy.ts` (M8-T2); storing the opt-in and auditing it remain M8-T7.
 
 ### Sync checkpoints
 

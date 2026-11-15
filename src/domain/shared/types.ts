@@ -36,3 +36,30 @@ export type RichTextDocument = Readonly<{
   type: "doc";
   content: readonly Readonly<Record<string, unknown>>[];
 }>;
+
+// M8 domain mirrors of the persisted enums; payment transitions arrive in M9.
+export const RESERVATION_STATUSES = [
+  "AWAITING_PAYMENT",
+  "CONFIRMED",
+  "PAYMENT_FAILED",
+  "CANCELLED",
+  "CHECKED_IN",
+  "CHECKED_OUT",
+  "NO_SHOW",
+] as const;
+export type ReservationStatus = (typeof RESERVATION_STATUSES)[number];
+export const RESERVATION_SOURCES = ["WEBSITE", "STAFF", "EXTERNAL"] as const;
+export type ReservationSource = (typeof RESERVATION_SOURCES)[number];
+export const PAYMENT_METHODS = ["PAY_AT_HOTEL", "PAYMOB"] as const;
+export type PaymentMethod = (typeof PAYMENT_METHODS)[number];
+export const RESERVATION_PAYMENT_STATUSES = [
+  "NOT_REQUIRED",
+  "AWAITING",
+  "PAID",
+  "REFUND_PENDING",
+  "REFUNDED",
+] as const;
+export type ReservationPaymentStatus =
+  (typeof RESERVATION_PAYMENT_STATUSES)[number];
+export const VERIFICATION_PURPOSES = ["BOOKING", "GUEST_SESSION"] as const;
+export type VerificationPurpose = (typeof VERIFICATION_PURPOSES)[number];
