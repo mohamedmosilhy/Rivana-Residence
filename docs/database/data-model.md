@@ -28,7 +28,7 @@ The implemented schema is `prisma/schema.prisma` (9 migrations; M4 added `…_st
 | Inventory | `PhysicalRoom`, `InventoryBlock` | Implemented (M6-T3): branch-unique labels, composite ownership FKs (`ON UPDATE/DELETE RESTRICT`), `InventoryBlock_dates_check`, `InventoryBlock_no_overlap` (GiST exclusion over uncancelled blocks per unit) |
 | Pricing | `RoomBaseRate`, `RatePeriod` (M6-T3) | Implemented: positive `INTEGER` cents, explicit `USD`, `RatePeriod_no_overlap` (GiST exclusion over active periods per listing) |
 | Commercial | `ServiceOffering`, `Coupon`, `CouponBranch`, `CommercialSettings` | Implemented (M7-T3): service price units and child pricing, positive USD amounts, case-insensitive coupon uniqueness and value/window/limit checks, branch joins, singleton VAT 0–10000 basis points inserted at 1500; service and VAT management APIs are implemented (T4), coupon management APIs are implemented (T5); quote composition remains T6 |
-| Reservations | `Reservation`, `ReservationRoom`, `ReservationNight`, `ReservationService`, `CouponRedemption`, `BranchSyncCheckpoint` | Storage implemented (M8-T1); repositories, domain rules, and workflows remain planned |
+| Reservations | `Reservation`, `ReservationRoom`, `ReservationNight`, `ReservationService`, `CouponRedemption`, `BranchSyncCheckpoint` | Storage implemented (M8-T1), domain rules (M8-T2), and reservation repository plus consumption reader (M8-T3); reservation workflows remain planned |
 | Payments | `Payment`, `PaymentEvent`, `CancellationRequest`, `ChangeRequest` | Planned (M9; `ChangeRequest` M9-T11, Q-85) |
 | Reservation changes | `ReservationChange`; columns `Reservation.pmsUpdatePendingSince`, `pmsUpdatedAt`, `pmsUpdatedById` | Planned (M8-T9, Q-83, Q-84) |
 | Transfer cars | `ServicePriceUnit.PER_VEHICLE`, `ServiceOffering.maxVehicles`, `ReservationService.vehicles` | Planned (M8-T3b, Q-82) |
@@ -684,7 +684,7 @@ Notes:
 
 ### SQL-only constraints (migration)
 
-M8-T1 implements the reservation date, occupancy, USD, version, complete snapshot, external/website requirements, hold, nightly amount, service value, verification/outbox attempt, singleton, and active-template checks in `20261115120000_reservations`, plus the assignment exclusion and partial idempotency index. Composite ownership FKs are also modelled in Prisma. Cross-row rules (line stay equality, aggregate night/service totals, and status-to-consumption consistency) remain responsibilities of later domain and repository tasks. The SQL below mixes implemented constraints with the planned M9 cancellation constraint; the migration and `schema.prisma` are authoritative.
+M8-T1 implements the reservation date, occupancy, USD, version, complete snapshot, external/website requirements, hold, nightly amount, service value, verification/outbox attempt, singleton, and active-template checks in `20261115120000_reservations`, plus the assignment exclusion and partial idempotency index. Composite ownership FKs are also modelled in Prisma. M8-T2 validates cross-row reservation and snapshot rules in the domain; M8-T3 inserts all room lines with the header stay and derives their consumption flag from status. Later use cases must call the domain checks and enforce transactional workflows. The SQL below mixes implemented constraints with the planned M9 cancellation constraint; the migration and `schema.prisma` are authoritative.
 
 ```sql
 CREATE EXTENSION IF NOT EXISTS btree_gist;

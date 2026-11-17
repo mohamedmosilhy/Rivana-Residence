@@ -14,8 +14,8 @@ export type AssignmentWindow =
   | Readonly<{ kind: "FROM"; from: LocalDate }>;
 
 /**
- * Reservation owned inventory consumption. M6 supplies an empty adapter. M8
- * replaces it with transaction bound reads of consuming lines and assignments.
+ * Reservation owned inventory consumption from persisted operational room stays.
+ * Reduction workflows bind these reads to their inventory lock transaction.
  */
 export interface ReservationConsumptionReader {
   readSoldOnDates(input: {

@@ -5,7 +5,7 @@ import type {
   SoldNightContribution,
 } from "@/application/inventory";
 import { LocalDate } from "@/domain/shared/local-date";
-import { EmptyReservationConsumptionReader } from "@/infrastructure/db/prisma/repositories/reservations/inventory/empty-reservation-consumption-reader";
+import { PrismaReservationConsumptionReader } from "@/infrastructure/db/prisma/repositories/reservations/inventory/reservation-consumption-reader";
 import { PrismaInventoryReader } from "@/infrastructure/db/prisma/repositories/reservations/inventory/inventory-reader";
 
 import {
@@ -151,7 +151,7 @@ describe("PrismaInventoryReader", () => {
   it("returns hidden NOT_FOUND for a listing outside the supplied branch", async () => {
     const result = await new PrismaInventoryReader(
       prisma,
-      new EmptyReservationConsumptionReader(),
+      new PrismaReservationConsumptionReader(prisma),
     ).readNights({
       branchId: TEST_BRANCH_ID,
       roomTypeIds: [roomId, foreignRoomId],
@@ -215,8 +215,8 @@ describe("PrismaInventoryReader", () => {
     ).rejects.toThrow("Reservation consumption returned an invalid row.");
   });
 
-  it("uses an explicitly empty consumption adapter until M8", async () => {
-    const empty = new EmptyReservationConsumptionReader();
+  it("returns no consumption when no reservation rooms exist", async () => {
+    const empty = new PrismaReservationConsumptionReader(prisma);
 
     await expect(
       empty.readSoldOnDates({

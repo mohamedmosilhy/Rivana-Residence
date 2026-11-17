@@ -39,7 +39,20 @@ Record exact commands and counts in the review package. If a gate cannot run, sa
 
 The owner selected Node **26.13.0 LTS** for the Mac, CI, and hosting. On macOS with npm **11.20.0**, clean `npm ci --no-audit` and `npm run check` passed (format, lint, typecheck, **67 unit files / 1,373 tests**, production build). The full PostgreSQL integration suite passed **29 files / 391 tests**; full Chromium E2E passed **175 tests**, with **30 intentionally skipped**. Independent review by `gpt-6-astra` approved with zero findings. The [runtime report](../delivery/reports/node-26-runtime-alignment.md) records exact commands, unchanged development audit findings, and the nonfatal upstream Tailwind loader deprecation under Node 26. Those Tailwind and media tracing warnings were subsequently resolved in M6-T10. These results do not replace the historical task acceptance evidence below or claim remote Linux CI has run.
 
-## Latest accepted task results (2026-11-15, M8-T2)
+## Latest accepted task results (2026-11-17, M8-T3)
+
+The owner accepted M8-T3 after the review package. [Exact evidence](../delivery/reports/m8-reservations.md#m8-t3-verification) and [independent review](../reviews/2026-11-17-m8-t3.md).
+
+| Gate | Result |
+| --- | --- |
+| `npm run check` | Passed format, lint, typecheck, 88 unit files / 1,886 tests, production build |
+| Full PostgreSQL integration | Passed 41 files / 626 tests |
+| Dedicated concurrency | Passed 4 files / 35 tests; relevant races repeated 20 times |
+| Independent review | Approve after coupon snapshot and captured-output tests; no open findings |
+| Live proof | Production P5 reflected persisted consumption and its release; transaction rollback and branch isolation verified |
+| E2E / migration drift | Not run: no routes, UI, or schema changes |
+
+## Previous accepted task results (2026-11-15, M8-T2)
 
 The owner accepted the reservation and guest domain on 2026-11-15. Local runtime: Node 26.13.0, PostgreSQL 18.7. [Task evidence and exact commands](../delivery/reports/m8-reservations.md#m8-t2-verification) and [independent review](../reviews/2026-11-15-m8-t2.md). M8-T1 results are in [its evidence](../delivery/reports/m8-reservations.md#m8-t1-verification).
 

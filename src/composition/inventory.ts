@@ -14,7 +14,7 @@ import { PrismaRoomRepository } from "@/infrastructure/db/prisma/repositories/ro
 import { PrismaRateRepository } from "@/infrastructure/db/prisma/repositories/reservations/pricing/rate-repository";
 import { getPrisma } from "@/infrastructure/db/prisma/client";
 import { PrismaAuditLog } from "@/infrastructure/db/prisma/repositories/audit/audit-log";
-import { EmptyReservationConsumptionReader } from "@/infrastructure/db/prisma/repositories/reservations/inventory/empty-reservation-consumption-reader";
+import { PrismaReservationConsumptionReader } from "@/infrastructure/db/prisma/repositories/reservations/inventory/reservation-consumption-reader";
 import { PrismaAvailabilityCatalog } from "@/infrastructure/db/prisma/repositories/reservations/inventory/availability-catalog";
 import { NullLastSyncCheckpointReader } from "@/infrastructure/db/prisma/repositories/reservations/inventory/null-sync-checkpoint-reader";
 import { PrismaBlockRepository } from "@/infrastructure/db/prisma/repositories/reservations/inventory/block-repository";
@@ -27,14 +27,14 @@ import { Cuid2IdGenerator } from "@/infrastructure/ids/cuid2-id-generator";
 
 const clock = { now: () => new Date() };
 
-/** M6 has no reservation persistence, so consumption stays the empty adapter. */
+/** Physical room reductions read persisted consumption under the inventory lock. */
 export function managePhysicalRooms() {
   const client = getPrisma();
   return new ManagePhysicalRooms({
     unitOfWork: new PrismaReservationUnitOfWork<PhysicalRoomContext>(
       client,
       (transaction) => {
-        const consumption = new EmptyReservationConsumptionReader();
+        const consumption = new PrismaReservationConsumptionReader(transaction);
         return {
           inventoryLock: new PrismaInventoryLock(transaction),
           inventoryReader: new PrismaInventoryReader(transaction, consumption),
@@ -51,14 +51,14 @@ export function managePhysicalRooms() {
   });
 }
 
-/** Block writes (M6-T6). Consumption stays the empty adapter until M8. */
+/** Block writes read persisted consumption under the inventory lock. */
 export function manageBlocks() {
   const client = getPrisma();
   return new ManageBlocks({
     unitOfWork: new PrismaReservationUnitOfWork<BlockContext>(
       client,
       (transaction) => {
-        const consumption = new EmptyReservationConsumptionReader();
+        const consumption = new PrismaReservationConsumptionReader(transaction);
         return {
           inventoryLock: new PrismaInventoryLock(transaction),
           inventoryReader: new PrismaInventoryReader(transaction, consumption),
@@ -84,7 +84,7 @@ export function getAvailabilityGrid() {
     catalog: new PrismaAvailabilityCatalog(client),
     reader: new PrismaInventoryReader(
       client,
-      new EmptyReservationConsumptionReader(),
+      new PrismaReservationConsumptionReader(client),
     ),
     checkpoints: new NullLastSyncCheckpointReader(),
   });
@@ -100,7 +100,7 @@ export function publicAvailability() {
       catalog: new PrismaAvailabilityCatalog(client),
       reader: new PrismaInventoryReader(
         client,
-        new EmptyReservationConsumptionReader(),
+        new PrismaReservationConsumptionReader(client),
       ),
       rates: new PrismaRateRepository(client),
       clock,

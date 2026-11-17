@@ -11,6 +11,7 @@ TEST_DATABASE_URL=postgresql://<user>@127.0.0.1:5432/rivana_test npm run test:in
 
 ## Layout
 
+- `reservation-repository.test.ts`, `guest-repository.test.ts`, `reservation-consumption.test.ts`: aggregate and guest persistence, protected fields, transaction rollback, and real sold inventory.
 - `unit-of-work.test.ts`: connection binding, isolation level, commit, and rollback behavior.
 - `inventory-reader.test.ts`: complete listing and night grids, branch isolation, blocks, and consumption validation.
 - `concurrency.test.ts`: deterministic lock ordering, observable waiting, fresh reads, and branch independence.
@@ -24,6 +25,6 @@ TEST_DATABASE_URL=postgresql://<user>@127.0.0.1:5432/rivana_test npm run test:in
 - Coordinate overlap with barriers or deferred signals. Observe PostgreSQL lock waits through `pg_stat_activity`; sleeps are not evidence that transactions overlapped.
 - Repeat locking and inventory races 20 times. Assert returned results and final resource, inventory, and audit state after the transactions finish.
 - Cover branch isolation and wrong branch refusal. A foreign listing is hidden as `NOT_FOUND`, not disclosed through a different error.
-- Keep M6 consumption expectations honest: the production adapter remains empty until M8-T3 even though M8-T1 adds real reservation tables. Injected consumption tests prove the port and guard behavior but do not claim persisted reservation coverage.
+- Production consumption reads persisted operational reservation room stays. Keep injected consumption tests distinct from persisted reservation coverage in `reservation-consumption.test.ts`.
 
 _Drafted by /sync from the introducing change, worth a quick human pass._

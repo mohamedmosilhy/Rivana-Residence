@@ -1,3 +1,5 @@
+import { PrismaReservationRepository } from "@/infrastructure/db/prisma/repositories/reservations/reservation-repository";
+import { range, reservationInput } from "./support/reservation-repositories";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
@@ -469,4 +471,29 @@ describe("API-P5 real Route Handler (M6 AC-1, AC-6, AC-8)", () => {
       await rm(root, { recursive: true, force: true });
     }
   });
+});
+
+it("P5 counts persisted sales and reads a released sale on the next request", async () => {
+  const input = reservationInput(listing, {
+    stay: range("2031-03-10", "2031-03-14"),
+  });
+  expect((await new PrismaReservationRepository(client).insert(input)).ok).toBe(
+    true,
+  );
+  expect(
+    (await body(await request(QUERY + "&unitsRequested=2"))).results[0],
+  ).toMatchObject({ unitsAvailable: 1, available: false, reason: "SOLD_OUT" });
+  await client.$transaction(async (tx) => {
+    await tx.reservation.update({
+      where: { id: input.id },
+      data: { status: "CANCELLED" },
+    });
+    await tx.reservationRoom.updateMany({
+      where: { reservationId: input.id },
+      data: { consumesInventory: false },
+    });
+  });
+  expect(
+    (await body(await request(QUERY + "&unitsRequested=2"))).results[0],
+  ).toMatchObject({ unitsAvailable: 2, available: true });
 });

@@ -1,6 +1,6 @@
 # M8 — Reservations, immediate confirmation, phone verification, and messages
 
-Status: **In progress** (4/17 tasks accepted: M8-T0 on 2026-11-13, M8-T0b on 2026-11-14, M8-T1 and M8-T2 on 2026-11-15; spec [0005](../../specs/0005-m8-reservations.md) and the task breakdown approved, 2026-11-14; scope extended by the owner on 2026-11-17 with the transfer car count, M8-T3b, and the shared change engine for guest changes, M8-T9 and T9b, Q-82…Q-85, Q-90). Branch: `m8-reservations`. Follow the [milestone loop](./README.md#the-loop-every-milestone-follows).
+Status: **In progress** (5/17 tasks accepted: M8-T0 on 2026-11-13, M8-T0b on 2026-11-14, M8-T1 and M8-T2 on 2026-11-15, M8-T3 on 2026-11-17; spec [0005](../../specs/0005-m8-reservations.md) and the task breakdown approved, 2026-11-14; scope extended by the owner on 2026-11-17 with the transfer car count, M8-T3b, and the shared change engine for guest changes, M8-T9 and T9b, Q-82…Q-85, Q-90). Branch: `m8-reservations`. Follow the [milestone loop](./README.md#the-loop-every-milestone-follows).
 
 > **Done first (accepted 2026-11-13): [M8-T0, application ports consolidation](#0-prerequisite-task-m8-t0-application-ports-consolidation).** The owner decided on 2026-11-13 that the old shared `src/application/ports/` files move into their modules before any other M8 task starts, so every M8 repository and port is written in the module layout from the start. [M8-T0b](#0b-follow-up-task-m8-t0b-public-surfaces-for-the-cms-modules) was accepted on 2026-11-14. Next: the rest of M8, task by task.
 
@@ -64,7 +64,7 @@ Planned, reviewed, and accepted one task at a time ([agent-workflow.md](../../en
 | M8-T0b | Public surfaces for the CMS modules: `index.ts` per old module and D-8 extended to them (refactor, no behavior change) | Medium | T0 | Existing tests unchanged and green; D-8 test extended | Accepted |
 | M8-T1 | Migration `reservations`: tables, checks, composite FKs, exclusion and idempotency constraints, demo seed | Critical | T0 | T-DB-6…8; drift check | Accepted |
 | M8-T2 | Reservation domain: state machine, invariants R-1…R-10, reference, `PhoneNumber`, verification and per-phone policies | Critical | T0 | T-LIFE-1…10, T-REF-1…3, T-PHONE-1…4; T-VAL domain fields (HTTP checks stay with endpoint tasks) | Accepted |
-| M8-T3 | Reservation and guest repositories, unit-of-work binding, real sold consumption adapter | Medium | T1 | repository integration tests | Not started |
+| M8-T3 | Reservation and guest repositories, unit-of-work binding, real sold consumption adapter | Critical | T1 | repository integration tests | Accepted |
 | M8-T3b | Airport transfer car count: migration (`PER_VEHICLE`, `maxVehicles`, `ReservationService.vehicles`), SV-5, P6 `services` objects, S35/S36 fields, T3 repository mapping, seed, OpenAPI (Q-82, Q-90) | Critical | T3, M7 | AC 11; T-SVC-VEH-1…6 | Not started |
 | M8-T4 | WhatsApp setup: settings, templates, sender port, provider and fake adapters, test message, minimal Admin screen (includes the `RESERVATION_MODIFIED` and change-request message purposes in the allowlist, Q-84) | Critical | T1, T2 | AC 10; T-WA-1…7 | Not started |
 | M8-T5 | Phone verification: request and confirm, limits, API P9 and P10 | Critical | T2, T3, T4 | AC 7; T-GST (verification) | Not started |

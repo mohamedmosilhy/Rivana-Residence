@@ -4,7 +4,7 @@ import type { StaffPrincipal } from "@/application/auth/ports";
 import { success } from "@/application/shared/result";
 import { LocalDate } from "@/domain/shared/local-date";
 import { PrismaInventoryReader } from "@/infrastructure/db/prisma/repositories/reservations/inventory/inventory-reader";
-import { EmptyReservationConsumptionReader } from "@/infrastructure/db/prisma/repositories/reservations/inventory/empty-reservation-consumption-reader";
+import { PrismaReservationConsumptionReader } from "@/infrastructure/db/prisma/repositories/reservations/inventory/reservation-consumption-reader";
 import { Prisma, type PrismaClient } from "@/generated/prisma/client";
 import { PrismaInventoryLock } from "@/infrastructure/db/prisma/repositories/reservations/inventory/inventory-lock";
 import { PrismaReservationUnitOfWork } from "@/infrastructure/db/prisma/unit-of-work";
@@ -198,7 +198,7 @@ function unit(id: string, branchId: string, roomTypeId: string, label: string) {
 async function capacity(branchId: string, roomTypeId: string) {
   const result = await new PrismaInventoryReader(
     prisma,
-    new EmptyReservationConsumptionReader(),
+    new PrismaReservationConsumptionReader(prisma),
   ).readNights({ branchId, roomTypeIds: [roomTypeId], nights: [NIGHT] });
   if (!result.ok) throw new Error("capacity read failed");
   return result.value[0]!;
@@ -576,7 +576,7 @@ describe("M6-T6 block concurrency", () => {
         // deactivated, so capacity is exactly zero and never negative.
         const [night] = await new PrismaInventoryReader(
           prisma,
-          new EmptyReservationConsumptionReader(),
+          new PrismaReservationConsumptionReader(prisma),
         )
           .readNights({
             branchId: TEST_BRANCH_ID,

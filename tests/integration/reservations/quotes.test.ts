@@ -1,3 +1,5 @@
+import { PrismaReservationRepository } from "@/infrastructure/db/prisma/repositories/reservations/reservation-repository";
+import { range, reservationInput } from "./support/reservation-repositories";
 import {
   afterAll,
   afterEach,
@@ -667,4 +669,25 @@ describe("API-P6 rate limits (T-QUOTE-12)", () => {
       ),
     ).toEqual(["rl:quote-coupon:fresh", "rl:quote-extra:old"]);
   });
+});
+
+it("P6 refuses a quote when persisted sales leave too few units", async () => {
+  const room = await listing("garden", 8000, { units: 2 });
+  const input = reservationInput(room.id, {
+    stay: range("2031-04-10", "2031-04-13"),
+  });
+  expect((await new PrismaReservationRepository(client).insert(input)).ok).toBe(
+    true,
+  );
+  expect(
+    await ok(
+      quoteRequest({
+        lines: Array.from({ length: 2 }, () => ({
+          roomSlug: "garden",
+          occupancy: { adults: 1, children: 0 },
+        })),
+      }),
+    ),
+  ).toMatchObject({ available: false, quote: null, unavailableLines: [0, 1] });
+  expect(await ok(quoteRequest())).toMatchObject({ available: true });
 });

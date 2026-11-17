@@ -1,9 +1,11 @@
+import { PrismaReservationRepository } from "@/infrastructure/db/prisma/repositories/reservations/reservation-repository";
+import { range, reservationInput } from "./support/reservation-repositories";
 import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { StaffPrincipal } from "@/application/auth/ports";
 import { SearchAvailability } from "@/application/inventory";
 import { PrismaAvailabilityCatalog } from "@/infrastructure/db/prisma/repositories/reservations/inventory/availability-catalog";
-import { EmptyReservationConsumptionReader } from "@/infrastructure/db/prisma/repositories/reservations/inventory/empty-reservation-consumption-reader";
+import { PrismaReservationConsumptionReader } from "@/infrastructure/db/prisma/repositories/reservations/inventory/reservation-consumption-reader";
 import { PrismaInventoryReader } from "@/infrastructure/db/prisma/repositories/reservations/inventory/inventory-reader";
 import { PrismaRateRepository } from "@/infrastructure/db/prisma/repositories/reservations/pricing/rate-repository";
 
@@ -71,7 +73,7 @@ const search = new SearchAvailability({
   catalog: new PrismaAvailabilityCatalog(client),
   reader: new PrismaInventoryReader(
     client,
-    new EmptyReservationConsumptionReader(),
+    new PrismaReservationConsumptionReader(client),
   ),
   rates: new PrismaRateRepository(client),
   clock: { now: () => NOW },
@@ -394,4 +396,26 @@ describe("SearchAvailability on PostgreSQL", () => {
       cairo.ok && cairo.value.results.map((r) => r.roomTypeId),
     ).not.toContain(gizaRoom);
   });
+});
+
+it("S20 includes persisted sold units in the staff availability grid", async () => {
+  expect(
+    (
+      await new PrismaReservationRepository(client).insert(
+        reservationInput(published, {
+          stay: range("2031-06-10", "2031-06-12"),
+        }),
+      )
+    ).ok,
+  ).toBe(true);
+  const response = await grid(TEST_BRANCH_ID, "from=2031-06-10&to=2031-06-13");
+  expect(response.status).toBe(200);
+  const body = await response.json();
+  expect(
+    body.roomTypes.find((room: { id: string }) => room.id === published).nights,
+  ).toEqual([
+    { night: "2031-06-10", capacity: 2, sold: 1, free: 1, blocked: 0 },
+    { night: "2031-06-11", capacity: 2, sold: 1, free: 1, blocked: 0 },
+    { night: "2031-06-12", capacity: 2, sold: 0, free: 2, blocked: 0 },
+  ]);
 });

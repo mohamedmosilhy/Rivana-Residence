@@ -5,7 +5,7 @@ import {
   type ReservationConsumptionReader,
 } from "@/application/inventory";
 import { PrismaAuditLog } from "@/infrastructure/db/prisma/repositories/audit/audit-log";
-import { EmptyReservationConsumptionReader } from "@/infrastructure/db/prisma/repositories/reservations/inventory/empty-reservation-consumption-reader";
+import { PrismaReservationConsumptionReader } from "@/infrastructure/db/prisma/repositories/reservations/inventory/reservation-consumption-reader";
 import { PrismaInventoryLock } from "@/infrastructure/db/prisma/repositories/reservations/inventory/inventory-lock";
 import { PrismaInventoryReader } from "@/infrastructure/db/prisma/repositories/reservations/inventory/inventory-reader";
 import { PrismaPhysicalRoomRepository } from "@/infrastructure/db/prisma/repositories/reservations/inventory/physical-room-repository";
@@ -42,7 +42,8 @@ export function physicalRoomUseCase(
     (transaction) => {
       current = transaction;
       const consumption =
-        options.consumption ?? new EmptyReservationConsumptionReader();
+        options.consumption ??
+        new PrismaReservationConsumptionReader(transaction);
       const audit = new PrismaAuditLog(transaction);
       return {
         inventoryLock: new PrismaInventoryLock(transaction),

@@ -10,7 +10,7 @@ import { getPrisma } from "@/infrastructure/db/prisma/client";
 import { PrismaAuditLog } from "@/infrastructure/db/prisma/repositories/audit/audit-log";
 import { PrismaBranchRepository } from "@/infrastructure/db/prisma/repositories/branches/branch-repository";
 import { PrismaRoomRepository } from "@/infrastructure/db/prisma/repositories/room-repository";
-import { EmptyReservationConsumptionReader } from "@/infrastructure/db/prisma/repositories/reservations/inventory/empty-reservation-consumption-reader";
+import { PrismaReservationConsumptionReader } from "@/infrastructure/db/prisma/repositories/reservations/inventory/reservation-consumption-reader";
 import { PrismaInventoryReader } from "@/infrastructure/db/prisma/repositories/reservations/inventory/inventory-reader";
 import { PrismaRateRepository } from "@/infrastructure/db/prisma/repositories/reservations/pricing/rate-repository";
 import { EmptyCouponRedemptionReader } from "@/infrastructure/db/prisma/repositories/reservations/commercial/empty-coupon-redemption-reader";
@@ -79,7 +79,7 @@ export function quoteBooking() {
     rooms: new PrismaRoomRepository(client),
     inventory: new PrismaInventoryReader(
       client,
-      new EmptyReservationConsumptionReader(),
+      new PrismaReservationConsumptionReader(client),
     ),
     rates: new PrismaRateRepository(client),
     services: new PrismaServiceOfferingRepository(client),
