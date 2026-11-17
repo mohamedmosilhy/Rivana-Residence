@@ -37,9 +37,9 @@ Planned, reviewed, and accepted one task at a time ([agent-workflow.md](../../en
 
 | Task | Title | Risk | Depends on | Covers (criteria, tests) | Status |
 | --- | --- | --- | --- | --- | --- |
-| M14-T1 | Threat-model test list and full authorization sweep | Critical | M13 | AC 2 | Not started |
+| M14-T1 | Threat-model test list and full authorization sweep (including guest change abuse and the analytics endpoint, added 2026-11-17) | Critical | M13 | AC 2 | Not started |
 | M14-T2 | Dependency audit, secret scan, client bundle check | Critical | — | AC 2 | Not started |
-| M14-T3 | Performance against a production-like dataset | Medium | — | AC 3 | Not started |
+| M14-T3 | Performance against a production-like dataset (including analytics event volume and the website report) | Medium | — | AC 3 | Not started |
 | M14-T4 | Accessibility pass (axe, VoiceOver, keyboard) | Medium | — | AC 2 | Not started |
 | M14-T5 | Cross-browser runs | Low | — | AC 1 | Not started |
 | M14-T6 | OpenAPI review against handlers | Medium | — | AC 1 | Not started |
@@ -51,9 +51,9 @@ Planned, reviewed, and accepted one task at a time ([agent-workflow.md](../../en
 
 ## Tasks
 
-1. Threat-model test list executed: authorization sweep for every use case and role, cross-branch IDOR, CSRF on staff REST, payment callback forgery and replay, amount tampering, coupon guessing and limit races, consent and blocked-number exclusion, refund authorization, token leakage, enumeration, log redaction.
+1. Threat-model test list executed (added 2026-11-17: guest change abuse — forwarded links, forbidden keys, deadline, limits, C-16, C-17 — and analytics collection — flooding, personal data in paths, GPC): authorization sweep for every use case and role, cross-branch IDOR, CSRF on staff REST, payment callback forgery and replay, amount tampering, coupon guessing and limit races, consent and blocked-number exclusion, refund authorization, token leakage, enumeration, log redaction.
 2. Dependency audit (`npm audit`), secret scan, client bundle check for server-only code and secrets.
-3. Performance (NFR-6) against a production-like dataset: availability search p95 < 500 ms, reservation creation p95 < 800 ms, Lighthouse budgets on branch pages and booking steps.
+3. Performance (NFR-6) against a production-like dataset: availability search p95 < 500 ms, reservation creation p95 < 800 ms, Lighthouse budgets on branch pages and booking steps (with the analytics beacon loaded). Added 2026-11-17: 90 days of synthetic analytics events; the rollup job and the website report stay within their budgets.
 4. Accessibility: axe on every page; VoiceOver pass on the booking journey and the sync reminder; keyboard-only runs.
 5. Cross-browser: WebKit locally; Firefox in Linux CI.
 6. OpenAPI review against handlers.

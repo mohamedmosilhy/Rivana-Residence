@@ -35,6 +35,10 @@ Terms as used in code, documents, and conversation. When the CMS and reservation
 | **Base rate** | A listing's default nightly price, before VAT. |
 | **Date period** (rate period) | A date range with a different nightly price for a listing. One kind; periods of a listing never overlap (Q-44). The earlier `SEASONAL`/`OFFER` kinds are superseded. |
 | **Optional service** | Breakfast or airport transportation, each priced by a unit the branch chooses (per booking, per night, per person, or per person per night), added only when the guest chooses it (Q-49). |
+| **Car count** | *(Planned, Q-82.)* The number of cars a guest needs for the airport transfer, from 1 to the branch's maximum. Stored on the reservation; multiplies the price only for the `PER_VEHICLE` unit. |
+| **Guest change** | *(Planned, Q-83…Q-85.)* A change a guest makes to their own booking from the manage link or "My reservations". Applied at once for pay-at-hotel bookings; a change to the total of a paid booking becomes a **change request** decided by a Manager or Admin. |
+| **Changed, update hotel system** | *(Planned, Q-84.)* Flag on a booking already entered in the hotel system that was changed afterwards, until a receptionist records that the hotel system was updated by hand. |
+| **Booking funnel** | *(Planned, ADR 029.)* The ordered steps from visiting the website to a confirmed booking (FR-ANL), used to see where visitors stop. Measured first-party, without cookies or personal data. |
 | **Coupon** | A code (percentage or fixed USD amount) entered during booking that reduces the subtotal before VAT (Q-48). Not the retired promotion popup. |
 | **VAT** | Value-added tax, one rate for all branches, calculated once on the taxable amount and shown separately at review (Q-45). |
 | **Subtotal / taxable / total** | Subtotal = accommodation + services; taxable = subtotal − coupon discount; total = taxable + VAT (ADR 027). |

@@ -32,7 +32,7 @@ Updated for the client decisions of 2026-11-06 (Q-36…Q-50). `reservations:deci
 | `reservations:pms-entry` (mark a website booking entered in the hotel system) | – | ✓ | ✓ | ✓ |
 | `reservations:modify`, `reservations:cancel` (unpaid reservations) | – | ✓ | ✓ | ✓ |
 | `reservations:cancel-paid` (cancel with a Paymob refund, Q-62†) | – | – | ✓ | ✓ |
-| `cancellations:decide` (approve or reject guest requests; triggers refunds) | – | – | ✓ | ✓ |
+| `cancellations:decide` (approve or reject guest cancellation requests, which triggers refunds, and guest change requests on paid bookings, Q-85) | – | – | ✓ | ✓ |
 | `reservations:front-desk` (assign, check-in/out, no-show) | – | ✓ | ✓ | ✓ |
 | `inventory:read`, `inventory:block` | – | ✓ | ✓ | ✓ |
 | `inventory:manage` (add/deactivate units) | – | –† | ✓ | ✓ |

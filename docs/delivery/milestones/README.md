@@ -8,11 +8,11 @@ One brief per forward milestone. Each brief is the contract for one tested slice
 | [M5](./m5-branch-websites.md) | Branch websites, rooms-and-apartments catalog, popup removal |
 | [M6](./m6-inventory-and-availability.md) | Inventory, date prices, availability |
 | [M7](./m7-booking-quote.md) | Booking quote: services, coupons, VAT |
-| [M8](./m8-reservations.md) | Reservations, immediate confirmation, verification, messages (API) |
-| [M9](./m9-payments-and-cancellations.md) | Paymob payments, holds, cancellation requests, refunds (API) |
-| [M10](./m10-guest-booking-journey.md) | Guest booking journey (UI) |
+| [M8](./m8-reservations.md) | Reservations, immediate confirmation, verification, messages, transfer car count, change engine (API) |
+| [M9](./m9-payments-and-cancellations.md) | Paymob payments, holds, cancellation requests, refunds, guest booking changes (API) |
+| [M10](./m10-guest-booking-journey.md) | Guest booking journey and change booking (UI); website analytics collection |
 | [M11](./m11-front-desk.md) | Front-desk operations (UI) |
-| [M12](./m12-manager-admin.md) | Manager and admin tools (UI) |
+| [M12](./m12-manager-admin.md) | Manager and admin tools (UI), reports with insights and the website funnel |
 | [M13](./m13-whatsapp-marketing.md) | WhatsApp broadcasts and feedback requests |
 | [M14](./m14-hardening.md) | Security, regression, E2E hardening |
 | [M15](./m15-joint-launch.md) | Joint launch and handover (with Phase 12) |

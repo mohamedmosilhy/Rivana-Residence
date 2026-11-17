@@ -256,13 +256,15 @@ Changes against the brief's table are marked **changed**. Brief ids stay.
 | M8-T1 | Migration `reservations`, constraints, seeds | Critical | T0 | T-DB-6…8 | Accepted |
 | M8-T2 | Reservation and guest domain (state machine, R-1…R-10, reference, `PhoneNumber`, verification and per phone policies). Includes the `libphonenumber-js` dependency if approved | Critical | T0 | T-LIFE, T-REF, T-PHONE, T-VAL | Accepted |
 | M8-T3 | Reservation and guest repositories, unit of work binding, **real sold consumption adapter** | Medium | T1 (and T0b) | repository integration tests | Not started |
-| M8-T4 | WhatsApp setup (settings, templates, sender port, adapters, test message, API A6 to A8, minimal Admin screen, branch enable guard) | Critical | T1, T2 | AC-10, T-WA-1…7 | Not started |
+| **M8-T3b** (new, 2026-11-17) | Airport transfer car count: migration `transfer_vehicles`, SV-5, P6 `services` objects, S35/S36 `maxVehicles`, T3 repository mapping (Q-82, Q-90) | Critical | T3, M7 | AC-11, T-SVC-VEH-1…6 | Not started |
+| M8-T4 | WhatsApp setup (settings, templates, sender port, adapters, test message, API A6 to A8, minimal Admin screen, branch enable guard; **changed 2026-11-17:** the purpose allowlist also holds `RESERVATION_MODIFIED`, `CHANGE_REQUEST_RECEIVED`, `CHANGE_REQUEST_APPROVED`, `CHANGE_REQUEST_REJECTED`, Q-84) | Critical | T1, T2 | AC-10, T-WA-1…7 | Not started |
 | M8-T5 | Phone verification, API P9 and P10 | Critical | T2, T3, T4 | AC-7, T-GST (verification) | Not started |
 | M8-T6 | Notifications: outbox, dispatcher, email templates, `reservations` CLI, token expiry job | Critical | T3, T4 | AC-4 (messages), T-NTF-1…3 | Not started |
-| M8-T7 | `CreateWebsiteReservation` use case: persistence, caps, coupon lock, redemption, guest upsert, audit, outbox, `PublicListingReader` | Critical | T5, T6, M7 | AC-1 to AC-4, T-RES, C-1…C-3, C-11 | Not started |
+| M8-T7 | `CreateWebsiteReservation` use case: persistence, caps, coupon lock, redemption, guest upsert, audit, outbox, `PublicListingReader` | Critical | T3b, T5, T6, M7 | AC-1 to AC-4, T-RES, C-1…C-3, C-11 | Not started |
 | **M8-T7b** (new) | Public API P7, idempotency replay over HTTP, P6 per phone limit change, OpenAPI, captured log test, mid milestone security review | Critical | T7 | AC-1, AC-8, T-HTTP, C-9 | Not started |
 | M8-T8 | Staff and external reservations (S3, S4) **and the reads S1, S2, S15** (changed: the brief assigns these three endpoints to no task) | Critical | T7 | AC-9, T-RES, T-AUTHZ-2, C-5, C-8 | Not started |
-| M8-T9 | Inventory changing transitions: staff cancellation with coupon release, stay modification (S6, S9) | Critical | T8 | AC-6, C-4, C-10 | Not started |
+| M8-T9 | Inventory changing transitions: staff cancellation with coupon release, stay modification (S6, S9); **changed 2026-11-17:** built as the shared change engine `ModifyReservation` with migration `reservation_changes` (`ReservationChange`, `pmsUpdatePendingSince`), and S55 (Q-83, Q-84) | Critical | T8 | AC-6, AC-12, C-4, C-10, T-CHG-1…4 | Not started |
+| **M8-T9b** (new, 2026-11-17) | Service changes through the change engine (S6 `services`: add, remove, car count, flight details; PR-11) | Critical | T9, T3b | AC-12, T-CHG-5…7 | Not started |
 | M8-T10 | Operational transitions (S5, S10 to S14, S16) | Critical | T8 | AC-5, T-PMS, C-7, C-9 | Not started |
 | M8-T11 | Guests and guest access (S50 to S53, G1, G3, G4) | Critical | T5, T7b | AC-7, T-GST, T-LKP | Not started |
 | M8-T12 | Sync status and checkpoints API (S28, S29), replaces the null checkpoint reader | Medium | T7 | T-SYNCAPI-1…4 | Not started |
@@ -277,6 +279,12 @@ Notes on the changes:
 - **WhatsApp screen**: the brief's "Out of scope: any screen" and its in scope Admin screen conflict on a plain reading. This spec treats the Admin WhatsApp screen as the one explicit exception. Confirm below.
 - **T0b before T3** stays as the brief says, so the new modules and the old ones share one rule. It does not block T1 or T2.
 - No task covers API-S17 to S19, S44, S45, S60 to S62, or S54; those belong to M9 and M13.
+
+### Decision 14. Scope added on 2026-11-17 (Q-82…Q-85, Q-90)
+
+- **Car count (M8-T3b).** `services` items become `ServiceInput` (a bare kind or `{ kind, vehicles?, details? }`), so the M7 contract keeps working. `vehicles` is stored on `ReservationService` for every transfer unit; only `PER_VEHICLE` multiplies. `maxVehicles` lives on the branch's transfer offering. Placed after T3 because T3 was already implemented; T3b extends the T3 repository mapping rather than reopening T3.
+- **One change engine (M8-T9, T9b).** `ModifyReservationStay` becomes `ModifyReservation`: a pure `ReservationChangePlan` (domain) compares the current reservation with a requested change and lists the changed nights, lines, and services; the use case loads prices and inventory under the old and new listing locks (Decision 1 lock order), applies PR-11, writes a `ReservationChange` row (actor kind, before and after summaries without personal values, totals), the audit event, and the outbox rows, and sets `pmsUpdatePendingSince` when `pmsEnteredAt` is set. The staff entry point checks `reservations:modify`; M9-T10 adds the guest entry point (deadline, own reservation, no override, forbidden keys) on the same engine, and M9-T11 the change-request path.
+- **Messages.** The WhatsApp purpose allowlist and the email templates gain `RESERVATION_MODIFIED` in M8 (staff changes can notify the guest when staff tick "send"), and the three change-request purposes, so M9 needs no allowlist change.
 
 ## Follow-up
 

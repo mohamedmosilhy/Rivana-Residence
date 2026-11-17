@@ -91,7 +91,9 @@ Each section states its status: **Implemented** (built and accepted in Phases 1�
 - **FR-SVC-1** Each branch may offer breakfast and airport transportation, each with a price unit (per booking, per night, per person, or per person per night), an adult price, an optional child price for the person units, and an on or off switch, managed by Manager (assigned branches) and Admin (Q-49).
 - **FR-SVC-2** Guests may choose services while booking. The final review may offer unchosen services as an optional cross-sell. A service is never added without the guest's explicit choice.
 - **FR-SVC-3** Chosen services are part of the subtotal, the coupon base, and the VAT base (ADR 027).
-- **FR-SVC-4** Approved prices, transfer details (flight number, direction), and post-booking additions are open (Q-56).
+- **FR-SVC-4** Approved prices are open (Q-56). The airport transfer is an arrival pickup with an optional flight number and arrival time as plain text (Q-56, Q-82).
+- **FR-SVC-5** For the airport transfer the guest chooses the number of cars, from 1 to the branch's maximum (`maxVehicles`, default 3). A `PER_VEHICLE` price unit charges the price × cars; the car count is stored for every unit (Q-82, SV-5). Planned (M8-T3b, UI M10-T5 and M12-T2).
+- **FR-SVC-6** Services can be added, removed, or changed after booking, by staff (FR-RES-6) and by the guest (FR-GCHG) (Q-83).
 
 ## FR-CPN Coupons — Partly implemented (M7-T5 management API; quote M7-T6, redemption M8, UI M10 and M12 planned)
 
@@ -115,7 +117,7 @@ Each section states its status: **Implemented** (built and accepted in Phases 1�
 - **FR-RES-3** Receptionist and above create reservations for guests (phone, walk-in, email), which start `CONFIRMED` and are paid at the hotel.
 - **FR-RES-4** Receptionist and above record reservations that exist in the hotel system (`EXTERNAL`), with the external reference. A conflict with Rivana's inventory is reported clearly.
 - **FR-RES-5** Staff mark each website reservation as entered in the hotel system; until then it is flagged and its age is shown (Q-40).
-- **FR-RES-6** Staff modify guest details and notes, and modify dates, units, or occupancy with an inventory re-check and an explicit re-quote (PR-11). Total changes on prepaid bookings follow Q-66.
+- **FR-RES-6** Staff modify guest details and notes, and modify dates, units, occupancy, or services (including the number of cars and the flight details) with an inventory re-check and an explicit re-quote (PR-11, Q-83). Total changes on prepaid bookings follow Q-66. Staff and guest changes use one change engine and one change history (FR-GCHG-6).
 - **FR-RES-7** Staff cancel reservations with a reason. Receptionists cancel unpaid reservations; cancelling a paid one requires a Manager or Admin and refunds it (Q-62). Guests request cancellations (FR-CXL).
 - **FR-RES-8** Staff assign a physical unit, check in, check out (early departure shortens the stay), and mark no-show, following [reservation-lifecycle.md](../domain/reservation-lifecycle.md).
 - **FR-RES-9** Creation is idempotent and conflict-safe (lifecycle "Idempotency"; ADR 016).
@@ -143,6 +145,16 @@ Each section states its status: **Implemented** (built and accepted in Phases 1�
 - **FR-CXL-6** The guest receives email and WhatsApp messages when the request is received and decided, and when the refund completes.
 - **FR-CXL-7** Every request, decision, and refund is audited.
 
+## FR-GCHG Guest booking changes — Planned (engine M8-T9, guest API M9-T10 and T11, UI M10-T8b and M11)
+
+- **FR-GCHG-1** From the manage link or "My reservations", a guest may change the dates, the units and listings (same branch, at most 5 units), the adults and children per unit, the services (add, remove, number of cars, flight details), their name, email, and special requests. The phone, branch, payment method, and coupon cannot be changed online; an existing coupon is kept (Q-83).
+- **FR-GCHG-2** The guest first sees a preview: availability, old and new totals with VAT, and what changed. The change is applied only when the guest confirms that exact total (`409 PRICE_CHANGED` otherwise) (Q-83).
+- **FR-GCHG-3** Changes are allowed until 24 hours before the branch's check-in time on the arrival date, judged on the current and the new arrival date; afterwards the guest sees the branch's contact details. They are refused for a blocked phone and while a cancellation or change request is open (Q-84).
+- **FR-GCHG-4** A change to a pay-at-hotel booking applies at once, in one transaction that re-checks inventory under the room-type locks. No staff approval (Q-84).
+- **FR-GCHG-5** A change to a Paymob-paid booking applies at once when the total stays the same; otherwise it becomes a change request that a Manager of the branch or an Admin approves or rejects with a reason, in the cancellation-request queue. The request holds no inventory; approval re-checks inventory and prices. The difference is settled at the hotel desk (Q-66, Q-85).
+- **FR-GCHG-6** Every change (guest or staff) is audited and kept in the reservation's change history (who, when, before and after totals and details, without personal values in the audit). The guest receives email and WhatsApp messages (`RESERVATION_MODIFIED`); a staff alert is sent to the branch inbox (Q-84).
+- **FR-GCHG-7** A changed booking that was already entered in the hotel system shows **"Changed, update hotel system"** until a receptionist marks the update done (`reservations:pms-entry`). Synchronization stays manual (Q-84).
+
 ## FR-GST Guest verification and profiles — Planned (M8, UI M10–M11)
 
 - **FR-GST-1** Before submitting, the guest verifies their phone with a 6-digit code sent by WhatsApp (valid 10 minutes, 5 attempts, rate-limited). The verification is valid for 30 minutes and one reservation (Q-27, Q-28).
@@ -154,7 +166,7 @@ Each section states its status: **Implemented** (built and accepted in Phases 1�
 
 ## FR-LKP Guest access — Planned (M8, UI M10)
 
-- **FR-LKP-1** A guest opens the manage link (sent by email and WhatsApp) to view their reservation, its payment status, and its allowed actions (cancellation request).
+- **FR-LKP-1** A guest opens the manage link (sent by email and WhatsApp) to view their reservation, its payment status, and its allowed actions (change the booking, request cancellation).
 - **FR-LKP-2** A guest enters their phone number, receives a WhatsApp code, and then sees all reservations of that number ("My reservations"), for 30 minutes.
 - **FR-LKP-3** Staff can resend or rotate a guest's manage link.
 
@@ -167,7 +179,9 @@ Each section states its status: **Implemented** (built and accepted in Phases 1�
 - **FR-OPS-5** Record a sync checkpoint for the branch, with an optional note. One checkpoint counts for the whole branch.
 - **FR-OPS-6** Sync reminder (Q-20): when a branch's last checkpoint is older than its interval (default 30 minutes), every signed-in receptionist of that branch hears a sound and sees a pop-up that cannot be dismissed without an answer: **"I have synced"** records a checkpoint; **"I'm syncing now"** reminds again after the follow-up delay (default 10 minutes). The first answer clears the reminder for everyone at that branch. The pop-up shows how many website bookings are not yet entered in the hotel system.
 - **FR-OPS-7** "Mark entered in hotel system" on website reservations (`reservations:pms-entry`), recorded with user and time; overdue entries are highlighted (target Q-61).
-- **FR-OPS-8** Cancellation-request queue for Managers and Admins with approve and reject actions and refund status.
+- **FR-OPS-8** Cancellation-request queue for Managers and Admins with approve and reject actions and refund status. It also holds guest change requests on paid bookings (FR-GCHG-5).
+- **FR-OPS-9** Reservation detail shows the change history; the "not yet in hotel system" list also shows changed bookings awaiting an update in the hotel system (FR-GCHG-7).
+- **FR-OPS-10** The front-desk dashboard lists upcoming airport pickups per branch: arrival date, number of cars, flight number, and arrival time (Q-82).
 
 ## FR-RPT Reporting — Planned (M12)
 
@@ -183,12 +197,47 @@ Definitions, all per branch and date range, with nights counted by stay night:
 - **ADR (average daily rate)**: accommodation revenue ÷ priced sold nights.
 - **Cancellations**: cancelled ÷ created; cancellation requests approved and rejected.
 - **PMS entry**: median and maximum time from confirmation to "entered in hotel system".
+- **RevPAR**: accommodation revenue ÷ room-nights available (Q-89).
+- **Booking pace**: room-nights and recorded revenue already booked for the next 30, 60, and 90 days, against the same window one year earlier when data exists (Q-89).
+- **Lead time** (days from creation to arrival) and **average length of stay**, as distributions and medians; **arrivals by weekday** (Q-89).
+- **Cancellation lead time** (days before arrival) and **no-show rate** (`NO_SHOW` ÷ reservations due to arrive) (Q-89).
+- **Payment mix**: share of pay-at-hotel and Paymob bookings, and the Paymob success rate (confirmed ÷ checkouts started) (Q-89).
+- **Coupon performance**: redemptions, discount given, and recorded revenue per code (Q-89).
+- **Service take-up**: share of reservations with breakfast and with airport transfer, and average cars per transfer (Q-89).
+- **Repeat guests**: share of reservations whose phone already had an earlier stay; **guest country** from the phone's country code (Q-89).
+- **Changes**: guest and staff changes, change requests approved and rejected, net total change (Q-83).
 
 Requirements:
 
 - **FR-RPT-1** Manager and Admin view summary, occupancy trend (day, week, month), and listing performance for their branches.
 - **FR-RPT-2** Every figure states its definition and data limitations.
 - **FR-RPT-3** Statistics are shown on screen only. There is no CSV export (Q-14).
+- **FR-RPT-4** Website traffic and the booking funnel are reported from FR-ANL (M12-T4b).
+
+## FR-ANL Website analytics — Planned (collection M10-T0a, T0b, T10; report M12-T4b)
+
+First-party and cookieless (Q-86, ADR 029). Definitions, per branch and date range:
+
+- **Visitors**: distinct daily visitor hashes (a visitor on two days counts twice; the hash cannot link days).
+- **Sessions**: a visitor's events with gaps under 30 minutes.
+- **Funnel steps**, each counted once per session: (1) visited the site, (2) viewed a listing, (3) searched availability (P5), (4) built a quote (P6), (5) requested a verification code (P9), (6) verified the phone (P10), (7) submitted a booking (P7), (8) booking confirmed (pay at hotel at once; Paymob on verified success).
+- **Conversion**: sessions reaching step 8 ÷ sessions; **booking-start rate**: sessions reaching step 3 ÷ sessions.
+- **Drop-off**: for each step, the sessions whose furthest step it was.
+- **Exit page**: the last page of a session that did not reach step 8.
+- **Unmet demand**: searches with no available listing, by stay date (Q-89).
+- **Checkout refusals**: `INVENTORY_UNAVAILABLE` and `PRICE_CHANGED` responses at P7 (Q-89).
+- **Verification abandonment**: sessions at step 5 that never reach step 6 (Q-89).
+- **Listing conversion**: listing views → quotes → bookings, per listing (Q-89).
+- **Landing pages, traffic sources** (referrer domain and UTM parameters), **device type**, and comparison with the previous period of equal length.
+
+Requirements:
+
+- **FR-ANL-1** Public pages record page views through a small first-party beacon, and the server records the funnel steps from the API itself. No cookie, no third-party script, no personal data in an event (no name, phone, email, reference, token, or full IP) (Q-86).
+- **FR-ANL-2** The visitor hash uses a salt that rotates daily and is then deleted; the IP is used only to compute it and is never stored. Global Privacy Control and Do Not Track stop recording; known bots are dropped (Q-86).
+- **FR-ANL-3** The collection endpoint is rate-limited, accepts only a fixed list of event names and fields, and never affects the page or the booking when it fails.
+- **FR-ANL-4** Raw events are deleted after 90 days; daily totals are kept indefinitely (Q-87).
+- **FR-ANL-5** Managers see their branches; Admins see all, including pages outside a branch. On screen only, with every figure's definition (Q-14, Q-88, FR-RPT-2).
+- **FR-ANL-6** A booking links to its session only through an anonymous session id sent with P7, so conversion is exact without personal data.
 
 ## FR-MKT WhatsApp marketing and feedback — Planned (consent M8, sending M13)
 
@@ -213,7 +262,7 @@ Requirements:
 
 ## FR-NTF Notifications — Planned (M8 including WhatsApp settings and templates, M9, M13)
 
-- **FR-NTF-1** Guest transactional messages by email and WhatsApp (Q-32): booking confirmed; payment not completed; cancellation request received, approved, rejected; refund completed; cancelled by the hotel; manage link (resend). Email uses plain-text and simple HTML templates; WhatsApp uses Meta-approved templates. English first (Arabic: Q-10). Verification codes go by WhatsApp only.
+- **FR-NTF-1** Guest transactional messages by email and WhatsApp (Q-32): booking confirmed; payment not completed; cancellation request received, approved, rejected; refund completed; cancelled by the hotel; manage link (resend); booking changed, change request received and decided (Q-84, Q-85). Email uses plain-text and simple HTML templates; WhatsApp uses Meta-approved templates. English first (Arabic: Q-10). Verification codes go by WhatsApp only.
 - **FR-NTF-2** Staff alert email to a branch inbox on each new confirmed website booking (reminding staff to enter it in the hotel system) and on each new cancellation request (address: Q-10).
 - **FR-NTF-3** Messages are queued in the outbox per channel inside the transaction that changes the status, and retried after commit. A failure never rolls back the reservation and is visible on reservation detail.
 - **FR-NTF-4** Marketing broadcasts and feedback requests use their own template classes and never delay transactional messages (ADR 028).

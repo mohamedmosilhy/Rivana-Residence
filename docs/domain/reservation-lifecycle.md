@@ -47,9 +47,11 @@ stateDiagram-v2
 | create (staff) → `CONFIRMED` | `reservations:create` + branch | As website, minus public-only rules; pay at hotel; manual price needs `pricing:override` | Audit; confirmation by email and WhatsApp if staff tick "send" |
 | record external → `CONFIRMED` | `reservations:record-external` + branch | `externalReference` required and unique per branch; inventory free under lock, otherwise a conflict is reported | Audit, flagged source `EXTERNAL`; already in the PMS, so no PMS-entry flag |
 | mark entered in hotel system | `reservations:pms-entry` + branch | `WEBSITE` source; `pmsEnteredAt` not set | Sets `pmsEnteredAt` and `pmsEnteredById`; audit |
+| mark change entered in hotel system *(planned M8-T9, Q-84)* | `reservations:pms-entry` + branch | A pending "changed, update hotel system" flag | Clears the flag with user and time; audit |
 | cancel (staff), unpaid | `reservations:cancel` + branch | `CONFIRMED`; not paid online | Inventory and coupon redemption released (Q-57); optional guest message; audit |
 | cancel (staff), paid | `reservations:cancel-paid` (Manager, Admin) + branch | `CONFIRMED`; payment `SUCCEEDED` | Refund requested through Paymob; `CANCELLED` when Paymob confirms; then release and messages; audit (Q-62) |
-| modify stay | `reservations:modify` | `CONFIRMED`; new dates or units pass inventory under locks for old and new listings; re-quote with VAT (PR-11); prepaid differences per Q-66 | New snapshot for changed nights; version bump; audit with before and after values |
+| modify stay or services | `reservations:modify` | `CONFIRMED`; new dates or units pass inventory under locks for old and new listings; re-quote with VAT (PR-11); prepaid differences per Q-66 | New snapshot for changed nights and services; version bump; change-history row; "changed, update hotel system" flag when already entered (GC-6); audit with before and after values |
+| guest change *(planned M9, Q-83…Q-85)* | Manage token or guest session for the reservation's phone | See [Guest changes](#guest-changes-q-83q-85) | Same as modify stay; guest and staff messages |
 | edit guest details/notes | `reservations:modify` | Not terminal | Audit (personal fields redacted to "changed") |
 | assign unit | `reservations:front-desk` | Unit of the same listing and branch, active, unblocked, not assigned to an overlapping stay | Exclusion constraint is the final guard; audit |
 | check in | `reservations:front-desk` | `CONFIRMED`; branch today ≥ check-in; every line assigned | Audit |
@@ -75,6 +77,21 @@ Every transition:
 | CX-7 | Request, decision, refund attempt, and result are each audited and messaged (email and WhatsApp). |
 
 Request states: `OPEN → APPROVED → (REFUND_PENDING → COMPLETED | REFUND_FAILED → retry)`, `OPEN → REJECTED`. For unpaid bookings `APPROVED` goes straight to `COMPLETED`.
+
+## Guest changes (Q-83…Q-85)
+
+*Planned:* the change engine in M8-T9 (staff), the guest entry points in M9-T10 (pay at hotel) and M9-T11 (paid bookings).
+
+| Rule | Definition |
+| --- | --- |
+| GC-1 | A guest may change dates, units and listings (same branch, at most 5 units, Q-69), adults and children per unit, services (add, remove, number of cars, flight details), name, email, and special requests. Phone, branch, payment method, and coupon are not changeable online; an existing coupon is kept as in Q-76. |
+| GC-2 | Allowed only for `CONFIRMED` reservations, before the CX-1 deadline computed on both the current and the new arrival date, with no `OPEN` cancellation or change request, from the manage link or a guest session for the reservation's phone. A blocked phone cannot change (Q-75). |
+| GC-3 | A preview re-quotes under PR-11 without writing. Applying re-runs the quote inside the transaction, under the room-type locks for old and new listings, and requires the previewed total (`409 PRICE_CHANGED` otherwise) and the reservation version (`412` on mismatch). |
+| GC-4 | Pay at hotel: the change applies at once (ADR 024). Paymob-paid: applies at once when the new total equals the paid total; otherwise an `OPEN` change request is stored with the requested change and holds no inventory (Q-85). |
+| GC-5 | A Manager of the branch or an Admin approves or rejects a change request with a reason, in the cancellation-request queue. Approval re-checks inventory and prices under the locks and applies the change, or fails with the conflict shown; the difference is settled at the desk (Q-66). |
+| GC-6 | Every applied change appends a change-history row (actor kind guest or staff, before and after totals and details), an audit event without personal values, outbox messages (`RESERVATION_MODIFIED`, and the staff alert), and, when `pmsEnteredAt` is set, a pending "changed, update hotel system" flag. |
+
+Change request states: `OPEN → APPROVED` (applied) or `OPEN → REJECTED`; an approval whose re-check fails leaves the request `OPEN` with the conflict shown.
 
 ## Payments (ADR 025)
 

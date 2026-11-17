@@ -28,6 +28,7 @@ flowchart LR
   Payments["Payments: Paymob holds, callbacks, refunds (planned)"]
   Marketing["Marketing: consent, broadcasts, feedback (planned)"]
   Reporting["Reporting (planned, read-only)"]
+  Analytics["Website analytics: page views, funnel steps (planned, ADR 029)"]
   Audit["Audit log (planned)"]
   Guests["Guests: verified phone profiles, blocking (planned)"]
   Notify["Notifications: email + WhatsApp (planned)"]
@@ -50,6 +51,7 @@ flowchart LR
   Enquiries --> Notify
   Reservations --> Audit
   Reporting --> Reservations
+  Reporting --> Analytics
   Reservations -. future .-> PMS
   IAM --> Branches
 ```
@@ -159,7 +161,7 @@ Better Auth owns user, account, session, and verification records. Rivana adds a
 
 ### Commercial rules (planned, ADR 027)
 
-- `ServiceOffering` (`branchId`, `kind` `BREAKFAST|AIRPORT_TRANSFER`, `priceUnit`, `priceMinor`, `childPriceMinor?`, `active`). Price unit configurable per offering (SV-1…4).
+- `ServiceOffering` (`branchId`, `kind` `BREAKFAST|AIRPORT_TRANSFER`, `priceUnit`, `priceMinor`, `childPriceMinor?`, `active`; planned `maxVehicles` for the transfer, M8-T3b). Price unit configurable per offering (SV-1…5; `PER_VEHICLE` planned, Q-82).
 - `Coupon` (`code`, `kind` `PERCENT|FIXED`, value, validity, total and per-phone limits, branch scope, `active`) and `CouponRedemption` (coupon, reservation, phone). Rules CP-1…7.
 - `CommercialSettings` (`vatRateBasisPoints`, never null, seeded at 1500). Rules TX-1…5.
 - `QuoteCalculator` (pure): accommodation + services − discount = taxable; VAT half-up once; total.
@@ -168,6 +170,13 @@ Better Auth owns user, account, session, and verification records. Rivana adds a
 
 - `Payment` (reservation, provider `PAYMOB`, provider ids, amount, currency, status `INITIATED|SUCCEEDED|FAILED|REFUND_PENDING|REFUNDED|REFUND_FAILED`) and `PaymentEvent` (verified callbacks, unique per provider transaction). Rules PY-1…8.
 - `CancellationRequest` (reservation, reason, status `OPEN|APPROVED|REJECTED|REFUND_PENDING|REFUND_FAILED|COMPLETED`, decided by and at, decision reason). Rules CX-1…7.
+- `ChangeRequest` *(planned M9-T11, Q-85)* (reservation, requested change, previewed total, status `OPEN|APPROVED|REJECTED`, decided by and at, decision reason, last conflict). At most one open request of either kind per reservation. Rules GC-4, GC-5.
+
+### Website analytics (planned, ADR 029)
+
+- `SiteEvent` (occurred at, branch?, event name from a fixed list, path, listing?, funnel step?, session id, visitor hash for the day, referrer domain, UTM source/medium/campaign, device class, outcome code). No personal data; deleted after 90 days (Q-87).
+- `SiteDailyTotal` (date, branch?, dimension, key, visitors, sessions, count), kept indefinitely.
+- `FunnelDefinition` (pure): the eight ordered steps of FR-ANL, furthest step per session, drop-off and exit page.
 
 ### Marketing (planned, ADR 028)
 
@@ -201,13 +210,15 @@ Reservation
   guest: GuestContact                  (contact as given for this stay)
   rooms: ReservationRoom[1..n]        (several units, same stay; Q-39)
     roomTypeId, occupancy, physicalRoomId?, nights: NightPrice[]
-  services: ReservationService[0..2]   (kind, unit, adult and child quantities, amountMinor)
+  services: ReservationService[0..2]   (kind, unit, adult and child quantities, amountMinor; planned vehicles for the transfer, SV-5)
   coupon?: { couponId, code, kind, value }
   price: accommodation, services, subtotal, discount, taxable, vatRateBasisPoints, vat, total (Money)
   paymentMethod: PAY_AT_HOTEL | PAYMOB (Q-37)
   paymentStatus: NOT_REQUIRED | AWAITING | PAID | REFUND_PENDING | REFUNDED
   holdExpiresAt?                       (AWAITING_PAYMENT only)
   pmsEnteredAt?, pmsEnteredById?       (WEBSITE source; Q-40)
+  pmsUpdatePendingSince?               (planned M8-T9: changed after entry, Q-84)
+  changes: ReservationChange[]         (planned M8-T9: actor kind, before and after totals and details)
   externalReference?                   (required when source = EXTERNAL)
   internalNotes?                       (staff only)
   manageTokenHash, manageTokenExpiresAt
@@ -236,7 +247,8 @@ Domain services (pure M6-T2 rules accepted 2026-11-08; the reservation state mac
 - `NightlyPriceResolver`: given base rate and active periods, produces immutable nightly prices and an exact accommodation total, or a null total for any unpriced night (implemented in `src/domain/pricing/`, PR-3).
 - `ReservationStateMachine`: allowed transitions plus preconditions (pure, given "today" in the branch zone). M8 transitions implemented in `src/domain/reservations/state-machine.ts` (M8-T2); payment transitions arrive in M9.
 - `QuoteCalculator`: total composition (pure, ADR 027).
-- `CancellationDeadline`: 24 hours before the branch check-in time on the arrival date (pure, CX-1).
+- `CancellationDeadline`: 24 hours before the branch check-in time on the arrival date (pure, CX-1). Also the guest change deadline (GC-2).
+- `ReservationChangePlan` *(planned M8-T9)*: compares the current reservation with a requested change (dates, lines, occupancy, services, contact), lists the changed nights and services, and checks GC-1 for guests (pure; the use case supplies prices and inventory under locks).
 
 ### Inventory
 
@@ -337,8 +349,8 @@ Operations (planned)
 
 **Operations (planned).**
 
-- Public: `ListBranches`, `ListBookableRoomTypes`, `SearchAvailability`, `QuoteBooking`, `RequestPhoneVerification`, `ConfirmPhoneVerification`, `CreateWebsiteReservation`, `ProcessPaymentCallback`, `ListGuestReservations`, `GetGuestReservation`, `RequestCancellation`.
-- Staff: `ListReservations`, `GetReservation`, `CreateStaffReservation`, `RecordExternalReservation`, `MarkEnteredInHotelSystem`, `CancelReservation`, `ListCancellationRequests`, `DecideCancellationRequest`, `RetryRefund`, `ManageServices`, `ManageCoupons`, `ManageCommercialSettings`, `PreviewBroadcastAudience`, `SendBroadcast`, `ModifyReservationStay`, `UpdateReservationGuest`, `AssignPhysicalRoom`, `CheckIn`, `CheckOut`, `MarkNoShow`, `ResendManageLink`, `GetAvailabilityGrid`, `CreateBlock`, `CancelBlock`, `ManagePhysicalRooms`, `ManageRates`, `GetSyncStatus`, `RecordSyncCheckpoint`, `SearchGuests`, `GetGuest`, `BlockGuestPhone`, `UnblockGuestPhone`, `GetReports`, `ListAuditEvents`, `ManageBranches`, `AssignStaffBranches`.
+- Public: `ListBranches`, `ListBookableRoomTypes`, `SearchAvailability`, `QuoteBooking`, `RequestPhoneVerification`, `ConfirmPhoneVerification`, `CreateWebsiteReservation`, `ProcessPaymentCallback`, `ListGuestReservations`, `GetGuestReservation`, `RequestCancellation`, planned `PreviewGuestChange` and `ApplyGuestChange` (M9-T10, T11), `RecordSiteEvent` (M10-T0a).
+- Staff: `ListReservations`, `GetReservation`, `CreateStaffReservation`, `RecordExternalReservation`, `MarkEnteredInHotelSystem`, `CancelReservation`, `ListCancellationRequests`, `DecideCancellationRequest`, `RetryRefund`, `ManageServices`, `ManageCoupons`, `ManageCommercialSettings`, `PreviewBroadcastAudience`, `SendBroadcast`, `ModifyReservationStay` (widened to `ModifyReservation`: stay and services, M8-T9), `MarkChangeEnteredInHotelSystem`, `ListChangeRequests` and `DecideChangeRequest` (M9-T11), `UpdateReservationGuest`, `AssignPhysicalRoom`, `CheckIn`, `CheckOut`, `MarkNoShow`, `ResendManageLink`, `GetAvailabilityGrid`, `CreateBlock`, `CancelBlock`, `ManagePhysicalRooms`, `ManageRates`, `GetSyncStatus`, `RecordSyncCheckpoint`, `SearchGuests`, `GetGuest`, `BlockGuestPhone`, `UnblockGuestPhone`, `GetReports`, `GetWebsiteReport` (M12-T4b), `ListAuditEvents`, `ManageBranches`, `AssignStaffBranches`.
 
 Every command and sensitive query authorizes itself, with branch scope for operations data, not only in menus or route layouts.
 

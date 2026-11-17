@@ -50,6 +50,9 @@ M4 (2026-11-06), M5 (2026-11-07), M6-T1 through M6-T10 (latest 2026-11-10), and 
 | T-QUOTE-1…10 | `QuoteCalculator` (ADR 027) | Order of operations; worked example 2 ($640.26); service price units and child price (worked example 5, $391.00); half-up at exactly .5 cent (example 3); percent coupon rounding; fixed coupon capped at subtotal (example 4); zero services; several units; VAT 0% and 100% bounds; VAT never null; no floating point. **Implemented (M7-T1)** `tests/unit/domain/quote-calculator.test.ts`, `money.test.ts`, `service-price-unit.test.ts` |
 | T-CPN-1…5 | `CouponPolicy`, coupon codes (**implemented M7-T2**: `tests/unit/domain/coupon-policy.test.ts`, `coupon-code.test.ts`) | Each refusal reason (`NOT_FOUND`, `INACTIVE`, `NOT_YET_VALID`, `EXPIRED`, `WRONG_BRANCH`, `LIMIT_REACHED`, `PHONE_LIMIT_REACHED`); case-insensitive match; all-branches vs listed branches |
 | T-SVC-1…2 | Services | Added only when requested; inactive service refused; unit quantities for all four price units; child price only for person units. **Implemented (M7-T2)** `tests/unit/domain/service-offering.test.ts` |
+| T-SVC-VEH-1…4 | Car count (planned M8-T3b, Q-82) | `PER_VEHICLE` = price × cars; count outside 1…`maxVehicles` refused under `services.N.vehicles`; breakfast refuses a car count and `PER_VEHICLE`; count kept for non-vehicle units |
+| T-CHG-1…3 | `ReservationChangePlan` (planned M8-T9) | Changed versus kept nights; added, removed, and kept services with PR-11 prices; GC-1 forbidden keys for guests |
+| T-ANL-1…3 | Analytics rules (planned M10-T0a) | Fixed event names and fields; funnel step order, furthest step, drop-off, exit page; session gap of 30 minutes |
 | T-TAX-1…2 | VAT rules | Computed once on taxable; stored rate used on modification |
 | T-LIFE-1…10 | `ReservationStateMachine` | Each allowed transition (pay at hotel → `CONFIRMED`; Paymob → `AWAITING_PAYMENT` → `CONFIRMED` / `PAYMENT_FAILED`); each forbidden one (no `PENDING`, no `DECLINED`); date preconditions for check-in and no-show; early check-out shortening; paid cancellation requires refund path. **M8 transitions implemented (M8-T2)** `tests/unit/domain/reservation-state-machine.test.ts`, `reservation-invariants.test.ts`; Paymob and refund transitions M9 |
 | T-PAY-1…4 | Payment rules | Amount and currency must match; late success decision (PY-5); hold expiry; zero-total booking cannot choose Paymob |
@@ -80,7 +83,7 @@ M4 (2026-11-06), M5 (2026-11-07), M6-T1 through M6-T10 (latest 2026-11-10), and 
 | T-PAY-5…10 | Fake gateway: checkout creation failure → `PAYMENT_FAILED`; verified success → `CONFIRMED` with messages; forged or mismatched callback ignored; duplicate ignored; hold expiry job; reconciliation job; refund pending, succeeded, failed, retry |
 | T-CXL-4…8 | Request creation and deadline; one open request; Manager and Admin decisions with branch scope; rejection keeps `CONFIRMED`; approval of paid booking cancels only after refund confirmation; audit and messages |
 | T-LKP-1…4 | Token hash lookup, expiry, rotation; guest session sees only its phone's reservations |
-| T-RPT-1…6 | Report definitions on a fixed dataset (occupancy, revenue excluding VAT, VAT, discounts, payments and refunds, cancellations, PMS-entry ages) |
+| T-RPT-1…10 | Report definitions on a fixed dataset (occupancy, revenue excluding VAT, VAT, discounts, payments and refunds, cancellations, PMS-entry ages); planned 2026-11-17: T-RPT-7…10 insights (Q-89) and website figures (FR-ANL) on fixtures, branch scope of S46, S47 |
 | T-GST-1…10 | Code request and confirm (hash stored, 10-minute expiry, 5 attempts, per-number and per-client limits); token single use; blocked number gets no code and existing tokens fail; guest profile upsert with marketing opt-in; staff entry links or creates an unverified profile; block and unblock audited and limited to `guests:block` |
 | T-SYNCAPI-1…4 | Sync status (including not-entered count) and checkpoints per branch; one checkpoint clears all receptionists of the branch; branch access enforced; audit appended |
 | T-PMS-1…2 | Mark entered in hotel system: once only, audited, branch-scoped, `WEBSITE` only |
@@ -90,7 +93,11 @@ M4 (2026-11-06), M5 (2026-11-07), M6-T1 through M6-T10 (latest 2026-11-10), and 
 | T-WA-4…7 | WhatsApp setup (Q-67): settings and templates Admin-only and audited, access token never returned; unknown variable keys refused and one active template per purpose and language; missing number or template → `WHATSAPP_NOT_CONFIGURED` and nothing sent; test message result stored and rate-limited |
 | T-MKT-1…6 | Audience excludes no opt-in, opted out, blocked, other branches, inside frequency window; Manager scope; feedback queued once per check-out and never before |
 | T-HTTP-1…10 | Route Handlers with `Request` objects: status mapping, problem shape, `415`/`413`, CSRF refusal, `401`/`403`/`404` cross-branch, `412`, `429`, webhook raw body and `401` on bad HMAC, `ETag` |
-| C-1…15 | Concurrency ([database/integrity-and-concurrency.md](../database/integrity-and-concurrency.md#proof-plan-integration-tests-on-real-postgresql)), 20 iterations each |
+| T-SVC-VEH-5…6 | Car count persistence and P6 end to end (planned M8-T3b): `maxVehicles` through S35/S36 with audit; `vehicles` stored and read back by the reservation repository; M7 P6 suite unchanged |
+| T-CHG-4…7 | Staff changes through the engine (planned M8-T9, T9b): history row and audit in one transaction, rollback leaves none; hotel-system flag set and cleared (S55); services and car count changes |
+| T-GCHG-1…12 | Guest changes (planned M9-T10, T11): preview without writes; apply with `If-Match` and `expectedTotal`; every GC-2 refusal; forbidden keys; manage token and guest session; another phone refused; outbox and flag; change requests on paid bookings, decisions, re-check conflict |
+| T-ANL-4…12 | Analytics (planned M10-T0a, T0b, T10): P11 strict parsing, `204`, limiter `429`, bots and GPC dropped; no IP, query string, or personal value stored; server-side steps outside the use case transaction; P7 session link; rollup totals and 90-day deletion; salt rotation |
+| C-1…17 | Concurrency ([database/integrity-and-concurrency.md](../database/integrity-and-concurrency.md#proof-plan-integration-tests-on-real-postgresql)), 20 iterations each |
 
 ## E2E (Playwright, Chromium)
 
@@ -109,6 +116,7 @@ M4 (2026-11-06), M5 (2026-11-07), M6-T1 through M6-T10 (latest 2026-11-10), and 
 | E2E-G-6 | Cancellation request before the deadline; contact details after it |
 | E2E-G-7 | Extras never preselected; cross-sell adds only when accepted |
 | E2E-G-8 | Validation and accessibility (axe) on every booking step, 320 px overflow sweep, touch targets; branch with booking off shows the disabled Book Now |
+| E2E-G-9 | Change booking (planned M10-T8b): pay-at-hotel change applied with new totals; paid booking change sent for approval; after the deadline only contact details |
 | E2E-R-1 | Receptionist signs in and sees only their branch |
 | E2E-R-2 | New website booking appears as "Not yet in hotel system"; mark entered; overdue highlight with a fake clock |
 | E2E-R-3 | Manual reservation; external reservation; external conflict notice |

@@ -14,7 +14,7 @@ Launch the branch websites, online booking with Paymob and pay at hotel, staff t
 
 ## Blocking questions (must be answered before go-live)
 
-Q-13 (confirmed with legal advice), Q-21, Q-23, Q-24, Q-25, Q-30 (all guest-facing text). Setup data from the client: live Paymob keys (Q-55), the WhatsApp Business number and approved templates entered by the Admin (Q-67), and the VAT rate confirmed or changed by the Admin (it starts at 15%, Q-05).
+Q-13 (confirmed with legal advice), Q-21, Q-23, Q-24, Q-25, Q-30 (all guest-facing text, including the website analytics description in the privacy notice, ADR 029, and the guest change terms, Q-83…Q-85). Setup data from the client: live Paymob keys (Q-55), the WhatsApp Business number and approved templates entered by the Admin (Q-67), and the VAT rate confirmed or changed by the Admin (it starts at 15%, Q-05).
 
 ## Skills for this milestone
 

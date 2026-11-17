@@ -22,7 +22,7 @@ ADRs record the decisions that materially shape Rivana, in one numbered sequence
 | [016](./016-inventory-and-concurrency.md) | Room-type inventory; row lock plus count in one transaction; exclusion constraint for room assignment | Accepted 2026-10-24; extended by 025, 027 |
 | [017](./017-multi-branch-data-ownership.md) | Branch-owned room types, inventory, prices, and reservations; composite FKs | Accepted 2026-10-24; extended by 026 |
 | [018](./018-staff-roles-and-branch-scope.md) | Receptionist and Manager roles; capabilities plus branch assignments | Accepted 2026-10-24; capabilities extended by 024–028 |
-| [019](./019-guest-reservation-access.md) | Verified phone profiles (WhatsApp code), blocking, and guest access without accounts | Accepted 2026-10-24; amended by 024, 028 |
+| [019](./019-guest-reservation-access.md) | Verified phone profiles (WhatsApp code), blocking, and guest access without accounts | Accepted 2026-10-24; amended by 024, 028; guest changes amendment proposed 2026-11-17 |
 | [020](./020-dates-timezones-money.md) | Date-only stays, branch time zone, money in US dollars as integer cents | Accepted 2026-10-24; amended by 027 |
 | [021](./021-reservation-testing-strategy.md) | Real-database integration and concurrency tests | Accepted 2026-10-24 |
 | [022](./022-deployment-transaction-compatibility.md) | Transaction-scoped primitives only; PostgreSQL provider requirements | Accepted 2026-10-24 |
@@ -30,8 +30,9 @@ ADRs record the decisions that materially shape Rivana, in one numbered sequence
 | [024](./024-immediate-confirmation.md) | Immediate confirmation of website reservations; `PENDING`/`DECLINED` removed; cancellation requests; PMS-entry tracking | Accepted 2026-11-06 (supersedes request to book; amends 013, 019) |
 | [025](./025-paymob-online-payment.md) | Online payment through Paymob hosted checkout; 15-minute payment holds; verified callbacks; refunds | Accepted 2026-11-06 (extends 016, 024) |
 | [026](./026-branch-websites-and-accommodation.md) | Branch-owned websites at `/{branchSlug}/…`; rooms and apartments in one catalog; per-branch maps | Accepted 2026-11-06 (extends 006, 017) |
-| [027](./027-booking-price-composition.md) | Price composition: date prices, services, coupons, VAT; promotion popup retired | Accepted 2026-11-06 (amends 020) |
+| [027](./027-booking-price-composition.md) | Price composition: date prices, services, coupons, VAT; promotion popup retired | Accepted 2026-11-06 (amends 020); `PER_VEHICLE` amendment proposed 2026-11-17 |
 | [028](./028-whatsapp-guest-messaging.md) | WhatsApp confirmations, feedback requests, consented marketing broadcasts; Admin-managed number, templates, and test message | Accepted 2026-11-06 (extends 019) |
+| [029](./029-first-party-site-analytics.md) | First-party, cookieless website analytics and booking funnel inside the Next.js app | Proposed 2026-11-17 |
 
 Consequences that run through all of them:
 

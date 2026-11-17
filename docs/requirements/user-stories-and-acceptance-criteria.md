@@ -74,12 +74,19 @@ Acceptance criteria (AC) are written so they can become tests. Stories for the w
 **US-G5 Add extras and a coupon.** As a guest, I can add breakfast or airport transportation and enter one coupon code.
 - AC1: Extras are never preselected; the review may offer ones I skipped, and nothing is added unless I accept.
 - AC2: A valid code reduces the total before VAT; an invalid, expired, used-up, or wrong-branch code shows why and leaves the total unchanged.
+- AC3: When I add the airport transfer I choose how many cars I need, up to the branch's maximum, and can add my flight number and arrival time; a per-car price is multiplied by the cars (Q-82).
 
 **US-G6 View my booking or request cancellation.** As a guest, I open my link or "My reservations" to see my booking and request cancellation.
 - AC1: A valid link shows my reservation, payment status, and any cancellation request; an invalid or expired link shows a neutral message and a "send me a new link" form.
 - AC2: Until 24 hours before the branch's check-in time on my arrival date, I can request cancellation with an optional reason; the booking stays confirmed until the hotel decides.
 - AC3: After that deadline there is no request button; the branch's contact details are shown.
 - AC4: I receive messages when my request is received and decided; if it was approved and I paid online, I am told the refund was requested through Paymob and when it completes.
+
+**US-G6a Change my booking (planned: API M9, UI M10).** As a guest, I change my dates, rooms or apartments, guests, extras (including the number of cars), name, email, or special requests from my link or "My reservations" (Q-83).
+- AC1: Before confirming I see whether the change is available and my old and new totals with VAT; nothing changes until I confirm.
+- AC2: For a pay-at-hotel booking the change applies at once and I receive email and WhatsApp messages with the new details.
+- AC3: For a booking I paid online, a change that keeps the same total applies at once; one that changes the total is sent to the hotel as a request, and I am told the decision. Any difference is settled at the hotel (Q-85).
+- AC4: My phone number, branch, payment method, and coupon cannot be changed online. After 24 hours before check-in, or while a request is open, I see the branch's contact details instead (Q-84).
 
 **US-G7 My reservations.** As a guest, I enter my phone number and a WhatsApp code to see my reservations.
 - AC1: After a correct code I see every reservation made with that number, for 30 minutes.
@@ -147,6 +154,7 @@ Acceptance criteria (AC) are written so they can become tests. Stories for the w
 **US-M2 See statistics.** As a manager, I see reservations, occupancy, revenue excluding VAT, VAT, discounts, online payments and refunds, and listing performance for a date range.
 - AC1: Figures match the definitions in FR-RPT and state their limitations.
 - AC2: Only my branches are included.
+- AC3: I also see RevPAR, booking pace, lead time, length of stay, arrival weekdays, cancellation lead time, no-show rate, payment mix, coupon performance, service take-up, repeat guests, guest countries, and changes (Q-89).
 
 **US-M3 Review compliance.** As a manager, I review the audit log, hotel-system entry ages, and sync checkpoints.
 - AC1: I can filter the audit log by branch, user, entity, and date.
@@ -167,6 +175,12 @@ Acceptance criteria (AC) are written so they can become tests. Stories for the w
 - AC2: Approving an unpaid booking cancels it and releases its units.
 - AC3: Approving a paid booking requests a Paymob refund of the amount paid; the booking becomes cancelled when Paymob confirms; a failed refund is shown with a retry action.
 - AC4: Receptionists cannot decide requests.
+- AC5: Guests' change requests on paid bookings appear in the same queue; approving re-checks availability and prices and applies the change, rejecting needs a reason (Q-85).
+
+**US-M2a See how the website performs (planned M12).** As a manager (my branches) or admin (all), I see how many people visited, how many started and completed a booking, at which step the others stopped, and from which page they left (Q-86, Q-88).
+- AC1: Figures follow the definitions in FR-ANL, each with its definition on screen, for a date range compared with the previous period.
+- AC2: I see the funnel with drop-off per step, exit pages, landing pages, traffic sources, devices, unmet demand (dates searched while sold out), and listing conversion.
+- AC3: No figure identifies a visitor; there is no export.
 
 **US-M7 Send offers by WhatsApp (planned M13).** As a manager (my branches) or admin, I send an approved WhatsApp offer, optionally with a coupon code, to opted-in guests.
 - AC1: I see the number of recipients before sending; only opted-in, not opted-out, non-blocked guests of the chosen branches are included.

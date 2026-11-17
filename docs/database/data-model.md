@@ -29,7 +29,10 @@ The implemented schema is `prisma/schema.prisma` (9 migrations; M4 added `…_st
 | Pricing | `RoomBaseRate`, `RatePeriod` (M6-T3) | Implemented: positive `INTEGER` cents, explicit `USD`, `RatePeriod_no_overlap` (GiST exclusion over active periods per listing) |
 | Commercial | `ServiceOffering`, `Coupon`, `CouponBranch`, `CommercialSettings` | Implemented (M7-T3): service price units and child pricing, positive USD amounts, case-insensitive coupon uniqueness and value/window/limit checks, branch joins, singleton VAT 0–10000 basis points inserted at 1500; service and VAT management APIs are implemented (T4), coupon management APIs are implemented (T5); quote composition remains T6 |
 | Reservations | `Reservation`, `ReservationRoom`, `ReservationNight`, `ReservationService`, `CouponRedemption`, `BranchSyncCheckpoint` | Storage implemented (M8-T1); repositories, domain rules, and workflows remain planned |
-| Payments | `Payment`, `PaymentEvent`, `CancellationRequest` | Planned (M9) |
+| Payments | `Payment`, `PaymentEvent`, `CancellationRequest`, `ChangeRequest` | Planned (M9; `ChangeRequest` M9-T11, Q-85) |
+| Reservation changes | `ReservationChange`; columns `Reservation.pmsUpdatePendingSince`, `pmsUpdatedAt`, `pmsUpdatedById` | Planned (M8-T9, Q-83, Q-84) |
+| Transfer cars | `ServicePriceUnit.PER_VEHICLE`, `ServiceOffering.maxVehicles`, `ReservationService.vehicles` | Planned (M8-T3b, Q-82) |
+| Website analytics | `SiteEvent`, `SiteDailyTotal`, `AnalyticsSalt` | Planned (M10-T0a, T0b; ADR 029, Q-86, Q-87) |
 | Guests | `Guest` (verified phone profiles, blocking, marketing consent), `PhoneVerification` | Storage implemented (M8-T1); verification and guest-access workflows remain planned |
 | Messaging settings | `WhatsAppSettings`, `WhatsAppTemplate` (Admin-managed, Q-67) | Storage implemented (M8-T1), empty settings singleton; setup API and UI remain planned (T4) |
 | Marketing | `Broadcast` | Planned (M13) |
@@ -215,7 +218,7 @@ enum PaymentMethod      { PAY_AT_HOTEL PAYMOB }
 enum ReservationPaymentStatus { NOT_REQUIRED AWAITING PAID REFUND_PENDING REFUNDED }
 enum NightRateSource    { BASE PERIOD MANUAL }
 enum ServiceKind        { BREAKFAST AIRPORT_TRANSFER }
-enum ServicePriceUnit   { PER_BOOKING PER_NIGHT PER_PERSON PER_PERSON_PER_NIGHT }   // owner decision 2026-11-11 (Q-49)
+enum ServicePriceUnit   { PER_BOOKING PER_NIGHT PER_PERSON PER_PERSON_PER_NIGHT }   // owner decision 2026-11-11 (Q-49); planned PER_VEHICLE (M8-T3b, Q-82)
 enum CouponKind         { PERCENT FIXED }
 enum PaymentStatus      { INITIATED SUCCEEDED FAILED REFUND_PENDING REFUNDED REFUND_FAILED }
 enum CancellationRequestStatus { OPEN APPROVED REJECTED REFUND_PENDING REFUND_FAILED COMPLETED }
@@ -439,6 +442,7 @@ model ReservationService {             // one line per service with its unit and
   priceMinor    Int                         // adult price used
   childPriceMinor Int?                      // child price used, null = children not charged
   adults / children / nights / adultQuantity / childQuantity  Int   // the multipliers that produced amountMinor
+  vehicles      Int?                        // planned M8-T3b (Q-82): AIRPORT_TRANSFER only, CHECK 1–10; null for BREAKFAST
   amountMinor   Int
   details       String?     @db.VarChar(300) // e.g. flight number (Q-56), plain text
   @@id([reservationId, kind])
@@ -454,6 +458,7 @@ model ServiceOffering {
   currency    String      @default("USD") @db.Char(3)   // CHECK = 'USD'
   active      Boolean     @default(false)
   description String?     @db.VarChar(300)
+  maxVehicles Int?                             // planned M8-T3b (Q-82): AIRPORT_TRANSFER only, default 3, CHECK 1–10; PER_VEHICLE only for AIRPORT_TRANSFER, no child price
   updatedAt / updatedById
   @@unique([branchId, kind])
 }
@@ -563,6 +568,69 @@ model CancellationRequest {
   createdAt / updatedAt
   // partial unique index: one OPEN request per reservation
   @@index([status, createdAt])
+}
+
+model ReservationChange {              // planned M8-T9 (Q-83, Q-84): one row per applied change
+  id               String   @id @db.VarChar(32)
+  reservationId    String   @db.VarChar(32)   // → Reservation CASCADE
+  actorKind        String   @db.VarChar(10)   // GUEST | STAFF
+  actorUserId      String?  @db.VarChar(32)   // staff only
+  changeRequestId  String?  @db.VarChar(32)   // when applied by approving a request (M9-T11)
+  before / after   Json                       // stay, lines, occupancy, services (with vehicles), never personal values
+  totalBeforeMinor Int
+  totalAfterMinor  Int
+  createdAt        DateTime @default(now()) @db.Timestamptz(3)
+  @@index([reservationId, createdAt])
+}
+// Reservation gains pmsUpdatePendingSince, pmsUpdatedAt, pmsUpdatedById (planned M8-T9): set when a change is applied
+// to a reservation whose pmsEnteredAt is set; cleared by "mark change entered in hotel system".
+
+model ChangeRequest {                  // planned M9-T11 (Q-85): paid bookings whose total would change
+  id              String   @id @db.VarChar(32)
+  reservationId   String   @db.VarChar(32)
+  status          String   @db.VarChar(10)    // OPEN | APPROVED | REJECTED
+  requested       Json                        // the requested change, as previewed
+  previewTotalMinor Int
+  lastConflict    String?  @db.VarChar(60)    // error code of a failed approval re-check
+  decidedById / decidedAt / decisionReason
+  createdAt / updatedAt
+  // one OPEN request of either kind (cancellation or change) per reservation: enforced in the transaction under the reservation row lock
+  @@index([status, createdAt])
+}
+
+model SiteEvent {                      // planned M10-T0a (ADR 029): no personal data; deleted after 90 days (Q-87)
+  id            BigInt   @id @default(autoincrement())
+  occurredAt    DateTime @db.Timestamptz(3)
+  branchId      String?  @db.VarChar(32)      // null for the chooser and pages outside a branch
+  name          String   @db.VarChar(30)      // fixed list: PAGE_VIEW, STEP_VIEW, SEARCH, QUOTE, CODE_REQUESTED, PHONE_VERIFIED, BOOKING_SUBMITTED, BOOKING_CONFIRMED, CHECKOUT_REFUSED
+  funnelStep    Int?                           // 1–8 (FR-ANL)
+  path          String?  @db.VarChar(200)     // route pattern or path without query string
+  roomId        String?  @db.VarChar(32)
+  sessionId     String   @db.VarChar(32)      // random, per tab session, from the beacon
+  visitorHash   String   @db.Char(32)         // HMAC(daily salt, IP + user agent); cannot link days
+  referrerHost  String?  @db.VarChar(100)
+  utmSource / utmMedium / utmCampaign  String? @db.VarChar(60)
+  device        String?  @db.VarChar(10)      // MOBILE | TABLET | DESKTOP
+  outcome       String?  @db.VarChar(40)      // e.g. INVENTORY_UNAVAILABLE, NO_AVAILABILITY; stay dates for unmet demand
+  @@index([occurredAt])
+  @@index([branchId, occurredAt])
+  @@index([sessionId])
+}
+
+model SiteDailyTotal {                 // planned M10-T0b: kept indefinitely
+  date       DateTime @db.Date
+  branchId   String   @db.VarChar(32)         // '' for outside a branch
+  dimension  String   @db.VarChar(30)         // e.g. TOTAL, FUNNEL_STEP, DROP_OFF, EXIT_PAGE, LANDING_PAGE, SOURCE, DEVICE, LISTING, UNMET_DATE
+  key        String   @db.VarChar(200)
+  visitors   Int
+  sessions   Int
+  count      Int
+  @@id([date, branchId, dimension, key])
+}
+
+model AnalyticsSalt {                  // planned M10-T0a: one row per day; deleted when it rotates (Q-86)
+  day   DateTime @id @db.Date
+  salt  Bytes
 }
 
 model Broadcast {                      // M13 (ADR 028)

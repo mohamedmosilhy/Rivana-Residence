@@ -49,6 +49,9 @@ The threats to Rivana and the controls against them. Implemented controls for au
 | Messaging misconfiguration or abuse | An attacker or non-Admin edits the WhatsApp number or templates, or spams test messages | Admin-only `settings:edit`; audit of every change; template variables limited to an allowlist (no free-form personal data); test messages rate-limited; access token never in the browser |
 | Card data exposure | Card details touch Rivana | Hosted checkout only; no card fields, iframes, or scripts on Rivana pages; payloads stored minimally |
 | Lock exhaustion | Many parallel creates on one room type | Short transactions; `lock_timeout`; rate limits |
+| Guest change abuse *(planned, Q-83…Q-85)* | Someone with a forwarded manage link moves dates, adds units, or changes the email to take over messages; a script repeatedly changes a booking to hold and release inventory | The change preview and apply share the guest access controls (ADR 019); blocked phones are view only; the phone and the coupon cannot be changed; the old email is also told about an email change (to confirm in the M9-T10 plan); per-client and per-reservation limits on G5 and G6; every change is audited and kept in the change history; inventory is re-checked under locks; the hotel-system flag makes staff look at every change |
+| Analytics endpoint abuse *(planned, ADR 029)* | Bots flood `POST /analytics/events` to fill the database or fake traffic | Strict schema, at most 20 events, fixed event names, per-client limiter, `204` for every valid shape, bot filtering, 90-day raw retention; reports label figures as estimates of human traffic |
+| Analytics privacy *(planned, ADR 029)* | Events re-identify visitors, or personal data leaks into paths or referrers | No cookie; daily rotating salt deleted at rotation; IP never stored; query strings and referrer paths dropped (host only); no names, phones, emails, references, or tokens accepted; GPC and DNT respected |
 | **Elevation of privilege** | Receptionist changes prices, coupons, VAT, refunds, or reaches CMS | Capability matrix in use cases; CMS and commercial capabilities not granted; sweep test per role |
 | Role or branch self-assignment | A Manager edits their own assignments | Only `users:manage` (Admin) can assign |
 | SQL injection | Raw availability SQL | Prisma tagged `$queryRaw` only; no string concatenation; lint rule banning `$queryRawUnsafe` |
@@ -95,6 +98,8 @@ The threats to Rivana and the controls against them. Implemented controls for au
 - Coupon tests: refusal reasons, limit race (C-11), rate limit on attempts.
 - Broadcast audience tests: every exclusion rule (T-MKT).
 - Bundle check: no Paymob or WhatsApp secret in client JavaScript.
+- Guest change tests *(planned M9-T10, T11)*: deadline, open request, blocked phone, stale version, forbidden keys (phone, branch, payment method, coupon), another phone's session, cross-branch, rate limits, concurrent change against a booking for the last unit (C-16, C-17).
+- Analytics tests *(planned M10-T0a)*: no IP, query string, or personal value is stored (captured rows), GPC drops events, limiter `429`, unknown fields `422`.
 
 ## Residual risks
 
@@ -103,3 +108,4 @@ The threats to Rivana and the controls against them. Implemented controls for au
 - A determined abuser with many real WhatsApp numbers can still make fake pay-at-hotel bookings, which are now confirmed immediately; per-phone caps, blocking, and staff cancellation limit the damage.
 - Paymob account compromise or misconfigured callback URL; mitigated by secret management, HMAC, and reconciliation.
 - Staff accounts are a high-value target. TOTP is recommended but is an approval item.
+- Anyone holding a forwarded manage link can change a pay-at-hotel booking at once (Q-84), not only request cancellation. The guest is told of every change by email and WhatsApp, and staff see it in the change history and the hotel-system flag.
