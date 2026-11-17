@@ -19,6 +19,7 @@ const select = {
   priceUnit: true,
   priceMinor: true,
   childPriceMinor: true,
+  maxVehicles: true,
   currency: true,
   active: true,
   description: true,
@@ -45,6 +46,7 @@ function record(row: Row): ServiceOfferingRecord {
             amountMinor: row.childPriceMinor,
             currency: row.currency,
           }),
+    maxVehicles: row.maxVehicles,
     active: row.active,
     description: row.description,
     updatedAt: row.updatedAt,
@@ -84,11 +86,11 @@ export class PrismaServiceOfferingRepository
       const inserted = await this.client.$queryRaw<Readonly<{ id: string }>[]>(
         Prisma.sql`
           INSERT INTO "ServiceOffering"
-            (id, "branchId", kind, "priceUnit", "priceMinor",
+            (id, "branchId", kind, "maxVehicles", "priceUnit", "priceMinor",
              "childPriceMinor", currency, active, description,
              "updatedAt", "updatedById")
           VALUES (${write.id}, ${write.branchId},
-            ${write.kind}::"ServiceKind", ${input.priceUnit}::"ServicePriceUnit",
+            ${write.kind}::"ServiceKind", ${input.maxVehicles}, ${input.priceUnit}::"ServicePriceUnit",
             ${input.price.amountMinor}, ${input.childPrice?.amountMinor ?? null},
             ${input.price.currency}, ${input.active}, ${input.description},
             ${write.now()}, ${write.updatedById})
@@ -115,6 +117,7 @@ export class PrismaServiceOfferingRepository
       }
       const before = record(current);
       const same =
+        current.maxVehicles === input.maxVehicles &&
         current.priceUnit === input.priceUnit &&
         current.priceMinor === input.price.amountMinor &&
         current.childPriceMinor === (input.childPrice?.amountMinor ?? null) &&
@@ -124,6 +127,7 @@ export class PrismaServiceOfferingRepository
       const updated = await this.client.serviceOffering.update({
         where: { id },
         data: {
+          maxVehicles: input.maxVehicles,
           priceUnit: input.priceUnit,
           priceMinor: input.price.amountMinor,
           childPriceMinor: input.childPrice?.amountMinor ?? null,

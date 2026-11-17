@@ -161,7 +161,7 @@ Better Auth owns user, account, session, and verification records. Rivana adds a
 
 ### Commercial rules (planned, ADR 027)
 
-- `ServiceOffering` (`branchId`, `kind` `BREAKFAST|AIRPORT_TRANSFER`, `priceUnit`, `priceMinor`, `childPriceMinor?`, `active`; planned `maxVehicles` for the transfer, M8-T3b). Price unit configurable per offering (SV-1…5; `PER_VEHICLE` planned, Q-82).
+- `ServiceOffering` (`branchId`, `kind` `BREAKFAST|AIRPORT_TRANSFER`, `priceUnit`, `priceMinor`, `childPriceMinor?`, `active`, `maxVehicles` for the transfer, M8-T3b). Price unit configurable per offering (SV-1…5; `PER_VEHICLE` implemented in M8-T3b, Q-82).
 - `Coupon` (`code`, `kind` `PERCENT|FIXED`, value, validity, total and per-phone limits, branch scope, `active`) and `CouponRedemption` (coupon, reservation, phone). Rules CP-1…7.
 - `CommercialSettings` (`vatRateBasisPoints`, never null, seeded at 1500). Rules TX-1…5.
 - `QuoteCalculator` (pure): accommodation + services − discount = taxable; VAT half-up once; total.
@@ -210,7 +210,7 @@ Reservation
   guest: GuestContact                  (contact as given for this stay)
   rooms: ReservationRoom[1..n]        (several units, same stay; Q-39)
     roomTypeId, occupancy, physicalRoomId?, nights: NightPrice[]
-  services: ReservationService[0..2]   (kind, unit, adult and child quantities, amountMinor; planned vehicles for the transfer, SV-5)
+  services: ReservationService[0..2]   (kind, unit, adult and child quantities, amountMinor; vehicles for the transfer, SV-5, M8-T3b)
   coupon?: { couponId, code, kind, value }
   price: accommodation, services, subtotal, discount, taxable, vatRateBasisPoints, vat, total (Money)
   paymentMethod: PAY_AT_HOTEL | PAYMOB (Q-37)

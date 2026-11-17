@@ -27,6 +27,11 @@ const m5 = migrations.filter((name) => name >= M5_START && name < M6_START);
 const m6 = migrations.filter((name) => name >= M6_START && name < M7_START);
 const m7 = migrations.filter((name) => name >= M7_START && name < M8_START);
 const m8 = migrations.filter((name) => name >= M8_START);
+// M8-T3b (2026-11-17) adds the transfer car migrations after `reservations`;
+// their populated upgrade is covered by transfer-vehicles-migration.test.ts.
+const M8_T3B_START = "20261117";
+const m8Reservations = m8.filter((name) => name < M8_T3B_START);
+const m8TransferVehicles = m8.filter((name) => name >= M8_T3B_START);
 
 const base = testDatabaseUrl();
 const scratchName = base.database.replace(/_test$/, "_m4_backfill_test");
@@ -295,7 +300,11 @@ describe("branches_and_staff_roles migration on M3 data", () => {
   });
 
   it("T-DB-6: applies reservations to populated M7 data without changing existing rows", async () => {
-    expect(m8).toEqual(["20261115120000_reservations"]);
+    expect(m8).toEqual([
+      "20261115120000_reservations",
+      "20261117120000_transfer_vehicle_unit",
+      "20261117120100_transfer_vehicles",
+    ]);
     await db.query(`
       INSERT INTO "ServiceOffering" (id,"branchId",kind,"priceUnit","priceMinor","updatedAt") VALUES ('m8-service','${DEFAULT_BRANCH_ID}','BREAKFAST','PER_BOOKING',1000,now());
       INSERT INTO "Coupon" (id,code,kind,"percentBasisPoints","updatedAt") VALUES ('m8-coupon','UPGRADE','PERCENT',1000,now());
@@ -318,7 +327,7 @@ describe("branches_and_staff_roles migration on M3 data", () => {
       return result;
     };
     const before = await snapshot();
-    await apply(m8);
+    await apply(m8Reservations);
     expect(await snapshot()).toEqual(before);
     expect((await db.query('SELECT * FROM "WhatsAppSettings"')).rows).toEqual([
       expect.objectContaining({
@@ -343,6 +352,15 @@ describe("branches_and_staff_roles migration on M3 data", () => {
         (await db.query(`SELECT count(*)::int AS n FROM "${table}"`)).rows,
       ).toEqual([{ n: 0 }]);
     }
+    // Then the M8-T3b migrations, so the drift check sees the whole schema.
+    await apply(m8TransferVehicles);
+    expect(
+      (
+        await db.query(
+          `SELECT "maxVehicles" FROM "ServiceOffering" WHERE id = 'm8-service'`,
+        )
+      ).rows,
+    ).toEqual([{ maxVehicles: null }]);
   });
 
   it("leaves no drift between the migrated database and the Prisma schema", () => {

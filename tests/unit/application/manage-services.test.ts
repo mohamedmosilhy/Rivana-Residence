@@ -54,6 +54,7 @@ function build(stored: ServiceOfferingRecord[] = []) {
       const after: ServiceOfferingRecord = {
         id: "service-new",
         kind: write.kind,
+        maxVehicles: write.input.maxVehicles ?? null,
         priceUnit: write.input.priceUnit,
         price: write.input.price,
         childPrice: write.input.childPrice,
@@ -93,6 +94,7 @@ describe("ManageServices.list (API-S35)", () => {
       {
         id: "service-1",
         kind: "BREAKFAST",
+        maxVehicles: null,
         priceUnit: "PER_PERSON",
         price: usd(1_200),
         childPrice: null,
@@ -147,6 +149,7 @@ describe("ManageServices.set (API-S36)", () => {
         kind: "BREAKFAST",
         before: null,
         after: {
+          maxVehicles: null,
           priceUnit: "PER_PERSON",
           price: amount(1_200),
           childPrice: amount(600),

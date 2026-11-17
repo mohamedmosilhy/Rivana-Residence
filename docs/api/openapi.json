@@ -2219,10 +2219,41 @@
           "services": {
             "type": "array",
             "items": {
-              "type": "string",
-              "enum": [
-                "BREAKFAST",
-                "AIRPORT_TRANSFER"
+              "anyOf": [
+                {
+                  "type": "string",
+                  "enum": [
+                    "BREAKFAST",
+                    "AIRPORT_TRANSFER"
+                  ]
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "kind": {
+                      "type": "string",
+                      "enum": [
+                        "BREAKFAST",
+                        "AIRPORT_TRANSFER"
+                      ]
+                    },
+                    "vehicles": {
+                      "type": "integer",
+                      "minimum": 1,
+                      "maximum": 10,
+                      "description": "Airport transfer only; cars needed, default 1."
+                    },
+                    "details": {
+                      "type": "string",
+                      "maxLength": 300,
+                      "description": "Optional plain text, such as a flight number and time."
+                    }
+                  },
+                  "required": [
+                    "kind"
+                  ],
+                  "additionalProperties": false
+                }
               ]
             },
             "description": "Only the services the guest chose; each at most once."
@@ -2326,13 +2357,26 @@
                     "AIRPORT_TRANSFER"
                   ]
                 },
+                "vehicles": {
+                  "anyOf": [
+                    {
+                      "type": "integer",
+                      "minimum": 1,
+                      "maximum": 10
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
                 "unit": {
                   "type": "string",
                   "enum": [
                     "PER_BOOKING",
                     "PER_NIGHT",
                     "PER_PERSON",
-                    "PER_PERSON_PER_NIGHT"
+                    "PER_PERSON_PER_NIGHT",
+                    "PER_VEHICLE"
                   ]
                 },
                 "price": {
@@ -2380,6 +2424,7 @@
               },
               "required": [
                 "kind",
+                "vehicles",
                 "unit",
                 "price",
                 "childPrice",
@@ -3841,6 +3886,18 @@
               "AIRPORT_TRANSFER"
             ]
           },
+          "maxVehicles": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 10
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "priceUnit": {
             "anyOf": [
               {
@@ -3849,7 +3906,8 @@
                   "PER_BOOKING",
                   "PER_NIGHT",
                   "PER_PERSON",
-                  "PER_PERSON_PER_NIGHT"
+                  "PER_PERSON_PER_NIGHT",
+                  "PER_VEHICLE"
                 ]
               },
               {
@@ -3896,6 +3954,7 @@
         },
         "required": [
           "kind",
+          "maxVehicles",
           "priceUnit",
           "price",
           "childPrice",
@@ -3924,13 +3983,27 @@
       "ServiceOfferingInput": {
         "type": "object",
         "properties": {
+          "maxVehicles": {
+            "description": "AIRPORT_TRANSFER only: the most cars a guest may choose, 1 to 10. This PUT replaces the whole offering, so an omitted or null value stores 3. Refused for BREAKFAST.",
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 10
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "priceUnit": {
             "type": "string",
             "enum": [
               "PER_BOOKING",
               "PER_NIGHT",
               "PER_PERSON",
-              "PER_PERSON_PER_NIGHT"
+              "PER_PERSON_PER_NIGHT",
+              "PER_VEHICLE"
             ]
           },
           "price": {

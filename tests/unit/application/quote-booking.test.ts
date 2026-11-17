@@ -45,6 +45,7 @@ function offering(
   return {
     id: `svc-${kind}`,
     kind,
+    maxVehicles: kind === "AIRPORT_TRANSFER" ? 3 : null,
     priceUnit,
     price: usd(price),
     childPrice: childPrice === null ? null : usd(childPrice),

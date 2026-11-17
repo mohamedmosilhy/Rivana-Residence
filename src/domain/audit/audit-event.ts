@@ -19,6 +19,7 @@ type RatePeriodSnapshot = Readonly<{
 
 /** Prices and flags only; the free text description is never copied. */
 type ServiceSnapshot = Readonly<{
+  maxVehicles?: number | null;
   priceUnit: string;
   price: AuditMoney;
   childPrice: AuditMoney | null;

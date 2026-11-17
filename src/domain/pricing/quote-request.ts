@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { serviceInputSchema, type ServiceInput } from "@/domain/services";
 
 import { issuesFromZod, type DomainIssue } from "@/domain/shared/domain-error";
 import { LocalDate } from "@/domain/shared/local-date";
@@ -54,7 +55,7 @@ const requestSchema = z
       )
       .min(1, "Choose at least one unit.")
       .max(QUOTE_MAX_LINES, `Request at most ${QUOTE_MAX_LINES} units.`),
-    services: z.array(z.string()).max(10, "Send fewer services."),
+    services: z.array(serviceInputSchema).max(10, "Send fewer services."),
     // No length limit here: an over long or odd code is a normal refusal
     // (COUPON_INVALID NOT_FOUND), not a different error shape. The request
     // body size cap already bounds it.
@@ -68,7 +69,7 @@ export type QuoteRequest = Readonly<{
   stay: StayRange;
   lines: readonly Readonly<{ roomSlug: string; occupancy: Occupancy }>[];
   /** Raw kinds; `selectRequestedServices` validates them against offerings. */
-  services: readonly string[];
+  services: readonly ServiceInput[];
   couponCode: string | undefined;
   phone: string | undefined;
 }>;

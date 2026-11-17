@@ -43,6 +43,7 @@ describe("M7 create only demo commercial seed", () => {
         expect.objectContaining({
           branchId: "demo",
           kind: "AIRPORT_TRANSFER",
+          maxVehicles: 3,
           priceUnit: "PER_BOOKING",
           priceMinor: 3000,
           childPriceMinor: null,
@@ -89,6 +90,10 @@ describe("M7 create only demo commercial seed", () => {
     await seedDemoCommercial(client);
     await client.serviceOffering.updateMany({
       data: { priceMinor: 2345, active: false, description: "Edited" },
+    });
+    await client.serviceOffering.updateMany({
+      where: { kind: "AIRPORT_TRANSFER" },
+      data: { maxVehicles: 7 },
     });
     await client.coupon.updateMany({
       data: {

@@ -126,6 +126,7 @@ export async function seedDemoCommercial(client: PrismaClient) {
           id: "vyxzpjrqblkqwznstafmgcde",
           branchId: branch.id,
           kind: "AIRPORT_TRANSFER",
+          maxVehicles: 3,
           priceUnit: "PER_BOOKING",
           priceMinor: 3000,
           active: true,

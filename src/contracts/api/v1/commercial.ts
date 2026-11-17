@@ -12,10 +12,21 @@ export const SERVICE_PRICE_UNIT_VALUES = [
   "PER_NIGHT",
   "PER_PERSON",
   "PER_PERSON_PER_NIGHT",
+  "PER_VEHICLE",
 ] as const;
 
 export const ServiceOfferingInput = z
   .object({
+    maxVehicles: z
+      .number()
+      .int()
+      .min(1)
+      .max(10)
+      .nullable()
+      .optional()
+      .describe(
+        "AIRPORT_TRANSFER only: the most cars a guest may choose, 1 to 10. This PUT replaces the whole offering, so an omitted or null value stores 3. Refused for BREAKFAST.",
+      ),
     priceUnit: z.enum(SERVICE_PRICE_UNIT_VALUES),
     price: authoredAmount.describe("The adult price."),
     childPrice: authoredAmount
@@ -29,6 +40,7 @@ export const ServiceOfferingInput = z
 
 export const ServiceOffering = z.object({
   kind: z.enum(SERVICE_KIND_VALUES),
+  maxVehicles: z.number().int().min(1).max(10).nullable(),
   priceUnit: z.enum(SERVICE_PRICE_UNIT_VALUES).nullable(),
   price: Money.nullable(),
   childPrice: Money.nullable(),

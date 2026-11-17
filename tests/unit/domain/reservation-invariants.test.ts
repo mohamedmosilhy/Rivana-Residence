@@ -252,6 +252,51 @@ describe("R-1…R-10 pure reservation invariants (trusted transaction facts supp
       validate(changePrice(record, { serviceLines: [service, service] })),
     ).toThrow(DomainValidationError);
   });
+  it("SV-5 requires the stored car count of a transfer and refuses one on breakfast", () => {
+    const record = fixture();
+    const quote = QuoteCalculator.compute({
+      lines: [
+        {
+          nights: record.lines[0]!.nights.map((entry) => ({
+            ...entry,
+            source: "BASE",
+            periodId: null,
+            label: null,
+          })),
+        },
+      ],
+      guests: { adults: 2, children: 1 },
+      services: [
+        {
+          kind: "BREAKFAST",
+          unit: "PER_PERSON_PER_NIGHT",
+          price: money(100),
+          childPrice: money(50),
+        },
+        {
+          kind: "AIRPORT_TRANSFER",
+          unit: "PER_VEHICLE",
+          price: money(4000),
+          childPrice: null,
+          vehicles: 2,
+        },
+      ],
+      coupon: { kind: "PERCENT", percentBasisPoints: 1000 },
+      vatRateBasisPoints: 1500,
+    });
+    const priced = changePrice(record, quote);
+    const [breakfast, transfer] = priced.snapshot!.serviceLines;
+    expect(transfer).toMatchObject({ vehicles: 2, amountMinor: 8000 });
+    expect(() => validate(priced)).not.toThrow();
+    for (const lines of [
+      [breakfast!, { ...transfer!, vehicles: null }],
+      [breakfast!, { ...transfer!, vehicles: 3 }],
+      [{ ...breakfast!, vehicles: 1 }, transfer!],
+    ])
+      expect(() =>
+        validate(changePrice(priced, { serviceLines: lines })),
+      ).toThrow(DomainValidationError);
+  });
   it("allows wholly unpriced external snapshots but never partial pricing or unpriced website/staff", () => {
     const record = fixture();
     const line = record.lines[0]!;

@@ -44,6 +44,7 @@ enum ServicePriceUnit {
   PER_NIGHT
   PER_PERSON
   PER_PERSON_PER_NIGHT
+  PER_VEHICLE // M8-T3b, airport transfer only (Q-82)
 }
 
 enum CouponKind {
@@ -689,6 +690,7 @@ model ServiceOffering {
   currency        String           @default("USD") @db.Char(3)
   active          Boolean          @default(false)
   description     String?          @db.VarChar(300)
+  maxVehicles     Int? // AIRPORT_TRANSFER only, 1–10; null for BREAKFAST (transfer_vehicles checks, Q-82)
   updatedAt       DateTime         @updatedAt @db.Timestamptz(3)
   updatedById     String?          @db.VarChar(32)
 
@@ -911,6 +913,7 @@ model ReservationService {
   adultQuantity   Int
   childQuantity   Int
   amountMinor     Int
+  vehicles        Int? // cars for AIRPORT_TRANSFER (1–10, every unit); null for BREAKFAST (Q-82)
   details         String?          @db.VarChar(300) // e.g. flight number (Q-56), plain text
   reservation     Reservation      @relation(fields: [reservationId], references: [id], onDelete: Cascade, onUpdate: Restrict)
 

@@ -10,6 +10,54 @@ const ServicePriceUnitValue = z.enum([
   "PER_NIGHT",
   "PER_PERSON",
   "PER_PERSON_PER_NIGHT",
+  "PER_VEHICLE",
+]);
+
+// SV-5 car count. Checked by hand, not with z.number().int(): Zod 4 treats a
+// type or .int() failure as a mismatch of the whole union branch, which would
+// report the item ("Invalid input" at services.N) instead of this field. The
+// metadata keeps the OpenAPI shape an integer from 1 to 10.
+const CarCount = z
+  .unknown()
+  .superRefine((value, context) => {
+    if (value === undefined) return;
+    if (typeof value !== "number" || !Number.isInteger(value))
+      context.addIssue({
+        code: "custom",
+        message: "Choose a whole number of cars.",
+      });
+    else if (value < 1 || value > 10)
+      context.addIssue({
+        code: "custom",
+        message: "Choose from 1 to 10 cars.",
+      });
+  })
+  .meta({
+    type: "integer",
+    minimum: 1,
+    maximum: 10,
+    description: "Airport transfer only; cars needed, default 1.",
+  });
+
+/** A chosen service: a bare kind, or an object with the transfer's cars. */
+export const ServiceInput = z.union([
+  ServiceKindValue,
+  z
+    .object({
+      kind: ServiceKindValue,
+      vehicles: CarCount.optional(),
+      details: z
+        .string()
+        .trim()
+        .max(300)
+        .refine(
+          (value) => !/[\p{Cc}\p{Cf}]/u.test(value),
+          "Use plain text without control characters.",
+        )
+        .describe("Optional plain text, such as a flight number and time.")
+        .optional(),
+    })
+    .strict(),
 ]);
 
 export const QuoteRequest = z
@@ -29,7 +77,7 @@ export const QuoteRequest = z
       .max(5)
       .describe("One entry per unit; repeat a listing for several units."),
     services: z
-      .array(ServiceKindValue)
+      .array(ServiceInput)
       .describe("Only the services the guest chose; each at most once."),
     couponCode: z
       .string()
@@ -64,6 +112,7 @@ const QuoteLine = z.object({
 
 const QuoteServiceLine = z.object({
   kind: ServiceKindValue,
+  vehicles: z.number().int().min(1).max(10).nullable(),
   unit: ServicePriceUnitValue,
   price: Money.describe("The adult (or only) price."),
   childPrice: Money.nullable(),

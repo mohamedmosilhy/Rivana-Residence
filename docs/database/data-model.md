@@ -31,7 +31,7 @@ The implemented schema is `prisma/schema.prisma` (9 migrations; M4 added `…_st
 | Reservations | `Reservation`, `ReservationRoom`, `ReservationNight`, `ReservationService`, `CouponRedemption`, `BranchSyncCheckpoint` | Storage implemented (M8-T1), domain rules (M8-T2), and reservation repository plus consumption reader (M8-T3); reservation workflows remain planned |
 | Payments | `Payment`, `PaymentEvent`, `CancellationRequest`, `ChangeRequest` | Planned (M9; `ChangeRequest` M9-T11, Q-85) |
 | Reservation changes | `ReservationChange`; columns `Reservation.pmsUpdatePendingSince`, `pmsUpdatedAt`, `pmsUpdatedById` | Planned (M8-T9, Q-83, Q-84) |
-| Transfer cars | `ServicePriceUnit.PER_VEHICLE`, `ServiceOffering.maxVehicles`, `ReservationService.vehicles` | Planned (M8-T3b, Q-82) |
+| Transfer cars | `ServicePriceUnit.PER_VEHICLE`, `ServiceOffering.maxVehicles`, `ReservationService.vehicles` | Implemented (M8-T3b, Q-82): migrations `20261117120000_transfer_vehicle_unit` (enum value, on its own so the next migration can use it) and `20261117120100_transfer_vehicles` (columns, backfill of 3 cars per transfer offering and 1 car per stored transfer line, checks `ServiceOffering_vehicles_check`, `ServiceOffering_vehicle_unit_check`, `ReservationService_vehicles_check`, `ReservationService_vehicle_unit_check`) |
 | Website analytics | `SiteEvent`, `SiteDailyTotal`, `AnalyticsSalt` | Planned (M10-T0a, T0b; ADR 029, Q-86, Q-87) |
 | Guests | `Guest` (verified phone profiles, blocking, marketing consent), `PhoneVerification` | Storage implemented (M8-T1); verification and guest-access workflows remain planned |
 | Messaging settings | `WhatsAppSettings`, `WhatsAppTemplate` (Admin-managed, Q-67) | Storage implemented (M8-T1), empty settings singleton; setup API and UI remain planned (T4) |
@@ -218,7 +218,7 @@ enum PaymentMethod      { PAY_AT_HOTEL PAYMOB }
 enum ReservationPaymentStatus { NOT_REQUIRED AWAITING PAID REFUND_PENDING REFUNDED }
 enum NightRateSource    { BASE PERIOD MANUAL }
 enum ServiceKind        { BREAKFAST AIRPORT_TRANSFER }
-enum ServicePriceUnit   { PER_BOOKING PER_NIGHT PER_PERSON PER_PERSON_PER_NIGHT }   // owner decision 2026-11-11 (Q-49); planned PER_VEHICLE (M8-T3b, Q-82)
+enum ServicePriceUnit   { PER_BOOKING PER_NIGHT PER_PERSON PER_PERSON_PER_NIGHT }   // owner decision 2026-11-11 (Q-49); PER_VEHICLE appended by M8-T3b (Q-82)
 enum CouponKind         { PERCENT FIXED }
 enum PaymentStatus      { INITIATED SUCCEEDED FAILED REFUND_PENDING REFUNDED REFUND_FAILED }
 enum CancellationRequestStatus { OPEN APPROVED REJECTED REFUND_PENDING REFUND_FAILED COMPLETED }
@@ -442,7 +442,7 @@ model ReservationService {             // one line per service with its unit and
   priceMinor    Int                         // adult price used
   childPriceMinor Int?                      // child price used, null = children not charged
   adults / children / nights / adultQuantity / childQuantity  Int   // the multipliers that produced amountMinor
-  vehicles      Int?                        // planned M8-T3b (Q-82): AIRPORT_TRANSFER only, CHECK 1–10; null for BREAKFAST
+  vehicles      Int?                        // M8-T3b (Q-82): required 1–10 for AIRPORT_TRANSFER (every unit), null for BREAKFAST; PER_VEHICLE lines have adultQuantity = vehicles, childQuantity 0, no child price
   amountMinor   Int
   details       String?     @db.VarChar(300) // e.g. flight number (Q-56), plain text
   @@id([reservationId, kind])
@@ -458,7 +458,7 @@ model ServiceOffering {
   currency    String      @default("USD") @db.Char(3)   // CHECK = 'USD'
   active      Boolean     @default(false)
   description String?     @db.VarChar(300)
-  maxVehicles Int?                             // planned M8-T3b (Q-82): AIRPORT_TRANSFER only, default 3, CHECK 1–10; PER_VEHICLE only for AIRPORT_TRANSFER, no child price
+  maxVehicles Int?                             // M8-T3b (Q-82): required 1–10 for AIRPORT_TRANSFER (S36 stores 3 when omitted), null for BREAKFAST; PER_VEHICLE only for AIRPORT_TRANSFER, no child price
   updatedAt / updatedById
   @@unique([branchId, kind])
 }

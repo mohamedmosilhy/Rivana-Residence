@@ -77,6 +77,7 @@ function map(row: Row): StoredReservation {
                     },
             serviceLines: row.services.map((line) => ({
               kind: line.kind,
+              vehicles: line.vehicles,
               details: line.details,
               unit: line.priceUnit,
               priceMinor: line.priceMinor,
@@ -242,6 +243,7 @@ export class PrismaReservationRepository implements ReservationRepository {
             data: snapshot.serviceLines.map((line) => ({
               reservationId: input.id,
               kind: serviceKind(line.kind),
+              vehicles: line.vehicles,
               details: line.details,
               priceUnit: line.unit,
               priceMinor: line.priceMinor,

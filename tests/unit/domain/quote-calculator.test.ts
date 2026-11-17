@@ -201,6 +201,7 @@ describe("QuoteCalculator (AC-1, AC-2, T-QUOTE-1…10)", () => {
       services: [
         {
           kind: "BREAKFAST",
+          vehicles: null,
           unit: "PER_PERSON_PER_NIGHT",
           price: usd(1000),
           childPrice: usd(500),
@@ -212,6 +213,7 @@ describe("QuoteCalculator (AC-1, AC-2, T-QUOTE-1…10)", () => {
     expect(quote.serviceLines).toEqual([
       {
         kind: "BREAKFAST",
+        vehicles: null,
         unit: "PER_PERSON_PER_NIGHT",
         priceMinor: 1000,
         childPriceMinor: 500,
@@ -224,6 +226,7 @@ describe("QuoteCalculator (AC-1, AC-2, T-QUOTE-1…10)", () => {
       },
       {
         kind: "AIRPORT_TRANSFER",
+        vehicles: 1,
         unit: "PER_BOOKING",
         priceMinor: 2500,
         childPriceMinor: null,
@@ -250,6 +253,7 @@ describe("QuoteCalculator (AC-1, AC-2, T-QUOTE-1…10)", () => {
         services: [
           {
             kind: "BREAKFAST",
+            vehicles: null,
             unit: "PER_PERSON",
             price: usd(1000),
             childPrice: null,
@@ -274,6 +278,7 @@ describe("QuoteCalculator (AC-1, AC-2, T-QUOTE-1…10)", () => {
         services: [
           {
             kind: "BREAKFAST",
+            vehicles: null,
             unit: "PER_NIGHT",
             price: usd(700),
             childPrice: null,

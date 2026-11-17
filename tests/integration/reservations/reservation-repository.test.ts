@@ -98,6 +98,7 @@ describe("reservation aggregate storage", () => {
       serviceLines: [
         {
           kind: "AIRPORT_TRANSFER",
+          vehicles: 1,
           unit: "PER_BOOKING" as const,
           priceMinor: 100,
           childPriceMinor: null,
@@ -436,3 +437,60 @@ it("keeps guest data and token hashes out of captured storage output and conflic
     for (const spy of spies) spy.mockRestore();
   }
 });
+
+it.each(["PER_VEHICLE", "PER_BOOKING"] as const)(
+  "T-SVC-VEH: snapshots the car count for %s independently of current offerings",
+  async (unit) => {
+    const input = reservationInput(roomId);
+    const quote = QuoteCalculator.compute({
+      lines: input.lines.map((line) => ({
+        nights: line.nights.map(({ night, amount }) => ({
+          night,
+          amount,
+          source: null,
+          periodId: null,
+          label: null,
+        })),
+      })),
+      guests: { adults: 2, children: 0 },
+      services: [
+        {
+          kind: "AIRPORT_TRANSFER",
+          unit,
+          price: Money.create({ amountMinor: 4000, currency: "USD" }),
+          childPrice: null,
+          vehicles: 2,
+        },
+      ],
+      vatRateBasisPoints: 1500,
+    });
+    const snapshot = {
+      ...quote,
+      couponValue: null,
+      serviceLines: quote.serviceLines.map((line) => ({
+        ...line,
+        details: "MS123",
+      })),
+    };
+    const result = await repository.insert({ ...input, snapshot });
+    expect(result).toMatchObject({
+      ok: true,
+      value: {
+        snapshot: {
+          serviceLines: [
+            {
+              vehicles: 2,
+              amountMinor: unit === "PER_VEHICLE" ? 8000 : 4000,
+              details: "MS123",
+            },
+          ],
+        },
+      },
+    });
+    expect(await repository.findById(TEST_BRANCH_ID, input.id)).toMatchObject({
+      snapshot: { serviceLines: [{ vehicles: 2 }] },
+    });
+    const stored = await client.reservationService.findFirstOrThrow();
+    expect(stored.vehicles).toBe(2);
+  },
+);

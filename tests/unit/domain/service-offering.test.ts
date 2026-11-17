@@ -3,12 +3,14 @@ import { describe, expect, it } from "vitest";
 import {
   SERVICE_PRICE_MAX_MINOR,
   parseServiceKind,
-  parseServiceOfferingInput,
+  parseServiceOfferingInput as parseOffering,
   selectRequestedServices,
   type ServiceOffering,
 } from "@/domain/services";
 import { Money } from "@/domain/shared/money";
 
+const parseServiceOfferingInput = (input: unknown) =>
+  parseOffering(input, "BREAKFAST");
 const usd = (amountMinor: number) => ({ amountMinor, currency: "USD" });
 const money = (amountMinor: number) =>
   Money.create({ amountMinor, currency: "USD" });
@@ -28,6 +30,7 @@ describe("parseServiceOfferingInput (SV-1, S36 body)", () => {
         ok: true,
         value: {
           priceUnit,
+          maxVehicles: null,
           price: money(2500),
           childPrice: null,
           active: true,
@@ -51,6 +54,7 @@ describe("parseServiceOfferingInput (SV-1, S36 body)", () => {
         ok: true,
         value: {
           priceUnit,
+          maxVehicles: null,
           price: money(1000),
           childPrice: money(500),
           active: false,
@@ -196,6 +200,7 @@ describe("selectRequestedServices (SV-2, T-SVC-1…2)", () => {
     unit: "PER_PERSON_PER_NIGHT",
     price: money(1000),
     childPrice: money(500),
+    maxVehicles: null,
     active: true,
   };
   const transfer: ServiceOffering = {
@@ -203,19 +208,29 @@ describe("selectRequestedServices (SV-2, T-SVC-1…2)", () => {
     unit: "PER_BOOKING",
     price: money(2500),
     childPrice: null,
+    maxVehicles: 3,
     active: true,
   };
 
   it("T-SVC-1: returns only the requested services, in request order", () => {
     expect(
       selectRequestedServices(["AIRPORT_TRANSFER"], [breakfast, transfer]),
-    ).toEqual({ ok: true, services: [transfer] });
+    ).toEqual({
+      ok: true,
+      services: [{ ...transfer, vehicles: 1, details: null }],
+    });
     expect(
       selectRequestedServices(
         ["AIRPORT_TRANSFER", "BREAKFAST"],
         [breakfast, transfer],
       ),
-    ).toEqual({ ok: true, services: [transfer, breakfast] });
+    ).toEqual({
+      ok: true,
+      services: [
+        { ...transfer, vehicles: 1, details: null },
+        { ...breakfast, vehicles: null, details: null },
+      ],
+    });
   });
 
   it("T-SVC-1b: nothing requested adds nothing, even with active offerings", () => {
@@ -265,7 +280,10 @@ describe("selectRequestedServices (SV-2, T-SVC-1…2)", () => {
         ["AIRPORT_TRANSFER"],
         [{ ...breakfast, active: false }, transfer],
       ),
-    ).toEqual({ ok: true, services: [transfer] });
+    ).toEqual({
+      ok: true,
+      services: [{ ...transfer, vehicles: 1, details: null }],
+    });
   });
 
   it.each([

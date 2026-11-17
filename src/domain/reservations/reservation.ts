@@ -295,6 +295,7 @@ export function validateReservationPriceSnapshot(
     guests: { adults, children },
     services: snapshot.serviceLines.map((service) => ({
       kind: service.kind,
+      vehicles: service.vehicles,
       unit: service.unit,
       price: Money.create({ amountMinor: service.priceMinor, currency: "USD" }),
       childPrice:
@@ -323,6 +324,13 @@ export function validateReservationPriceSnapshot(
   }
   for (const [index, service] of snapshot.serviceLines.entries()) {
     const expected = computed.serviceLines[index]!;
+    // A stored transfer line must name its cars; the recomputation defaults
+    // a missing count to one car, so a null count never matches it.
+    if (service.vehicles !== expected.vehicles)
+      invalid(
+        `services.${index}.vehicles`,
+        "The stored car count must match the service.",
+      );
     for (const key of [
       "adults",
       "children",

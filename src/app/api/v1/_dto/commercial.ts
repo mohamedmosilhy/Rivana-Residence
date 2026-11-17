@@ -18,6 +18,7 @@ export function serviceOffering(
   if (!record) {
     return {
       kind,
+      maxVehicles: null,
       priceUnit: null,
       price: null,
       childPrice: null,
@@ -29,6 +30,7 @@ export function serviceOffering(
   return {
     kind,
     priceUnit: record.priceUnit,
+    maxVehicles: record.maxVehicles,
     price: money(record.price),
     childPrice: record.childPrice ? money(record.childPrice) : null,
     active: record.active,

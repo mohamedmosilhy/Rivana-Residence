@@ -37,6 +37,7 @@ const money = (value: Money) => ({
 
 function snapshot(record: ServiceOfferingRecord) {
   return {
+    maxVehicles: record.maxVehicles,
     priceUnit: record.priceUnit,
     price: money(record.price),
     childPrice: record.childPrice ? money(record.childPrice) : null,
@@ -89,7 +90,7 @@ export class ManageServices {
     if (!access.ok) return access;
     const kind = parseServiceKind(kindInput);
     if (!kind.ok) return invalid("Choose a supported service.", kind.issues);
-    const parsed = parseServiceOfferingInput(input);
+    const parsed = parseServiceOfferingInput(input, kind.value);
     if (!parsed.ok) {
       return invalid("The service needs attention.", parsed.issues);
     }

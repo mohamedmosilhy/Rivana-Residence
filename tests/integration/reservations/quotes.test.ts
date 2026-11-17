@@ -115,6 +115,7 @@ async function listing(
 async function service(
   kind: "BREAKFAST" | "AIRPORT_TRANSFER",
   priceUnit:
+    | "PER_VEHICLE"
     | "PER_BOOKING"
     | "PER_NIGHT"
     | "PER_PERSON"
@@ -126,6 +127,7 @@ async function service(
   await client.serviceOffering.create({
     data: {
       id: `p6-${kind.toLowerCase()}`,
+      maxVehicles: kind === "AIRPORT_TRANSFER" ? 3 : null,
       branchId: TEST_BRANCH_ID,
       kind,
       priceUnit,
@@ -690,4 +692,68 @@ it("P6 refuses a quote when persisted sales leave too few units", async () => {
     ),
   ).toMatchObject({ available: false, quote: null, unavailableLines: [0, 1] });
   expect(await ok(quoteRequest())).toMatchObject({ available: true });
+});
+
+it("T-SVC-VEH: P6 prices car objects, retains bare requests, and reports indexed count errors", async () => {
+  await listing("garden", 8000);
+  await service("AIRPORT_TRANSFER", "PER_VEHICLE", 4000);
+  expect(
+    await ok(
+      quoteRequest({
+        services: [{ kind: "AIRPORT_TRANSFER", vehicles: 2, details: "MS123" }],
+      }),
+    ),
+  ).toMatchObject({
+    quote: {
+      services: [{ vehicles: 2, adultQuantity: 2, amount: usd(8000) }],
+      servicesTotal: usd(8000),
+      subtotal: usd(32000),
+      vat: usd(4800),
+      total: usd(36800),
+    },
+  });
+  expect(
+    await ok(quoteRequest({ services: ["AIRPORT_TRANSFER"] })),
+  ).toMatchObject({
+    quote: { services: [{ vehicles: 1, amount: usd(4000) }] },
+  });
+  for (const vehicles of [0, 4, 11, 1.5, null, "2"]) {
+    const response = await post(
+      quoteRequest({ services: [{ kind: "AIRPORT_TRANSFER", vehicles }] }),
+    );
+    expect(response.status).toBe(422);
+    expect(await response.json()).toMatchObject({
+      fieldErrors: { "services.0.vehicles": expect.any(Array) },
+    });
+  }
+  // The HTTP contract refuses control characters in details, like the domain.
+  const header = await post(
+    quoteRequest({
+      services: [{ kind: "AIRPORT_TRANSFER", details: "MS123\r\nX-Bad: 1" }],
+    }),
+  );
+  expect(header.status).toBe(422);
+  expect(await header.json()).toMatchObject({
+    fieldErrors: { "services.0.details": expect.any(Array) },
+  });
+  await service("BREAKFAST", "PER_PERSON", 1000);
+  const breakfast = await post(
+    quoteRequest({ services: [{ kind: "BREAKFAST", vehicles: 1 }] }),
+  );
+  expect(breakfast.status).toBe(422);
+  expect(await breakfast.json()).toMatchObject({
+    fieldErrors: { "services.0.vehicles": expect.any(Array) },
+  });
+});
+
+it("T-SVC-VEH: P6 retains car counts without multiplying per-booking prices", async () => {
+  await listing("garden", 8000);
+  await service("AIRPORT_TRANSFER", "PER_BOOKING", 4000);
+  expect(
+    await ok(
+      quoteRequest({ services: [{ kind: "AIRPORT_TRANSFER", vehicles: 3 }] }),
+    ),
+  ).toMatchObject({
+    quote: { services: [{ vehicles: 3, adultQuantity: 1, amount: usd(4000) }] },
+  });
 });

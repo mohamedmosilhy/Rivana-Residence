@@ -1,6 +1,6 @@
 # M8 — Reservations, immediate confirmation, phone verification, and messages
 
-Status: **In progress** (5/17 tasks accepted: M8-T0 on 2026-11-13, M8-T0b on 2026-11-14, M8-T1 and M8-T2 on 2026-11-15, M8-T3 on 2026-11-17; spec [0005](../../specs/0005-m8-reservations.md) and the task breakdown approved, 2026-11-14; scope extended by the owner on 2026-11-17 with the transfer car count, M8-T3b, and the shared change engine for guest changes, M8-T9 and T9b, Q-82…Q-85, Q-90). Branch: `m8-reservations`. Follow the [milestone loop](./README.md#the-loop-every-milestone-follows).
+Status: **In progress** (6/17 tasks accepted: M8-T0 on 2026-11-13, M8-T0b on 2026-11-14, M8-T1 and M8-T2 on 2026-11-15, M8-T3 and M8-T3b on 2026-11-17; spec [0005](../../specs/0005-m8-reservations.md) and the task breakdown approved, 2026-11-14; scope extended by the owner on 2026-11-17 with the transfer car count, M8-T3b, and the shared change engine for guest changes, M8-T9 and T9b, Q-82…Q-85, Q-90). Branch: `m8-reservations`. Follow the [milestone loop](./README.md#the-loop-every-milestone-follows).
 
 > **Done first (accepted 2026-11-13): [M8-T0, application ports consolidation](#0-prerequisite-task-m8-t0-application-ports-consolidation).** The owner decided on 2026-11-13 that the old shared `src/application/ports/` files move into their modules before any other M8 task starts, so every M8 repository and port is written in the module layout from the start. [M8-T0b](#0b-follow-up-task-m8-t0b-public-surfaces-for-the-cms-modules) was accepted on 2026-11-14. Next: the rest of M8, task by task.
 
@@ -65,7 +65,7 @@ Planned, reviewed, and accepted one task at a time ([agent-workflow.md](../../en
 | M8-T1 | Migration `reservations`: tables, checks, composite FKs, exclusion and idempotency constraints, demo seed | Critical | T0 | T-DB-6…8; drift check | Accepted |
 | M8-T2 | Reservation domain: state machine, invariants R-1…R-10, reference, `PhoneNumber`, verification and per-phone policies | Critical | T0 | T-LIFE-1…10, T-REF-1…3, T-PHONE-1…4; T-VAL domain fields (HTTP checks stay with endpoint tasks) | Accepted |
 | M8-T3 | Reservation and guest repositories, unit-of-work binding, real sold consumption adapter | Critical | T1 | repository integration tests | Accepted |
-| M8-T3b | Airport transfer car count: migration (`PER_VEHICLE`, `maxVehicles`, `ReservationService.vehicles`), SV-5, P6 `services` objects, S35/S36 fields, T3 repository mapping, seed, OpenAPI (Q-82, Q-90) | Critical | T3, M7 | AC 11; T-SVC-VEH-1…6 | Not started |
+| M8-T3b | Airport transfer car count: migration (`PER_VEHICLE`, `maxVehicles`, `ReservationService.vehicles`), SV-5, P6 `services` objects, S35/S36 fields, T3 repository mapping, seed, OpenAPI (Q-82, Q-90) | Critical | T3, M7 | AC 11; T-SVC-VEH-1…6 | Accepted |
 | M8-T4 | WhatsApp setup: settings, templates, sender port, provider and fake adapters, test message, minimal Admin screen (includes the `RESERVATION_MODIFIED` and change-request message purposes in the allowlist, Q-84) | Critical | T1, T2 | AC 10; T-WA-1…7 | Not started |
 | M8-T5 | Phone verification: request and confirm, limits, API P9 and P10 | Critical | T2, T3, T4 | AC 7; T-GST (verification) | Not started |
 | M8-T6 | Notifications: outbox, dispatcher, email templates, token expiry job | Critical | T3, T4 | AC 4; T-NTF-1…3 | Not started |
@@ -127,6 +127,8 @@ Tables as in [data-model.md](../../database/data-model.md): `WhatsAppSettings` (
 
 Q-82 and Q-90. Runs after M8-T3 (already implemented) and before M8-T7, so `CreateWebsiteReservation` stores the car count from the start.
 
+**Accepted 2026-11-17.** As built: the migration is split in two, `20261117120000_transfer_vehicle_unit` (the enum value alone, so PostgreSQL can use it in the next migration) and `20261117120100_transfer_vehicles` (columns, backfill, checks). The domain and the P6 contract check the car count by hand rather than with `z.number().int()`, so every wrong value is a field error on `services.N.vehicles`; a transfer offering without a maximum fails closed. Evidence: [report](../reports/m8-reservations.md#m8-t3b-verification).
+
 1. **Migration** `transfer_vehicles` (additive): `ServicePriceUnit` gains `PER_VEHICLE`; `ServiceOffering.maxVehicles` (nullable, `AIRPORT_TRANSFER` only, default 3 when set, `CHECK` 1–10); `ReservationService.vehicles` (nullable, `CHECK` 1–10, required for `AIRPORT_TRANSFER`, null for `BREAKFAST`); a `CHECK` that `PER_VEHICLE` is used only by `AIRPORT_TRANSFER` with no child price. Existing transfer offerings get `maxVehicles = 3`.
 2. **Domain** (`src/domain/services`, `src/domain/pricing`): SV-5; `selectRequestedServices` accepts a bare kind or `{ kind, vehicles?, details? }` (default 1 car); `QuoteCalculator` multiplies `PER_VEHICLE` by cars; `parseServiceOfferingInput` accepts `maxVehicles` and refuses `PER_VEHICLE` for breakfast.
 3. **Application and API**: `QuoteBooking` passes the car count through; P6 accepts the object form (bare kinds keep working, so the M7 tests pass unchanged); `QuoteServiceLine.vehicles`; S35/S36 return and accept `maxVehicles`; OpenAPI regenerated.
@@ -164,7 +166,7 @@ P7 (pay at hotel), P9, P10, G1, G3, G4 (view only), S1–S6, S9–S16, S28, S29,
 
 ## Database impact
 
-Additive migrations: `reservations` (M8-T1), `transfer_vehicles` (M8-T3b), `reservation_changes` (M8-T9). Demo seed: reservations in every status (fictional guests, `+1 555 01xx` numbers), a blocked guest, a coupon redemption, unentered and entered website bookings, sync history.
+Additive migrations: `reservations` (M8-T1), `transfer_vehicle_unit` and `transfer_vehicles` (M8-T3b), `reservation_changes` (M8-T9). Demo seed: reservations in every status (fictional guests, `+1 555 01xx` numbers), a blocked guest, a coupon redemption, unentered and entered website bookings, sync history.
 
 ## API impact
 

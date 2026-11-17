@@ -228,6 +228,7 @@ export class QuoteBooking {
       await this.deps.services.listByBranch(branch.id)
     ).map((offering) => ({
       kind: offering.kind,
+      maxVehicles: offering.maxVehicles,
       unit: offering.priceUnit,
       price: offering.price,
       childPrice: offering.childPrice,
@@ -288,6 +289,7 @@ export class QuoteBooking {
       },
       services: selected.services.map((service) => ({
         kind: service.kind,
+        vehicles: service.vehicles,
         unit: service.unit,
         price: service.price,
         childPrice: service.childPrice,

@@ -651,3 +651,114 @@ describe("A5 on PostgreSQL (T-TAX-3, T-TAX-4, M7 AC-5, AC-7)", () => {
     }
   }, 20_000);
 });
+
+it("T-SVC-VEH: S35/S36 persist and audit maximum cars, validate kinds and detect identical writes", async () => {
+  session.staff = admin;
+  const input = offering({
+    priceUnit: "PER_VEHICLE",
+    childPrice: null,
+    maxVehicles: 2,
+  });
+  const first = await setService(TEST_BRANCH_ID, "AIRPORT_TRANSFER", input);
+  expect(first.status).toBe(200);
+  expect(await first.json()).toMatchObject({
+    maxVehicles: 2,
+    priceUnit: "PER_VEHICLE",
+  });
+  expect(await (await list(TEST_BRANCH_ID)).json()).toMatchObject({
+    items: expect.arrayContaining([
+      expect.objectContaining({ kind: "AIRPORT_TRANSFER", maxVehicles: 2 }),
+    ]),
+  });
+  expect(
+    (await setService(TEST_BRANCH_ID, "AIRPORT_TRANSFER", input)).status,
+  ).toBe(200);
+  expect(await audits("service.update")).toHaveLength(1);
+  expect(
+    (
+      await setService(TEST_BRANCH_ID, "AIRPORT_TRANSFER", {
+        ...input,
+        maxVehicles: 3,
+      })
+    ).status,
+  ).toBe(200);
+  const events = await audits("service.update");
+  expect(events).toHaveLength(2);
+  expect(events[1]?.changes).toMatchObject({
+    before: { maxVehicles: 2 },
+    after: { maxVehicles: 3 },
+  });
+  for (const maxVehicles of [0, 11, 1.5])
+    expect(
+      (
+        await setService(TEST_BRANCH_ID, "AIRPORT_TRANSFER", {
+          ...input,
+          maxVehicles,
+        })
+      ).status,
+    ).toBe(422);
+  expect((await setService(TEST_BRANCH_ID, "BREAKFAST", input)).status).toBe(
+    422,
+  );
+  expect(
+    (
+      await setService(TEST_BRANCH_ID, "AIRPORT_TRANSFER", {
+        ...input,
+        childPrice: amount(10),
+      })
+    ).status,
+  ).toBe(422);
+});
+
+it("T-SVC-VEH: concurrent maximum changes read the latest locked value, 20 observed waits", async () => {
+  session.staff = admin;
+  const input = offering({
+    priceUnit: "PER_BOOKING",
+    childPrice: null,
+    maxVehicles: 3,
+  });
+  expect(
+    (await setService(TEST_BRANCH_ID, "AIRPORT_TRANSFER", input)).status,
+  ).toBe(200);
+  await withIndependentClients(2, async ([first, second]) => {
+    if (!first || !second) throw new Error("Missing independent clients");
+    for (let index = 0; index < 20; index++) {
+      const ready = deferred();
+      const release = deferred();
+      const pid = deferred<number>();
+      const holding = first.$transaction(
+        async (tx) => {
+          await tx.serviceOffering.updateMany({
+            where: { branchId: TEST_BRANCH_ID, kind: "AIRPORT_TRANSFER" },
+            data: { maxVehicles: 2 },
+          });
+          ready.resolve();
+          await release.promise;
+        },
+        { timeout: 15000 },
+      );
+      await ready.promise;
+      const changing = commercialUseCases(second, {
+        onBackend: (value) => pid.resolve(value),
+      }).services.set(admin, TEST_BRANCH_ID, "AIRPORT_TRANSFER", {
+        ...input,
+        maxVehicles: 4,
+      });
+      try {
+        await waitForDatabaseLock(client, await pid.promise);
+      } finally {
+        release.resolve();
+      }
+      await holding;
+      expect(changing).toBeDefined();
+      expect(await changing).toMatchObject({
+        ok: true,
+        value: { maxVehicles: 4 },
+      });
+      expect((await audits("service.update")).at(-1)?.changes).toMatchObject({
+        before: { maxVehicles: 2 },
+        after: { maxVehicles: 4 },
+      });
+    }
+  });
+});

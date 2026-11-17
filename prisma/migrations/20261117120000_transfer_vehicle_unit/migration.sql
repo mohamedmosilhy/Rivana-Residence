@@ -1,0 +1,1 @@
+ALTER TYPE "ServicePriceUnit" ADD VALUE 'PER_VEHICLE';

@@ -34,6 +34,7 @@ function quote(view: QuoteView): NonNullable<Response["quote"]> {
     services: view.serviceLines.map((line) => ({
       kind: line.kind as "BREAKFAST" | "AIRPORT_TRANSFER",
       unit: line.unit,
+      vehicles: line.vehicles,
       price: usd(line.priceMinor),
       childPrice:
         line.childPriceMinor === null ? null : usd(line.childPriceMinor),

@@ -566,7 +566,7 @@ test("P6 quotes the $391 worked example from server owned prices", async ({
       [room],
     );
     await sql(
-      'INSERT INTO "ServiceOffering" (id, "branchId", kind, "priceUnit", "priceMinor", "childPriceMinor", active, "updatedAt") VALUES ($1, $3, \'BREAKFAST\', \'PER_PERSON_PER_NIGHT\', 1000, 500, true, now()), ($2, $3, \'AIRPORT_TRANSFER\', \'PER_BOOKING\', 2500, NULL, true, now())',
+      'INSERT INTO "ServiceOffering" (id, "branchId", kind, "priceUnit", "priceMinor", "childPriceMinor", "maxVehicles", active, "updatedAt") VALUES ($1, $3, \'BREAKFAST\', \'PER_PERSON_PER_NIGHT\', 1000, 500, NULL, true, now()), ($2, $3, \'AIRPORT_TRANSFER\', \'PER_BOOKING\', 2500, NULL, 3, true, now())',
       ["e2e-p6-breakfast", "e2e-p6-transfer", branch],
     );
     await sql(
@@ -643,6 +643,35 @@ test("P6 quotes the $391 worked example from server owned prices", async ({
       unavailableLines: [0, 1],
       quote: null,
     });
+    // SV-5 (M8-T3b): the object form carries the car count. Per booking it
+    // is recorded but not multiplied; per car it multiplies the price.
+    const cars = (vehicles: unknown) =>
+      quote({
+        services: [
+          "BREAKFAST",
+          { kind: "AIRPORT_TRANSFER", vehicles, details: "MS123 10:30" },
+        ],
+      });
+    const perBooking = await call(cars(2));
+    expect(perBooking.body.quote).toMatchObject({
+      services: [{}, { kind: "AIRPORT_TRANSFER", vehicles: 2 }],
+      servicesTotal: { amountMinor: 10000 },
+      total: { amountMinor: 39100 },
+    });
+    await sql(
+      'UPDATE "ServiceOffering" SET "priceUnit" = \'PER_VEHICLE\' WHERE id = $1',
+      ["e2e-p6-transfer"],
+    );
+    expect((await call(cars(2))).body.quote).toMatchObject({
+      services: [{}, { unit: "PER_VEHICLE", vehicles: 2, adultQuantity: 2 }],
+      servicesTotal: { amountMinor: 12500 },
+      subtotal: { amountMinor: 36500 },
+      vat: { amountMinor: 5475 },
+      total: { amountMinor: 41975 },
+    });
+    const tooMany = await call(cars(4));
+    expect(tooMany.status).toBe(422);
+    expect(tooMany.body.fieldErrors).toHaveProperty(["services.1.vehicles"]);
     await sql('UPDATE "ServiceOffering" SET active = false WHERE id = $1', [
       "e2e-p6-transfer",
     ]);

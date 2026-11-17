@@ -30,7 +30,7 @@ ADRs record the decisions that materially shape Rivana, in one numbered sequence
 | [024](./024-immediate-confirmation.md) | Immediate confirmation of website reservations; `PENDING`/`DECLINED` removed; cancellation requests; PMS-entry tracking | Accepted 2026-11-06 (supersedes request to book; amends 013, 019) |
 | [025](./025-paymob-online-payment.md) | Online payment through Paymob hosted checkout; 15-minute payment holds; verified callbacks; refunds | Accepted 2026-11-06 (extends 016, 024) |
 | [026](./026-branch-websites-and-accommodation.md) | Branch-owned websites at `/{branchSlug}/…`; rooms and apartments in one catalog; per-branch maps | Accepted 2026-11-06 (extends 006, 017) |
-| [027](./027-booking-price-composition.md) | Price composition: date prices, services, coupons, VAT; promotion popup retired | Accepted 2026-11-06 (amends 020); `PER_VEHICLE` amendment proposed 2026-11-17 |
+| [027](./027-booking-price-composition.md) | Price composition: date prices, services, coupons, VAT; promotion popup retired | Accepted 2026-11-06 (amends 020); `PER_VEHICLE` amendment accepted 2026-11-17 (M8-T3b) |
 | [028](./028-whatsapp-guest-messaging.md) | WhatsApp confirmations, feedback requests, consented marketing broadcasts; Admin-managed number, templates, and test message | Accepted 2026-11-06 (extends 019) |
 | [029](./029-first-party-site-analytics.md) | First-party, cookieless website analytics and booking funnel inside the Next.js app | Proposed 2026-11-17 |
 

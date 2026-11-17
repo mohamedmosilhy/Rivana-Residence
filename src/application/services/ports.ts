@@ -10,6 +10,7 @@ import type { Money } from "@/domain/shared/money";
 export type ServiceOfferingRecord = Readonly<{
   id: string;
   kind: ServiceKind;
+  maxVehicles: number | null;
   priceUnit: ServicePriceUnit;
   price: Money;
   childPrice: Money | null;

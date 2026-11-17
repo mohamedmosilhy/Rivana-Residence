@@ -20,6 +20,7 @@ export type QuoteServiceInput = Readonly<{
   unit: ServicePriceUnit;
   price: Money;
   childPrice: Money | null;
+  vehicles?: number | null;
 }>;
 
 export type QuoteInput = Readonly<{
@@ -47,6 +48,7 @@ export type QuoteServiceLine = Readonly<{
   adultQuantity: number;
   childQuantity: number;
   amountMinor: number;
+  vehicles: number | null;
 }>;
 
 export type QuoteLine = Readonly<{
@@ -147,7 +149,22 @@ export class QuoteCalculator {
           `services.${index}.childPrice`,
           "A child price applies only to person units.",
         );
-      const quantity = serviceQuantity(service.unit, input.guests, nightCount);
+      const vehicles =
+        service.kind === "AIRPORT_TRANSFER" ? (service.vehicles ?? 1) : null;
+      if (
+        service.kind !== "AIRPORT_TRANSFER" &&
+        (service.vehicles != null || service.unit === "PER_VEHICLE")
+      )
+        fail(
+          `services.${index}.vehicles`,
+          "Cars apply only to airport transfers.",
+        );
+      const quantity = serviceQuantity(
+        service.unit,
+        input.guests,
+        nightCount,
+        vehicles ?? 1,
+      );
       const adultPart = safeProduct(
         service.price.amountMinor,
         quantity.adults,
@@ -165,6 +182,7 @@ export class QuoteCalculator {
       services = safeSum(services, amountMinor, "servicesMinor");
       return Object.freeze({
         kind: service.kind,
+        vehicles,
         unit: service.unit,
         priceMinor: service.price.amountMinor,
         childPriceMinor: service.childPrice?.amountMinor ?? null,
