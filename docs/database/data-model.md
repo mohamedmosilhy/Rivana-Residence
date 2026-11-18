@@ -679,7 +679,7 @@ Notes:
 - **Idempotency uniqueness.** Postgres treats `NULL`s as distinct in unique constraints. The migration instead creates `UNIQUE NULLS NOT DISTINCT ("source", "createdById", "idempotencyKeyHash")` (PostgreSQL 15+), so public (`createdById IS NULL`) keys are also unique. Rows without a key (none in v1) are excluded with a partial index.
 - **Manage token in outbox payload (dispatcher planned, M8-T6).** A manage link may appear in queued email and WhatsApp payloads. Every payload holding it is scrubbed when its row reaches `SENT` or `FAILED` (spec 0005, Decision 4). Never log payloads.
 - **The manage token is not stored in plaintext anywhere else.**
-- **Verification codes** are sent by WhatsApp directly from the verification use case, not through the outbox, because they must arrive within seconds and no other write depends on them. Only the code's hash is stored.
+- **Verification codes (implemented M8-T5)** are sent by WhatsApp directly after their verification transaction commits, not through the outbox. Only an identity-bound HMAC-SHA-256 under `PHONE_VERIFICATION_SECRET` is stored. Request admission takes a transaction advisory lock for the normalized phone before counting retained rolling history. Confirmation locks the guest, then the verification row; wrong guesses commit their attempt count. Failed delivery exhausts the retained row and clears token fields. Token issuance stores only SHA-256; booking consumption remains M8-T7 and token cleanup M8-T6.
 - **Retention:** guest and reservation rows are kept indefinitely (Q-13). Verification rows are also kept, as evidence for abuse investigations; their code and token hashes are useless after expiry.
 
 ### SQL-only constraints (migration)

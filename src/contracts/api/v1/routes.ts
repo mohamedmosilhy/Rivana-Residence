@@ -61,6 +61,13 @@ import {
   WhatsAppTestMessageResult,
 } from "./whatsapp";
 
+import {
+  PhoneVerificationRequest,
+  PhoneVerificationConfirmation,
+  PhoneVerificationRequested,
+  PhoneVerificationConfirmed,
+} from "./phone-verifications";
+
 /** One documented endpoint. The OpenAPI document is generated from these. */
 export type ApiRoute = Readonly<{
   method: "get" | "post" | "put" | "patch" | "delete";
@@ -81,6 +88,63 @@ export type ApiRoute = Readonly<{
 }>;
 
 export const API_ROUTES: readonly ApiRoute[] = [
+  {
+    method: "post",
+    path: "/api/v1/phone-verifications",
+    operationId: "requestPhoneVerification",
+    summary:
+      "API-P9. Send a WhatsApp verification code after commit. Three per phone per rolling 15 minutes, ten per rolling 24 hours, ten per client per hour.",
+    tag: "Guests",
+    security: "public",
+    request: PhoneVerificationRequest,
+    responses: {
+      201: {
+        description:
+          "Code valid for ten minutes. Resend availability follows the rolling phone limits; no additional cooldown.",
+        schema: PhoneVerificationRequested,
+      },
+    },
+    errors: [
+      "VALIDATION",
+      "MALFORMED_JSON",
+      "PAYLOAD_TOO_LARGE",
+      "UNSUPPORTED_MEDIA_TYPE",
+      "PHONE_BLOCKED",
+      "WHATSAPP_NOT_CONFIGURED",
+      "VERIFICATION_UNAVAILABLE",
+      "RATE_LIMITED",
+      "TRY_AGAIN",
+    ],
+  },
+  {
+    method: "post",
+    path: "/api/v1/phone-verifications/{verificationId}/confirmation",
+    operationId: "confirmPhoneVerification",
+    summary:
+      "API-P10. Confirm a six digit code, at most five attempts. Twenty requests per client per ten minutes.",
+    tag: "Guests",
+    security: "public",
+    request: PhoneVerificationConfirmation,
+    responses: {
+      200: {
+        description:
+          "Thirty minute token, stored only as a hash. BOOKING is single use in P7; GUEST_SESSION authenticates guest reads. Confirming the same verification again returns 410.",
+        schema: PhoneVerificationConfirmed,
+      },
+    },
+    errors: [
+      "VALIDATION",
+      "MALFORMED_JSON",
+      "PAYLOAD_TOO_LARGE",
+      "UNSUPPORTED_MEDIA_TYPE",
+      "PHONE_BLOCKED",
+      "VERIFICATION_CODE_INVALID",
+      "VERIFICATION_EXPIRED",
+      "VERIFICATION_UNAVAILABLE",
+      "RATE_LIMITED",
+      "TRY_AGAIN",
+    ],
+  },
   {
     method: "get",
     path: "/api/v1/health",

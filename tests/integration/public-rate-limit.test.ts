@@ -5,7 +5,11 @@ import { afterAll, beforeEach, describe, expect, it } from "vitest";
 
 import { createRoutes, json } from "@/app/api/v1/_http/routes";
 import { RateLimiter } from "@/application/shared/rate-limit";
-import { AVAILABILITY_RATE_LIMIT } from "@/application/shared/public-rate-limit-policy";
+import {
+  AVAILABILITY_RATE_LIMIT,
+  VERIFICATION_REQUEST_RATE_LIMIT,
+  VERIFICATION_CONFIRM_RATE_LIMIT,
+} from "@/application/shared/public-rate-limit-policy";
 import { HmacThrottleKeys } from "@/infrastructure/auth/throttle-keys";
 import { PrismaPublicRateLimitStore } from "@/infrastructure/db/prisma/repositories/public-rate-limit-store";
 
@@ -159,6 +163,28 @@ describe("public limiter admission (M6 AC-8)", () => {
 });
 
 describe("public limiter expiry cleanup (M6 AC-8)", () => {
+  it.each([VERIFICATION_REQUEST_RATE_LIMIT, VERIFICATION_CONFIRM_RATE_LIMIT])(
+    "cleans expired $name buckets at their own window boundary",
+    async ({ name, rule }) => {
+      const prefix = `rl:${name}:`;
+      await expired(prefix + "expired", {
+        windowStartedAt: new Date(+start - rule.windowMs),
+        lockedUntil: null,
+      });
+      const preserved = await expired(prefix + "inside-window", {
+        windowStartedAt: new Date(+start - rule.windowMs + 1),
+        lockedUntil: null,
+      });
+      const locked = await expired(prefix + "still-locked", {
+        windowStartedAt: new Date(+start - rule.windowMs),
+        lockedUntil: new Date(+start + 1),
+      });
+      expect(await store.cleanupExpired(now)).toBe(1);
+      expect(
+        await client.loginThrottle.findMany({ orderBy: { key: "asc" } }),
+      ).toEqual([preserved, locked]);
+    },
+  );
   it("deletes only expired availability buckets and preserves all other rows exactly", async () => {
     await expired(key("expired"));
     await expired(key("null-lock"), { lockedUntil: null });

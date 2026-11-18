@@ -21,6 +21,15 @@ const serverEnvSchema = z
       .string()
       .min(32, "Must be at least 32 characters of random data.")
       .optional(),
+    PHONE_VERIFICATION_SECRET: z.preprocess(
+      // The optional placeholder in .env.example must not break unrelated routes.
+      (value) =>
+        typeof value === "string" && value.trim() === "" ? undefined : value,
+      z
+        .string()
+        .min(32, "Must be at least 32 characters of random data.")
+        .optional(),
+    ),
     AUTH_TRUST_PROXY_HEADERS: z
       .enum(["true", "false"])
       .default("false")

@@ -274,8 +274,8 @@ PhoneVerification
 
 Rules:
 
-- GV-1: A code is valid for 10 minutes and 5 attempts. At most 3 codes per phone in a rolling 15 minutes and 10 in a rolling 24 hours (Q-80), plus per-client limits. The pure policies are implemented in `src/domain/guests/verification-policy.ts` (M8-T2); the PostgreSQL counts, code hashing, and endpoints remain M8-T5.
-- GV-2: A correct `BOOKING` code yields a verification token valid for 30 minutes and one reservation. A correct `GUEST_SESSION` code yields a 30-minute guest session for that phone.
+- GV-1: A code is valid for 10 minutes and 5 attempts. At most 3 codes per phone in a rolling 15 minutes and 10 in a rolling 24 hours (Q-80), plus per-client limits. The pure policies are implemented in `src/domain/guests/verification-policy.ts` (M8-T2); PostgreSQL rolling counts, identity-bound code HMACs, locked attempts and P9/P10 are **implemented (M8-T5)**. Client limits are ten requests per hour and twenty confirmations per ten minutes. Request admission uses a phone-scoped transaction advisory lock; confirmation locks the guest before the verification row and commits failed attempts.
+- GV-2: A correct `BOOKING` code yields a verification token valid for 30 minutes and one reservation. A correct `GUEST_SESSION` code yields a 30-minute guest session for that phone. **Token issuance implemented (M8-T5):** 256-bit random tokens, only SHA-256 stored, one issuance per verification. Booking consumption remains M8-T7 and guest-session reads M8-T11.
 - GV-3: A blocked phone gets no code or broadcast, and its open verifications are invalid. The message the guest sees does not reveal more than "please contact the hotel".
 - GV-4: Blocking and unblocking need `guests:block` (Manager, Admin) and a reason. They apply to all branches and are audited. Existing reservations are not changed automatically.
 - GV-5: Staff-created and external reservations link to the guest with the same normalized phone, or create an unverified profile. Staff entry never marks a phone verified.

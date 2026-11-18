@@ -1,4 +1,5 @@
 import type { PhoneNumber } from "@/domain/guests";
+import type { VerificationPurpose } from "@/domain/shared/types";
 import type { Result } from "@/application/shared/result";
 
 export type GuestProfile = Readonly<{
@@ -39,4 +40,54 @@ export interface GuestRepository {
       at: Date;
     }>,
   ): Promise<GuestProfile>;
+}
+
+export type VerificationRecord = Readonly<{
+  id: string;
+  phone: string;
+  purpose: VerificationPurpose;
+  codeHash: string;
+  attempts: number;
+  expiresAt: Date;
+  verifiedAt: Date | null;
+  tokenHash: string | null;
+  tokenExpiresAt: Date | null;
+  consumedAt: Date | null;
+  clientKey: string;
+  createdAt: Date;
+}>;
+
+export interface PhoneVerificationRepository {
+  /** Transaction scoped, including phones without a guest or verification row. */
+  lockPhone(phone: PhoneNumber): Promise<Result<void>>;
+  findById(id: string): Promise<VerificationRecord | null>;
+  /** Lock after the guest row, then reload the verification. */
+  lock(id: string): Promise<Result<VerificationRecord | null>>;
+  requestHistory(phone: PhoneNumber, since: Date): Promise<readonly Date[]>;
+  insert(record: VerificationRecord): Promise<void>;
+  saveConfirmation(
+    id: string,
+    values: Readonly<{
+      attempts: number;
+      verifiedAt: Date | null;
+      tokenHash: string | null;
+      tokenExpiresAt: Date | null;
+    }>,
+  ): Promise<void>;
+  /** Retain the request for rolling limits, but make its code unusable. */
+  invalidate(id: string): Promise<void>;
+}
+
+export interface PhoneVerificationCrypto {
+  generateCode(): string;
+  codeHash(id: string, phone: string, purpose: string, code: string): string;
+  codeMatches(
+    id: string,
+    phone: string,
+    purpose: string,
+    code: string,
+    hash: string,
+  ): boolean;
+  generateToken(): string;
+  tokenHash(token: string): string;
 }

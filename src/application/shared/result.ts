@@ -19,11 +19,18 @@ export type ApplicationErrorCode =
   | "TRY_AGAIN"
   | "VALIDATION"
   | "WHATSAPP_NOT_CONFIGURED"
-  | "WHATSAPP_TEST_FAILED";
+  | "WHATSAPP_TEST_FAILED"
+  | "PHONE_BLOCKED"
+  | "VERIFICATION_CODE_INVALID"
+  | "VERIFICATION_EXPIRED"
+  | "VERIFICATION_UNAVAILABLE";
 
 type StandardApplicationErrorCode = Exclude<
   ApplicationErrorCode,
-  "INVENTORY_UNAVAILABLE" | "COUPON_INVALID" | "SERVICE_UNAVAILABLE"
+  | "INVENTORY_UNAVAILABLE"
+  | "COUPON_INVALID"
+  | "SERVICE_UNAVAILABLE"
+  | "VERIFICATION_CODE_INVALID"
 >;
 
 type StandardApplicationError = Readonly<{
@@ -64,7 +71,13 @@ export type ApplicationError =
   | StandardApplicationError
   | InventoryUnavailableError
   | CouponInvalidError
-  | ServiceUnavailableError;
+  | ServiceUnavailableError
+  | Readonly<{
+      code: "VERIFICATION_CODE_INVALID";
+      message: string;
+      context: Readonly<{ attemptsLeft: number }>;
+      fieldErrors?: never;
+    }>;
 
 export type Result<T, E = ApplicationError> =
   | Readonly<{ ok: true; value: T }>

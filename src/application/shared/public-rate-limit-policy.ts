@@ -31,12 +31,24 @@ export const WHATSAPP_TEST_RATE_LIMIT = {
   rule: { maxFailures: 5, windowMs: 600_000, lockMs: 600_000 },
 } as const;
 
+/** API-P9 and API-P10, Q-74. */
+export const VERIFICATION_REQUEST_RATE_LIMIT = {
+  name: "verification-request",
+  rule: { maxFailures: 10, windowMs: 3_600_000, lockMs: 3_600_000 },
+} as const;
+export const VERIFICATION_CONFIRM_RATE_LIMIT = {
+  name: "verification-confirm",
+  rule: { maxFailures: 20, windowMs: 600_000, lockMs: 600_000 },
+} as const;
+
 /** Every limiter namespace on the shared store; cleanup prunes each one. */
 export const PUBLIC_RATE_LIMITS = [
   AVAILABILITY_RATE_LIMIT,
   QUOTE_RATE_LIMIT,
   QUOTE_COUPON_RATE_LIMIT,
   WHATSAPP_TEST_RATE_LIMIT,
+  VERIFICATION_REQUEST_RATE_LIMIT,
+  VERIFICATION_CONFIRM_RATE_LIMIT,
 ] as const;
 
 export const PUBLIC_THROTTLE_CLEANUP_LIMIT = 1_000;

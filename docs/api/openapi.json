@@ -11,6 +11,100 @@
     }
   ],
   "paths": {
+    "/api/v1/phone-verifications": {
+      "post": {
+        "operationId": "requestPhoneVerification",
+        "summary": "API-P9. Send a WhatsApp verification code after commit. Three per phone per rolling 15 minutes, ten per rolling 24 hours, ten per client per hour.",
+        "tags": [
+          "Guests"
+        ],
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PhoneVerificationRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Code valid for ten minutes. Resend availability follows the rolling phone limits; no additional cooldown.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PhoneVerificationRequested"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Problem details. Codes: INTERNAL, VALIDATION, MALFORMED_JSON, PAYLOAD_TOO_LARGE, UNSUPPORTED_MEDIA_TYPE, PHONE_BLOCKED, WHATSAPP_NOT_CONFIGURED, VERIFICATION_UNAVAILABLE, RATE_LIMITED, TRY_AGAIN.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/phone-verifications/{verificationId}/confirmation": {
+      "post": {
+        "operationId": "confirmPhoneVerification",
+        "summary": "API-P10. Confirm a six digit code, at most five attempts. Twenty requests per client per ten minutes.",
+        "tags": [
+          "Guests"
+        ],
+        "security": [],
+        "parameters": [
+          {
+            "name": "verificationId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PhoneVerificationConfirmation"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Thirty minute token, stored only as a hash. BOOKING is single use in P7; GUEST_SESSION authenticates guest reads. Confirming the same verification again returns 410.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PhoneVerificationConfirmed"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Problem details. Codes: INTERNAL, VALIDATION, MALFORMED_JSON, PAYLOAD_TOO_LARGE, UNSUPPORTED_MEDIA_TYPE, PHONE_BLOCKED, VERIFICATION_CODE_INVALID, VERIFICATION_EXPIRED, VERIFICATION_UNAVAILABLE, RATE_LIMITED, TRY_AGAIN.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/health": {
       "get": {
         "operationId": "getHealth",
@@ -1822,6 +1916,92 @@
   },
   "components": {
     "schemas": {
+      "PhoneVerificationRequest": {
+        "type": "object",
+        "properties": {
+          "phone": {
+            "type": "string",
+            "maxLength": 16,
+            "pattern": "^\\+[1-9]\\d{1,14}$",
+            "description": "Valid international E.164 phone."
+          },
+          "purpose": {
+            "type": "string",
+            "enum": [
+              "BOOKING",
+              "GUEST_SESSION"
+            ]
+          },
+          "website": {
+            "description": "Honeypot. Leave empty.",
+            "type": "string",
+            "maxLength": 32768
+          }
+        },
+        "required": [
+          "phone",
+          "purpose"
+        ],
+        "additionalProperties": false
+      },
+      "PhoneVerificationConfirmation": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "pattern": "^\\d{6}$"
+          }
+        },
+        "required": [
+          "code"
+        ],
+        "additionalProperties": false
+      },
+      "PhoneVerificationRequested": {
+        "type": "object",
+        "properties": {
+          "verificationId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 32
+          },
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+          },
+          "resendAvailableAt": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+          }
+        },
+        "required": [
+          "verificationId",
+          "expiresAt",
+          "resendAvailableAt"
+        ],
+        "additionalProperties": false
+      },
+      "PhoneVerificationConfirmed": {
+        "type": "object",
+        "properties": {
+          "token": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_-]{43}$"
+          },
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+          }
+        },
+        "required": [
+          "token",
+          "expiresAt"
+        ],
+        "additionalProperties": false
+      },
       "Coupon": {
         "type": "object",
         "properties": {

@@ -15,6 +15,7 @@ TEST_DATABASE_URL=postgresql://<user>@127.0.0.1:5432/rivana_test npm run test:in
 - `unit-of-work.test.ts`: connection binding, isolation level, commit, and rollback behavior.
 - `inventory-reader.test.ts`: complete listing and night grids, branch isolation, blocks, and consumption validation.
 - `concurrency.test.ts`: deterministic lock ordering, observable waiting, fresh reads, and branch independence.
+- `phone-verification.test.ts`: P9/P10, hash storage, commit before delivery, persisted failed guesses, rolling limits, generic public errors, and 20-round observed phone/verification lock races. Use a disposable database and the fake WhatsApp transport; active codes are request fixtures, never seeds.
 - `storage-concurrency.test.ts`: M8-T1 database idempotency and assignment exclusion races (spec 0005); these prove storage constraints, not booking workflows.
 - `support/concurrency.ts`: barriers, deferred signals, independent Prisma clients, and observable PostgreSQL lock waits.
 

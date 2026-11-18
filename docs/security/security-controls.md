@@ -148,3 +148,10 @@ The future booking integration gets explicit `script-src`, `frame-src`, `connect
 - backup restore tested;
 - no default credentials or secrets in repository/build output;
 - penetration-style checks for IDOR, upload bypass, stored XSS, CSRF, brute force, and open redirects.
+
+
+## Phone verification (implemented M8-T5)
+
+P9/P10 are public and global. Six-digit codes use identity-bound HMAC-SHA-256 with the separate server secret `PHONE_VERIFICATION_SECRET`, not a reversible low-entropy bare hash. Comparisons use constant-time equality. Thirty-minute bearer tokens contain 256 random bits and only their SHA-256 hashes are stored. Codes, tokens and phone numbers are excluded from application logs and outbox payloads. Guest and verification lock contention share the same public message to avoid disclosing profile existence.
+
+PostgreSQL serializes first requests by normalized phone, counts rolling fifteen-minute and twenty-four-hour windows across purposes, and locks confirmation attempts before comparison. Invalid attempts commit even though the response is 422. Public client buckets `verification-request` (10/hour) and `verification-confirm` (20/10 minutes) use the existing hashed-client limiter and bounded cleanup. Blocked numbers get no code or token. Sending occurs only after the verification commits; failed delivery exhausts the code and clears its token without deleting the request history. P7 single-use consumption, staff block invalidation and guest-session reads remain their later tasks.

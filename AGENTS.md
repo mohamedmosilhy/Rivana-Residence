@@ -1,6 +1,6 @@
 <!-- BEGIN:nextjs-agent-rules -->
 
-# This is NOT the Next.js you know
+## This is NOT the Next.js you know
 
 This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` (resolved from this file's directory; in monorepos the `next` package may not be visible from the repo root) before writing any code. Heed deprecation notices.
 
@@ -45,7 +45,7 @@ E2E_DATABASE_URL=postgresql://<user>@127.0.0.1:5432/rivana_e2e_test npm run test
 npm run db:migrate                # dev migrations; production uses npm run db:deploy
 npm run staff -- create --email … --name … --role ADMIN   # passwords via prompt or --password-stdin
 
-# Maintenance (hourly app-user cron; bounded public limiter buckets: availability, quote, quote-coupon)
+# Maintenance (hourly app-user cron; bounded buckets listed in PUBLIC_RATE_LIMITS)
 npm run throttles -- cleanup-public
 ```
 
@@ -70,6 +70,7 @@ npm run throttles -- cleanup-public
 - **Enforce authentication, capabilities, and branch scope on the server**, inside use cases (`authorize`, `authorizeBranch`). Hidden buttons are not security.
 - **Public pages live under `src/app/(marketing)/[branch]/`** (spec 0002). Resolve the branch on the server with `requireBranch(params)` (active branches only, else 404) and pass its id to queries; never trust a client branch value. Every internal link carries `/{branch}`, every cache key and tag names the branch (`CACHE_TAGS` in `src/application/cache/cache-tags.ts`), and old URLs redirect through `src/infrastructure/http/legacy-redirects.ts` to the default branch `new-cairo`, which cannot be deactivated.
 - **Protect reservation consistency in PostgreSQL**: room-type row lock plus count in one transaction, and constraints (ADR 016). No in-memory locks, no frontend-only checks.
+- **Phone verification** uses `RequestPhoneVerification` and `ConfirmPhoneVerification` in `src/application/guests`. Preserve the PostgreSQL phone lock for rolling admission even without a guest row; confirmation locks the guest before the verification row. Wrong-code attempts must commit before returning the public error: a failed `Result` inside `ReservationUnitOfWork` rolls back. Send codes only after commit, never through the outbox, and keep the code HMAC secret server-only.
 - **Never fabricate an external hotel-system integration.** Synchronization with the hotel's system is manual and must never be described as real-time.
 - **Keep docs and tests in sync with the code.** Run the gates and report exact results; never claim a check passed without running it.
 - Detailed coding standards are in [docs/engineering/engineering-standards.md](./docs/engineering/engineering-standards.md). The working loop is in [docs/engineering/agent-workflow.md](./docs/engineering/agent-workflow.md).

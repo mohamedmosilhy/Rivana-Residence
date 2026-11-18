@@ -1,4 +1,5 @@
 import { defineConfig, devices } from "@playwright/test";
+import { E2E_PHONE_VERIFICATION_SECRET } from "./tests/e2e/support/phone-verification";
 
 const port = 3100;
 const e2eDatabaseUrl = process.env.E2E_DATABASE_URL;
@@ -109,6 +110,7 @@ export default defineConfig({
       CONTACT_DELIVERY: "outbox",
       CONTACT_OUTBOX_DIR: "/tmp/rivana-e2e-outbox",
       BETTER_AUTH_SECRET: "e2e-only-secret-0123456789abcdefghijklmnop",
+      PHONE_VERIFICATION_SECRET: E2E_PHONE_VERIFICATION_SECRET,
       ...(e2eDatabaseUrl ? { DATABASE_URL: e2eDatabaseUrl } : {}),
     },
   },

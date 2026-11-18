@@ -3,6 +3,24 @@ import { describe, expect, it } from "vitest";
 import { parseServerEnv } from "@/lib/env/schema";
 
 describe("server environment", () => {
+  it.each([undefined, "", "  "])(
+    "treats an empty optional phone secret as unconfigured: %j",
+    (value) => {
+      const environment = parseServerEnv({ PHONE_VERIFICATION_SECRET: value });
+      expect(environment.PHONE_VERIFICATION_SECRET).toBeUndefined();
+      expect(environment.APP_URL).toBe("http://localhost:3000");
+    },
+  );
+  it("preserves a configured phone secret exactly and refuses a short nonempty value", () => {
+    const value = "  phone-secret-0123456789abcdefghijklmnop  ";
+    expect(
+      parseServerEnv({ PHONE_VERIFICATION_SECRET: value })
+        .PHONE_VERIFICATION_SECRET,
+    ).toBe(value);
+    expect(() =>
+      parseServerEnv({ PHONE_VERIFICATION_SECRET: "short" }),
+    ).toThrow("PHONE_VERIFICATION_SECRET");
+  });
   it("reports a missing production media root clearly", () => {
     expect(() =>
       parseServerEnv({

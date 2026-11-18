@@ -51,6 +51,19 @@ export const PROBLEMS: Readonly<Record<ProblemCode, ProblemDefinition>> = {
     status: 502,
     title: "WhatsApp refused the test message",
   },
+  PHONE_BLOCKED: { status: 403, title: "Please contact the hotel" },
+  VERIFICATION_CODE_INVALID: {
+    status: 422,
+    title: "The verification code is incorrect",
+  },
+  VERIFICATION_EXPIRED: {
+    status: 410,
+    title: "Request a new verification code",
+  },
+  VERIFICATION_UNAVAILABLE: {
+    status: 503,
+    title: "Verification is temporarily unavailable",
+  },
   MALFORMED_JSON: { status: 400, title: "The request body is not valid JSON" },
   INVALID_QUERY: { status: 400, title: "The query parameters are not valid" },
   PAYLOAD_TOO_LARGE: { status: 413, title: "The request body is too large" },

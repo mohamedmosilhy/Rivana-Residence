@@ -39,7 +39,22 @@ Record exact commands and counts in the review package. If a gate cannot run, sa
 
 The owner selected Node **26.13.0 LTS** for the Mac, CI, and hosting. On macOS with npm **11.20.0**, clean `npm ci --no-audit` and `npm run check` passed (format, lint, typecheck, **67 unit files / 1,373 tests**, production build). The full PostgreSQL integration suite passed **29 files / 391 tests**; full Chromium E2E passed **175 tests**, with **30 intentionally skipped**. Independent review by `gpt-6-astra` approved with zero findings. The [runtime report](../delivery/reports/node-26-runtime-alignment.md) records exact commands, unchanged development audit findings, and the nonfatal upstream Tailwind loader deprecation under Node 26. Those Tailwind and media tracing warnings were subsequently resolved in M6-T10. These results do not replace the historical task acceptance evidence below or claim remote Linux CI has run.
 
-## Latest accepted task results (2026-11-17, M8-T3)
+## Latest accepted task results (2026-11-18, M8-T5)
+
+The owner accepted M8-T5 with its aggregate E2E limitation recorded. [Exact commands and results](../delivery/reports/m8-reservations.md#m8-t5-verification); [independent review](../reviews/2026-11-18-m8-t5.md): Approve, all six findings resolved. This acceptance does not make the full browser gate green.
+
+| Gate | Result |
+| --- | --- |
+| `npm run check` | Passed format, lint, typecheck, 94 unit files / 2,090 tests, build |
+| Full PostgreSQL integration | 44 files / 683 tests passed |
+| Dedicated concurrency | 3 files / 40 tests passed; new observed races repeat 20 times |
+| Final aggregate Chromium E2E | Exit 1: 185 passed, 36 skipped, one existing branch-title timeout, nine unrun; dependency rerun reproduced it. All four T5 cases passed |
+| Isolated branch project | All 15 passed, including the title and nine previously unrun cases |
+| Live proof | Fake WhatsApp: request 201, wrong code 422, confirmation 200, replay 410; hashes, lifetimes and redacted logs checked |
+
+The existing persistence architecture test hit its five second timeout under concurrent load, then passed in isolation and the final aggregate check. The branch-title E2E timeout remains unresolved; no unrelated timeout or assertion was changed.
+
+## Previous accepted task results (2026-11-17, M8-T3)
 
 The owner accepted M8-T3 after the review package. [Exact evidence](../delivery/reports/m8-reservations.md#m8-t3-verification) and [independent review](../reviews/2026-11-17-m8-t3.md).
 
