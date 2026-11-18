@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 
 import { getAdminSiteSettings, getBookingStatus } from "@/composition/admin";
 import { requireStaff } from "@/composition/auth";
@@ -13,6 +14,7 @@ import { SiteImagesForm } from "@/presentation/admin/media/site-images-form";
 import { SiteSettingsForm } from "@/presentation/admin/settings/site-settings-form";
 import { SocialLinksForm } from "@/presentation/admin/settings/social-links-form";
 import { Badge } from "@/presentation/admin/ui/badge";
+import { link } from "@/presentation/admin/ui/classes";
 import { PageHeader } from "@/presentation/admin/ui/page-header";
 import { EmptyState, Panel } from "@/presentation/admin/ui/states";
 
@@ -120,6 +122,24 @@ export default async function SettingsPage() {
         <p>
           <strong>{current.timeZone}</strong>. Admin times use this zone.
           Changing it requires a developer.
+        </p>
+      </Panel>
+
+      <Panel
+        title="WhatsApp"
+        titleId="whatsapp-title"
+        description={
+          <p>
+            The business number and message templates used for booking messages
+            and verification codes.
+          </p>
+        }
+        wide
+      >
+        <p>
+          <Link href="/admin/settings/whatsapp" className={link}>
+            Open WhatsApp setup
+          </Link>
         </p>
       </Panel>
 

@@ -50,7 +50,8 @@ export const sectionTitle =
 export const muted = "m-0 text-neutral-600";
 export const link = "text-plum-700 underline underline-offset-[0.2em]";
 
-// Form fields: a label, optional hint and errors, then the control.
+// Form fields: a label, the control, then errors and an optional hint below it
+// (so neighbouring fields in a multi column row stay aligned).
 export const field = "grid min-w-0 content-start gap-2";
 export const fieldLabel = "font-medium text-neutral-800";
 export const fieldOptional = "font-normal text-neutral-600";

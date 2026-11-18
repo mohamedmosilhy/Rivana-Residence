@@ -118,7 +118,7 @@ Minimum touch target: 44×44px. Every state includes hover (when available), foc
 
 ## Forms
 
-- Persistent labels above controls; placeholders are examples, not labels.
+- Persistent labels above controls; placeholders are examples, not labels. In admin forms each field is the label, then the control, then its errors and hint below it, so neighbouring fields in a multi column row line up whether or not they have a hint (`FieldShell`; an E2E test measures it).
 - Minimum 44px control height, visible border, clear focus ring, and adjacent help/error text.
 - Errors use text plus color and link to an error summary on long admin forms.
 - Required state is announced programmatically.

@@ -105,7 +105,7 @@ Groups:
 - Footer/legal: footer text and approved policy links.
 - Default SEO: title template, description, social image.
 - Booking: read-only “Not configured” status initially (implemented). Online booking will be switched per branch on the branch screen (shown read only as Off since M5; enabled from M10); VAT is set here by the Admin only (M12, any rate).
-- WhatsApp (Admin only, M8): business number (placeholder until the client supplies it), provider phone-number id, token-configured indicator, template manager per purpose and language, setup gaps, and **Send test message**.
+- WhatsApp (Admin only, **implemented in M8-T4b** at `/admin/settings/whatsapp`, linked from Settings): business number (placeholder until the client supplies it), provider phone-number id, token-configured indicator, template manager per purpose and language, setup gaps, and **Send test message**.
 - Media storage: read-only provider/root health and free-space warning; filesystem paths are never editable in the browser.
 - Account/security: current user password/session management; user management is administrator-only.
 

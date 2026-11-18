@@ -135,4 +135,5 @@ M4 (2026-11-06), M5 (2026-11-07), M6-T1 through M6-T10 (latest 2026-11-10), and 
 | E2E-A-2 | Receptionist and Manager get `403` / denied page on CMS routes and actions |
 | E2E-A-3 | Admin assigns branch, and the receptionist's access changes on the next request |
 | E2E-A-4 | Admin sets VAT (0% to 100%; below 0 or above 100 is refused); the default is 15%; Manager cannot see the setting; new quotes use the new rate |
-| E2E-A-5 | Admin enters the WhatsApp number, adds a template, and sends a test message (fake adapter); with the number empty, online booking cannot be enabled and verification shows the not-configured message |
+| E2E-A-5 | Admin enters the WhatsApp number, adds a template, edits and deactivates it, and sends a test message; Editors are denied; with WhatsApp not set up, the branch API refuses online booking. **Implemented (M8-T4b)** against the production build, which refuses the fake adapter and has no access token, so the test message ends at "no active WhatsApp template"; the successful send is proven by the integration and unit tests. Also covers aligned form rows (T-UI-ALIGN) |
+| T-UI-ALIGN | Fields in one row of a multi column admin form start at the same height (Playwright, four admin pages). **Implemented (M8-T4b)** |

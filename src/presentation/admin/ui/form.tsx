@@ -2,6 +2,7 @@
 
 import {
   useEffect,
+  useId,
   useRef,
   type InputHTMLAttributes,
   type ReactNode,
@@ -38,6 +39,8 @@ export function ErrorSummary({
   submission: unknown;
 }>) {
   const ref = useRef<HTMLDivElement>(null);
+  // One id per instance: a page can hold several forms with summaries.
+  const titleId = useId();
   useEffect(() => {
     ref.current?.focus();
   }, [submission]);
@@ -48,9 +51,9 @@ export function ErrorSummary({
       className={errorSummary}
       role="alert"
       tabIndex={-1}
-      aria-labelledby="error-summary-title"
+      aria-labelledby={titleId}
     >
-      <h2 id="error-summary-title" className={errorSummaryTitle}>
+      <h2 id={titleId} className={errorSummaryTitle}>
         {title}
       </h2>
       {errors.length > 0 ? (
@@ -97,17 +100,16 @@ export function FieldShell({
   const hintId = hint ? `${id}-hint` : undefined;
   const errorId = errors.length > 0 ? `${id}-errors` : undefined;
   const describedBy = [hintId, errorId].filter(Boolean).join(" ") || undefined;
+  // Label, then the control, then errors and hint below it. Hints and errors
+  // differ from field to field, so keeping them under the control lets the
+  // labels and controls of neighbouring fields line up in a multi column row.
   return (
     <div className={field}>
       <label htmlFor={id} className={fieldLabel}>
         {label}
         {optional ? <span className={fieldOptional}> (optional)</span> : null}
       </label>
-      {hint ? (
-        <p className={fieldHint} id={hintId}>
-          {hint}
-        </p>
-      ) : null}
+      {children(describedBy, errors.length > 0)}
       {errorId ? (
         <ul className={fieldErrors} id={errorId}>
           {errors.map((error) => (
@@ -115,7 +117,11 @@ export function FieldShell({
           ))}
         </ul>
       ) : null}
-      {children(describedBy, errors.length > 0)}
+      {hint ? (
+        <p className={fieldHint} id={hintId}>
+          {hint}
+        </p>
+      ) : null}
     </div>
   );
 }

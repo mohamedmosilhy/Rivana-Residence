@@ -18,6 +18,7 @@ const CMS_ROUTES = [
   "/admin/branches",
   "/admin/branches/new",
   "/admin/settings",
+  "/admin/settings/whatsapp",
   "/admin/staff",
 ];
 

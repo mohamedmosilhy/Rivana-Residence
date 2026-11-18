@@ -1,6 +1,6 @@
 # M8: Reservations, immediate confirmation, verification, messages
 
-Status: **In progress** (7/17 tasks accepted: M8-T0 on 2026-11-13, M8-T0b on 2026-11-14, M8-T1 and M8-T2 on 2026-11-15, M8-T3 and M8-T3b on 2026-11-17, M8-T4 backend on 2026-11-18; spec [0005](../../specs/0005-m8-reservations.md) and task breakdown approved 2026-11-14). Brief: [m8-reservations.md](../milestones/m8-reservations.md).
+Status: **In progress** (8/18 tasks accepted: M8-T0 on 2026-11-13, M8-T0b on 2026-11-14, M8-T1 and M8-T2 on 2026-11-15, M8-T3 and M8-T3b on 2026-11-17, M8-T4 backend and M8-T4b screen on 2026-11-18; spec [0005](../../specs/0005-m8-reservations.md) and task breakdown approved 2026-11-14). Brief: [m8-reservations.md](../milestones/m8-reservations.md).
 
 ## Task log
 
@@ -14,6 +14,7 @@ Status: **In progress** (7/17 tasks accepted: M8-T0 on 2026-11-13, M8-T0b on 202
 | M8-T3 | Critical | Owner, 2026-11-17 | `feat(reservations): add M8-T3 repositories and inventory consumption` (this task commit) | [2026-11-17-m8-t3.md](../../reviews/2026-11-17-m8-t3.md) | `npm run check`: 88 unit files / 1,886 tests and build passed. Full PostgreSQL integration: 41 files / 626 tests. Dedicated concurrency: 4 files / 35 tests; races repeat 20 times. Live P5 and storage transaction proof passed. E2E not applicable (no routes or UI) | Reservation and guest repositories, transaction composition, and persisted consumption for availability, quotes, blocks, and unit reductions. Review (gpt-6-astra): approve after coupon snapshot and captured output tests; no open findings. [Exact evidence](#m8-t3-verification) |
 | M8-T3b | Critical | Owner, 2026-11-17 | `feat(reservations): add M8-T3b airport transfer car count` (this task commit) | [2026-11-17-m8-t3b.md](../../reviews/2026-11-17-m8-t3b.md) | `npm run check`: 89 unit files / 1,919 tests and build passed. Full PostgreSQL integration: 42 files / 633 tests (service write lock wait repeated 20 times; populated upgrade with drift check). E2E: P6 test passed in the `branches` project (spec run 179 passed, 30 skipped) | Car count for the airport transfer: `PER_VEHICLE`, `maxVehicles`, stored `vehicles`, P6 object form, S35/S36 fields, ADR 027 amendment accepted. Started by a Codex model and finished by Claude Opus; review (Sonnet 5.5): approve with nits, all answered. [Exact evidence](#m8-t3b-verification) |
 | M8-T4 | Critical | Owner, 2026-11-18 | `feat(reservations): add M8-T4 WhatsApp setup backend` (this task commit) | [2026-11-17-m8-t4.md](../../reviews/2026-11-17-m8-t4.md) | `npm run check` passed (format, lint, typecheck, unit, build); unit run 92 files / 2,042 tests. Full PostgreSQL integration: 43 files / 657 tests (includes the 20-round active-template race). E2E not run (no screen yet) | Admin WhatsApp setup API A6 to A8, `TemplateWhatsAppSender` over a `WhatsAppTransport` port (Meta Cloud and fake), sanitizer, per-Admin test limiter, env config, Q-71 gate on online booking. Review (Sonnet 5.5): approve with nits, all six minors fixed or answered. The minimal Admin screen moved to M8-T4b. [Notes](#m8-t4-verification) |
+| M8-T4b | Medium | Owner, 2026-11-18 | `feat(admin): add M8-T4b WhatsApp setup screen` (this task commit) | [2026-11-18-m8-t4b.md](../../reviews/2026-11-18-m8-t4b.md) | `npm run check`: exit 0, 93 unit files / 2,054 tests and build passed. Full PostgreSQL integration: 43 files / 657 tests. Chromium desktop and mobile with branches: 181 passed, 36 skipped in the full run (new spec: 12 passed, 6 skipped on desktop and mobile) | Admin screen `/admin/settings/whatsapp` on the T4 API: status, number and phone number id, template table with add and edit, test message. Shared admin form change: hints and errors sit below the control so multi column rows align; `ErrorSummary` ids are unique per form. Review (Opus 5.5): changes requested, one major (controlled fields reverted after a failed save) fixed with regression tests, minors and nits fixed. [Notes](#m8-t4b-verification) |
 
 Task commits identified by subject in this log can be located with `git log --oneline --fixed-strings --grep='<subject>'`.
 
@@ -96,3 +97,17 @@ Accepted by the owner on 2026-11-18. Started by one model and finished by Claude
 | `TEST_DATABASE_URL=postgresql://mohamedmosilhy@127.0.0.1:5432/rivana_test npm run test:integration` | 43 files / 657 tests passed |
 
 Deviations from the spec, accepted: adapters are `meta-cloud-transport.ts` and `fake-transport.ts` behind a `WhatsAppTransport` port; the sender lives in the application layer. Left free by decision of the review: a UTILITY purpose may carry a MARKETING category. Not done here: the `/admin/settings/whatsapp` screen (M8-T4b) and its E2E-A-5.
+
+## M8-T4b verification
+
+Accepted by the owner on 2026-11-18. Author: Claude Sonnet 5.5; independent reviewer: Claude Opus 5.5 ([2026-11-18-m8-t4b.md](../../reviews/2026-11-18-m8-t4b.md)). Risk tier Medium: an Admin screen over the accepted Critical T4 use cases, no new endpoint, schema, or rule.
+
+| Command | Result |
+| --- | --- |
+| `npm run check` | Exit 0: format, lint, typecheck, 93 unit files / 2,054 tests, production build |
+| `TEST_DATABASE_URL=postgresql://mohamedmosilhy@127.0.0.1:5432/rivana_test npm run test:integration` | 43 files / 657 tests passed |
+| `E2E_DATABASE_URL=postgresql://mohamedmosilhy@127.0.0.1:5432/rivana_e2e_test npx playwright test --project=desktop-chromium --project=mobile-chromium --project=branches` | 181 passed, 36 skipped; one branches test timed out once under load and passed on rerun (the whole spec: 191 passed) |
+
+What the E2E proves: the Admin saves the number and id, is refused a bad number and a bad template name with a linked error summary, adds, edits and deactivates a template, sees the setup gap close, and gets the "no active WhatsApp template" outcome for a test message (the production build has no fake adapter and no token); axe and no horizontal scroll on desktop and mobile; Editors, Managers, and Receptionists are denied; the branch API refuses online booking while WhatsApp is not set up; form rows are aligned on four admin pages (fails on the old layout). Unit tests cover the forms, including the regression for the major finding. The successful send is proven by the T4 integration tests. A real Meta send awaits the client's number, token, and approved templates (Q-10); it is not part of M8 acceptance.
+
+Known intermittent timeouts under full parallel load, unrelated to this task: `tests/unit/architecture/persistence-boundaries.test.ts` (5 second limit) and one branches E2E title test.

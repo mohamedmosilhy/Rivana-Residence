@@ -40,7 +40,7 @@ Branch slugs never collide with `admin`, `api`, `media`, `reservations`, `book`,
 | `/admin/media`, `/admin/media/[id]` | `media:upload` | Media library | Implemented |
 | `/admin/promotions` | — | Promotion campaigns | **Removed** in M5 (Q-47); the `Promotion` table stays until a later contract migration |
 | `/admin/enquiries` | `enquiries:read` | Contact enquiries | Implemented |
-| `/admin/settings/whatsapp` | `settings:edit` | WhatsApp business number (placeholder until supplied), template manager, "Send test message" (Admin only) | Planned (M8) |
+| `/admin/settings/whatsapp` | `settings:edit` | WhatsApp business number (placeholder until supplied), template manager, "Send test message" (Admin only). Linked from `/admin/settings` | **Implemented (M8-T4b)** |
 | `/admin/settings` | `settings:edit` | Brand settings, social links, site images (contact and map moved to branches in M5); VAT rate (Admin, `tax:manage`, M12) | Implemented |
 | `/admin/staff` | `users:manage` | Staff accounts; role and branch assignment planned (M12) | Implemented |
 | `/admin/account` | `sessions:manage-own` | Own password and sessions | Implemented |
