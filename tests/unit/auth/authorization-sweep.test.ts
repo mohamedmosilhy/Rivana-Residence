@@ -20,6 +20,11 @@ import {
 } from "@/application/settings";
 import { ManageCommercialSettings } from "@/application/commercial";
 import { ManageServices } from "@/application/services";
+import {
+  ManageWhatsAppSettings,
+  ManageWhatsAppTemplates,
+  SendWhatsAppTestMessage,
+} from "@/application/notifications";
 import type { Capability } from "@/domain/auth/capabilities";
 import { roleHasCapability } from "@/domain/auth/capabilities";
 
@@ -78,6 +83,7 @@ const branches = () =>
     branches: tripwire("branches"),
     cache: tripwire("cache"),
     media: tripwire("media"),
+    whatsApp: tripwire("whatsApp"),
     clock: tripwire("clock"),
   });
 const settingsRepo = () => tripwire("settings");
@@ -103,7 +109,63 @@ const coupons = () =>
     clock: tripwire("clock"),
     ids: tripwire("ids"),
   });
+// M8-T4: WhatsApp setup, Admin only (settings:edit).
+const whatsAppSettings = () =>
+  new ManageWhatsAppSettings({
+    unitOfWork: tripwire("unitOfWork"),
+    setup: tripwire("setup"),
+    clock: tripwire("clock"),
+  });
+const whatsAppTemplates = () =>
+  new ManageWhatsAppTemplates({
+    unitOfWork: tripwire("unitOfWork"),
+    templates: tripwire("templates"),
+    clock: tripwire("clock"),
+    ids: tripwire("ids"),
+  });
+const whatsAppTest = () =>
+  new SendWhatsAppTestMessage({
+    unitOfWork: tripwire("unitOfWork"),
+    templates: tripwire("templates"),
+    sender: tripwire("sender"),
+    limiter: tripwire("limiter"),
+    clock: tripwire("clock"),
+  });
 const CALLS: readonly Call[] = [
+  {
+    name: "whatsapp.settings.read",
+    capability: "settings:edit",
+    run: (s) => whatsAppSettings().read(s),
+  },
+  {
+    name: "whatsapp.settings.update",
+    capability: "settings:edit",
+    run: (s) =>
+      whatsAppSettings().update(s, {
+        businessPhoneNumber: null,
+        providerPhoneNumberId: null,
+      }),
+  },
+  {
+    name: "whatsapp.templates.list",
+    capability: "settings:edit",
+    run: (s) => whatsAppTemplates().list(s),
+  },
+  {
+    name: "whatsapp.templates.create",
+    capability: "settings:edit",
+    run: (s) => whatsAppTemplates().create(s, {}),
+  },
+  {
+    name: "whatsapp.templates.update",
+    capability: "settings:edit",
+    run: (s) => whatsAppTemplates().update(s, "tmpl-1", {}),
+  },
+  {
+    name: "whatsapp.test-message",
+    capability: "settings:edit",
+    run: (s) => whatsAppTest().execute(s, { phone: "+12025550101" }),
+  },
   {
     name: "coupons.list",
     capability: "coupons:manage",

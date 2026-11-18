@@ -1556,6 +1556,268 @@
           }
         }
       }
+    },
+    "/api/v1/staff/settings/whatsapp": {
+      "get": {
+        "operationId": "getWhatsAppSettings",
+        "summary": "API-A6. The WhatsApp setup (settings:edit, Admin only): number, phone number id, whether the server holds an access token (never the token), Q-71 configured flag, setup gaps, and the last test result.",
+        "tags": [
+          "Settings"
+        ],
+        "security": [
+          {
+            "staffSession": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The WhatsApp setup.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WhatsAppSetup"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Problem details. Codes: INTERNAL, UNAUTHENTICATED, FORBIDDEN.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "operationId": "updateWhatsAppSettings",
+        "summary": "API-A6. Set or clear the business number and phone number id (settings:edit, Admin only). Audited under the settings row lock. An accessToken field is refused.",
+        "tags": [
+          "Settings"
+        ],
+        "security": [
+          {
+            "staffSession": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WhatsAppSettingsInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The WhatsApp setup.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WhatsAppSetup"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Problem details. Codes: INTERNAL, UNAUTHENTICATED, FORBIDDEN, CROSS_SITE_REQUEST, VALIDATION, TRY_AGAIN.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/staff/whatsapp-templates": {
+      "get": {
+        "operationId": "listWhatsAppTemplates",
+        "summary": "API-A7. Every WhatsApp template (settings:edit, Admin only).",
+        "tags": [
+          "Settings"
+        ],
+        "security": [
+          {
+            "staffSession": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The templates.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WhatsAppTemplateList"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Problem details. Codes: INTERNAL, UNAUTHENTICATED, FORBIDDEN.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "operationId": "createWhatsAppTemplate",
+        "summary": "API-A7. Add a template (settings:edit, Admin only). Variable keys come from the per purpose allowlist; one active template per purpose and language except MARKETING. Audited; returns Location.",
+        "tags": [
+          "Settings"
+        ],
+        "security": [
+          {
+            "staffSession": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WhatsAppTemplateInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "The created template.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WhatsAppTemplate"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Problem details. Codes: INTERNAL, UNAUTHENTICATED, FORBIDDEN, CROSS_SITE_REQUEST, CONFLICT, VALIDATION, TRY_AGAIN.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/staff/whatsapp-templates/{id}": {
+      "patch": {
+        "operationId": "updateWhatsAppTemplate",
+        "summary": "API-A7. Patch a template under its row lock (settings:edit, Admin only); the merged template is validated again. Deactivate instead of deleting. Identical changes add no audit event.",
+        "tags": [
+          "Settings"
+        ],
+        "security": [
+          {
+            "staffSession": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WhatsAppTemplatePatch"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The updated template.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WhatsAppTemplate"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Problem details. Codes: INTERNAL, UNAUTHENTICATED, FORBIDDEN, CROSS_SITE_REQUEST, NOT_FOUND, CONFLICT, VALIDATION, TRY_AGAIN.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/staff/settings/whatsapp/test-message": {
+      "post": {
+        "operationId": "sendWhatsAppTestMessage",
+        "summary": "API-A8. Send the chosen template, or the active en TEST template, filled with fake sample values (settings:edit, Admin only). 5 per 10 minutes per Admin. The result is stored on the settings and audited; the recipient is never stored.",
+        "tags": [
+          "Settings"
+        ],
+        "security": [
+          {
+            "staffSession": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WhatsAppTestMessageInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The provider accepted the message.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WhatsAppTestMessageResult"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Problem details. Codes: INTERNAL, UNAUTHENTICATED, FORBIDDEN, CROSS_SITE_REQUEST, NOT_FOUND, VALIDATION, RATE_LIMITED, WHATSAPP_TEST_FAILED, WHATSAPP_NOT_CONFIGURED.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -4106,6 +4368,436 @@
         },
         "required": [
           "vatRateBasisPoints"
+        ],
+        "additionalProperties": false
+      },
+      "WhatsAppSetup": {
+        "type": "object",
+        "properties": {
+          "businessPhoneNumber": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "providerPhoneNumberId": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "accessTokenConfigured": {
+            "type": "boolean",
+            "description": "Whether the server holds an access token. Never the token."
+          },
+          "configured": {
+            "type": "boolean",
+            "description": "Q-71: number, phone number id, token, and active `en` templates for VERIFICATION_CODE and BOOKING_CONFIRMED."
+          },
+          "setupGaps": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "purpose": {
+                  "type": "string",
+                  "enum": [
+                    "VERIFICATION_CODE",
+                    "BOOKING_CONFIRMED",
+                    "PAYMENT_NOT_COMPLETED",
+                    "CANCELLATION_RECEIVED",
+                    "CANCELLATION_APPROVED",
+                    "CANCELLATION_REJECTED",
+                    "REFUND_COMPLETED",
+                    "CANCELLED_BY_HOTEL",
+                    "MANAGE_LINK",
+                    "FEEDBACK_REQUEST",
+                    "MARKETING",
+                    "TEST",
+                    "RESERVATION_MODIFIED",
+                    "CHANGE_REQUEST_RECEIVED",
+                    "CHANGE_REQUEST_APPROVED",
+                    "CHANGE_REQUEST_REJECTED"
+                  ]
+                },
+                "language": {
+                  "type": "string"
+                },
+                "blocking": {
+                  "type": "boolean",
+                  "description": "True when the gap keeps WhatsApp from being configured."
+                }
+              },
+              "required": [
+                "purpose",
+                "language",
+                "blocking"
+              ],
+              "additionalProperties": false
+            },
+            "description": "Message purposes without an active template."
+          },
+          "lastTest": {
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "at": {
+                    "type": "string",
+                    "description": "UTC instant (ISO 8601)."
+                  },
+                  "ok": {
+                    "type": "boolean"
+                  },
+                  "error": {
+                    "description": "Provider text without secrets, or the setup gap.",
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  }
+                },
+                "required": [
+                  "at",
+                  "ok",
+                  "error"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "updatedAt": {
+            "type": "string",
+            "description": "UTC instant (ISO 8601)."
+          }
+        },
+        "required": [
+          "businessPhoneNumber",
+          "providerPhoneNumberId",
+          "accessTokenConfigured",
+          "configured",
+          "setupGaps",
+          "lastTest",
+          "updatedAt"
+        ],
+        "additionalProperties": false
+      },
+      "WhatsAppSettingsInput": {
+        "type": "object",
+        "properties": {
+          "businessPhoneNumber": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 40
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The hotel's WhatsApp Business number in international format (stored as E.164). Null or empty clears it, which turns sending off."
+          },
+          "providerPhoneNumberId": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 64
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The Meta Cloud API phone number id: digits only."
+          }
+        },
+        "required": [
+          "businessPhoneNumber",
+          "providerPhoneNumberId"
+        ],
+        "additionalProperties": false,
+        "description": "The access token is never accepted here; it is a server secret."
+      },
+      "WhatsAppTemplate": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "purpose": {
+            "type": "string",
+            "enum": [
+              "VERIFICATION_CODE",
+              "BOOKING_CONFIRMED",
+              "PAYMENT_NOT_COMPLETED",
+              "CANCELLATION_RECEIVED",
+              "CANCELLATION_APPROVED",
+              "CANCELLATION_REJECTED",
+              "REFUND_COMPLETED",
+              "CANCELLED_BY_HOTEL",
+              "MANAGE_LINK",
+              "FEEDBACK_REQUEST",
+              "MARKETING",
+              "TEST",
+              "RESERVATION_MODIFIED",
+              "CHANGE_REQUEST_RECEIVED",
+              "CHANGE_REQUEST_APPROVED",
+              "CHANGE_REQUEST_REJECTED"
+            ]
+          },
+          "language": {
+            "type": "string",
+            "enum": [
+              "en",
+              "ar"
+            ]
+          },
+          "providerName": {
+            "type": "string",
+            "maxLength": 120,
+            "description": "The template name exactly as approved in Meta."
+          },
+          "category": {
+            "type": "string",
+            "enum": [
+              "AUTHENTICATION",
+              "UTILITY",
+              "MARKETING"
+            ],
+            "description": "VERIFICATION_CODE must be AUTHENTICATION."
+          },
+          "variables": {
+            "maxItems": 12,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "maxLength": 40
+            },
+            "description": "Ordered allowlisted keys: guestFirstName, reference, branchName, checkIn, checkOut, total, manageLink, code, holdExpiresAt, refundAmount, reason, feedbackLink. Each purpose allows a subset; unknown or disallowed keys return 422."
+          },
+          "previewText": {
+            "type": "string",
+            "maxLength": 1024,
+            "description": "Staff facing preview; never sent."
+          },
+          "active": {
+            "type": "boolean",
+            "description": "One active template per purpose and language (except MARKETING); a second returns 409."
+          },
+          "createdAt": {
+            "type": "string",
+            "description": "UTC instant (ISO 8601)."
+          },
+          "updatedAt": {
+            "type": "string",
+            "description": "UTC instant (ISO 8601)."
+          }
+        },
+        "required": [
+          "id",
+          "purpose",
+          "language",
+          "providerName",
+          "category",
+          "variables",
+          "previewText",
+          "active",
+          "createdAt",
+          "updatedAt"
+        ],
+        "additionalProperties": false
+      },
+      "WhatsAppTemplateInput": {
+        "type": "object",
+        "properties": {
+          "purpose": {
+            "type": "string",
+            "enum": [
+              "VERIFICATION_CODE",
+              "BOOKING_CONFIRMED",
+              "PAYMENT_NOT_COMPLETED",
+              "CANCELLATION_RECEIVED",
+              "CANCELLATION_APPROVED",
+              "CANCELLATION_REJECTED",
+              "REFUND_COMPLETED",
+              "CANCELLED_BY_HOTEL",
+              "MANAGE_LINK",
+              "FEEDBACK_REQUEST",
+              "MARKETING",
+              "TEST",
+              "RESERVATION_MODIFIED",
+              "CHANGE_REQUEST_RECEIVED",
+              "CHANGE_REQUEST_APPROVED",
+              "CHANGE_REQUEST_REJECTED"
+            ]
+          },
+          "language": {
+            "type": "string",
+            "enum": [
+              "en",
+              "ar"
+            ]
+          },
+          "providerName": {
+            "type": "string",
+            "maxLength": 120,
+            "description": "The template name exactly as approved in Meta."
+          },
+          "category": {
+            "type": "string",
+            "enum": [
+              "AUTHENTICATION",
+              "UTILITY",
+              "MARKETING"
+            ],
+            "description": "VERIFICATION_CODE must be AUTHENTICATION."
+          },
+          "variables": {
+            "maxItems": 12,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "maxLength": 40
+            },
+            "description": "Ordered allowlisted keys: guestFirstName, reference, branchName, checkIn, checkOut, total, manageLink, code, holdExpiresAt, refundAmount, reason, feedbackLink. Each purpose allows a subset; unknown or disallowed keys return 422."
+          },
+          "previewText": {
+            "type": "string",
+            "maxLength": 1024,
+            "description": "Staff facing preview; never sent."
+          },
+          "active": {
+            "type": "boolean",
+            "description": "One active template per purpose and language (except MARKETING); a second returns 409."
+          }
+        },
+        "required": [
+          "purpose",
+          "language",
+          "providerName",
+          "category",
+          "variables",
+          "previewText",
+          "active"
+        ],
+        "additionalProperties": false
+      },
+      "WhatsAppTemplatePatch": {
+        "type": "object",
+        "properties": {
+          "purpose": {
+            "type": "string",
+            "enum": [
+              "VERIFICATION_CODE",
+              "BOOKING_CONFIRMED",
+              "PAYMENT_NOT_COMPLETED",
+              "CANCELLATION_RECEIVED",
+              "CANCELLATION_APPROVED",
+              "CANCELLATION_REJECTED",
+              "REFUND_COMPLETED",
+              "CANCELLED_BY_HOTEL",
+              "MANAGE_LINK",
+              "FEEDBACK_REQUEST",
+              "MARKETING",
+              "TEST",
+              "RESERVATION_MODIFIED",
+              "CHANGE_REQUEST_RECEIVED",
+              "CHANGE_REQUEST_APPROVED",
+              "CHANGE_REQUEST_REJECTED"
+            ]
+          },
+          "language": {
+            "type": "string",
+            "enum": [
+              "en",
+              "ar"
+            ]
+          },
+          "providerName": {
+            "type": "string",
+            "maxLength": 120,
+            "description": "The template name exactly as approved in Meta."
+          },
+          "category": {
+            "type": "string",
+            "enum": [
+              "AUTHENTICATION",
+              "UTILITY",
+              "MARKETING"
+            ],
+            "description": "VERIFICATION_CODE must be AUTHENTICATION."
+          },
+          "variables": {
+            "maxItems": 12,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "maxLength": 40
+            },
+            "description": "Ordered allowlisted keys: guestFirstName, reference, branchName, checkIn, checkOut, total, manageLink, code, holdExpiresAt, refundAmount, reason, feedbackLink. Each purpose allows a subset; unknown or disallowed keys return 422."
+          },
+          "previewText": {
+            "type": "string",
+            "maxLength": 1024,
+            "description": "Staff facing preview; never sent."
+          },
+          "active": {
+            "type": "boolean",
+            "description": "One active template per purpose and language (except MARKETING); a second returns 409."
+          }
+        },
+        "additionalProperties": false
+      },
+      "WhatsAppTemplateList": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/WhatsAppTemplate"
+            }
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "additionalProperties": false
+      },
+      "WhatsAppTestMessageInput": {
+        "type": "object",
+        "properties": {
+          "phone": {
+            "type": "string",
+            "maxLength": 40,
+            "description": "Recipient in international format; never stored."
+          },
+          "templateId": {
+            "description": "A stored template; default: the active `en` TEST template.",
+            "type": "string",
+            "maxLength": 32
+          }
+        },
+        "required": [
+          "phone"
+        ],
+        "additionalProperties": false
+      },
+      "WhatsAppTestMessageResult": {
+        "type": "object",
+        "properties": {
+          "ok": {
+            "type": "boolean",
+            "const": true
+          },
+          "providerMessageId": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "ok",
+          "providerMessageId"
         ],
         "additionalProperties": false
       }

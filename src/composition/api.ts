@@ -18,6 +18,11 @@ import {
   manageServices,
   quoteBooking as buildQuoteBooking,
 } from "@/composition/commercial";
+import {
+  manageWhatsAppSettings,
+  manageWhatsAppTemplates,
+  sendWhatsAppTestMessage,
+} from "@/composition/notifications";
 import { getRateCalendar, manageRates } from "@/composition/pricing";
 import { clientAddressFrom, isSameOriginRequest } from "@/composition/http";
 import {
@@ -238,3 +243,20 @@ export const updateCoupon = (
   id: string,
   input: unknown,
 ) => manageCoupons().update(staff, id, input);
+
+// API-A6…A8, the Admin's WhatsApp setup (M8-T4). Admin only, audited.
+export const readWhatsAppSettings = (staff: StaffPrincipal) =>
+  manageWhatsAppSettings().read(staff);
+export const updateWhatsAppSettings = (staff: StaffPrincipal, input: unknown) =>
+  manageWhatsAppSettings().update(staff, input);
+export const listWhatsAppTemplates = (staff: StaffPrincipal) =>
+  manageWhatsAppTemplates().list(staff);
+export const createWhatsAppTemplate = (staff: StaffPrincipal, input: unknown) =>
+  manageWhatsAppTemplates().create(staff, input);
+export const updateWhatsAppTemplate = (
+  staff: StaffPrincipal,
+  id: string,
+  input: unknown,
+) => manageWhatsAppTemplates().update(staff, id, input);
+export const sendWhatsAppTest = (staff: StaffPrincipal, input: unknown) =>
+  sendWhatsAppTestMessage().execute(staff, input);

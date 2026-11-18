@@ -659,7 +659,11 @@ export async function seedDemoReservations(
           providerName: `fictional_demo_${purpose.toLowerCase()}`,
           category:
             purpose === "VERIFICATION_CODE" ? "AUTHENTICATION" : "UTILITY",
-          variables: [],
+          // Valid for the purpose's allowlist (M8-T4); still inactive.
+          variables:
+            purpose === "VERIFICATION_CODE"
+              ? ["code"]
+              : ["guestFirstName", "reference", "checkIn", "checkOut"],
           previewText: "Fictional demo template, not approved by Meta.",
           active: false,
         },

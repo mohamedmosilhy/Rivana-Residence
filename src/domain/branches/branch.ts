@@ -217,8 +217,14 @@ function crossFieldRules(branch: CrossFieldValues, context: z.RefinementCtx) {
  */
 export const branchSchema = branchFields.superRefine(crossFieldRules);
 
+// Turning online booking on (FR-BR-3, Q-71, Q-09). The branch use case checks
+// these in order; the last one stays until the booking journey ships (M10).
+export const ONLINE_BOOKING_NEEDS_WHATSAPP_MESSAGE =
+  "Online booking can't be turned on until WhatsApp messaging is set up.";
+export const ONLINE_BOOKING_NEEDS_CHECK_IN_MESSAGE =
+  "Add the branch's check-in time before turning on online booking.";
 export const ONLINE_BOOKING_NOT_READY_MESSAGE =
-  "Online booking can't be turned on yet. It needs WhatsApp messaging and the booking journey, which arrive in later releases.";
+  "Online booking can't be turned on yet. The booking journey arrives in a later release.";
 
 /** Optional whole number from a form string or a JSON number. */
 const sortOrderField = z.preprocess(
@@ -233,18 +239,16 @@ const sortOrderField = z.preprocess(
     .max(9999, "Use 9999 or less."),
 );
 
-// M5 additions shared by create and update (spec 0002). Online booking is
-// refused until its prerequisites exist (M10); the hero image is checked
-// against the media library by the use case.
+// M5 additions shared by create and update (spec 0002). Turning online
+// booking on needs WhatsApp and a check-in time, and stays refused until M10:
+// the use case checks that, because WhatsApp readiness is stored data. The
+// hero image is checked against the media library by the use case.
 const managedFields = {
   heroMediaId: z.preprocess(
     blankToNull,
     z.string().trim().min(1).max(32).nullable().default(null),
   ),
-  onlineBookingEnabled: z
-    .boolean()
-    .default(false)
-    .refine((value) => value === false, ONLINE_BOOKING_NOT_READY_MESSAGE),
+  onlineBookingEnabled: z.boolean().default(false),
   sortOrder: sortOrderField.default(0),
 };
 

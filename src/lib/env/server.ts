@@ -24,6 +24,9 @@ export function getServerEnv() {
     SMTP_SECURE: process.env.SMTP_SECURE,
     SMTP_USER: process.env.SMTP_USER,
     SMTP_PASSWORD: process.env.SMTP_PASSWORD,
+    WHATSAPP_PROVIDER: process.env.WHATSAPP_PROVIDER,
+    WHATSAPP_ACCESS_TOKEN: process.env.WHATSAPP_ACCESS_TOKEN,
+    WHATSAPP_GRAPH_VERSION: process.env.WHATSAPP_GRAPH_VERSION,
   });
   return cached;
 }

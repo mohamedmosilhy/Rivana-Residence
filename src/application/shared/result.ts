@@ -17,7 +17,9 @@ export type ApplicationErrorCode =
   | "REFERENCED"
   | "SERVICE_UNAVAILABLE"
   | "TRY_AGAIN"
-  | "VALIDATION";
+  | "VALIDATION"
+  | "WHATSAPP_NOT_CONFIGURED"
+  | "WHATSAPP_TEST_FAILED";
 
 type StandardApplicationErrorCode = Exclude<
   ApplicationErrorCode,
@@ -29,6 +31,8 @@ type StandardApplicationError = Readonly<{
   message: string;
   fieldErrors?: Readonly<Record<string, readonly string[]>>;
   context?: never;
+  /** For 429 and 503: when the caller may try again (`Retry-After`). */
+  retryAfterSeconds?: number;
 }>;
 
 export type InventoryUnavailableError = Readonly<{
@@ -81,6 +85,21 @@ export function failure(
       code,
       message,
       ...(fieldErrors ? { fieldErrors } : {}),
+    },
+  };
+}
+
+/** A limiter refusal that tells the caller when the window reopens. */
+export function rateLimited(
+  message: string,
+  retryAfterSeconds: number,
+): Result<never> {
+  return {
+    ok: false,
+    error: {
+      code: "RATE_LIMITED",
+      message,
+      retryAfterSeconds: Math.max(1, Math.ceil(retryAfterSeconds)),
     },
   };
 }

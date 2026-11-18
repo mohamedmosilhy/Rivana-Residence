@@ -58,4 +58,37 @@ describe("server environment", () => {
     ).toBe(true);
     expect(() => parseServerEnv({ AUTH_TRUST_PROXY_HEADERS: "yes" })).toThrow();
   });
+
+  // M8-T4 (spec 0005 Decision 6): the fake WhatsApp adapter never runs in
+  // production; development and tests default to it.
+  it("defaults WhatsApp to the fake outside production and Meta in it", () => {
+    expect(parseServerEnv({}).WHATSAPP_PROVIDER).toBe("fake");
+    expect(parseServerEnv({}).WHATSAPP_GRAPH_VERSION).toBe("v23.0");
+    expect(
+      parseServerEnv({
+        NODE_ENV: "production",
+        MEDIA_STORAGE_ROOT: "/srv/rivana/media",
+        DATABASE_URL: "postgresql://rivana@example.test/rivana",
+        BETTER_AUTH_SECRET: "s".repeat(48),
+      }).WHATSAPP_PROVIDER,
+    ).toBe("meta");
+  });
+
+  it("refuses the fake WhatsApp provider in production", () => {
+    expect(() =>
+      parseServerEnv({
+        NODE_ENV: "production",
+        MEDIA_STORAGE_ROOT: "/srv/rivana/media",
+        DATABASE_URL: "postgresql://rivana@example.test/rivana",
+        BETTER_AUTH_SECRET: "s".repeat(48),
+        WHATSAPP_PROVIDER: "fake",
+      }),
+    ).toThrowError(/WHATSAPP_PROVIDER=fake is not allowed in production/);
+  });
+
+  it("checks the Graph API version format", () => {
+    expect(() => parseServerEnv({ WHATSAPP_GRAPH_VERSION: "latest" })).toThrow(
+      /Graph API version/,
+    );
+  });
 });

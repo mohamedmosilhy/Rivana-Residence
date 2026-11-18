@@ -50,6 +50,16 @@ import {
   ServiceOfferingList,
 } from "./commercial";
 import { Money } from "./primitives";
+import {
+  WhatsAppSettingsInput,
+  WhatsAppSetup,
+  WhatsAppTemplate,
+  WhatsAppTemplateInput,
+  WhatsAppTemplateList,
+  WhatsAppTemplatePatch,
+  WhatsAppTestMessageInput,
+  WhatsAppTestMessageResult,
+} from "./whatsapp";
 
 /** One documented endpoint. The OpenAPI document is generated from these. */
 export type ApiRoute = Readonly<{
@@ -622,6 +632,120 @@ export const API_ROUTES: readonly ApiRoute[] = [
       "NOT_FOUND",
       "VALIDATION",
       "TRY_AGAIN",
+    ],
+  },
+  {
+    method: "get",
+    path: "/api/v1/staff/settings/whatsapp",
+    operationId: "getWhatsAppSettings",
+    summary:
+      "API-A6. The WhatsApp setup (settings:edit, Admin only): number, phone number id, whether the server holds an access token (never the token), Q-71 configured flag, setup gaps, and the last test result.",
+    tag: "Settings",
+    security: "staff",
+    responses: {
+      200: { description: "The WhatsApp setup.", schema: WhatsAppSetup },
+    },
+    errors: ["UNAUTHENTICATED", "FORBIDDEN"],
+  },
+  {
+    method: "put",
+    path: "/api/v1/staff/settings/whatsapp",
+    operationId: "updateWhatsAppSettings",
+    summary:
+      "API-A6. Set or clear the business number and phone number id (settings:edit, Admin only). Audited under the settings row lock. An accessToken field is refused.",
+    tag: "Settings",
+    security: "staff",
+    request: WhatsAppSettingsInput,
+    responses: {
+      200: { description: "The WhatsApp setup.", schema: WhatsAppSetup },
+    },
+    errors: [
+      "UNAUTHENTICATED",
+      "FORBIDDEN",
+      "CROSS_SITE_REQUEST",
+      "VALIDATION",
+      "TRY_AGAIN",
+    ],
+  },
+  {
+    method: "get",
+    path: "/api/v1/staff/whatsapp-templates",
+    operationId: "listWhatsAppTemplates",
+    summary: "API-A7. Every WhatsApp template (settings:edit, Admin only).",
+    tag: "Settings",
+    security: "staff",
+    responses: {
+      200: { description: "The templates.", schema: WhatsAppTemplateList },
+    },
+    errors: ["UNAUTHENTICATED", "FORBIDDEN"],
+  },
+  {
+    method: "post",
+    path: "/api/v1/staff/whatsapp-templates",
+    operationId: "createWhatsAppTemplate",
+    summary:
+      "API-A7. Add a template (settings:edit, Admin only). Variable keys come from the per purpose allowlist; one active template per purpose and language except MARKETING. Audited; returns Location.",
+    tag: "Settings",
+    security: "staff",
+    request: WhatsAppTemplateInput,
+    responses: {
+      201: { description: "The created template.", schema: WhatsAppTemplate },
+    },
+    errors: [
+      "UNAUTHENTICATED",
+      "FORBIDDEN",
+      "CROSS_SITE_REQUEST",
+      "CONFLICT",
+      "VALIDATION",
+      "TRY_AGAIN",
+    ],
+  },
+  {
+    method: "patch",
+    path: "/api/v1/staff/whatsapp-templates/{id}",
+    operationId: "updateWhatsAppTemplate",
+    summary:
+      "API-A7. Patch a template under its row lock (settings:edit, Admin only); the merged template is validated again. Deactivate instead of deleting. Identical changes add no audit event.",
+    tag: "Settings",
+    security: "staff",
+    request: WhatsAppTemplatePatch,
+    responses: {
+      200: { description: "The updated template.", schema: WhatsAppTemplate },
+    },
+    errors: [
+      "UNAUTHENTICATED",
+      "FORBIDDEN",
+      "CROSS_SITE_REQUEST",
+      "NOT_FOUND",
+      "CONFLICT",
+      "VALIDATION",
+      "TRY_AGAIN",
+    ],
+  },
+  {
+    method: "post",
+    path: "/api/v1/staff/settings/whatsapp/test-message",
+    operationId: "sendWhatsAppTestMessage",
+    summary:
+      "API-A8. Send the chosen template, or the active en TEST template, filled with fake sample values (settings:edit, Admin only). 5 per 10 minutes per Admin. The result is stored on the settings and audited; the recipient is never stored.",
+    tag: "Settings",
+    security: "staff",
+    request: WhatsAppTestMessageInput,
+    responses: {
+      200: {
+        description: "The provider accepted the message.",
+        schema: WhatsAppTestMessageResult,
+      },
+    },
+    errors: [
+      "UNAUTHENTICATED",
+      "FORBIDDEN",
+      "CROSS_SITE_REQUEST",
+      "NOT_FOUND",
+      "VALIDATION",
+      "RATE_LIMITED",
+      "WHATSAPP_TEST_FAILED",
+      "WHATSAPP_NOT_CONFIGURED",
     ],
   },
 ];

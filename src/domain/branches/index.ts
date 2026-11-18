@@ -1,6 +1,8 @@
 // Public surface of the branches domain module (dependency rule D-8).
 export {
   BRANCH_STATUSES,
+  ONLINE_BOOKING_NEEDS_CHECK_IN_MESSAGE,
+  ONLINE_BOOKING_NEEDS_WHATSAPP_MESSAGE,
   ONLINE_BOOKING_NOT_READY_MESSAGE,
   RESERVED_BRANCH_SLUGS,
   branchCreateSchema,

@@ -6,6 +6,7 @@ import {
   seedDemoReservations,
 } from "../../prisma/seed/demo";
 import { seedWhatsAppSettings } from "../../prisma/seed/whatsapp";
+import { parseWhatsAppTemplateInput } from "@/domain/notifications";
 import {
   createActor,
   createBranch,
@@ -93,6 +94,20 @@ describe("M8 create only seed", () => {
         (row) => !row.active && row.providerName.startsWith("fictional_demo_"),
       ),
     ).toBe(true);
+    // M8-T4: demo templates satisfy the per purpose allowlist.
+    for (const row of state.templates) {
+      expect(
+        parseWhatsAppTemplateInput({
+          purpose: row.purpose,
+          language: row.language,
+          providerName: row.providerName,
+          category: row.category,
+          variables: row.variables,
+          previewText: row.previewText,
+          active: row.active,
+        }).ok,
+      ).toBe(true);
+    }
     expect(
       await client.reservation.count({ where: { branchId: TEST_BRANCH_ID } }),
     ).toBe(0);

@@ -1,6 +1,6 @@
 # M8: Reservations, immediate confirmation, verification, messages
 
-Status: **In progress** (5/17 tasks accepted: M8-T0 on 2026-11-13, M8-T0b on 2026-11-14, M8-T1 and M8-T2 on 2026-11-15, M8-T3 on 2026-11-17; spec [0005](../../specs/0005-m8-reservations.md) and task breakdown approved 2026-11-14). Brief: [m8-reservations.md](../milestones/m8-reservations.md).
+Status: **In progress** (7/17 tasks accepted: M8-T0 on 2026-11-13, M8-T0b on 2026-11-14, M8-T1 and M8-T2 on 2026-11-15, M8-T3 and M8-T3b on 2026-11-17, M8-T4 backend on 2026-11-18; spec [0005](../../specs/0005-m8-reservations.md) and task breakdown approved 2026-11-14). Brief: [m8-reservations.md](../milestones/m8-reservations.md).
 
 ## Task log
 
@@ -13,6 +13,7 @@ Status: **In progress** (5/17 tasks accepted: M8-T0 on 2026-11-13, M8-T0b on 202
 
 | M8-T3 | Critical | Owner, 2026-11-17 | `feat(reservations): add M8-T3 repositories and inventory consumption` (this task commit) | [2026-11-17-m8-t3.md](../../reviews/2026-11-17-m8-t3.md) | `npm run check`: 88 unit files / 1,886 tests and build passed. Full PostgreSQL integration: 41 files / 626 tests. Dedicated concurrency: 4 files / 35 tests; races repeat 20 times. Live P5 and storage transaction proof passed. E2E not applicable (no routes or UI) | Reservation and guest repositories, transaction composition, and persisted consumption for availability, quotes, blocks, and unit reductions. Review (gpt-6-astra): approve after coupon snapshot and captured output tests; no open findings. [Exact evidence](#m8-t3-verification) |
 | M8-T3b | Critical | Owner, 2026-11-17 | `feat(reservations): add M8-T3b airport transfer car count` (this task commit) | [2026-11-17-m8-t3b.md](../../reviews/2026-11-17-m8-t3b.md) | `npm run check`: 89 unit files / 1,919 tests and build passed. Full PostgreSQL integration: 42 files / 633 tests (service write lock wait repeated 20 times; populated upgrade with drift check). E2E: P6 test passed in the `branches` project (spec run 179 passed, 30 skipped) | Car count for the airport transfer: `PER_VEHICLE`, `maxVehicles`, stored `vehicles`, P6 object form, S35/S36 fields, ADR 027 amendment accepted. Started by a Codex model and finished by Claude Opus; review (Sonnet 5.5): approve with nits, all answered. [Exact evidence](#m8-t3b-verification) |
+| M8-T4 | Critical | Owner, 2026-11-18 | `feat(reservations): add M8-T4 WhatsApp setup backend` (this task commit) | [2026-11-17-m8-t4.md](../../reviews/2026-11-17-m8-t4.md) | `npm run check` passed (format, lint, typecheck, unit, build); unit run 92 files / 2,042 tests. Full PostgreSQL integration: 43 files / 657 tests (includes the 20-round active-template race). E2E not run (no screen yet) | Admin WhatsApp setup API A6 to A8, `TemplateWhatsAppSender` over a `WhatsAppTransport` port (Meta Cloud and fake), sanitizer, per-Admin test limiter, env config, Q-71 gate on online booking. Review (Sonnet 5.5): approve with nits, all six minors fixed or answered. The minimal Admin screen moved to M8-T4b. [Notes](#m8-t4-verification) |
 
 Task commits identified by subject in this log can be located with `git log --oneline --fixed-strings --grep='<subject>'`.
 
@@ -83,3 +84,15 @@ What the completion changed in the Codex work: a fractional, `null`, or string c
 Runtime proof: the P6 E2E test drives the running server over HTTP: the object form with a per-booking price keeps the $391 total and records 2 cars; switched to `PER_VEHICLE`, 2 cars give services 12500, subtotal 36500, VAT 5475, total 41975 cents; 4 cars against a maximum of 3 return `422` on `services.1.vehicles`. S35 and S36 were proven through Route Handler integration tests, not a running server. The migrations were not applied to the dev database `rivana`.
 
 [Independent review](../../reviews/2026-11-17-m8-t3b.md): approve with nits, no blockers or majors. Fixed: blank details stored as none, control characters refused in the P6 contract, one constant for the 10-car bound, and the S36 replacement rule documented in the contract. Kept with reasons (in the review file): S36 full replacement defaulting to 3, the maximum checked in request order after availability, the duplicated car count validator required by rule D-7, and the optional audit key for older events. In one earlier aggregate unit run the existing persistence boundary test timed out under load (5104 ms); it passed alone and in every later full run.
+
+## M8-T4 verification
+
+Accepted by the owner on 2026-11-18. Started by one model and finished by Claude Sonnet 5.5; independent review in [2026-11-17-m8-t4.md](../../reviews/2026-11-17-m8-t4.md).
+
+| Command | Result |
+| --- | --- |
+| `npm run check` | Passed through the production build |
+| `npx vitest run` | 92 files / 2,042 tests passed |
+| `TEST_DATABASE_URL=postgresql://mohamedmosilhy@127.0.0.1:5432/rivana_test npm run test:integration` | 43 files / 657 tests passed |
+
+Deviations from the spec, accepted: adapters are `meta-cloud-transport.ts` and `fake-transport.ts` behind a `WhatsAppTransport` port; the sender lives in the application layer. Left free by decision of the review: a UTILITY purpose may carry a MARKETING category. Not done here: the `/admin/settings/whatsapp` screen (M8-T4b) and its E2E-A-5.

@@ -19,6 +19,7 @@ import type { StaffPrincipal } from "@/application/auth/ports";
 import {
   failure,
   inventoryUnavailable,
+  rateLimited,
   type ApplicationErrorCode,
 } from "@/application/shared/result";
 
@@ -102,6 +103,8 @@ describe("problem mapping", () => {
     "SERVICE_UNAVAILABLE",
     "TRY_AGAIN",
     "VALIDATION",
+    "WHATSAPP_NOT_CONFIGURED",
+    "WHATSAPP_TEST_FAILED",
   ];
 
   it("has exactly one status for every application code", () => {
@@ -121,6 +124,8 @@ describe("problem mapping", () => {
     ["COUPON_INVALID", 422],
     ["RATE_LIMITED", 429],
     ["TRY_AGAIN", 503],
+    ["WHATSAPP_NOT_CONFIGURED", 503],
+    ["WHATSAPP_TEST_FAILED", 502],
     ["MALFORMED_JSON", 400],
     ["INVALID_QUERY", 400],
     ["PAYLOAD_TOO_LARGE", 413],
@@ -162,6 +167,15 @@ describe("problem mapping", () => {
     expect(
       problem("NOT_FOUND", { requestId: "r" }).headers.get("retry-after"),
     ).toBeNull();
+  });
+
+  // M8-T4: a use case limiter refusal carries its own window.
+  it("uses a failed result's retryAfterSeconds for Retry-After", () => {
+    const limited = rateLimited("Too many.", 321.2);
+    if (limited.ok) throw new Error("Expected a limiter refusal.");
+    const response = problemFromError(limited.error, "req-3");
+    expect(response.status).toBe(429);
+    expect(response.headers.get("retry-after")).toBe("322");
   });
 
   it("forwards only typed inventory context into a problem response", async () => {

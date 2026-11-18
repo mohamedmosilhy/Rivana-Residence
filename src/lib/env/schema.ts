@@ -40,8 +40,32 @@ const serverEnvSchema = z
       .transform((value) => value === "true"),
     SMTP_USER: z.string().trim().min(1).optional(),
     SMTP_PASSWORD: z.string().min(1).optional(),
+    // WhatsApp (ADR 028, spec 0005 Decision 6). "fake" records messages in
+    // memory for development and tests and is refused in production; the
+    // default is "meta" in production and "fake" elsewhere. The access
+    // token is a server secret: never stored in the database or returned.
+    WHATSAPP_PROVIDER: z.enum(["meta", "fake"]).optional(),
+    WHATSAPP_ACCESS_TOKEN: z.string().trim().min(1).optional(),
+    WHATSAPP_GRAPH_VERSION: z
+      .string()
+      .trim()
+      .regex(/^v\d+\.\d+$/, "Use a Graph API version such as v23.0.")
+      .default("v23.0"),
   })
+  .transform((value) => ({
+    ...value,
+    WHATSAPP_PROVIDER:
+      value.WHATSAPP_PROVIDER ??
+      (value.NODE_ENV === "production" ? "meta" : "fake"),
+  }))
   .superRefine((value, context) => {
+    if (value.NODE_ENV === "production" && value.WHATSAPP_PROVIDER === "fake") {
+      context.addIssue({
+        code: "custom",
+        message: "WHATSAPP_PROVIDER=fake is not allowed in production.",
+        path: ["WHATSAPP_PROVIDER"],
+      });
+    }
     if (value.NODE_ENV === "production" && !value.MEDIA_STORAGE_ROOT) {
       context.addIssue({
         code: "custom",

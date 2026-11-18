@@ -20,11 +20,23 @@ export const QUOTE_COUPON_RATE_LIMIT = {
   rule: { maxFailures: 20, windowMs: 600_000, lockMs: 600_000 },
 } as const;
 
-/** Every public limiter namespace; cleanup prunes the expired buckets of each. */
+/**
+ * API-A8: the Admin's WhatsApp test message, 5 per 10 minutes per staff user
+ * (owner, 2026-11-17). A staff bucket on the same atomic store, keyed by the
+ * staff id instead of a client address, and consumed by the use case only
+ * after `authorize`.
+ */
+export const WHATSAPP_TEST_RATE_LIMIT = {
+  name: "whatsapp-test",
+  rule: { maxFailures: 5, windowMs: 600_000, lockMs: 600_000 },
+} as const;
+
+/** Every limiter namespace on the shared store; cleanup prunes each one. */
 export const PUBLIC_RATE_LIMITS = [
   AVAILABILITY_RATE_LIMIT,
   QUOTE_RATE_LIMIT,
   QUOTE_COUPON_RATE_LIMIT,
+  WHATSAPP_TEST_RATE_LIMIT,
 ] as const;
 
 export const PUBLIC_THROTTLE_CLEANUP_LIMIT = 1_000;

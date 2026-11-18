@@ -25,6 +25,16 @@ import {
 } from "./commercial";
 import { HealthResponse } from "./health";
 import {
+  WhatsAppSettingsInput,
+  WhatsAppSetup,
+  WhatsAppTemplate,
+  WhatsAppTemplateInput,
+  WhatsAppTemplateList,
+  WhatsAppTemplatePatch,
+  WhatsAppTestMessageInput,
+  WhatsAppTestMessageResult,
+} from "./whatsapp";
+import {
   AvailabilityGrid,
   Block,
   BlockInput,
@@ -97,6 +107,14 @@ const COMPONENTS: Readonly<Record<string, z.ZodType>> = {
   ServiceOfferingInput,
   CommercialSettings,
   CommercialSettingsInput,
+  WhatsAppSetup,
+  WhatsAppSettingsInput,
+  WhatsAppTemplate,
+  WhatsAppTemplateInput,
+  WhatsAppTemplatePatch,
+  WhatsAppTemplateList,
+  WhatsAppTestMessageInput,
+  WhatsAppTestMessageResult,
 };
 
 function componentSchemas() {

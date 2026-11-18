@@ -135,11 +135,11 @@ The owner approved the task card, approach, and recommendations. **Implemented a
 
 - Port `WhatsAppSender` in `src/application/notifications/ports.ts` (the module is new; the file layout follows M8-T0): `send({ purpose, language, to, variables })` returns `{ providerMessageId }` or a typed failure (`NOT_CONFIGURED`, `TEMPLATE_MISSING`, `PROVIDER_REJECTED` with sanitized provider text, `RATE_LIMITED`, `UNAVAILABLE`).
 - Resolution: purpose and language resolve to the active `WhatsAppTemplate` (name, language, ordered variables from the fixed allowlist). The business number and phone number id come from `WhatsAppSettings`. The access token comes only from the server environment (`WHATSAPP_ACCESS_TOKEN`) and is never stored or returned. No active template or empty setup returns `NOT_CONFIGURED` and sends nothing.
-- Adapters: `src/infrastructure/whatsapp/meta-cloud-sender.ts` (Graph API call over `fetch`, bounded timeout, sanitized errors) and `fake-sender.ts` (records messages in memory for tests and in a table or file only in development). `WHATSAPP_PROVIDER=meta|fake`; the fake is refused when `NODE_ENV=production`. The Graph API version is configuration, not a constant.
+- Adapters: `src/infrastructure/whatsapp/meta-cloud-transport.ts` (Graph API call over `fetch`, bounded timeout, sanitized errors) and `fake-transport.ts` behind a `WhatsAppTransport` port, with `TemplateWhatsAppSender` in the application layer resolving templates (as built in M8-T4; the first names `meta-cloud-sender.ts` and `fake-sender.ts` were not used) (records messages in memory for tests and in a table or file only in development). `WHATSAPP_PROVIDER=meta|fake`; the fake is refused when `NODE_ENV=production`. The Graph API version is configuration, not a constant.
 - The variable allowlist is a domain constant (guest first name, reference, branch name, check in, check out, total, manage link, code, and the rest the lifecycle needs). Unknown keys return `422`.
 - Online booking for a branch cannot be turned on while WhatsApp is not configured. This guard is added to the existing branch update use case, with a test.
 - The test message is rate limited (5 per 10 minutes), audited, and stores its last result on the settings row.
-- The minimal Admin screen `/admin/settings/whatsapp` (brief section 3, item 8) lands in M8-T4 with the API. It is the one screen in M8.
+- The minimal Admin screen `/admin/settings/whatsapp` (brief section 3, item 8) lands in M8-T4b, after the M8-T4 API (owner decision, 2026-11-18). It is the one screen in M8.
 
 ### Decision 7. Staff, external, and transition use cases
 

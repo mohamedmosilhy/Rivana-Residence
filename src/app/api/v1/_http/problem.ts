@@ -43,6 +43,14 @@ export const PROBLEMS: Readonly<Record<ProblemCode, ProblemDefinition>> = {
   NOT_PUBLISHABLE: { status: 422, title: "This cannot be published yet" },
   RATE_LIMITED: { status: 429, title: "Too many requests" },
   TRY_AGAIN: { status: 503, title: "Please try again shortly" },
+  WHATSAPP_NOT_CONFIGURED: {
+    status: 503,
+    title: "WhatsApp messaging is not set up",
+  },
+  WHATSAPP_TEST_FAILED: {
+    status: 502,
+    title: "WhatsApp refused the test message",
+  },
   MALFORMED_JSON: { status: 400, title: "The request body is not valid JSON" },
   INVALID_QUERY: { status: 400, title: "The query parameters are not valid" },
   PAYLOAD_TOO_LARGE: { status: 413, title: "The request body is too large" },
@@ -88,8 +96,16 @@ export function problem(code: ProblemCode, options: ProblemOptions) {
   const headers = new Headers({
     "Content-Type": "application/problem+json",
   });
-  const retryAfter =
-    options.retryAfter ?? (status === 503 ? 5 : status === 429 ? 60 : null);
+  // A setup gap only an Admin can fix is not worth retrying automatically.
+  const defaultRetry =
+    code === "WHATSAPP_NOT_CONFIGURED"
+      ? null
+      : status === 503
+        ? 5
+        : status === 429
+          ? 60
+          : null;
+  const retryAfter = options.retryAfter ?? defaultRetry;
   if (retryAfter !== null && (status === 429 || status === 503)) {
     headers.set("Retry-After", String(retryAfter));
   }
@@ -106,5 +122,8 @@ export function problemFromError(error: ApplicationError, requestId: string) {
     detail: error.message,
     ...(error.fieldErrors ? { fieldErrors: error.fieldErrors } : {}),
     ...(error.context ? { context: error.context } : {}),
+    ...("retryAfterSeconds" in error && error.retryAfterSeconds !== undefined
+      ? { retryAfter: error.retryAfterSeconds }
+      : {}),
   });
 }

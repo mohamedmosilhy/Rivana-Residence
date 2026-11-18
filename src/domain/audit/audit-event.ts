@@ -119,7 +119,42 @@ export type AuditChanges = {
   "commercial.update": Readonly<{
     vatRateBasisPoints: Readonly<{ from: number; to: number }>;
   }>;
+  /** The hotel's own WhatsApp number and Meta id (M8-T4); never a token. */
+  "whatsapp-settings.updated": Readonly<{
+    businessPhoneNumber?: Readonly<{ from: string | null; to: string | null }>;
+    providerPhoneNumberId?: Readonly<{
+      from: string | null;
+      to: string | null;
+    }>;
+  }>;
+  "whatsapp-template.created": Readonly<{
+    before: null;
+    after: WhatsAppTemplateSnapshot;
+    previewChanged: boolean;
+  }>;
+  "whatsapp-template.updated": Readonly<{
+    before: WhatsAppTemplateSnapshot;
+    after: WhatsAppTemplateSnapshot;
+    previewChanged: boolean;
+  }>;
+  /** The outcome of an Admin test message; the recipient is never stored. */
+  "whatsapp-test.sent": Readonly<{
+    templateId: string | null;
+    purpose: string | null;
+    ok: boolean;
+    failure: string | null;
+  }>;
 };
+
+/** The staff preview text is not copied; only that it changed. */
+type WhatsAppTemplateSnapshot = Readonly<{
+  purpose: string;
+  language: string;
+  providerName: string;
+  category: string;
+  variables: readonly string[];
+  active: boolean;
+}>;
 
 export type AuditAction = keyof AuditChanges;
 
@@ -138,7 +173,9 @@ export type AuditEvent<A extends AuditAction = AuditAction> = Readonly<{
     | "RatePeriod"
     | "ServiceOffering"
     | "CommercialSettings"
-    | "Coupon";
+    | "Coupon"
+    | "WhatsAppSettings"
+    | "WhatsAppTemplate";
   entityId: string;
   branchId: string | null;
   reason: string | null;

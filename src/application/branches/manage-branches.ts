@@ -13,6 +13,9 @@ import { auditEvent } from "@/domain/audit";
 import {
   DEFAULT_BRANCH_DEACTIVATION_MESSAGE,
   DEFAULT_BRANCH_SLUG,
+  ONLINE_BOOKING_NEEDS_CHECK_IN_MESSAGE,
+  ONLINE_BOOKING_NEEDS_WHATSAPP_MESSAGE,
+  ONLINE_BOOKING_NOT_READY_MESSAGE,
   branchCreateSchema,
   branchCrossFieldIssues,
   parseBranchUpdate,
@@ -23,13 +26,34 @@ import {
   defaultPageSections,
 } from "@/domain/content/default-sections";
 import { PAGE_KEYS } from "@/domain/content/page-sections";
-import { issuesFromZod } from "@/domain/shared/domain-error";
+import { issuesFromZod, type DomainIssue } from "@/domain/shared/domain-error";
 
 import type { BranchRepository, BranchRow } from "./ports";
 
 /** Whether an id names a ready, undeleted library image. */
 export interface BranchMediaCheck {
   isUsableImage(id: string): Promise<boolean>;
+}
+
+/** Whether WhatsApp counts as configured (Q-71). */
+export interface WhatsAppReadinessCheck {
+  isConfigured(): Promise<boolean>;
+}
+
+/** The raw check-in time a body sent: undefined when absent, null when blank. */
+function sentCheckInTime(input: unknown): string | null | undefined {
+  if (typeof input !== "object" || input === null) return undefined;
+  if (!("checkInTime" in input)) return undefined;
+  const value = (input as { checkInTime: unknown }).checkInTime;
+  return typeof value === "string" && value.trim() !== "" ? value : null;
+}
+
+function sendsOnlineBookingOn(input: unknown): boolean {
+  return (
+    typeof input === "object" &&
+    input !== null &&
+    (input as { onlineBookingEnabled?: unknown }).onlineBookingEnabled === true
+  );
 }
 
 const SLUG_TAKEN = "That web address is already used by another branch.";
@@ -47,6 +71,7 @@ export class ManageBranches {
       branches: BranchRepository;
       cache: CacheInvalidator;
       media: BranchMediaCheck;
+      whatsApp: WhatsAppReadinessCheck;
       clock: Clock;
     }>,
   ) {}
@@ -73,11 +98,18 @@ export class ManageBranches {
     const access = authorize(staff, "branches:manage");
     if (!access.ok) return access;
     const parsed = branchCreateSchema.safeParse(input);
-    if (!parsed.success) {
-      return invalid(
-        "Some branch details need attention.",
-        issuesFromZod(parsed.error.issues),
-      );
+    const booking = sendsOnlineBookingOn(input)
+      ? await this.onlineBookingIssues(
+          parsed.success
+            ? parsed.data.checkInTime
+            : (sentCheckInTime(input) ?? null),
+        )
+      : [];
+    if (!parsed.success || booking.length > 0) {
+      return invalid("Some branch details need attention.", [
+        ...(parsed.success ? [] : issuesFromZod(parsed.error.issues)),
+        ...booking,
+      ]);
     }
     const hero = await this.checkHero(parsed.data.heroMediaId);
     if (!hero.ok) return hero;
@@ -124,10 +156,22 @@ export class ManageBranches {
     if (!access.ok) return access;
     const parsed = parseBranchUpdate(input);
     if (!parsed.success) {
-      return invalid(
-        "Some branch details need attention.",
-        issuesFromZod(parsed.error.issues),
-      );
+      // Report the online booking refusal with the other field errors, when
+      // the patch would turn it on (not when the branch already has it on).
+      const stored = sendsOnlineBookingOn(input)
+        ? await this.deps.branches.findRowById(id)
+        : null;
+      const sent = sentCheckInTime(input);
+      const booking =
+        stored && !stored.onlineBookingEnabled
+          ? await this.onlineBookingIssues(
+              sent !== undefined ? sent : stored.checkInTime,
+            )
+          : [];
+      return invalid("Some branch details need attention.", [
+        ...issuesFromZod(parsed.error.issues),
+        ...booking,
+      ]);
     }
     const current = await this.deps.branches.findRowById(id);
     if (!current) return failure("NOT_FOUND", NOT_FOUND);
@@ -154,6 +198,14 @@ export class ManageBranches {
     if (crossField.length > 0) {
       return invalid("Some branch details need attention.", crossField);
     }
+    if (patch.onlineBookingEnabled === true && !current.onlineBookingEnabled) {
+      const booking = await this.onlineBookingIssues(
+        pick("checkInTime") ?? null,
+      );
+      if (booking.length > 0) {
+        return invalid("Some branch details need attention.", booking);
+      }
+    }
     if (patch.heroMediaId !== undefined) {
       const hero = await this.checkHero(patch.heroMediaId);
       if (!hero.ok) return hero;
@@ -179,6 +231,24 @@ export class ManageBranches {
     );
     if (result.ok) await this.invalidateBranch(current);
     return result;
+  }
+
+  /**
+   * Turning online booking on needs WhatsApp configured (Q-71) and a
+   * check-in time (Q-09). Until the booking journey ships (M10) it is refused
+   * even then; M10 removes only that last refusal.
+   */
+  private async onlineBookingIssues(
+    checkInTime: string | null,
+  ): Promise<DomainIssue[]> {
+    const issue = (message: string) => [
+      { path: "onlineBookingEnabled", message },
+    ];
+    if (!(await this.deps.whatsApp.isConfigured())) {
+      return issue(ONLINE_BOOKING_NEEDS_WHATSAPP_MESSAGE);
+    }
+    if (!checkInTime) return issue(ONLINE_BOOKING_NEEDS_CHECK_IN_MESSAGE);
+    return issue(ONLINE_BOOKING_NOT_READY_MESSAGE);
   }
 
   private async checkHero(id: string | null): Promise<Result<void>> {

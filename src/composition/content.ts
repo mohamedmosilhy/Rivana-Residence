@@ -22,6 +22,7 @@ import { PrismaFacilityRepository } from "@/infrastructure/db/prisma/repositorie
 import { PrismaMediaRepository } from "@/infrastructure/db/prisma/repositories/media-repository";
 import { PrismaPageRepository } from "@/infrastructure/db/prisma/repositories/page-repository";
 import { PrismaRoomRepository } from "@/infrastructure/db/prisma/repositories/room-repository";
+import { whatsAppSetupReader } from "@/composition/notifications";
 
 const clock = { now: () => new Date() };
 const DEFAULT_TIME_ZONE = "Africa/Cairo";
@@ -82,6 +83,7 @@ export function manageBranches(
         return (await media.findAdminById(id))?.status === "READY";
       },
     },
+    whatsApp: whatsAppSetupReader(),
     clock,
   });
 }

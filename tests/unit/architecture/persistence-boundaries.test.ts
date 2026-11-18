@@ -68,6 +68,8 @@ const AUDIT_ENTITY_LABELS = [
   "ServiceOffering",
   "CommercialSettings",
   "Coupon",
+  "WhatsAppSettings",
+  "WhatsAppTemplate",
 ];
 
 function propertyName(node: ts.Node | undefined) {
