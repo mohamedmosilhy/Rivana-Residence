@@ -662,10 +662,21 @@ test.describe("interaction and motion", () => {
     await expect(page.getByRole("dialog")).toBeHidden();
   });
 
-  test("the mobile menu is a modal sheet", async ({ page, isMobile }) => {
-    test.skip(!isMobile, "The menu sheet is the phone navigation.");
+  test("the header offers inline navigation or a modal mobile menu", async ({
+    page,
+    isMobile,
+  }) => {
     await page.goto("/new-cairo");
     const toggle = page.locator("[data-site-menu] > summary");
+    if (!isMobile) {
+      await expect(toggle).toBeHidden();
+      await page
+        .getByRole("navigation", { name: "Main", exact: true })
+        .getByRole("link", { name: "Rooms" })
+        .click();
+      await expect(page).toHaveURL(/\/new-cairo\/stay$/);
+      return;
+    }
     await toggle.click();
     const menu = page.getByRole("navigation", { name: "Main (menu)" });
     await expect(menu.getByRole("link", { name: "Rooms" })).toBeVisible();
@@ -720,23 +731,31 @@ test.describe("interaction and motion", () => {
     page,
     isMobile,
   }) => {
-    test.skip(isMobile, "Scroll direction is exercised on desktop.");
     await page.goto("/new-cairo");
     const header = page.locator("[data-site-header]");
     // Scroll only once the enhancement is listening; a scroll that lands
     // before hydration is (correctly) treated as the starting position.
     await expect(header).toHaveAttribute("data-enhanced", "true");
-    await page.mouse.wheel(0, 1400);
+    await page.evaluate(() =>
+      window.scrollBy({ top: 1400, behavior: "instant" }),
+    );
     await expect(header).toHaveAttribute("data-tucked", "true");
-    await page.mouse.wheel(0, -300);
+    await page.evaluate(() =>
+      window.scrollBy({ top: -300, behavior: "instant" }),
+    );
     await expect(header).toHaveAttribute("data-tucked", "false");
     // Keyboard focus always brings it back.
-    await page.mouse.wheel(0, 900);
+    await page.evaluate(() =>
+      window.scrollBy({ top: 900, behavior: "instant" }),
+    );
     await expect(header).toHaveAttribute("data-tucked", "true");
-    await page
-      .getByRole("navigation", { name: "Main" })
-      .getByRole("link", { name: "Rooms" })
-      .focus();
+    const control = isMobile
+      ? header.locator("[data-site-menu] > summary")
+      : header
+          .getByRole("navigation", { name: "Main", exact: true })
+          .getByRole("link", { name: "Rooms" });
+    await control.focus();
+    await expect(control).toBeFocused();
     await expect(header).toHaveCSS("transform", "none");
   });
 

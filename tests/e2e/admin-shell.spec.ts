@@ -94,14 +94,20 @@ test("editors cannot open settings directly", async ({ page }, testInfo) => {
   await expect(page.getByLabel("Residence name")).toHaveCount(0);
 });
 
-test("the mobile menu is a modal sheet that returns focus", async ({
+test("staff can open Rooms from the sidebar or mobile menu", async ({
   page,
   isMobile,
 }, testInfo) => {
-  test.skip(!isMobile, "The sheet replaces the sidebar on small screens.");
   await signInAs(page, accountsFor(testInfo.project.name).editor);
 
-  await expect(page.getByRole("navigation", { name: "Admin" })).toBeHidden();
+  const sidebar = page.getByRole("navigation", { name: "Admin", exact: true });
+  if (!isMobile) {
+    await sidebar.getByRole("link", { name: "Rooms" }).click();
+    await expect(page).toHaveURL(/\/admin\/rooms$/);
+    return;
+  }
+
+  await expect(sidebar).toBeHidden();
   const trigger = page.getByRole("button", { name: "Menu" });
   await trigger.click();
   const sheet = page.getByRole("dialog", { name: "Admin menu" });
@@ -136,13 +142,12 @@ test("the shell reflows at 200% zoom without horizontal scrolling", async ({
 
 test("keyboard users can reach content and the account menu", async ({
   page,
-  isMobile,
 }, testInfo) => {
-  test.skip(isMobile, "Keyboard flow is exercised on desktop.");
   await signInAs(page, accountsFor(testInfo.project.name).editor);
 
-  await page.keyboard.press("Tab");
   const skip = page.getByRole("link", { name: "Skip to admin content" });
+  await expect(skip).toBeAttached();
+  await page.keyboard.press("Tab");
   await expect(skip).toBeFocused();
   await page.keyboard.press("Enter");
   await expect(page.locator("#admin-content")).toBeFocused();
