@@ -23,7 +23,12 @@ export type ApplicationErrorCode =
   | "PHONE_BLOCKED"
   | "VERIFICATION_CODE_INVALID"
   | "VERIFICATION_EXPIRED"
-  | "VERIFICATION_UNAVAILABLE";
+  | "VERIFICATION_UNAVAILABLE"
+  | "PHONE_NOT_VERIFIED"
+  | "BOOKING_LIMIT_REACHED"
+  | "BRANCH_NOT_BOOKABLE"
+  | "IDEMPOTENCY_KEY_REUSED"
+  | "PRICE_CHANGED";
 
 type StandardApplicationErrorCode = Exclude<
   ApplicationErrorCode,
@@ -31,6 +36,7 @@ type StandardApplicationErrorCode = Exclude<
   | "COUPON_INVALID"
   | "SERVICE_UNAVAILABLE"
   | "VERIFICATION_CODE_INVALID"
+  | "PRICE_CHANGED"
 >;
 
 type StandardApplicationError = Readonly<{
@@ -67,8 +73,24 @@ export type ServiceUnavailableError = Readonly<{
   fieldErrors?: never;
 }>;
 
+/**
+ * The server's current quote, so the client can show the new total. Typed
+ * structurally so `shared` never imports a feature module; the quote view of
+ * `application/quotes` satisfies it.
+ */
+export type PriceChangedQuote = Readonly<
+  { totalMinor: number } & Record<string, unknown>
+>;
+export type PriceChangedError = Readonly<{
+  code: "PRICE_CHANGED";
+  message: string;
+  context: Readonly<{ quote: PriceChangedQuote }>;
+  fieldErrors?: never;
+}>;
+
 export type ApplicationError =
   | StandardApplicationError
+  | PriceChangedError
   | InventoryUnavailableError
   | CouponInvalidError
   | ServiceUnavailableError
@@ -141,6 +163,17 @@ export function couponInvalid(reason: CouponRefusal): Result<never> {
       message: COUPON_MESSAGE,
       context: { reason },
       fieldErrors: { couponCode: [COUPON_MESSAGE] },
+    },
+  };
+}
+
+export function priceChanged(quote: PriceChangedQuote): Result<never> {
+  return {
+    ok: false,
+    error: {
+      code: "PRICE_CHANGED",
+      message: "The price changed. Review the new total.",
+      context: { quote },
     },
   };
 }

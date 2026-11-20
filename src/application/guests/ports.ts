@@ -31,6 +31,21 @@ export interface GuestRepository {
   ensureExists(input: GuestIdentity): Promise<GuestProfile>;
   /** Transaction only. Lock before inspecting blocking or counting per phone bookings. */
   lockByPhone(phone: PhoneNumber): Promise<Result<GuestProfile | null>>;
+  /**
+   * Transaction only, after lock. A website booking proves the phone, so it
+   * sets the verification time once, refreshes the latest name and email, and
+   * records a marketing opt in with its wording version. Block and earlier
+   * consent are never cleared by anything but an explicit opt in.
+   */
+  recordWebsiteBooking(
+    input: Readonly<{
+      id: string;
+      name: string;
+      email: string | null;
+      verifiedAt: Date;
+      marketingConsentVersion: string | null;
+    }>,
+  ): Promise<GuestProfile>;
   /** Transaction only, after lock. Updates contact only, preserving verification, block and consent. */
   updateContact(
     input: Readonly<{
@@ -61,6 +76,10 @@ export interface PhoneVerificationRepository {
   /** Transaction scoped, including phones without a guest or verification row. */
   lockPhone(phone: PhoneNumber): Promise<Result<void>>;
   findById(id: string): Promise<VerificationRecord | null>;
+  /** Lookup by the SHA-256 of a presented token. Lock the row before trusting it. */
+  findByTokenHash(tokenHash: string): Promise<VerificationRecord | null>;
+  /** Marks a BOOKING token used, in the booking transaction. */
+  consume(id: string, at: Date): Promise<void>;
   /** Lock after the guest row, then reload the verification. */
   lock(id: string): Promise<Result<VerificationRecord | null>>;
   requestHistory(phone: PhoneNumber, since: Date): Promise<readonly Date[]>;

@@ -70,6 +70,7 @@ const AUDIT_ENTITY_LABELS = [
   "Coupon",
   "WhatsAppSettings",
   "WhatsAppTemplate",
+  "Reservation",
 ];
 
 function propertyName(node: ts.Node | undefined) {
@@ -137,7 +138,8 @@ describe("reservation data boundaries", () => {
         ).map((model) => `${file}: ${model}`);
       });
     expect(offenders).toEqual([]);
-  });
+    // Parses every source file; near the 5 s default when the suite runs in parallel.
+  }, 30_000);
 
   it("declares every reservation model it guards in the data model", () => {
     const dataModel = readFileSync(

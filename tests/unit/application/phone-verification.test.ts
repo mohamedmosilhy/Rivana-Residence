@@ -30,6 +30,11 @@ const setup = { isConfigured: vi.fn(async () => true) };
 const repository: PhoneVerificationRepository = {
   lockPhone: async () => success(undefined),
   findById: async (id) => rows.get(id) ?? null,
+  findByTokenHash: async (hash) =>
+    [...rows.values()].find((row) => row.tokenHash === hash) ?? null,
+  consume: async (id, at) => {
+    rows.set(id, { ...rows.get(id)!, consumedAt: at });
+  },
   lock: async (id) => success(rows.get(id) ?? null),
   requestHistory: async (number, since) =>
     [...rows.values()]
@@ -48,6 +53,9 @@ const repository: PhoneVerificationRepository = {
 const guests: GuestRepository = {
   findByPhone: async () => null,
   ensureExists: async () => {
+    throw new Error("Not used");
+  },
+  recordWebsiteBooking: async () => {
     throw new Error("Not used");
   },
   lockByPhone: async () =>

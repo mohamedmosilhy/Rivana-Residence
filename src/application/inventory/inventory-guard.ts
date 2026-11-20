@@ -50,11 +50,30 @@ export type InventoryGuardContext = Readonly<{
   inventoryLock: InventoryLock;
 }>;
 
-export type InventoryGuardOperation<Context, State, Checked, Value> = Readonly<{
+/**
+ * Work that must hold its locks before any listing lock (the guest row, spec
+ * 0005 Decision 1). `done` ends the operation early with a final value, for
+ * example an idempotent replay, without locking any listing.
+ */
+export type InventoryGuardPreparation<Prepared, Value> = Readonly<
+  { done: false; prepared: Prepared } | { done: true; value: Value }
+>;
+
+export type InventoryGuardOperation<
+  Context,
+  State,
+  Checked,
+  Value,
+  Prepared = undefined,
+> = Readonly<{
   branchId: string;
   roomTypeIds: readonly string[];
+  /** Runs in the same transaction, before the listing lock. Omit when not needed. */
+  prepare?(
+    context: Context,
+  ): Promise<Result<InventoryGuardPreparation<Prepared, Value>>>;
   /** Reloads mutable state and consumption only after the listing lock is held. */
-  load(context: Context): Promise<Result<State>>;
+  load(context: Context, prepared: Prepared): Promise<Result<State>>;
   validate(state: State): Result<Checked>;
   mutate(
     context: Context,
@@ -69,17 +88,31 @@ export type InventoryGuardOperation<Context, State, Checked, Value> = Readonly<{
 export class InventoryGuard<Context extends InventoryGuardContext> {
   constructor(private readonly unitOfWork: ReservationUnitOfWork<Context>) {}
 
-  execute<State, Checked, Value>(
-    operation: InventoryGuardOperation<Context, State, Checked, Value>,
+  execute<State, Checked, Value, Prepared = undefined>(
+    operation: InventoryGuardOperation<
+      Context,
+      State,
+      Checked,
+      Value,
+      Prepared
+    >,
   ): Promise<Result<Value>> {
     return this.unitOfWork.run(async (context) => {
+      let prepared = undefined as Prepared;
+      if (operation.prepare) {
+        const preparation = await operation.prepare(context);
+        if (!preparation.ok) return preparation;
+        if (preparation.value.done) return success(preparation.value.value);
+        prepared = preparation.value.prepared;
+      }
+
       const locked = await context.inventoryLock.lockRoomTypes(
         operation.branchId,
         operation.roomTypeIds,
       );
       if (!locked.ok) return locked;
 
-      const loaded = await operation.load(context);
+      const loaded = await operation.load(context, prepared);
       if (!loaded.ok) return loaded;
 
       const checked = operation.validate(loaded.value);

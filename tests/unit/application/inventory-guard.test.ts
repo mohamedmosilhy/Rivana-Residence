@@ -252,4 +252,71 @@ describe("InventoryGuard", () => {
     expect(mutate).not.toHaveBeenCalled();
     expect(audit).not.toHaveBeenCalled();
   });
+
+  describe("prepare", () => {
+    it("runs before the listing lock and hands its value to load", async () => {
+      const { guard, order } = setup();
+      const result = await guard.execute({
+        branchId: "branch-1",
+        roomTypeIds: ["room-1"],
+        prepare: async () => {
+          order.push("prepare");
+          return success({ done: false, prepared: "guest-1" } as const);
+        },
+        load: async (_context, prepared) => {
+          order.push("load");
+          return success(prepared);
+        },
+        validate: (state) => success(state),
+        mutate: async (_context, state) => success(`booked-${state}`),
+        audit: async () => {
+          order.push("audit");
+        },
+      });
+      expect(result).toEqual(success("booked-guest-1"));
+      expect(order).toEqual([
+        "transaction",
+        "prepare",
+        "lock",
+        "load",
+        "audit",
+      ]);
+    });
+
+    it("ends early with a final value and never locks a listing", async () => {
+      const { guard, inventoryLock } = setup();
+      const load = vi.fn();
+      const result = await guard.execute({
+        branchId: "branch-1",
+        roomTypeIds: ["room-1"],
+        prepare: async () =>
+          success({ done: true, value: "replayed" } as const),
+        load,
+        validate: vi.fn(),
+        mutate: vi.fn(),
+        audit: vi.fn(),
+      });
+      expect(result).toEqual(success("replayed"));
+      expect(inventoryLock.lockRoomTypes).not.toHaveBeenCalled();
+      expect(load).not.toHaveBeenCalled();
+    });
+
+    it("stops on a failed preparation without locking", async () => {
+      const { guard, inventoryLock } = setup();
+      const result = await guard.execute({
+        branchId: "branch-1",
+        roomTypeIds: ["room-1"],
+        prepare: async () => failure("PHONE_NOT_VERIFIED", "Verify."),
+        load: vi.fn(),
+        validate: vi.fn(),
+        mutate: vi.fn(),
+        audit: vi.fn(),
+      });
+      expect(result).toMatchObject({
+        ok: false,
+        error: { code: "PHONE_NOT_VERIFIED" },
+      });
+      expect(inventoryLock.lockRoomTypes).not.toHaveBeenCalled();
+    });
+  });
 });

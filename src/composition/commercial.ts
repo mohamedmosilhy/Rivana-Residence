@@ -9,11 +9,11 @@ import { QuoteBooking } from "@/application/quotes";
 import { getPrisma } from "@/infrastructure/db/prisma/client";
 import { PrismaAuditLog } from "@/infrastructure/db/prisma/repositories/audit/audit-log";
 import { PrismaBranchRepository } from "@/infrastructure/db/prisma/repositories/branches/branch-repository";
-import { PrismaRoomRepository } from "@/infrastructure/db/prisma/repositories/room-repository";
+import { PrismaPublicListingReader } from "@/infrastructure/db/prisma/repositories/public-listing-reader";
 import { PrismaReservationConsumptionReader } from "@/infrastructure/db/prisma/repositories/reservations/inventory/reservation-consumption-reader";
 import { PrismaInventoryReader } from "@/infrastructure/db/prisma/repositories/reservations/inventory/inventory-reader";
 import { PrismaRateRepository } from "@/infrastructure/db/prisma/repositories/reservations/pricing/rate-repository";
-import { EmptyCouponRedemptionReader } from "@/infrastructure/db/prisma/repositories/reservations/commercial/empty-coupon-redemption-reader";
+import { PrismaCouponRedemptionReader } from "@/infrastructure/db/prisma/repositories/reservations/commercial/coupon-redemption-repository";
 import { PrismaCouponRepository } from "@/infrastructure/db/prisma/repositories/reservations/commercial/coupon-repository";
 import { PrismaCommercialSettingsRepository } from "@/infrastructure/db/prisma/repositories/reservations/commercial/commercial-settings-repository";
 import { PrismaServiceOfferingRepository } from "@/infrastructure/db/prisma/repositories/reservations/commercial/service-repository";
@@ -76,7 +76,7 @@ export function quoteBooking() {
   const client = getPrisma();
   return new QuoteBooking({
     branches: new PrismaBranchRepository(client),
-    rooms: new PrismaRoomRepository(client),
+    rooms: new PrismaPublicListingReader(client),
     inventory: new PrismaInventoryReader(
       client,
       new PrismaReservationConsumptionReader(client),
@@ -84,7 +84,10 @@ export function quoteBooking() {
     rates: new PrismaRateRepository(client),
     services: new PrismaServiceOfferingRepository(client),
     coupons: new PrismaCouponRepository(client),
-    redemptions: new EmptyCouponRedemptionReader(),
+    // Phone blind until P6 stops accepting an unverified phone (M8-T7b).
+    redemptions: new PrismaCouponRedemptionReader(client, {
+      phoneAware: false,
+    }),
     settings: new PrismaCommercialSettingsRepository(client),
     clock,
   });

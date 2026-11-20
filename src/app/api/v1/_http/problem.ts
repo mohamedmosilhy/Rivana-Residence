@@ -64,6 +64,17 @@ export const PROBLEMS: Readonly<Record<ProblemCode, ProblemDefinition>> = {
     status: 503,
     title: "Verification is temporarily unavailable",
   },
+  PHONE_NOT_VERIFIED: { status: 401, title: "Verify your phone to continue" },
+  BOOKING_LIMIT_REACHED: { status: 429, title: "Please contact the hotel" },
+  BRANCH_NOT_BOOKABLE: {
+    status: 409,
+    title: "This branch cannot take bookings now",
+  },
+  IDEMPOTENCY_KEY_REUSED: {
+    status: 422,
+    title: "This idempotency key was used for a different request",
+  },
+  PRICE_CHANGED: { status: 409, title: "The price changed" },
   MALFORMED_JSON: { status: 400, title: "The request body is not valid JSON" },
   INVALID_QUERY: { status: 400, title: "The query parameters are not valid" },
   PAYLOAD_TOO_LARGE: { status: 413, title: "The request body is too large" },

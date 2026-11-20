@@ -1,11 +1,12 @@
 import type { Result } from "@/application/shared/result";
 
-import type { GuestContact } from "@/domain/guests";
+import type { GuestContact, PhoneNumber } from "@/domain/guests";
 import type {
   ReservationReference,
   ReservationSnapshot,
   ReservationNightSnapshot,
 } from "@/domain/reservations";
+import type { LocalDate } from "@/domain/shared/local-date";
 import type { Occupancy } from "@/domain/shared/occupancy";
 import type { Money } from "@/domain/shared/money";
 import type { StayRange } from "@/domain/shared/stay-range";
@@ -89,6 +90,17 @@ export type StoredReservation = Readonly<
     updatedAt: Date;
   }
 >;
+/** One of a phone's reservations, with the branch zone needed for "today" (Q-78). */
+export type PhoneBookingRow = Readonly<{
+  id: string;
+  source: ReservationSource;
+  status: ReservationStatus;
+  paymentMethod: PaymentMethod;
+  checkIn: LocalDate;
+  branchTimeZone: string;
+  holdExpiresAt: Date | null;
+}>;
+
 export interface ReservationRepository {
   /** Every lookup has an explicit authorized branch. Missing or foreign means null. */
   findById(branchId: string, id: string): Promise<StoredReservation | null>;
@@ -101,4 +113,25 @@ export interface ReservationRepository {
    * Authorization, pricing, inventory locking and audit belong to the calling use case.
    */
   insert(input: ReservationInsert): Promise<Result<StoredReservation | null>>;
+  /**
+   * The one lookup that is not branch scoped: idempotency keys are unique per
+   * source and actor (DB-7). Callers must compare the stored fingerprint and
+   * never return the row to a caller whose fingerprint differs.
+   */
+  findByIdempotencyKey(
+    source: ReservationSource,
+    createdById: string | null,
+    keyHash: string,
+  ): Promise<StoredReservation | null>;
+  /** Website reservations that can count toward the per phone cap, in every branch. */
+  listPhoneBookings(phone: PhoneNumber): Promise<readonly PhoneBookingRow[]>;
+}
+
+/** Randomness and hashing the booking needs. The domain never touches crypto. */
+export interface BookingCrypto {
+  /** 256 bit URL safe token, returned to the guest once. */
+  generateToken(): string;
+  /** Lower case hex SHA-256, for tokens, idempotency keys and fingerprints. */
+  sha256(value: string): string;
+  randomBytes(length: number): Uint8Array;
 }

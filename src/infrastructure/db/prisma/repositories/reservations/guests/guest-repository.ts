@@ -43,6 +43,32 @@ export class PrismaGuestRepository implements GuestRepository {
     }
   }
 
+  async recordWebsiteBooking(
+    input: Parameters<GuestRepository["recordWebsiteBooking"]>[0],
+  ) {
+    // The caller holds the guest row lock, so this read cannot go stale.
+    const current = await this.client.guest.findUniqueOrThrow({
+      where: { id: input.id },
+      select: { phoneVerifiedAt: true },
+    });
+    return this.client.guest.update({
+      where: { id: input.id },
+      data: {
+        name: input.name,
+        email: input.email,
+        updatedAt: input.verifiedAt,
+        phoneVerifiedAt: current.phoneVerifiedAt ?? input.verifiedAt,
+        ...(input.marketingConsentVersion === null
+          ? {}
+          : {
+              marketingOptInAt: input.verifiedAt,
+              marketingConsentVersion: input.marketingConsentVersion,
+              marketingOptOutAt: null,
+            }),
+      },
+    });
+  }
+
   updateContact(input: Parameters<GuestRepository["updateContact"]>[0]) {
     return this.client.guest.update({
       where: { id: input.id },

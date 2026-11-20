@@ -63,3 +63,18 @@ export interface CouponRedemptionReader {
     input: Readonly<{ code: string; phone?: string | undefined }>,
   ): Promise<CouponRedemptionCounts>;
 }
+
+/** Booking transaction writes. Lock the coupon before counting its redemptions (CP-1). */
+export interface CouponRedemptionStore {
+  /** Transaction only. Locks the coupon row by normalized code; null when it does not exist. */
+  lockByCode(code: string): Promise<Result<string | null>>;
+  /** One redemption per reservation; the phone is the verified booking phone. */
+  record(
+    input: Readonly<{
+      couponId: string;
+      reservationId: string;
+      phone: string | null;
+      at: Date;
+    }>,
+  ): Promise<void>;
+}

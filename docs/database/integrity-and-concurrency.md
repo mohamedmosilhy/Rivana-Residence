@@ -102,13 +102,15 @@ Raw SQL is parameterized through Prisma's tagged `$queryRaw` and lives only in `
 
 ## Lock discipline
 
-1. Lock order: room-type ids sorted ascending. A single transaction never locks a lower id after a higher one.
+1. Lock order: **guest row, then room-type ids sorted ascending, then the coupon row, then reservation rows** (M8-T7, spec 0005 Decision 1). A single transaction never locks a lower id after a higher one, and the guest row comes first for every writer that takes it (website booking, phone verification confirmation, guest blocking, and staff and external creation from M8-T8): it serializes per phone caps and token use. Releases take only the reservation row; blocking a guest takes only the guest row.
 2. Lock scope: only availability-reducing writes take the lock (bookings, payment holds, late payment confirmations, stay changes, blocks, unit deactivation). The coupon row lock is taken after the listing locks, always in that order.
 3. Lock duration: from the lock statement to commit. There is no I/O to email, external services, or the filesystem in between.
 4. Lock timeout: `SET LOCAL lock_timeout = '5s'`. On timeout the request fails with `503 TRY_AGAIN` rather than piling up.
 5. Read paths (public availability search, staff grid) take no locks. They can show availability that is gone a millisecond later, which is acceptable because creation re-checks.
 
 **Implemented in M6-T4:** `PrismaReservationUnitOfWork` uses an explicit `READ COMMITTED` interactive transaction and rolls back both failed results and exceptions. `PrismaInventoryLock` deduplicates and sorts ids, applies the local five second timeout, locks the complete branch scoped listing set, and maps SQLSTATE `55P03` to `TRY_AGAIN`. `InventoryGuard` keeps load, validation, mutation, and audit in that transaction. Later writer tasks must compose their concrete ports through this guard.
+
+**Implemented in M8-T7:** `InventoryGuard` accepts an optional `prepare` step that runs in the same transaction before the listing lock. `CreateWebsiteReservation` uses it for the idempotency lookup, the guest lock, a second idempotency lookup under that lock (C-9), token consumption and the per phone cap; a replay returns from `prepare` without locking any listing. The coupon row is locked after the listings, and the booking reads its quote through `QuoteBooking` built on that transaction's readers.
 
 ## Proof plan (integration tests on real PostgreSQL)
 

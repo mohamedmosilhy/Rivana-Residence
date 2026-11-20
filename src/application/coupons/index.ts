@@ -3,6 +3,7 @@ export type {
   CouponLookup,
   CouponRedemptionCounts,
   CouponRedemptionReader,
+  CouponRedemptionStore,
   CouponRepository,
   ManagedCoupon,
   CouponQuery,

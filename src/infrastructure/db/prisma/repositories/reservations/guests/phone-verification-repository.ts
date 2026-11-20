@@ -36,6 +36,16 @@ export class PrismaPhoneVerificationRepository
   findById(id: string) {
     return this.client.phoneVerification.findUnique({ where: { id } });
   }
+  findByTokenHash(tokenHash: string) {
+    return this.client.phoneVerification.findUnique({ where: { tokenHash } });
+  }
+  async consume(id: string, at: Date) {
+    // Defense in depth: the caller holds the row lock, and a used token stays used.
+    await this.client.phoneVerification.updateMany({
+      where: { id, consumedAt: null },
+      data: { consumedAt: at },
+    });
+  }
   lock(id: string) {
     return this.locked(async () => {
       const rows = await this.client.$queryRaw<

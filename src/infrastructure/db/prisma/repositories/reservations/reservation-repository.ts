@@ -8,6 +8,8 @@ import type {
 import { failure, success } from "@/application/shared/result";
 import { consumesInventory, ReservationReference } from "@/domain/reservations";
 import { SERVICE_KINDS } from "@/domain/services";
+import type { PhoneNumber } from "@/domain/guests";
+import type { ReservationSource } from "@/domain/shared/types";
 import { LocalDate } from "@/domain/shared/local-date";
 import { Money } from "@/domain/shared/money";
 import { Occupancy } from "@/domain/shared/occupancy";
@@ -147,6 +149,47 @@ export class PrismaReservationRepository implements ReservationRepository {
       include: graph,
     });
     return row ? map(row) : null;
+  }
+
+  async findByIdempotencyKey(
+    source: ReservationSource,
+    createdById: string | null,
+    keyHash: string,
+  ) {
+    const row = await this.client.reservation.findFirst({
+      where: { source, createdById, idempotencyKeyHash: keyHash },
+      include: graph,
+    });
+    return row ? map(row) : null;
+  }
+
+  async listPhoneBookings(phone: PhoneNumber) {
+    const rows = await this.client.reservation.findMany({
+      where: {
+        // Through the unique guest phone, so the indexed guest id is used.
+        guest: { phone: phone.value },
+        source: "WEBSITE",
+        status: { in: ["CONFIRMED", "AWAITING_PAYMENT"] },
+      },
+      select: {
+        id: true,
+        source: true,
+        status: true,
+        paymentMethod: true,
+        checkIn: true,
+        holdExpiresAt: true,
+        branch: { select: { timeZone: true } },
+      },
+    });
+    return rows.map((row) => ({
+      id: row.id,
+      source: row.source,
+      status: row.status,
+      paymentMethod: row.paymentMethod,
+      checkIn: date(row.checkIn),
+      branchTimeZone: row.branch.timeZone,
+      holdExpiresAt: row.holdExpiresAt,
+    }));
   }
 
   async insert(input: ReservationInsert) {

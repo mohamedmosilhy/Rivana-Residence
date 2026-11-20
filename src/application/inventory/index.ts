@@ -4,6 +4,7 @@ export {
   validateInventoryReduction,
   type InventoryGuardContext,
   type InventoryGuardOperation,
+  type InventoryGuardPreparation,
 } from "./inventory-guard";
 export type {
   AssignmentWindow,

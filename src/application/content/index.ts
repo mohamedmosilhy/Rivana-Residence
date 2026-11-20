@@ -34,6 +34,8 @@ export type {
   RoomDto,
   RoomInput,
   RoomRepository,
+  PublicListing,
+  PublicListingReader,
   SectionMediaAssignment,
   SectionMediaReference,
 } from "./ports";

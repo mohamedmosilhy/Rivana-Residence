@@ -139,6 +139,22 @@ export type PageDetailsInput = Readonly<{
 
 // Rooms and facilities belong to one branch (ADR 017, ADR 026). Lists, slug
 // lookups, creation, and ordering are per branch; slugs stay globally unique.
+/** The slim published listing the booking era needs: identity and occupancy limits. */
+export type PublicListing = Readonly<{
+  id: string;
+  branchId: string;
+  slug: string;
+  name: string;
+  accommodationType: AccommodationType;
+  maxAdults: number;
+  maxChildren: number;
+}>;
+
+/** Published listings of one branch only, without the media and facility graph. */
+export interface PublicListingReader {
+  listPublished(branchId: string): Promise<readonly PublicListing[]>;
+}
+
 export interface RoomRepository {
   listPublished(branchId: string): Promise<readonly RoomDto[]>;
   findPublishedBySlug(branchId: string, slug: string): Promise<RoomDto | null>;

@@ -39,6 +39,8 @@ import { localDateAt } from "@/domain/shared/zoned-time";
 import type { QuoteBookingReaders } from "./quote-readers";
 
 export type QuoteLineView = Readonly<{
+  /** Internal. Lets a booking confirm it locked the listing it priced. Never sent to clients. */
+  roomTypeId: string;
   roomSlug: string;
   roomName: string;
   accommodationType: AccommodationType;
@@ -129,9 +131,7 @@ export class QuoteBooking {
     // Listings of this branch only; the branch never comes from the client.
     const published = new Map(
       (await this.deps.rooms.listPublished(branch.id))
-        .filter(
-          (room) => room.branchId === branch.id && room.status === "PUBLISHED",
-        )
+        .filter((room) => room.branchId === branch.id)
         .map((room) => [room.slug, room]),
     );
     const lineIssues: DomainIssue[] = [];
@@ -307,6 +307,7 @@ export class QuoteBooking {
       quote: {
         stay: request.stay,
         lines: lines.map((line, index) => ({
+          roomTypeId: line.room.id,
           roomSlug: line.room.slug,
           roomName: line.room.name,
           accommodationType: line.room.accommodationType,

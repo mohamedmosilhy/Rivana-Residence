@@ -569,10 +569,50 @@ describe("API-P6 coupons (AC-4)", () => {
     expect(
       results.every((r) => r.body.fieldErrors.couponCode.length === 1),
     ).toBe(true);
-    // M7 counts redemptions as zero, so limits never trip yet (M8 persists them).
+    // The phone is never matched on a public quote, so a per phone limit
+    // never trips here, even once redemptions are persisted (M8-T7).
     expect((await attempt("PHONE1", { phone: "+201001234567" })).status).toBe(
       200,
     );
+  });
+
+  it("stays phone blind with persisted redemptions, but counts the overall limit", async () => {
+    const room = await client.room.findFirstOrThrow({
+      where: { slug: "garden" },
+    });
+    const phone = "+201001234567";
+    const once = await coupon("ONCE", {
+      maxRedemptions: 2,
+      maxRedemptionsPerPhone: 1,
+    });
+    const stored = await new PrismaReservationRepository(client).insert(
+      reservationInput(room.id, { stay: range("2031-06-10", "2031-06-12") }),
+    );
+    if (!stored.ok || !stored.value) throw new Error("fixture failed");
+    await client.couponRedemption.create({
+      data: {
+        couponId: once.id,
+        reservationId: stored.value.id,
+        phone,
+      },
+    });
+    // This phone already used its one redemption, yet P6 answers as it would
+    // for any phone, so a guesser cannot learn who used a coupon.
+    expect((await attempt("ONCE", { phone })).status).toBe(200);
+    expect((await attempt("ONCE")).status).toBe(200);
+    // The overall count is real: with the last redemption used, it is refused.
+    const second = await new PrismaReservationRepository(client).insert(
+      reservationInput(room.id, { stay: range("2031-07-10", "2031-07-12") }),
+    );
+    if (!second.ok || !second.value) throw new Error("fixture failed");
+    await client.couponRedemption.create({
+      data: { couponId: once.id, reservationId: second.value.id },
+    });
+    const refused = await attempt("ONCE", { phone });
+    expect(refused).toMatchObject({
+      status: 422,
+      body: { context: { reason: "LIMIT_REACHED" } },
+    });
   });
 
   it("matches case and spacing, and a code for this branch works", async () => {

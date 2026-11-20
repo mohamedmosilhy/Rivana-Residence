@@ -77,6 +77,8 @@ Order inside `CreateWebsiteReservation`, following the integrity document:
 
 `InventoryGuard` remains the only entry for availability reducing writes, and every writer in this milestone (website, staff, external, modify) goes through it.
 
+**Implemented in M8-T7 (accepted 2026-11-20).** `InventoryGuard.execute` gained an optional `prepare` step that runs inside the same transaction before the listing locks, so the guest row is locked first and the guard stays the only entry for availability reducing writes. `prepare` holds the replay lookup (before and under the guest lock), token consumption and the per phone cap. `QuoteBooking` runs on the transaction's readers after the locks. `SearchPublicAvailability` keeps its full room read because it renders the cards. The persisted redemption reader is phone aware inside bookings and phone blind for P6 until M8-T7b.
+
 ### Decision 1b. Idempotency fingerprint
 
 The fingerprint is a SHA-256 of the normalized body (stay, sorted lines, sorted services, coupon code, payment method, expected total) plus, for website bookings, the verified phone and the verification token hash. A different client replaying the same key and body without that token fails with `422 IDEMPOTENCY_KEY_REUSED` and never sees another guest's reference.
@@ -259,7 +261,7 @@ Changes against the brief's table are marked **changed**. Brief ids stay.
 | M8-T4 | WhatsApp setup (settings, templates, sender port, adapters, test message, API A6 to A8, minimal Admin screen, branch enable guard; **changed 2026-11-17:** the purpose allowlist also holds `RESERVATION_MODIFIED`, `CHANGE_REQUEST_RECEIVED`, `CHANGE_REQUEST_APPROVED`, `CHANGE_REQUEST_REJECTED`, Q-84) | Critical | T1, T2 | AC-10, T-WA-1…7 | Not started |
 | M8-T5 | Phone verification, API P9 and P10 | Critical | T2, T3, T4 | AC-7, T-GST (verification) | Not started |
 | M8-T6 | Notifications: outbox, dispatcher, email templates, `reservations` CLI, token expiry job | Critical | T3, T4 | AC-4 (messages), T-NTF-1…3 | Accepted (2026-11-20) |
-| M8-T7 | `CreateWebsiteReservation` use case: persistence, caps, coupon lock, redemption, guest upsert, audit, outbox, `PublicListingReader` | Critical | T3b, T5, T6, M7 | AC-1 to AC-4, T-RES, C-1…C-3, C-11 | Not started |
+| M8-T7 | `CreateWebsiteReservation` use case: persistence, caps, coupon lock, redemption, guest upsert, audit, outbox, `PublicListingReader` | Critical | T3b, T5, T6, M7 | AC-1 to AC-4, T-RES, C-1…C-3, C-11 | Accepted (2026-11-20) |
 | **M8-T7b** (new) | Public API P7, idempotency replay over HTTP, P6 per phone limit change, OpenAPI, captured log test, mid milestone security review | Critical | T7 | AC-1, AC-8, T-HTTP, C-9 | Not started |
 | M8-T8 | Staff and external reservations (S3, S4) **and the reads S1, S2, S15** (changed: the brief assigns these three endpoints to no task) | Critical | T7 | AC-9, T-RES, T-AUTHZ-2, C-5, C-8 | Not started |
 | M8-T9 | Inventory changing transitions: staff cancellation with coupon release, stay modification (S6, S9); **changed 2026-11-17:** built as the shared change engine `ModifyReservation` with migration `reservation_changes` (`ReservationChange`, `pmsUpdatePendingSince`), and S55 (Q-83, Q-84) | Critical | T8 | AC-6, AC-12, C-4, C-10, T-CHG-1…4 | Not started |

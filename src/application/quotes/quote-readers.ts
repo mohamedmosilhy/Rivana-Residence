@@ -5,7 +5,7 @@ import type {
 } from "@/application/coupons";
 import type { CommercialSettingsRepository } from "@/application/commercial";
 import type { InventoryReader } from "@/application/inventory";
-import type { RoomRepository } from "@/application/content";
+import type { PublicListingReader } from "@/application/content";
 import type { RateBatchReader } from "@/application/pricing";
 import type { ServiceOfferingRepository } from "@/application/services";
 
@@ -18,7 +18,7 @@ import type { ServiceOfferingRepository } from "@/application/services";
  */
 export type QuoteBookingReaders = Readonly<{
   branches: Pick<BranchRepository, "findActiveRowBySlug">;
-  rooms: Pick<RoomRepository, "listPublished">;
+  rooms: PublicListingReader;
   inventory: InventoryReader;
   rates: RateBatchReader;
   services: Pick<ServiceOfferingRepository, "listByBranch">;

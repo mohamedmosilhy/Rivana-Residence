@@ -137,6 +137,22 @@ export type AuditChanges = {
     after: WhatsAppTemplateSnapshot;
     previewChanged: boolean;
   }>;
+  /**
+   * A website booking (M8-T7). Identifiers, dates and money only: no guest
+   * name, email, phone, token or free text. The actor is the guest profile.
+   */
+  "reservation.created": Readonly<{
+    reference: string;
+    source: "WEBSITE";
+    status: "CONFIRMED";
+    paymentMethod: "PAY_AT_HOTEL";
+    checkIn: string;
+    checkOut: string;
+    units: number;
+    totalMinor: number;
+    couponCode: string | null;
+    marketingOptIn: boolean;
+  }>;
   /** The outcome of an Admin test message; the recipient is never stored. */
   "whatsapp-test.sent": Readonly<{
     templateId: string | null;
@@ -175,7 +191,8 @@ export type AuditEvent<A extends AuditAction = AuditAction> = Readonly<{
     | "CommercialSettings"
     | "Coupon"
     | "WhatsAppSettings"
-    | "WhatsAppTemplate";
+    | "WhatsAppTemplate"
+    | "Reservation";
   entityId: string;
   branchId: string | null;
   reason: string | null;
