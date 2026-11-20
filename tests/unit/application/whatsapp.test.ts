@@ -224,6 +224,25 @@ const message = {
 };
 
 describe("TemplateWhatsAppSender (T-WA-1, T-WA-2)", () => {
+  it.each(["MANAGE_LINK", "BOOKING_CONFIRMED"] as const)(
+    "refuses a %s template that would discard the guest link",
+    async (purpose) => {
+      const { sender, deliveries } = world({
+        templates: [templateRecord({ purpose, variables: ["reference"] })],
+      });
+      expect(
+        await sender.send({
+          ...message,
+          purpose,
+          variables: {
+            ...message.variables,
+            manageLink: "https://example.test/reservations/manage#t=fixture",
+          },
+        }),
+      ).toMatchObject({ ok: false, code: "TEMPLATE_MISSING" });
+      expect(deliveries).toEqual([]);
+    },
+  );
   it("resolves purpose and language and orders values by the template", async () => {
     const { sender, deliveries } = world();
     expect(await sender.send(message)).toEqual({

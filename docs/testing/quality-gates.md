@@ -39,11 +39,15 @@ Record exact commands and counts in the review package. If a gate cannot run, sa
 
 The owner selected Node **26.13.0 LTS** for the Mac, CI, and hosting. On macOS with npm **11.20.0**, clean `npm ci --no-audit` and `npm run check` passed (format, lint, typecheck, **67 unit files / 1,373 tests**, production build). The full PostgreSQL integration suite passed **29 files / 391 tests**; full Chromium E2E passed **175 tests**, with **30 intentionally skipped**. Independent review by `gpt-6-astra` approved with zero findings. The [runtime report](../delivery/reports/node-26-runtime-alignment.md) records exact commands, unchanged development audit findings, and the nonfatal upstream Tailwind loader deprecation under Node 26. Those Tailwind and media tracing warnings were subsequently resolved in M6-T10. These results do not replace the historical task acceptance evidence below or claim remote Linux CI has run.
 
-## Latest accepted task results (2026-11-20, M8-T5b)
+## Latest accepted task results (2026-11-20, M8-T6)
+
+Format, lint, typecheck and build passed. 95 unit files / 2,099 tests passed. All 693 PostgreSQL integration tests passed (45 files). The `outbox` and `expire-tokens` commands ran against the local database. E2E was not run. [Task log](../delivery/reports/m8-reservations.md#task-log) and [independent review](../reviews/2026-11-20-m8-t6.md).
+
+## Previous accepted task results (2026-11-20, M8-T5b)
 
 All eight focused Chromium cases passed without retries. Full Chromium passed 199 with 32 intentional skips. The six focused WebKit cases passed. Firefox stopped at browser launch on this Mac. The aggregate check and all 683 PostgreSQL integration tests passed. [Task log](../delivery/reports/m8-reservations.md#task-log) and [independent review](../reviews/2026-11-20-m8-t5b.md).
 
-## Previous accepted task results (2026-11-18, M8-T5)
+## Earlier accepted task results (2026-11-18, M8-T5)
 
 The owner accepted M8-T5 with its aggregate E2E limitation recorded. [Exact commands and results](../delivery/reports/m8-reservations.md#m8-t5-verification); [independent review](../reviews/2026-11-18-m8-t5.md): Approve, all six findings resolved. This acceptance does not make the full browser gate green.
 

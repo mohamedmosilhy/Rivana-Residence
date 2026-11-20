@@ -71,7 +71,7 @@ Use the same pinned release for the systemd service and cron, rather than relyin
 
 - nightly `scripts/backup.sh` copied off the server, plus point-in-time recovery (WAL archiving on the VPS, or the managed provider's);
 - nightly off-server backup of the media root plus checksums/manifest; Hostinger VPS snapshots and backups are an extra layer, never the only copy;
-- planned reservation jobs (cron, app user): `npm run reservations -- outbox` every minute or two (M8), `npm run reservations -- expire-holds` every minute and `npm run reservations -- reconcile-payments` every 5 minutes (M9), `npm run reservations -- expire-tokens` daily (M8) ([migrations-and-seeding.md](../database/migrations-and-seeding.md#scheduled-jobs-cron));
+- reservation jobs (cron, app user): `npm run reservations -- outbox` every minute and `npm run reservations -- expire-tokens` daily (M8). Planned for M9: `npm run reservations -- expire-holds` every minute and `npm run reservations -- reconcile-payments` every 5 minutes ([migrations-and-seeding.md](../database/migrations-and-seeding.md#scheduled-jobs-cron));
 - hourly `npm run media -- cleanup` (cron) to fail abandoned uploads, clear stray quarantine files, and finish deletions whose file removal failed; see [phase-6-media.md](../delivery/reports/phase-6-media.md#storage-configuration-permissions-and-backup) for the media root layout and permissions;
 - after any database restore, clear `.next/cache/fetch-cache` and restart the app;
 - quarterly restore drill into a non-production environment;

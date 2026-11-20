@@ -4,12 +4,9 @@ import {
   ManageWhatsAppSettings,
   ManageWhatsAppTemplates,
   SendWhatsAppTestMessage,
-  TemplateWhatsAppSender,
-  WhatsAppSetupReader,
   type WhatsAppSettingsContext,
   type WhatsAppTemplateContext,
   type WhatsAppTestContext,
-  type WhatsAppTransport,
 } from "@/application/notifications";
 import { WHATSAPP_TEST_RATE_LIMIT } from "@/application/shared/public-rate-limit-policy";
 import { RateLimiter } from "@/application/shared/rate-limit";
@@ -21,71 +18,15 @@ import { PrismaWhatsAppTemplateRepository } from "@/infrastructure/db/prisma/rep
 import { PrismaPublicRateLimitStore } from "@/infrastructure/db/prisma/repositories/public-rate-limit-store";
 import { PrismaReservationUnitOfWork } from "@/infrastructure/db/prisma/unit-of-work";
 import { Cuid2IdGenerator } from "@/infrastructure/ids/cuid2-id-generator";
-import { FakeWhatsAppTransport } from "@/infrastructure/whatsapp/fake-transport";
-import { MetaCloudWhatsAppTransport } from "@/infrastructure/whatsapp/meta-cloud-transport";
-import { getServerEnv } from "@/lib/env/server";
+
+import { whatsAppSender, whatsAppSetupReader } from "./whatsapp-sender";
+export {
+  whatsAppSender,
+  whatsAppSetupReader,
+  whatsAppTransport,
+} from "./whatsapp-sender";
 
 const clock = { now: () => new Date() };
-
-/** Without a token nothing is sent; this transport is never reached then. */
-const unconfiguredTransport: WhatsAppTransport = {
-  async deliver() {
-    return {
-      ok: false,
-      code: "UNAVAILABLE",
-      detail: "The WhatsApp access token is not configured.",
-    };
-  },
-};
-
-let transport: WhatsAppTransport | undefined;
-
-/**
- * The process wide transport. With `WHATSAPP_PROVIDER=fake` (development and
- * tests; refused in production) it is one in memory fake, so tests can read
- * what was sent. The access token is read here and goes only to Meta.
- */
-export function whatsAppTransport(): WhatsAppTransport {
-  if (transport) return transport;
-  const env = getServerEnv();
-  if (env.WHATSAPP_PROVIDER === "fake") {
-    transport = new FakeWhatsAppTransport();
-  } else if (env.WHATSAPP_ACCESS_TOKEN) {
-    transport = new MetaCloudWhatsAppTransport({
-      accessToken: env.WHATSAPP_ACCESS_TOKEN,
-      graphVersion: env.WHATSAPP_GRAPH_VERSION,
-    });
-  } else {
-    transport = unconfiguredTransport;
-  }
-  return transport;
-}
-
-/** Use cases see only whether the token exists, never its value. */
-function accessTokenConfigured(): boolean {
-  const env = getServerEnv();
-  return env.WHATSAPP_PROVIDER === "fake" || Boolean(env.WHATSAPP_ACCESS_TOKEN);
-}
-
-export function whatsAppSetupReader() {
-  const client = getPrisma();
-  return new WhatsAppSetupReader({
-    settings: new PrismaWhatsAppSettingsRepository(client),
-    templates: new PrismaWhatsAppTemplateRepository(client),
-    accessTokenConfigured: accessTokenConfigured(),
-  });
-}
-
-/** The sender later tasks use (verification codes, the outbox dispatcher). */
-export function whatsAppSender() {
-  const client = getPrisma();
-  return new TemplateWhatsAppSender({
-    settings: new PrismaWhatsAppSettingsRepository(client),
-    templates: new PrismaWhatsAppTemplateRepository(client),
-    transport: whatsAppTransport(),
-    accessTokenConfigured: accessTokenConfigured(),
-  });
-}
 
 export function manageWhatsAppSettings() {
   return new ManageWhatsAppSettings({

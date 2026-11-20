@@ -25,6 +25,16 @@ export {
   type WhatsAppSetupView,
 } from "./whatsapp-setup";
 export type {
+  MessageKind,
+  MessageVariables,
+  ReservationMessageEvent,
+  ReservationMessageStore,
+  OutgoingMessage,
+  ClaimedMessage,
+  Completion,
+  DeliveryResult,
+  ReservationEmailSender,
+  OutboxWorkerStore,
   StaffActionLimiter,
   WhatsAppDelivery,
   WhatsAppFailureCode,
@@ -41,3 +51,5 @@ export type {
   WhatsAppTransport,
   WhatsAppTransportResult,
 } from "./ports";
+export * from "./reservation-messages";
+export * from "./dispatch-outbox";

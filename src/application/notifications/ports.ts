@@ -1,3 +1,7 @@
+import type {
+  ReservationSource,
+  ReservationStatus,
+} from "@/domain/shared/types";
 import type { PhoneNumber } from "@/domain/guests";
 import type {
   WhatsAppCategory,
@@ -109,6 +113,7 @@ export type WhatsAppSendResult =
       ok: false;
       code: WhatsAppFailureCode;
       /** Sanitized, at most 200 characters, never a token, phone, or code. */
+      providerCode?: number | undefined;
       detail: string;
     }>;
 
@@ -131,6 +136,7 @@ export type WhatsAppTransportResult =
         WhatsAppFailureCode,
         "PROVIDER_REJECTED" | "RATE_LIMITED" | "UNAVAILABLE"
       >;
+      providerCode?: number | undefined;
       detail: string;
     }>;
 
@@ -158,4 +164,90 @@ export interface WhatsAppSender {
 /** Admits one staff action per call against a per user window. */
 export interface StaffActionLimiter {
   consume(staffId: string): Promise<RateLimitOutcome>;
+}
+
+type GuestMessageKind =
+  | "reservation.confirmed"
+  | "reservation.cancelled"
+  | "reservation.manage-link";
+export type MessageKind = GuestMessageKind | "reservation.staff-alert";
+export type MessageChannel = "EMAIL" | "WHATSAPP";
+export type MessageVariables = {
+  reference: string;
+  branchName: string;
+  guestFirstName?: string;
+  checkIn?: string;
+  checkOut?: string;
+  total?: string;
+  reason?: string;
+  manageLink?: string;
+};
+
+export type MessageSnapshot = {
+  id: string;
+  source: ReservationSource;
+  status: ReservationStatus;
+  reference: string;
+  branchName: string;
+  branchEmail: string | null;
+  guestName: string;
+  guestEmail: string | null;
+  guestPhone: string | null;
+  checkIn: string;
+  checkOut: string;
+  totalMinor: number | null;
+};
+export type OutgoingMessage = {
+  id: string;
+  reservationId: string;
+  recipient: string;
+  kind: MessageKind;
+  channel: MessageChannel;
+  payload: MessageVariables;
+  availableAt: Date;
+};
+/** Both operations are bound to the caller's authorized reservation transaction. */
+export interface ReservationMessageStore {
+  snapshot(branchId: string, reservationId: string): Promise<MessageSnapshot>;
+  append(messages: OutgoingMessage[]): Promise<void>;
+}
+export type ReservationMessageEvent =
+  | {
+      kind: "reservation.confirmed";
+      notifyGuest: boolean;
+      manageToken?: string;
+    }
+  | { kind: "reservation.cancelled"; notifyGuest: boolean; reason: string }
+  | { kind: "reservation.manage-link"; manageToken: string };
+
+export type ClaimedMessage = {
+  id: string;
+  channel: MessageChannel;
+  recipient: string;
+  kind: string;
+  payload: unknown;
+  attempts: number;
+};
+export type DeliveryResult =
+  | { ok: true }
+  | {
+      ok: false;
+      code: WhatsAppFailureCode | "INVALID_MESSAGE";
+      providerCode?: number | undefined;
+    };
+export type Completion =
+  | { status: "SENT"; sentAt: Date }
+  | { status: "FAILED"; lastError: string }
+  | { status: "PENDING"; lastError: string; availableAt: Date };
+export interface OutboxWorkerStore {
+  claim(now: Date): Promise<ClaimedMessage | "exhausted" | null>;
+  complete(message: ClaimedMessage, outcome: Completion): Promise<boolean>;
+}
+export interface ReservationEmailSender {
+  send(
+    id: string,
+    to: string,
+    kind: MessageKind,
+    variables: MessageVariables,
+  ): Promise<DeliveryResult>;
 }

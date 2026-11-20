@@ -14,6 +14,18 @@ type SmtpOptions = Readonly<{
   to: string;
 }>;
 
+export function createSmtpTransport(options: Omit<SmtpOptions, "from" | "to">) {
+  return nodemailer.createTransport({
+    host: options.host,
+    port: options.port,
+    secure: options.secure,
+    auth: { user: options.user, pass: options.password },
+    connectionTimeout: 10_000,
+    greetingTimeout: 10_000,
+    socketTimeout: 20_000,
+  });
+}
+
 /** One line of plain text, safe for a mail header. */
 export function headerText(value: string, max: number) {
   return value
@@ -31,15 +43,7 @@ export class SmtpContactDelivery implements ContactDelivery {
   private readonly transporter: Transporter;
 
   constructor(private readonly options: SmtpOptions) {
-    this.transporter = nodemailer.createTransport({
-      host: options.host,
-      port: options.port,
-      secure: options.secure,
-      auth: { user: options.user, pass: options.password },
-      connectionTimeout: 10_000,
-      greetingTimeout: 10_000,
-      socketTimeout: 20_000,
-    });
+    this.transporter = createSmtpTransport(options);
   }
 
   async deliver(input: {

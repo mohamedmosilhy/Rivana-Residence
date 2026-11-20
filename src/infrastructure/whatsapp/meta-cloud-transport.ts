@@ -73,16 +73,18 @@ export class MetaCloudWhatsAppTransport implements WhatsAppTransport {
     }
     const error = graphError(payload);
     const detail = this.describe(response.status, error);
+    const providerCode =
+      typeof error?.code === "number" ? error.code : undefined;
     if (
       response.status === 429 ||
       (typeof error?.code === "number" && RATE_LIMIT_CODES.has(error.code))
     ) {
-      return { ok: false, code: "RATE_LIMITED", detail };
+      return { ok: false, code: "RATE_LIMITED", detail, providerCode };
     }
     if (response.status >= 500) {
-      return { ok: false, code: "UNAVAILABLE", detail };
+      return { ok: false, code: "UNAVAILABLE", detail, providerCode };
     }
-    return { ok: false, code: "PROVIDER_REJECTED", detail };
+    return { ok: false, code: "PROVIDER_REJECTED", detail, providerCode };
   }
 
   private describe(status: number, error: GraphError | null): string {

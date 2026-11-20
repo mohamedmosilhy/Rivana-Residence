@@ -50,6 +50,19 @@ export class TemplateWhatsAppSender implements WhatsAppSender {
         detail: WHATSAPP_TEMPLATE_MISSING_DETAIL,
       };
     }
+    if (
+      (message.purpose === "MANAGE_LINK" ||
+        message.purpose === "BOOKING_CONFIRMED") &&
+      message.variables.manageLink &&
+      !template.variables.includes("manageLink")
+    ) {
+      return {
+        ok: false,
+        code: "TEMPLATE_MISSING",
+        detail:
+          "The active template cannot deliver the reservation manage link.",
+      };
+    }
     return this.deliver(phoneNumberId, template, message.to, message.variables);
   }
 

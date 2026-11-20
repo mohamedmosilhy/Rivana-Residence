@@ -1,6 +1,6 @@
 # M8 — Reservations, immediate confirmation, phone verification, and messages
 
-Status: **In progress** (10/19 tasks accepted: M8-T0 on 2026-11-13, M8-T0b on 2026-11-14, M8-T1 and M8-T2 on 2026-11-15, M8-T3 and M8-T3b on 2026-11-17, M8-T4 backend, M8-T4b screen, M8-T5 phone verification on 2026-11-18, and M8-T5b browser coverage on 2026-11-20; spec [0005](../../specs/0005-m8-reservations.md) and the task breakdown approved, 2026-11-14; scope extended by the owner on 2026-11-17 with the transfer car count, M8-T3b, and the shared change engine for guest changes, M8-T9 and T9b, Q-82…Q-85, Q-90). Branch: `m8-reservations`. Follow the [milestone loop](./README.md#the-loop-every-milestone-follows).
+Status: **In progress** (11/19 tasks accepted: M8-T0 on 2026-11-13, M8-T0b on 2026-11-14, M8-T1 and M8-T2 on 2026-11-15, M8-T3 and M8-T3b on 2026-11-17, M8-T4 backend, M8-T4b screen, M8-T5 phone verification on 2026-11-18, M8-T5b browser coverage, and M8-T6 notifications on 2026-11-20; spec [0005](../../specs/0005-m8-reservations.md) and the task breakdown approved, 2026-11-14; scope extended by the owner on 2026-11-17 with the transfer car count, M8-T3b, and the shared change engine for guest changes, M8-T9 and T9b, Q-82…Q-85, Q-90). Branch: `m8-reservations`. Follow the [milestone loop](./README.md#the-loop-every-milestone-follows).
 
 > **Done first (accepted 2026-11-13): [M8-T0, application ports consolidation](#0-prerequisite-task-m8-t0-application-ports-consolidation).** The owner decided on 2026-11-13 that the old shared `src/application/ports/` files move into their modules before any other M8 task starts, so every M8 repository and port is written in the module layout from the start. [M8-T0b](#0b-follow-up-task-m8-t0b-public-surfaces-for-the-cms-modules) was accepted on 2026-11-14. Next: the rest of M8, task by task.
 
@@ -70,7 +70,7 @@ Planned, reviewed, and accepted one task at a time ([agent-workflow.md](../../en
 | M8-T4b | Minimal Admin WhatsApp screen `/admin/settings/whatsapp` on the T4 API (number, templates, test message, setup gaps) (owner decision, 2026-11-18) | Medium | T4 | AC 10; E2E-A-5 | Accepted |
 | M8-T5 | Phone verification: request and confirm, limits, API P9 and P10 | Critical | T2, T3, T4 | AC 7; T-GST (verification) | Accepted |
 | M8-T5b | Exercise admin and public navigation and keyboard focus on desktop and mobile | Medium | T5 | Four Playwright tests pass on both Chromium layouts | Accepted (2026-11-20) |
-| M8-T6 | Notifications: outbox, dispatcher, email templates, token expiry job | Critical | T3, T4 | AC 4; T-NTF-1…3 | Not started |
+| M8-T6 | Notifications: outbox, dispatcher, email templates, token expiry job | Critical | T3, T4 | AC 4; T-NTF-1…3 | Accepted (2026-11-20) |
 | M8-T7 | `CreateWebsiteReservation` (pay at hotel): persistence, per phone caps, coupon lock and redemption, guest upsert, audit, outbox, `PublicListingReader` | Critical | T3b, T5, T6, M7 | AC 1–4; T-RES, C-1…C-3, C-11 | Not started |
 | M8-T7b | Public API P7, idempotency replay over HTTP, P6 per phone limit change, OpenAPI, captured log test, mid-milestone security review | Critical | T7 | AC 1, 8; T-HTTP, C-9 | Not started |
 | M8-T8 | Staff and external reservations: `CreateStaffReservation`, `RecordExternalReservation`, plus the reads S1, S2, S15 | Critical | T7 | AC 9; T-RES, T-AUTHZ-2, C-5, C-8 | Not started |
