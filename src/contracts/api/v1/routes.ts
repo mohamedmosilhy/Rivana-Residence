@@ -20,6 +20,12 @@ import {
 } from "./branches";
 import { AvailabilityQuery, AvailabilityResponse } from "./availability";
 import { QuoteRequest, QuoteResponse } from "./quotes";
+import {
+  IdempotencyKey,
+  WebsiteReservationCreated,
+  WebsiteReservationReplayed,
+  WebsiteReservationRequest,
+} from "./reservations";
 import { HealthResponse } from "./health";
 import {
   Block,
@@ -80,6 +86,13 @@ export type ApiRoute = Readonly<{
   request?: z.ZodType;
   /** Query parameters, documented from the object's keys. */
   query?: z.ZodObject;
+  /** Request headers the endpoint reads (for example `Idempotency-Key`). */
+  headers?: readonly Readonly<{
+    name: string;
+    required: boolean;
+    description: string;
+    schema: z.ZodType;
+  }>[];
   responses: Readonly<
     Record<number, Readonly<{ description: string; schema?: z.ZodType }>>
   >;
@@ -88,6 +101,57 @@ export type ApiRoute = Readonly<{
 }>;
 
 export const API_ROUTES: readonly ApiRoute[] = [
+  {
+    method: "post",
+    path: "/api/v1/reservations",
+    operationId: "createWebsiteReservation",
+    summary:
+      "API-P7. Create a pay at hotel website booking. Requires an `Idempotency-Key` header (8 to 128 printable characters) and a booking token from API-P10. Consumes the token, locks inventory, and returns CONFIRMED. Five requests per client per hour, on top of the per phone cap.",
+    tag: "Reservations",
+    security: "public",
+    headers: [
+      {
+        name: "Idempotency-Key",
+        required: true,
+        description:
+          "8 to 128 printable ASCII characters. A retry with the same key and body replays the booking.",
+        schema: IdempotencyKey,
+      },
+    ],
+    request: WebsiteReservationRequest,
+    responses: {
+      201: {
+        description:
+          "Booking confirmed. `manageUrl` is returned once and never repeated.",
+        schema: WebsiteReservationCreated,
+      },
+      200: {
+        description:
+          "Replay of the same key and body: the same reference, `manageUrl` null.",
+        schema: WebsiteReservationReplayed,
+      },
+    },
+    errors: [
+      "MISSING_IDEMPOTENCY_KEY",
+      "MALFORMED_JSON",
+      "PAYLOAD_TOO_LARGE",
+      "UNSUPPORTED_MEDIA_TYPE",
+      "VALIDATION",
+      "IDEMPOTENCY_KEY_REUSED",
+      "PHONE_NOT_VERIFIED",
+      "PHONE_BLOCKED",
+      "NOT_FOUND",
+      "BRANCH_NOT_BOOKABLE",
+      "PAYMENT_METHOD_UNAVAILABLE",
+      "INVENTORY_UNAVAILABLE",
+      "PRICE_CHANGED",
+      "COUPON_INVALID",
+      "SERVICE_UNAVAILABLE",
+      "BOOKING_LIMIT_REACHED",
+      "RATE_LIMITED",
+      "TRY_AGAIN",
+    ],
+  },
   {
     method: "post",
     path: "/api/v1/phone-verifications",

@@ -42,7 +42,7 @@ describe("parseWebsiteBooking", () => {
   it.each([
     ["a client price", { totalMinor: 1 }, "_root"],
     ["a status", { status: "CONFIRMED" }, "_root"],
-    ["card payment", { paymentMethod: "PAYMOB" }, "paymentMethod"],
+    ["an unknown payment method", { paymentMethod: "CASH" }, "paymentMethod"],
     [
       "a missing phone",
       { guest: { fullName: "A", email: "a@example.test" } },
@@ -68,6 +68,29 @@ describe("parseWebsiteBooking", () => {
     const result = parse(body(overrides));
     expect(result.ok).toBe(false);
     expect(Object.keys(issues(result)).join(" ")).toContain(path);
+  });
+
+  it("refuses online payment with the documented code (Q-74)", () => {
+    const result = parse(body({ paymentMethod: "PAYMOB" }));
+    expect(result.ok).toBe(false);
+    if (!result.ok)
+      expect(result.error.code).toBe("PAYMENT_METHOD_UNAVAILABLE");
+  });
+
+  it("refuses an invalid PAYMOB body as validation, not as payment", () => {
+    const result = parse(body({ paymentMethod: "PAYMOB", lines: [] }));
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.error.code).toBe("VALIDATION");
+  });
+
+  it("refuses a filled honeypot generically and accepts an empty one", () => {
+    const filled = parse(body({ website: "http://spam.test" }));
+    expect(filled.ok).toBe(false);
+    if (!filled.ok) {
+      expect(filled.error.code).toBe("VALIDATION");
+      expect(filled.error.fieldErrors ?? {}).toEqual({});
+    }
+    expect(parse(body({ website: "" })).ok).toBe(true);
   });
 
   it("refuses a missing or odd idempotency key", () => {

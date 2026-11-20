@@ -27,6 +27,7 @@ export type ApplicationErrorCode =
   | "PHONE_NOT_VERIFIED"
   | "BOOKING_LIMIT_REACHED"
   | "BRANCH_NOT_BOOKABLE"
+  | "PAYMENT_METHOD_UNAVAILABLE"
   | "IDEMPOTENCY_KEY_REUSED"
   | "PRICE_CHANGED";
 
@@ -37,7 +38,20 @@ type StandardApplicationErrorCode = Exclude<
   | "SERVICE_UNAVAILABLE"
   | "VERIFICATION_CODE_INVALID"
   | "PRICE_CHANGED"
+  | "BRANCH_NOT_BOOKABLE"
 >;
+
+export type BranchNotBookableReason =
+  | "ONLINE_BOOKING_DISABLED"
+  | "CHECK_IN_TIME_MISSING"
+  | "WHATSAPP_NOT_CONFIGURED";
+
+export type BranchNotBookableError = Readonly<{
+  code: "BRANCH_NOT_BOOKABLE";
+  message: string;
+  context: Readonly<{ reason: BranchNotBookableReason }>;
+  fieldErrors?: never;
+}>;
 
 type StandardApplicationError = Readonly<{
   code: StandardApplicationErrorCode;
@@ -90,6 +104,7 @@ export type PriceChangedError = Readonly<{
 
 export type ApplicationError =
   | StandardApplicationError
+  | BranchNotBookableError
   | PriceChangedError
   | InventoryUnavailableError
   | CouponInvalidError
@@ -174,6 +189,19 @@ export function priceChanged(quote: PriceChangedQuote): Result<never> {
       code: "PRICE_CHANGED",
       message: "The price changed. Review the new total.",
       context: { quote },
+    },
+  };
+}
+
+export function branchNotBookable(
+  reason: BranchNotBookableReason,
+): Result<never> {
+  return {
+    ok: false,
+    error: {
+      code: "BRANCH_NOT_BOOKABLE",
+      message: "This branch cannot take online bookings right now.",
+      context: { reason },
     },
   };
 }

@@ -11,6 +11,71 @@
     }
   ],
   "paths": {
+    "/api/v1/reservations": {
+      "post": {
+        "operationId": "createWebsiteReservation",
+        "summary": "API-P7. Create a pay at hotel website booking. Requires an `Idempotency-Key` header (8 to 128 printable characters) and a booking token from API-P10. Consumes the token, locks inventory, and returns CONFIRMED. Five requests per client per hour, on top of the per phone cap.",
+        "tags": [
+          "Reservations"
+        ],
+        "security": [],
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "description": "8 to 128 printable ASCII characters. A retry with the same key and body replays the booking.",
+            "schema": {
+              "type": "string",
+              "pattern": "^[\\x21-\\x7E]{8,128}$",
+              "description": "8 to 128 printable ASCII characters, no spaces."
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WebsiteReservationRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Replay of the same key and body: the same reference, `manageUrl` null.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WebsiteReservationReplayed"
+                }
+              }
+            }
+          },
+          "201": {
+            "description": "Booking confirmed. `manageUrl` is returned once and never repeated.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WebsiteReservationCreated"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Problem details. Codes: INTERNAL, MISSING_IDEMPOTENCY_KEY, MALFORMED_JSON, PAYLOAD_TOO_LARGE, UNSUPPORTED_MEDIA_TYPE, VALIDATION, IDEMPOTENCY_KEY_REUSED, PHONE_NOT_VERIFIED, PHONE_BLOCKED, NOT_FOUND, BRANCH_NOT_BOOKABLE, PAYMENT_METHOD_UNAVAILABLE, INVENTORY_UNAVAILABLE, PRICE_CHANGED, COUPON_INVALID, SERVICE_UNAVAILABLE, BOOKING_LIMIT_REACHED, RATE_LIMITED, TRY_AGAIN.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/phone-verifications": {
       "post": {
         "operationId": "requestPhoneVerification",
@@ -2705,7 +2770,7 @@
             "type": "string"
           },
           "phone": {
-            "description": "A verified phone, only for the per phone coupon limit. Never stored.",
+            "description": "Deprecated and ignored. P6 never evaluates the per phone coupon limit; it is enforced at booking against the verified phone.",
             "type": "string",
             "maxLength": 32
           }
@@ -3010,6 +3075,241 @@
           "unavailableLines",
           "bookable",
           "quote"
+        ],
+        "additionalProperties": false
+      },
+      "WebsiteReservationRequest": {
+        "type": "object",
+        "properties": {
+          "branchSlug": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 80
+          },
+          "stay": {
+            "$ref": "#/components/schemas/Stay"
+          },
+          "lines": {
+            "minItems": 1,
+            "maxItems": 5,
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "roomSlug": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 120
+                },
+                "occupancy": {
+                  "$ref": "#/components/schemas/Occupancy"
+                }
+              },
+              "required": [
+                "roomSlug",
+                "occupancy"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "services": {
+            "type": "array",
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "enum": [
+                    "BREAKFAST",
+                    "AIRPORT_TRANSFER"
+                  ]
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "kind": {
+                      "type": "string",
+                      "enum": [
+                        "BREAKFAST",
+                        "AIRPORT_TRANSFER"
+                      ]
+                    },
+                    "vehicles": {
+                      "type": "integer",
+                      "minimum": 1,
+                      "maximum": 10,
+                      "description": "Airport transfer only; cars needed, default 1."
+                    },
+                    "details": {
+                      "type": "string",
+                      "maxLength": 300,
+                      "description": "Optional plain text, such as a flight number and time."
+                    }
+                  },
+                  "required": [
+                    "kind"
+                  ],
+                  "additionalProperties": false
+                }
+              ]
+            }
+          },
+          "couponCode": {
+            "type": "string",
+            "maxLength": 64
+          },
+          "guest": {
+            "type": "object",
+            "properties": {
+              "fullName": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 120
+              },
+              "email": {
+                "type": "string",
+                "minLength": 3,
+                "maxLength": 254
+              },
+              "phone": {
+                "type": "string",
+                "maxLength": 32,
+                "description": "Must equal the phone the token was issued for."
+              },
+              "country": {
+                "type": "string",
+                "minLength": 2,
+                "maxLength": 2
+              },
+              "specialRequests": {
+                "type": "string",
+                "maxLength": 1000
+              }
+            },
+            "required": [
+              "fullName",
+              "email",
+              "phone"
+            ],
+            "additionalProperties": false
+          },
+          "phoneVerificationToken": {
+            "type": "string",
+            "minLength": 16,
+            "maxLength": 128,
+            "description": "From API-P10 (purpose BOOKING). Single use."
+          },
+          "paymentMethod": {
+            "type": "string",
+            "enum": [
+              "PAY_AT_HOTEL",
+              "PAYMOB"
+            ],
+            "description": "PAYMOB returns 409 PAYMENT_METHOD_UNAVAILABLE in M8."
+          },
+          "expectedTotal": {
+            "description": "The total from the last quote.",
+            "$ref": "#/components/schemas/Money"
+          },
+          "consent": {
+            "type": "object",
+            "properties": {
+              "privacyNoticeVersion": {
+                "type": "string",
+                "maxLength": 40
+              }
+            },
+            "required": [
+              "privacyNoticeVersion"
+            ],
+            "additionalProperties": false
+          },
+          "marketingOptIn": {
+            "type": "object",
+            "properties": {
+              "consentVersion": {
+                "type": "string",
+                "maxLength": 40
+              }
+            },
+            "required": [
+              "consentVersion"
+            ],
+            "additionalProperties": false
+          },
+          "website": {
+            "description": "Honeypot. Leave empty.",
+            "type": "string",
+            "maxLength": 32768
+          }
+        },
+        "required": [
+          "branchSlug",
+          "stay",
+          "lines",
+          "services",
+          "guest",
+          "phoneVerificationToken",
+          "paymentMethod",
+          "expectedTotal",
+          "consent"
+        ],
+        "additionalProperties": false
+      },
+      "WebsiteReservationCreated": {
+        "type": "object",
+        "properties": {
+          "reference": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "CONFIRMED"
+            ]
+          },
+          "total": {
+            "$ref": "#/components/schemas/Money"
+          },
+          "manageUrl": {
+            "type": "string",
+            "description": "Shown once. Contains the manage token in the fragment."
+          }
+        },
+        "required": [
+          "reference",
+          "status",
+          "total",
+          "manageUrl"
+        ],
+        "additionalProperties": false
+      },
+      "WebsiteReservationReplayed": {
+        "type": "object",
+        "properties": {
+          "reference": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "AWAITING_PAYMENT",
+              "CONFIRMED",
+              "PAYMENT_FAILED",
+              "CANCELLED",
+              "CHECKED_IN",
+              "CHECKED_OUT",
+              "NO_SHOW"
+            ],
+            "description": "The booking's current status, which may have moved on."
+          },
+          "manageUrl": {
+            "type": "null"
+          }
+        },
+        "required": [
+          "reference",
+          "status",
+          "manageUrl"
         ],
         "additionalProperties": false
       },

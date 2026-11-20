@@ -84,7 +84,8 @@ export function quoteBooking() {
     rates: new PrismaRateRepository(client),
     services: new PrismaServiceOfferingRepository(client),
     coupons: new PrismaCouponRepository(client),
-    // Phone blind until P6 stops accepting an unverified phone (M8-T7b).
+    // Phone blind by design: public P6 never evaluates the per phone limit
+    // (M8-T7b); the verified phone is checked inside the booking transaction.
     redemptions: new PrismaCouponRedemptionReader(client, {
       phoneAware: false,
     }),

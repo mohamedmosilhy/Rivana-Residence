@@ -6,6 +6,7 @@ import type {
 /** Errors the HTTP layer produces before a use case runs. */
 export type TransportErrorCode =
   | "MALFORMED_JSON"
+  | "MISSING_IDEMPOTENCY_KEY"
   | "INVALID_QUERY"
   | "PAYLOAD_TOO_LARGE"
   | "UNSUPPORTED_MEDIA_TYPE"
@@ -69,6 +70,14 @@ export const PROBLEMS: Readonly<Record<ProblemCode, ProblemDefinition>> = {
   BRANCH_NOT_BOOKABLE: {
     status: 409,
     title: "This branch cannot take bookings now",
+  },
+  PAYMENT_METHOD_UNAVAILABLE: {
+    status: 409,
+    title: "This payment method is not available",
+  },
+  MISSING_IDEMPOTENCY_KEY: {
+    status: 400,
+    title: "Send an Idempotency-Key header",
   },
   IDEMPOTENCY_KEY_REUSED: {
     status: 422,

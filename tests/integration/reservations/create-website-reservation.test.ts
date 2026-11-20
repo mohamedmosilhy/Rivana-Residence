@@ -66,9 +66,16 @@ const book = (
     );
   })();
 
-function expectFailure(result: Awaited<ReturnType<typeof book>>, code: string) {
+function expectFailure(
+  result: Awaited<ReturnType<typeof book>>,
+  code: string,
+  context?: Record<string, unknown>,
+) {
   expect(result.ok).toBe(false);
-  if (!result.ok) expect(result.error.code).toBe(code);
+  if (!result.ok) {
+    expect(result.error.code).toBe(code);
+    if (context) expect(result.error.context).toEqual(context);
+  }
 }
 
 const nothingWritten = async (consumedBefore = 0) =>
@@ -189,7 +196,11 @@ describe("CreateWebsiteReservation", () => {
       "VALIDATION",
     ],
     ["a client price", { totalMinor: 1 }, "VALIDATION"],
-    ["a card payment", { paymentMethod: "PAYMOB" }, "VALIDATION"],
+    [
+      "a card payment",
+      { paymentMethod: "PAYMOB" },
+      "PAYMENT_METHOD_UNAVAILABLE",
+    ],
     [
       "an old privacy version",
       { consent: { privacyNoticeVersion: "old" } },
@@ -218,6 +229,7 @@ describe("CreateWebsiteReservation", () => {
     expectFailure(
       await book({}, key("a"), phone, token),
       "BRANCH_NOT_BOOKABLE",
+      { reason: "ONLINE_BOOKING_DISABLED" },
     );
     await client.branch.update({
       where: { id: TEST_BRANCH_ID },
@@ -226,6 +238,7 @@ describe("CreateWebsiteReservation", () => {
     expectFailure(
       await book({}, key("a"), phone, token),
       "BRANCH_NOT_BOOKABLE",
+      { reason: "CHECK_IN_TIME_MISSING" },
     );
     await client.branch.update({
       where: { id: TEST_BRANCH_ID },
@@ -234,10 +247,35 @@ describe("CreateWebsiteReservation", () => {
     const unconfigured = await websiteBooking(client, {
       setupConfigured: false,
     }).execute(bookingBody(phone, token), key("a"));
-    expectFailure(unconfigured, "BRANCH_NOT_BOOKABLE");
+    expectFailure(unconfigured, "BRANCH_NOT_BOOKABLE", {
+      reason: "WHATSAPP_NOT_CONFIGURED",
+    });
     expect((await rowCounts(client)).reservations).toBe(0);
     // The token was never consumed by any refusal.
     expect((await rowCounts(client)).consumed).toBe(0);
+  });
+
+  it("refuses with the same reason when booking closes between the pre check and the locked quote", async () => {
+    await seedBookable(client);
+    const token = await issueToken(client, phone);
+    const closed = await websiteBooking(client, {
+      quote: (inner) => ({
+        execute: async (input) => {
+          const quoted = await inner.execute(input);
+          return quoted.ok
+            ? { ok: true, value: { ...quoted.value, bookable: false } }
+            : quoted;
+        },
+      }),
+    }).execute(bookingBody(phone, token), key("closed"));
+    expectFailure(closed, "BRANCH_NOT_BOOKABLE", {
+      reason: "ONLINE_BOOKING_DISABLED",
+    });
+    // The transaction rolled back, so the token is still unused.
+    expect(await rowCounts(client)).toMatchObject({
+      reservations: 0,
+      consumed: 0,
+    });
   });
 
   describe("verification token", () => {

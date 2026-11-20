@@ -1,4 +1,4 @@
-import { quoteResponse } from "@/app/api/v1/_dto/quotes";
+import { publicQuoteRequest, quoteResponse } from "@/app/api/v1/_dto/quotes";
 import { json, publicRoute, toHttp } from "@/app/api/v1/_http";
 import {
   QUOTE_COUPON_RATE_LIMIT,
@@ -9,6 +9,7 @@ import { QuoteRequest } from "@/contracts/api/v1/quotes";
 
 // API-P6. A read: no lock, hold, or cache. Every request takes the general
 // limit; a request that sends a coupon code also takes the stricter one.
+// `publicQuoteRequest` drops the unverified `phone` (spec 0005 Decision 9.1).
 export const POST = publicRoute(
   {
     route: "/api/v1/quotes",
@@ -18,7 +19,7 @@ export const POST = publicRoute(
       body.couponCode ? QUOTE_COUPON_RATE_LIMIT : null,
   },
   async ({ body, setBranch }) =>
-    toHttp(await quoteBooking(body), {
+    toHttp(await quoteBooking(publicQuoteRequest(body)), {
       ok: (result) => {
         setBranch(result.branchId);
         return json(200, quoteResponse(result));

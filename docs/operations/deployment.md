@@ -92,6 +92,8 @@ The deployment paths above are examples, not provisioned paths. Check exit statu
 
 P5 uses one availability bucket per trusted client across branches, allowing 60 admissions per 60 second window. P5 endpoint wiring is implemented in M6-T10. Without a trusted address, all such requests share one anonymous bucket. Enable `AUTH_TRUST_PROXY_HEADERS` only when the edge overwrites client supplied forwarding headers and the Next.js listener cannot be reached directly. Rehearse that trust configuration before public exposure. Staff sign-in policy remains separate.
 
+P7 (`POST /api/v1/reservations`, M8-T7b) uses the `booking-create` bucket: 5 admissions per trusted client per hour, on top of the per phone caps. Every request counts, including a replay, a missing key and a price change, because admission runs before the body is read (owner decision, 2026-11-20, to revisit with Paymob in M9). A guest whose response was lost can therefore see `429` with `Retry-After` for up to an hour even though the booking exists; the hotel can confirm it by phone or from the staff screens. The bucket is far more sensitive to proxy configuration than P5: with trust off, or behind a proxy that hides visitor addresses, the whole site shares five bookings an hour. The hourly cleanup prunes this bucket with the others.
+
 ### Backup and restore tooling
 
 `scripts/backup.sh` and `scripts/restore.sh` (Phase 11) need `pg_dump`/`pg_restore`/`psql` at least as new as the server.

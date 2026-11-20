@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { invalid, type Result } from "@/application/shared/result";
+import { failure, invalid, type Result } from "@/application/shared/result";
 import { normalizeCouponCode } from "@/domain/coupons";
 import {
   parseGuestContact,
@@ -31,7 +31,11 @@ const bodySchema = z.strictObject({
     .string()
     .min(16, "Send the verification token.")
     .max(128, "Send the verification token."),
-  paymentMethod: z.literal("PAY_AT_HOTEL", "Choose pay at hotel."),
+  // PAYMOB is a documented value that M8 refuses with 409 (Q-74), after the
+  // body is otherwise valid.
+  paymentMethod: z.enum(["PAY_AT_HOTEL", "PAYMOB"], "Choose pay at hotel."),
+  /** Honeypot (Q-74): a filled value is refused generically, nothing written. */
+  website: z.string().max(32_768).optional(),
   expectedTotal: z.strictObject({
     amountMinor: z.number().int().min(0),
     currency: z.literal("USD"),
@@ -79,6 +83,7 @@ export function parseWebsiteBooking(
     );
     return invalid("Check the booking details.", issues);
   }
+  if (body.data.website) return invalid("Check the booking details.", []);
   const { guest: guestInput, ...data } = body.data;
 
   let guest: GuestContact | undefined;
@@ -117,6 +122,11 @@ export function parseWebsiteBooking(
 
   if (issues.length > 0 || !guest || !consent || !quote.ok)
     return invalid("Check the booking details.", issues);
+  if (data.paymentMethod === "PAYMOB")
+    return failure(
+      "PAYMENT_METHOD_UNAVAILABLE",
+      "Online payment is not available. Choose pay at hotel.",
+    );
   return {
     ok: true,
     value: {

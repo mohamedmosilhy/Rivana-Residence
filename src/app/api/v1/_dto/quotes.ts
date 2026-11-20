@@ -1,9 +1,20 @@
 import type { z } from "zod";
 
 import type { QuoteResult, QuoteView } from "@/application/quotes";
-import type { QuoteResponse } from "@/contracts/api/v1/quotes";
+import type { QuoteRequest, QuoteResponse } from "@/contracts/api/v1/quotes";
 
 type Response = z.infer<typeof QuoteResponse>;
+
+/**
+ * The public P6 request without its unverified `phone`: P6 never evaluates
+ * the per phone coupon limit (spec 0005 Decision 9.1). Only the booking
+ * transaction does, against the verified phone.
+ */
+export function publicQuoteRequest(body: z.infer<typeof QuoteRequest>) {
+  const request: Record<string, unknown> = { ...body };
+  delete request.phone;
+  return request;
+}
 
 const usd = (amountMinor: number) => ({
   amountMinor,

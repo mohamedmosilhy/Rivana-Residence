@@ -45,6 +45,8 @@ export const TOTAL_MINOR = 34_500;
 
 type Options = Readonly<{
   audit?: (inner: AuditLog) => AuditLog;
+  /** Wraps the transaction's quote, e.g. to report a branch closed after the locks. */
+  quote?: (inner: QuoteBooking) => Pick<QuoteBooking, "execute">;
   setupConfigured?: boolean;
 }>;
 
@@ -65,6 +67,19 @@ export function websiteBooking(client: PrismaClient, options: Options = {}) {
             consumption,
           );
           const audit = new PrismaAuditLog(transaction);
+          const quote = new QuoteBooking({
+            branches: new PrismaBranchRepository(transaction),
+            rooms: new PrismaPublicListingReader(transaction),
+            inventory: inventoryReader,
+            rates: new PrismaRateRepository(transaction),
+            services: new PrismaServiceOfferingRepository(transaction),
+            coupons: new PrismaCouponRepository(transaction),
+            redemptions: new PrismaCouponRedemptionReader(transaction, {
+              phoneAware: true,
+            }),
+            settings: new PrismaCommercialSettingsRepository(transaction),
+            clock,
+          });
           return {
             reservations: new PrismaReservationRepository(transaction),
             guests: new PrismaGuestRepository(transaction),
@@ -74,19 +89,7 @@ export function websiteBooking(client: PrismaClient, options: Options = {}) {
             audit: options.audit ? options.audit(audit) : audit,
             verifications: new PrismaPhoneVerificationRepository(transaction),
             redemptions: new PrismaCouponRedemptionStore(transaction),
-            quote: new QuoteBooking({
-              branches: new PrismaBranchRepository(transaction),
-              rooms: new PrismaPublicListingReader(transaction),
-              inventory: inventoryReader,
-              rates: new PrismaRateRepository(transaction),
-              services: new PrismaServiceOfferingRepository(transaction),
-              coupons: new PrismaCouponRepository(transaction),
-              redemptions: new PrismaCouponRedemptionReader(transaction, {
-                phoneAware: true,
-              }),
-              settings: new PrismaCommercialSettingsRepository(transaction),
-              clock,
-            }),
+            quote: options.quote ? options.quote(quote) : quote,
             messages: new QueueReservationMessages(
               new PrismaReservationMessageStore(transaction),
               ids,

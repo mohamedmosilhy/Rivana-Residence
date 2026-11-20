@@ -41,8 +41,15 @@ export const VERIFICATION_CONFIRM_RATE_LIMIT = {
   rule: { maxFailures: 20, windowMs: 600_000, lockMs: 600_000 },
 } as const;
 
+/** API-P7: five booking attempts per client per hour (api-contracts). */
+export const BOOKING_CREATE_RATE_LIMIT = {
+  name: "booking-create",
+  rule: { maxFailures: 5, windowMs: 3_600_000, lockMs: 3_600_000 },
+} as const;
+
 /** Every limiter namespace on the shared store; cleanup prunes each one. */
 export const PUBLIC_RATE_LIMITS = [
+  BOOKING_CREATE_RATE_LIMIT,
   AVAILABILITY_RATE_LIMIT,
   QUOTE_RATE_LIMIT,
   QUOTE_COUPON_RATE_LIMIT,

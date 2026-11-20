@@ -90,7 +90,7 @@ export const QuoteRequest = z
       .max(32)
       .optional()
       .describe(
-        "A verified phone, only for the per phone coupon limit. Never stored.",
+        "Deprecated and ignored. P6 never evaluates the per phone coupon limit; it is enforced at booking against the verified phone.",
       ),
   })
   .strict();

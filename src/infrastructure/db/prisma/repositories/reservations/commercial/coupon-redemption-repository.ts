@@ -10,9 +10,9 @@ import { postgresErrorCode } from "@/infrastructure/db/prisma/error-translation"
 import type { DatabaseClient } from "@/infrastructure/db/prisma/transaction";
 
 /**
- * Counts unreleased redemptions. Public quotes pass `phoneAware: false` until
- * P6 stops accepting an unverified phone (M8-T7b), so a guesser can never
- * learn which phone used a coupon (M7 AC-4). The booking transaction passes
+ * Counts unreleased redemptions. Public quotes pass `phoneAware: false` and
+ * P6 drops any `phone` it is sent (M8-T7b), so a guesser can never learn
+ * which phone used a coupon (M7 AC-4). The booking transaction passes
  * `true` and only ever supplies a phone proved by a verification token.
  */
 export class PrismaCouponRedemptionReader implements CouponRedemptionReader {

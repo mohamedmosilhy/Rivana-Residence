@@ -5,6 +5,11 @@ import {
   PhoneVerificationConfirmed,
 } from "./phone-verifications";
 import { Coupon, CouponInput, CouponPatch, CouponList } from "./coupons";
+import {
+  WebsiteReservationCreated,
+  WebsiteReservationReplayed,
+  WebsiteReservationRequest,
+} from "./reservations";
 import { z } from "zod";
 
 import {
@@ -86,6 +91,9 @@ const COMPONENTS: Readonly<Record<string, z.ZodType>> = {
   QuoteRequest,
   Quote,
   QuoteResponse,
+  WebsiteReservationRequest,
+  WebsiteReservationCreated,
+  WebsiteReservationReplayed,
   Image,
   BranchSummary,
   BranchDetail,
@@ -186,7 +194,21 @@ function parameters(route: ApiRoute) {
         };
       })
     : [];
-  return [...path, ...query];
+  const headers = (route.headers ?? []).map((header) => {
+    const json = z.toJSONSchema(header.schema, {
+      unrepresentable: "any",
+      io: "input",
+    }) as Record<string, unknown>;
+    delete json.$schema;
+    return {
+      name: header.name,
+      in: "header",
+      required: header.required,
+      description: header.description,
+      schema: json,
+    };
+  });
+  return [...path, ...query, ...headers];
 }
 
 function operation(route: ApiRoute) {

@@ -17,6 +17,7 @@ import type { QuoteBooking, QuoteView } from "@/application/quotes";
 import type { Clock, IdGenerator } from "@/application/shared/providers";
 import {
   failure,
+  branchNotBookable,
   inventoryUnavailable,
   invalid,
   priceChanged,
@@ -170,15 +171,11 @@ export class CreateWebsiteReservation {
       booking.quote.branchSlug,
     );
     if (!branch) return failure("NOT_FOUND", "This branch was not found.");
-    if (
-      !branch.onlineBookingEnabled ||
-      !branch.checkInTime ||
-      !(await this.deps.setup.isConfigured())
-    )
-      return failure(
-        "BRANCH_NOT_BOOKABLE",
-        "This branch cannot take online bookings right now.",
-      );
+    if (!branch.onlineBookingEnabled)
+      return branchNotBookable("ONLINE_BOOKING_DISABLED");
+    if (!branch.checkInTime) return branchNotBookable("CHECK_IN_TIME_MISSING");
+    if (!(await this.deps.setup.isConfigured()))
+      return branchNotBookable("WHATSAPP_NOT_CONFIGURED");
 
     const listings = await this.deps.listings.listPublished(branch.id);
     const published = new Map(listings.map((room) => [room.slug, room]));
@@ -385,10 +382,7 @@ export class CreateWebsiteReservation {
     const result = quoted.value;
     if (!result.bookable)
       return result.available
-        ? failure(
-            "BRANCH_NOT_BOOKABLE",
-            "This branch cannot take online bookings right now.",
-          )
+        ? branchNotBookable("ONLINE_BOOKING_DISABLED")
         : this.unavailable(
             context,
             booking,

@@ -22,6 +22,7 @@ Production and staging run on a Hostinger KVM VPS ([ADR 023](../adr/023-hostinge
 - [ ] Linux `libatomic` runtime library is available for the official Node 26 binary; systemd and cron use the same pinned Node and npm 11 runtime.
 - [ ] A systemd service runs `next start` on `127.0.0.1`, restarts on failure, and reads its environment from a root-owned file readable only by the app user.
 - [ ] Nginx proxies to the app, serves TLS, redirects HTTP to HTTPS, sets `X-Forwarded-For`, and allows the upload body size the media policy needs.
+- [ ] The real client address reaches the app: `AUTH_TRUST_PROXY_HEADERS` is on only because Nginx overwrites `X-Forwarded-For`, and a proxied Cloudflare zone restores the visitor address before Nginx. Public buckets are per client, and the booking bucket (`booking-create`, 5 per hour) is strict: without a trusted address every guest shares one anonymous bucket, so five bookings an hour for the whole site. Rehearse this before public exposure.
 - [ ] Release layout (`releases/<id>` plus a `current` symlink) and the restart command proven with a dummy release and a rollback.
 - [ ] App user's crontab runs `npm run media -- cleanup` hourly, plus the reservation jobs from M8 and M9 (outbox, hold expiry every minute, payment reconciliation, token expiry).
 - [ ] Nginx passes `POST /api/v1/payments/paymob/callback` to the app unchanged (no body rewriting, so the HMAC can be verified), and the callback URL is registered in the Paymob dashboard for staging (test keys) and production (live keys) separately.
