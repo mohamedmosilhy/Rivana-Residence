@@ -28,6 +28,7 @@ it("upgrades populated M8 storage, preserves monetary history, enforces car cons
     const directory = join(process.cwd(), "prisma/migrations");
     const externalChannelMigration =
       "20261121120000_reservation_external_channel";
+    const changesMigration = "20261122120000_reservation_changes";
     const names = readdirSync(directory)
       .filter((name) => /^\d/.test(name))
       .sort();
@@ -142,13 +143,61 @@ it("upgrades populated M8 storage, preserves monetary history, enforces car cons
     ).rejects.toMatchObject({ code: "23514" });
     // M8-T8 adds nullable metadata. The upgrade preserves an existing
     // reservation, including its recorded prices, with no inferred channel.
-    for (const name of names.filter((name) => name >= externalChannelMigration))
+    for (const name of names.filter(
+      (name) => name >= externalChannelMigration && name < changesMigration,
+    ))
       await db.query(
         readFileSync(join(directory, name, "migration.sql"), "utf8"),
       );
     expect((await db.query(`SELECT * FROM "Reservation"`)).rows).toEqual(
       before.booking.map((row) => ({ ...row, externalChannel: null })),
     );
+    // M8-T9 adds the change sequence, the pending flag, and the history table.
+    for (const name of names.filter((name) => name >= changesMigration))
+      await db.query(
+        readFileSync(join(directory, name, "migration.sql"), "utf8"),
+      );
+    expect((await db.query(`SELECT * FROM "Reservation"`)).rows).toEqual(
+      before.booking.map((row) => ({
+        ...row,
+        externalChannel: null,
+        changeSeq: 0,
+        pmsUpdatePendingSince: null,
+      })),
+    );
+    const change = (overrides: string, values: unknown[]) =>
+      db.query(
+        `INSERT INTO "ReservationChange" (id,"reservationId","branchId",seq,kind,"actorType",before,after${overrides.split("|")[0]}) VALUES ($1,'old-reservation',$2,$3,'STAY','STAFF','{}','{}'${overrides.split("|")[1]})`,
+        values,
+      );
+    await change("|", ["c1", TEST_BRANCH_ID, 1]);
+    await expect(change("|", ["c1b", TEST_BRANCH_ID, 1])).rejects.toMatchObject(
+      { code: "23505" },
+    );
+    await expect(change("|", ["c0", TEST_BRANCH_ID, 0])).rejects.toMatchObject({
+      code: "23514",
+    });
+    await expect(change("|", ["cx", "other-branch", 2])).rejects.toMatchObject({
+      code: "23503",
+    });
+    // Override fields are all or none, and the reason cannot be blank.
+    await expect(
+      change(',"overrideFromMinor"|,100', ["c2", TEST_BRANCH_ID, 2]),
+    ).rejects.toMatchObject({ code: "23514" });
+    await expect(
+      change(
+        ',"overrideFromMinor","overrideToMinor","overrideReason"|,100,90,\' \'',
+        ["c3", TEST_BRANCH_ID, 3],
+      ),
+    ).rejects.toMatchObject({ code: "23514" });
+    await change(
+      ',"overrideFromMinor","overrideToMinor","overrideReason"|,100,90,\'Goodwill\'',
+      ["c4", TEST_BRANCH_ID, 4],
+    );
+    // The pending flag needs a hotel-system entry.
+    await expect(
+      db.query(`UPDATE "Reservation" SET "pmsUpdatePendingSince"=now()`),
+    ).rejects.toMatchObject({ code: "23514" });
     const output = execFileSync(
       "npx",
       [

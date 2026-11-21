@@ -805,59 +805,62 @@ enum SyncCheckpointKind {
 // M8 storage foundation. SQL checks, partial uniqueness and exclusion constraints
 // live in the reservations migration. Payment flows remain M9.
 model Reservation {
-  id                   String                   @id @db.VarChar(32)
-  reference            String                   @unique @db.VarChar(16)
-  branchId             String                   @db.VarChar(32)
-  source               ReservationSource
-  status               ReservationStatus
-  version              Int                      @default(1)
-  checkIn              DateTime                 @db.Date
-  checkOut             DateTime                 @db.Date
-  guestId              String?                  @db.VarChar(32) // → Guest RESTRICT; required for WEBSITE (CHECK)
-  guestName            String                   @db.VarChar(120)
-  guestEmail           String?                  @db.VarChar(320) // required for WEBSITE (app rule)
-  guestPhone           String?                  @db.VarChar(32)
-  guestCountry         String?                  @db.VarChar(2)
-  specialRequests      String?                  @db.VarChar(1000)
-  internalNotes        String?                  @db.VarChar(2000)
-  externalReference    String?                  @db.VarChar(80)
-  externalChannel      String?                  @db.VarChar(80)
-  currency             String                   @default("USD") @db.Char(3)
-  accommodationMinor   Int? // price snapshot (ADR 027); null only for unpriced EXTERNAL
-  servicesMinor        Int                      @default(0)
-  subtotalMinor        Int?
-  discountMinor        Int                      @default(0)
-  taxableMinor         Int?
-  vatRateBasisPoints   Int? // stored rate used (TX-5)
-  vatMinor             Int?
-  totalMinor           Int? // taxable + vat
-  couponId             String?                  @db.VarChar(32) // → Coupon RESTRICT
-  couponCode           String?                  @db.VarChar(32) // as entered, normalized
-  couponKind           CouponKind?
-  couponValue          Int? // basis points or cents
-  paymentMethod        PaymentMethod            @default(PAY_AT_HOTEL)
-  paymentStatus        ReservationPaymentStatus @default(NOT_REQUIRED)
-  holdExpiresAt        DateTime?                @db.Timestamptz(3) // AWAITING_PAYMENT only
-  pmsEnteredAt         DateTime?                @db.Timestamptz(3) // WEBSITE only (Q-40)
-  pmsEnteredById       String?                  @db.VarChar(32)
-  privacyNoticeVersion String?                  @db.VarChar(40)
-  manageTokenHash      String?                  @unique @db.VarChar(64)
-  manageTokenExpiresAt DateTime?                @db.Timestamptz(3)
-  idempotencyKeyHash   String?                  @db.VarChar(64)
-  requestFingerprint   String?                  @db.VarChar(64)
-  statusChangedAt      DateTime                 @db.Timestamptz(3)
-  createdAt            DateTime                 @default(now()) @db.Timestamptz(3)
-  updatedAt            DateTime                 @updatedAt @db.Timestamptz(3)
-  createdById          String?                  @db.VarChar(32) // staff; null for WEBSITE
-  branch               Branch                   @relation(fields: [branchId], references: [id], onDelete: Restrict, onUpdate: Restrict)
-  guest                Guest?                   @relation(fields: [guestId], references: [id], onDelete: Restrict, onUpdate: Restrict)
-  coupon               Coupon?                  @relation(fields: [couponId], references: [id], onDelete: Restrict, onUpdate: Restrict)
-  createdBy            User?                    @relation("ReservationCreatedBy", fields: [createdById], references: [id], onDelete: Restrict, onUpdate: Restrict)
-  pmsEnteredBy         User?                    @relation("ReservationPmsEnteredBy", fields: [pmsEnteredById], references: [id], onDelete: Restrict, onUpdate: Restrict)
-  rooms                ReservationRoom[]
-  services             ReservationService[]
-  redemption           CouponRedemption?
-  notifications        NotificationOutbox[]
+  id                    String                   @id @db.VarChar(32)
+  reference             String                   @unique @db.VarChar(16)
+  branchId              String                   @db.VarChar(32)
+  source                ReservationSource
+  status                ReservationStatus
+  version               Int                      @default(1)
+  checkIn               DateTime                 @db.Date
+  checkOut              DateTime                 @db.Date
+  guestId               String?                  @db.VarChar(32) // → Guest RESTRICT; required for WEBSITE (CHECK)
+  guestName             String                   @db.VarChar(120)
+  guestEmail            String?                  @db.VarChar(320) // required for WEBSITE (app rule)
+  guestPhone            String?                  @db.VarChar(32)
+  guestCountry          String?                  @db.VarChar(2)
+  specialRequests       String?                  @db.VarChar(1000)
+  internalNotes         String?                  @db.VarChar(2000)
+  externalReference     String?                  @db.VarChar(80)
+  externalChannel       String?                  @db.VarChar(80)
+  currency              String                   @default("USD") @db.Char(3)
+  accommodationMinor    Int? // price snapshot (ADR 027); null only for unpriced EXTERNAL
+  servicesMinor         Int                      @default(0)
+  subtotalMinor         Int?
+  discountMinor         Int                      @default(0)
+  taxableMinor          Int?
+  vatRateBasisPoints    Int? // stored rate used (TX-5)
+  vatMinor              Int?
+  totalMinor            Int? // taxable + vat
+  couponId              String?                  @db.VarChar(32) // → Coupon RESTRICT
+  couponCode            String?                  @db.VarChar(32) // as entered, normalized
+  couponKind            CouponKind?
+  couponValue           Int? // basis points or cents
+  paymentMethod         PaymentMethod            @default(PAY_AT_HOTEL)
+  paymentStatus         ReservationPaymentStatus @default(NOT_REQUIRED)
+  holdExpiresAt         DateTime?                @db.Timestamptz(3) // AWAITING_PAYMENT only
+  pmsEnteredAt          DateTime?                @db.Timestamptz(3) // WEBSITE only (Q-40)
+  pmsEnteredById        String?                  @db.VarChar(32)
+  changeSeq             Int                      @default(0) // last ReservationChange.seq (M8-T9)
+  pmsUpdatePendingSince DateTime?                @db.Timestamptz(3) // set by a change after hotel-system entry (Q-84)
+  privacyNoticeVersion  String?                  @db.VarChar(40)
+  manageTokenHash       String?                  @unique @db.VarChar(64)
+  manageTokenExpiresAt  DateTime?                @db.Timestamptz(3)
+  idempotencyKeyHash    String?                  @db.VarChar(64)
+  requestFingerprint    String?                  @db.VarChar(64)
+  statusChangedAt       DateTime                 @db.Timestamptz(3)
+  createdAt             DateTime                 @default(now()) @db.Timestamptz(3)
+  updatedAt             DateTime                 @updatedAt @db.Timestamptz(3)
+  createdById           String?                  @db.VarChar(32) // staff; null for WEBSITE
+  branch                Branch                   @relation(fields: [branchId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  guest                 Guest?                   @relation(fields: [guestId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  coupon                Coupon?                  @relation(fields: [couponId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  createdBy             User?                    @relation("ReservationCreatedBy", fields: [createdById], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  pmsEnteredBy          User?                    @relation("ReservationPmsEnteredBy", fields: [pmsEnteredById], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  rooms                 ReservationRoom[]
+  services              ReservationService[]
+  redemption            CouponRedemption?
+  notifications         NotificationOutbox[]
+  changes               ReservationChange[]
 
   @@unique([id, branchId]) // composite-FK target for ReservationRoom
   @@unique([branchId, externalReference])
@@ -867,6 +870,30 @@ model Reservation {
   @@index([guestId, checkIn])
   @@index([status, holdExpiresAt]) // hold expiry job
   @@index([branchId, source, pmsEnteredAt])
+}
+
+// Append-only change history (M8-T9). Summaries hold no personal values.
+// SQL checks (seq, override all-or-none) live in the reservation_changes migration.
+model ReservationChange {
+  id                String      @id @db.VarChar(32)
+  reservationId     String      @db.VarChar(32)
+  branchId          String      @db.VarChar(32)
+  seq               Int // 1, 2, … per reservation; matches Reservation.changeSeq after the write
+  kind              String      @db.VarChar(24) // STAY (T9); SERVICES arrives with T9b
+  actorType         String      @db.VarChar(16)
+  actorId           String?     @db.VarChar(32)
+  before            Json
+  after             Json
+  oldTotalMinor     Int?
+  newTotalMinor     Int?
+  overrideFromMinor Int? // re-quoted total before a staff override
+  overrideToMinor   Int? // total the staff member set
+  overrideReason    String?     @db.VarChar(500)
+  createdAt         DateTime    @default(now()) @db.Timestamptz(3)
+  reservation       Reservation @relation(fields: [reservationId, branchId], references: [id, branchId], onDelete: Restrict, onUpdate: Restrict)
+
+  @@unique([reservationId, seq])
+  @@index([branchId, createdAt])
 }
 
 model ReservationRoom {

@@ -28,7 +28,7 @@ The implemented schema is `prisma/schema.prisma` (9 migrations; M4 added `…_st
 | Inventory | `PhysicalRoom`, `InventoryBlock` | Implemented (M6-T3): branch-unique labels, composite ownership FKs (`ON UPDATE/DELETE RESTRICT`), `InventoryBlock_dates_check`, `InventoryBlock_no_overlap` (GiST exclusion over uncancelled blocks per unit) |
 | Pricing | `RoomBaseRate`, `RatePeriod` (M6-T3) | Implemented: positive `INTEGER` cents, explicit `USD`, `RatePeriod_no_overlap` (GiST exclusion over active periods per listing) |
 | Commercial | `ServiceOffering`, `Coupon`, `CouponBranch`, `CommercialSettings` | Implemented (M7-T3): service price units and child pricing, positive USD amounts, case-insensitive coupon uniqueness and value/window/limit checks, branch joins, singleton VAT 0–10000 basis points inserted at 1500; service and VAT management APIs are implemented (T4), coupon management APIs are implemented (T5); quote composition remains T6 |
-| Reservations | `Reservation`, `ReservationRoom`, `ReservationNight`, `ReservationService`, `CouponRedemption`, `BranchSyncCheckpoint` | Storage, domain rules, and consumption reader implemented in M8-T1 to T3. Website creation implemented in M8-T7b. Staff and external creation plus scoped reads implemented in M8-T8, which adds nullable `Reservation.externalChannel` |
+| Reservations | `Reservation`, `ReservationRoom`, `ReservationNight`, `ReservationService`, `CouponRedemption`, `ReservationChange`, `BranchSyncCheckpoint` | Storage, domain rules, and consumption reader implemented in M8-T1 to T3. Website creation implemented in M8-T7b. Staff and external creation plus scoped reads implemented in M8-T8, which adds nullable `Reservation.externalChannel`. M8-T9 migration `reservation_changes` adds `Reservation.changeSeq`, `Reservation.pmsUpdatePendingSince` (CHECK: only after hotel-system entry) and the append-only `ReservationChange` table (unique `(reservationId, seq)`, composite FK on branch, override amounts and reason all-or-none); the use cases arrive in the same task |
 | Payments | `Payment`, `PaymentEvent`, `CancellationRequest`, `ChangeRequest` | Planned (M9; `ChangeRequest` M9-T11, Q-85) |
 | Reservation changes | `ReservationChange`; columns `Reservation.pmsUpdatePendingSince`, `pmsUpdatedAt`, `pmsUpdatedById` | Planned (M8-T9, Q-83, Q-84) |
 | Transfer cars | `ServicePriceUnit.PER_VEHICLE`, `ServiceOffering.maxVehicles`, `ReservationService.vehicles` | Implemented (M8-T3b, Q-82): migrations `20261117120000_transfer_vehicle_unit` (enum value, on its own so the next migration can use it) and `20261117120100_transfer_vehicles` (columns, backfill of 3 cars per transfer offering and 1 car per stored transfer line, checks `ServiceOffering_vehicles_check`, `ServiceOffering_vehicle_unit_check`, `ReservationService_vehicles_check`, `ReservationService_vehicle_unit_check`) |
@@ -325,6 +325,8 @@ model Reservation {
   internalNotes        String?           @db.VarChar(2000)
   externalReference    String?           @db.VarChar(80)
   externalChannel      String?           @db.VarChar(80) // M8-T8, external records
+  changeSeq            Int               @default(0) // M8-T9, last ReservationChange.seq
+  pmsUpdatePendingSince DateTime?        @db.Timestamptz(3) // M8-T9, Q-84
   currency             String            @default("USD") @db.Char(3)
   accommodationMinor   Int?              // price snapshot (ADR 027); null only for unpriced EXTERNAL
   servicesMinor        Int               @default(0)
