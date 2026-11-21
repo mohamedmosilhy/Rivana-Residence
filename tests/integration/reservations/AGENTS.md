@@ -17,6 +17,7 @@ TEST_DATABASE_URL=postgresql://<user>@127.0.0.1:5432/rivana_test npm run test:in
 - `concurrency.test.ts`: deterministic lock ordering, observable waiting, fresh reads, and branch independence.
 - `phone-verification.test.ts`: P9/P10, hash storage, commit before delivery, persisted failed guesses, rolling limits, generic public errors, and 20-round observed phone/verification lock races. Use a disposable database and the fake WhatsApp transport; active codes are request fixtures, never seeds.
 - `create-website-reservation.test.ts`: M8-T7 use case on real PostgreSQL through `support/website-booking.ts` (production wiring on an independent client, seeded branch, listing and verification tokens): rows, snapshot, outbox and audit in one transaction, every refusal leaves nothing, token single use, idempotency, per phone cap, coupon lock, and C-1, C-9, C-11 over 20 rounds.
+- `staff-reservations.test.ts`: S1 to S4 and S15 against PostgreSQL. The duplicate external reference race holds a table `SHARE` lock so both requests pass their prechecks before the unique index decides the winner.
 - `storage-concurrency.test.ts`: M8-T1 database idempotency and assignment exclusion races (spec 0005); these prove storage constraints, not booking workflows.
 - `support/concurrency.ts`: barriers, deferred signals, independent Prisma clients, and observable PostgreSQL lock waits.
 

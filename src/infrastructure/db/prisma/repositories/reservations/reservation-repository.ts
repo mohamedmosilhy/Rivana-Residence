@@ -27,6 +27,7 @@ const graph = {
     include: { nights: { orderBy: { night: "asc" } } },
   },
   services: { orderBy: { kind: "asc" } },
+  branch: { select: { timeZone: true } },
 } as const;
 type Row = Prisma.ReservationGetPayload<{ include: typeof graph }>;
 const date = (value: Date) => LocalDate.parse(value.toISOString().slice(0, 10));
@@ -40,6 +41,7 @@ function map(row: Row): StoredReservation {
     id: row.id,
     reference: ReservationReference.parse(row.reference),
     branchId: row.branchId,
+    branchTimeZone: row.branch.timeZone,
     source: row.source,
     status: row.status,
     stay: stay(row.checkIn, row.checkOut),
@@ -53,6 +55,7 @@ function map(row: Row): StoredReservation {
     },
     internalNotes: row.internalNotes,
     externalReference: row.externalReference,
+    externalChannel: row.externalChannel,
     snapshot:
       row.totalMinor === null
         ? null
@@ -143,6 +146,31 @@ export class PrismaReservationRepository implements ReservationRepository {
     return row ? map(row) : null;
   }
 
+  async findVisible(id: string, scope: "ALL" | readonly string[]) {
+    const row = await this.client.reservation.findFirst({
+      where: {
+        id,
+        ...(scope === "ALL" ? {} : { branchId: { in: [...scope] } }),
+      },
+      include: graph,
+    });
+    return row ? map(row) : null;
+  }
+
+  async exists(branchId: string, reference: string) {
+    return (
+      (await this.client.reservation.findUnique({
+        where: {
+          branchId_externalReference: {
+            branchId,
+            externalReference: reference,
+          },
+        },
+        select: { id: true },
+      })) !== null
+    );
+  }
+
   async findByReference(branchId: string, reference: ReservationReference) {
     const row = await this.client.reservation.findFirst({
       where: { reference: reference.value, branchId },
@@ -213,6 +241,7 @@ export class PrismaReservationRepository implements ReservationRepository {
           specialRequests: input.contact.specialRequests,
           internalNotes: input.internalNotes,
           externalReference: input.externalReference,
+          externalChannel: input.externalChannel ?? null,
           accommodationMinor: snapshot?.accommodationMinor ?? null,
           servicesMinor: snapshot?.servicesMinor ?? 0,
           subtotalMinor: snapshot?.subtotalMinor ?? null,

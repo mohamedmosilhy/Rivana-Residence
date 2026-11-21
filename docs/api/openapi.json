@@ -76,6 +76,399 @@
         }
       }
     },
+    "/api/v1/staff/reservations": {
+      "get": {
+        "operationId": "listStaffReservations",
+        "summary": "API-S1. List reservations in authorized branches. Date filters overlap the half-open stay.",
+        "tags": [
+          "Reservations"
+        ],
+        "security": [
+          {
+            "staffSession": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "branchId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 32
+            }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "AWAITING_PAYMENT",
+                "CONFIRMED",
+                "PAYMENT_FAILED",
+                "CANCELLED",
+                "CHECKED_IN",
+                "CHECKED_OUT",
+                "NO_SHOW"
+              ]
+            }
+          },
+          {
+            "name": "source",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "WEBSITE",
+                "STAFF",
+                "EXTERNAL"
+              ]
+            }
+          },
+          {
+            "name": "from",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+            }
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+            }
+          },
+          {
+            "name": "q",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 160
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "default": "1",
+              "type": "string",
+              "pattern": "^[1-9]\\d*$"
+            }
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "default": "25",
+              "type": "string",
+              "pattern": "^[1-9]\\d*$"
+            }
+          },
+          {
+            "name": "sort",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "default": "-createdAt",
+              "type": "string",
+              "enum": [
+                "checkIn",
+                "-checkIn",
+                "createdAt",
+                "-createdAt"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Reservation page.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StaffReservationList"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Problem details. Codes: INTERNAL, UNAUTHENTICATED, FORBIDDEN, NOT_FOUND, INVALID_QUERY.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "operationId": "createStaffReservation",
+        "summary": "API-S3. Confirm a staff pay-at-hotel reservation from the branch’s current date onwards.",
+        "tags": [
+          "Reservations"
+        ],
+        "security": [
+          {
+            "staffSession": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "description": "8 to 128 printable ASCII characters. Matching requests replay the reservation.",
+            "schema": {
+              "type": "string",
+              "pattern": "^[\\x21-\\x7E]{8,128}$",
+              "description": "8 to 128 printable ASCII characters, no spaces."
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateStaffReservationRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The current reservation on a matching replay.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StaffReservationDetail"
+                }
+              }
+            }
+          },
+          "201": {
+            "description": "Confirmed reservation created.",
+            "headers": {
+              "Location": {
+                "description": "The staff reservation detail URL.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StaffReservationDetail"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Problem details. Codes: INTERNAL, UNAUTHENTICATED, FORBIDDEN, NOT_FOUND, CROSS_SITE_REQUEST, MALFORMED_JSON, PAYLOAD_TOO_LARGE, UNSUPPORTED_MEDIA_TYPE, VALIDATION, MISSING_IDEMPOTENCY_KEY, IDEMPOTENCY_KEY_REUSED, INVENTORY_UNAVAILABLE, TRY_AGAIN, SERVICE_UNAVAILABLE, COUPON_INVALID.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/staff/reservations/{id}": {
+      "get": {
+        "operationId": "getStaffReservation",
+        "summary": "API-S2. Read a staff reservation and its version ETag.",
+        "tags": [
+          "Reservations"
+        ],
+        "security": [
+          {
+            "staffSession": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Reservation detail.",
+            "headers": {
+              "ETag": {
+                "description": "Reservation version formatted as \"v<version>\".",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StaffReservationDetail"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Problem details. Codes: INTERNAL, UNAUTHENTICATED, FORBIDDEN, NOT_FOUND.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/staff/external-reservations": {
+      "post": {
+        "operationId": "recordExternalReservation",
+        "summary": "API-S4. Record an existing or historical hotel-system booking and reserve its inventory.",
+        "tags": [
+          "Reservations"
+        ],
+        "security": [
+          {
+            "staffSession": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "description": "8 to 128 printable ASCII characters. Matching requests replay the reservation.",
+            "schema": {
+              "type": "string",
+              "pattern": "^[\\x21-\\x7E]{8,128}$",
+              "description": "8 to 128 printable ASCII characters, no spaces."
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RecordExternalReservationRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The current reservation on a matching replay.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StaffReservationDetail"
+                }
+              }
+            }
+          },
+          "201": {
+            "description": "Confirmed reservation created.",
+            "headers": {
+              "Location": {
+                "description": "The staff reservation detail URL.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StaffReservationDetail"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Problem details. Codes: INTERNAL, UNAUTHENTICATED, FORBIDDEN, NOT_FOUND, CROSS_SITE_REQUEST, MALFORMED_JSON, PAYLOAD_TOO_LARGE, UNSUPPORTED_MEDIA_TYPE, VALIDATION, MISSING_IDEMPOTENCY_KEY, IDEMPOTENCY_KEY_REUSED, INVENTORY_UNAVAILABLE, TRY_AGAIN, EXTERNAL_REFERENCE_EXISTS.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/staff/reservations/{id}/history": {
+      "get": {
+        "operationId": "getStaffReservationHistory",
+        "summary": "API-S15. Read redacted audit events for a reservation.",
+        "tags": [
+          "Reservations"
+        ],
+        "security": [
+          {
+            "staffSession": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Reservation audit history.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StaffReservationHistory"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Problem details. Codes: INTERNAL, UNAUTHENTICATED, FORBIDDEN, NOT_FOUND.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/phone-verifications": {
       "post": {
         "operationId": "requestPhoneVerification",
@@ -3252,6 +3645,981 @@
           "paymentMethod",
           "expectedTotal",
           "consent"
+        ],
+        "additionalProperties": false
+      },
+      "CreateStaffReservationRequest": {
+        "type": "object",
+        "properties": {
+          "branchId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 32
+          },
+          "stay": {
+            "description": "Branch-local dates with a stay of 1 to 366 nights.",
+            "$ref": "#/components/schemas/Stay"
+          },
+          "guest": {
+            "type": "object",
+            "properties": {
+              "fullName": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 120
+              },
+              "email": {
+                "type": "string",
+                "maxLength": 320,
+                "format": "email",
+                "pattern": "^(?:[A-Za-z0-9_'+\\-]+\\.)*[A-Za-z0-9_'+\\-]*[A-Za-z0-9_+-]@(?:[A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$"
+              },
+              "phone": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 32
+              },
+              "country": {
+                "type": "string",
+                "minLength": 2,
+                "maxLength": 2
+              },
+              "specialRequests": {
+                "type": "string",
+                "maxLength": 1000
+              }
+            },
+            "required": [
+              "fullName",
+              "phone"
+            ],
+            "additionalProperties": false
+          },
+          "notes": {
+            "type": "string",
+            "maxLength": 2000
+          },
+          "lines": {
+            "minItems": 1,
+            "maxItems": 5,
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "roomTypeId": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 32
+                },
+                "occupancy": {
+                  "$ref": "#/components/schemas/Occupancy"
+                }
+              },
+              "required": [
+                "roomTypeId",
+                "occupancy"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "services": {
+            "type": "array",
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "enum": [
+                    "BREAKFAST",
+                    "AIRPORT_TRANSFER"
+                  ]
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "kind": {
+                      "type": "string",
+                      "enum": [
+                        "BREAKFAST",
+                        "AIRPORT_TRANSFER"
+                      ]
+                    },
+                    "vehicles": {
+                      "type": "integer",
+                      "minimum": 1,
+                      "maximum": 10,
+                      "description": "Airport transfer only; cars needed, default 1."
+                    },
+                    "details": {
+                      "type": "string",
+                      "maxLength": 300,
+                      "description": "Optional plain text, such as a flight number and time."
+                    }
+                  },
+                  "required": [
+                    "kind"
+                  ],
+                  "additionalProperties": false
+                }
+              ]
+            }
+          },
+          "couponCode": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64
+          },
+          "priceOverride": {
+            "type": "object",
+            "properties": {
+              "lines": {
+                "minItems": 1,
+                "maxItems": 5,
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "nights": {
+                      "minItems": 1,
+                      "maxItems": 366,
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "night": {
+                            "type": "string",
+                            "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                          },
+                          "amountMinor": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "maximum": 2147483647
+                          }
+                        },
+                        "required": [
+                          "night",
+                          "amountMinor"
+                        ],
+                        "additionalProperties": false
+                      }
+                    }
+                  },
+                  "required": [
+                    "nights"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              "reason": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 500
+              }
+            },
+            "required": [
+              "lines",
+              "reason"
+            ],
+            "additionalProperties": false
+          },
+          "sendConfirmation": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "branchId",
+          "stay",
+          "guest",
+          "lines",
+          "sendConfirmation"
+        ],
+        "additionalProperties": false
+      },
+      "RecordExternalReservationRequest": {
+        "type": "object",
+        "properties": {
+          "branchId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 32
+          },
+          "stay": {
+            "description": "Branch-local dates with a stay of 1 to 366 nights.",
+            "$ref": "#/components/schemas/Stay"
+          },
+          "guest": {
+            "type": "object",
+            "properties": {
+              "fullName": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 120
+              },
+              "email": {
+                "type": "string",
+                "maxLength": 320,
+                "format": "email",
+                "pattern": "^(?:[A-Za-z0-9_'+\\-]+\\.)*[A-Za-z0-9_'+\\-]*[A-Za-z0-9_+-]@(?:[A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$"
+              },
+              "phone": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 32
+              },
+              "country": {
+                "type": "string",
+                "minLength": 2,
+                "maxLength": 2
+              },
+              "specialRequests": {
+                "type": "string",
+                "maxLength": 1000
+              }
+            },
+            "required": [
+              "fullName",
+              "email",
+              "phone"
+            ],
+            "additionalProperties": false
+          },
+          "notes": {
+            "type": "string",
+            "maxLength": 2000
+          },
+          "lines": {
+            "minItems": 1,
+            "maxItems": 5,
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "roomTypeId": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 32
+                },
+                "occupancy": {
+                  "$ref": "#/components/schemas/Occupancy"
+                },
+                "amounts": {
+                  "type": "object",
+                  "properties": {
+                    "nights": {
+                      "minItems": 1,
+                      "maxItems": 366,
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "night": {
+                            "type": "string",
+                            "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                          },
+                          "amountMinor": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "maximum": 2147483647
+                          }
+                        },
+                        "required": [
+                          "night",
+                          "amountMinor"
+                        ],
+                        "additionalProperties": false
+                      }
+                    }
+                  },
+                  "required": [
+                    "nights"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              "required": [
+                "roomTypeId",
+                "occupancy"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "externalReference": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 80
+          },
+          "channel": {
+            "type": "string",
+            "maxLength": 80
+          }
+        },
+        "required": [
+          "branchId",
+          "stay",
+          "guest",
+          "lines",
+          "externalReference"
+        ],
+        "additionalProperties": false
+      },
+      "StaffReservationDetail": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 32
+          },
+          "branchId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 32
+          },
+          "reference": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "AWAITING_PAYMENT",
+              "CONFIRMED",
+              "PAYMENT_FAILED",
+              "CANCELLED",
+              "CHECKED_IN",
+              "CHECKED_OUT",
+              "NO_SHOW"
+            ]
+          },
+          "source": {
+            "type": "string",
+            "enum": [
+              "WEBSITE",
+              "STAFF",
+              "EXTERNAL"
+            ]
+          },
+          "stay": {
+            "$ref": "#/components/schemas/Stay"
+          },
+          "externalReference": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+          },
+          "externalChannel": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "paymentMethod": {
+            "type": "string",
+            "enum": [
+              "PAY_AT_HOTEL",
+              "PAYMOB"
+            ]
+          },
+          "paymentStatus": {
+            "type": "string",
+            "enum": [
+              "NOT_REQUIRED",
+              "AWAITING",
+              "PAID",
+              "REFUND_PENDING",
+              "REFUNDED"
+            ]
+          },
+          "guest": {
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "fullName": {
+                    "type": "string"
+                  },
+                  "email": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "phone": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "country": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "specialRequests": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  }
+                },
+                "required": [
+                  "fullName",
+                  "email",
+                  "phone",
+                  "country",
+                  "specialRequests"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "internalNotes": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "couponCode": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "price": {
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "currency": {
+                    "type": "string",
+                    "const": "USD"
+                  },
+                  "accommodationMinor": {
+                    "type": "integer",
+                    "minimum": -9007199254740991,
+                    "maximum": 9007199254740991
+                  },
+                  "servicesMinor": {
+                    "type": "integer",
+                    "minimum": -9007199254740991,
+                    "maximum": 9007199254740991
+                  },
+                  "subtotalMinor": {
+                    "type": "integer",
+                    "minimum": -9007199254740991,
+                    "maximum": 9007199254740991
+                  },
+                  "discountMinor": {
+                    "type": "integer",
+                    "minimum": -9007199254740991,
+                    "maximum": 9007199254740991
+                  },
+                  "taxableMinor": {
+                    "type": "integer",
+                    "minimum": -9007199254740991,
+                    "maximum": 9007199254740991
+                  },
+                  "vatRateBasisPoints": {
+                    "type": "integer",
+                    "minimum": -9007199254740991,
+                    "maximum": 9007199254740991
+                  },
+                  "vatMinor": {
+                    "type": "integer",
+                    "minimum": -9007199254740991,
+                    "maximum": 9007199254740991
+                  },
+                  "totalMinor": {
+                    "type": "integer",
+                    "minimum": -9007199254740991,
+                    "maximum": 9007199254740991
+                  },
+                  "services": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "kind": {
+                          "type": "string"
+                        },
+                        "unit": {
+                          "type": "string"
+                        },
+                        "priceMinor": {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991
+                        },
+                        "childPriceMinor": {
+                          "anyOf": [
+                            {
+                              "type": "integer",
+                              "minimum": -9007199254740991,
+                              "maximum": 9007199254740991
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "adultQuantity": {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991
+                        },
+                        "childQuantity": {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991
+                        },
+                        "amountMinor": {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991
+                        },
+                        "vehicles": {
+                          "anyOf": [
+                            {
+                              "type": "integer",
+                              "minimum": -9007199254740991,
+                              "maximum": 9007199254740991
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "details": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "kind",
+                        "unit",
+                        "priceMinor",
+                        "childPriceMinor",
+                        "adultQuantity",
+                        "childQuantity",
+                        "amountMinor",
+                        "vehicles",
+                        "details"
+                      ],
+                      "additionalProperties": false
+                    }
+                  }
+                },
+                "required": [
+                  "currency",
+                  "accommodationMinor",
+                  "servicesMinor",
+                  "subtotalMinor",
+                  "discountMinor",
+                  "taxableMinor",
+                  "vatRateBasisPoints",
+                  "vatMinor",
+                  "totalMinor",
+                  "services"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "lines": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 32
+                },
+                "roomTypeId": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 32
+                },
+                "physicalRoomId": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 32
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "stay": {
+                  "$ref": "#/components/schemas/Stay"
+                },
+                "occupancy": {
+                  "$ref": "#/components/schemas/Occupancy"
+                },
+                "subtotal": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/Money"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "consumesInventory": {
+                  "type": "boolean"
+                },
+                "nights": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "night": {
+                        "type": "string",
+                        "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                      },
+                      "amount": {
+                        "anyOf": [
+                          {
+                            "$ref": "#/components/schemas/Money"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "source": {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "enum": [
+                              "BASE",
+                              "PERIOD",
+                              "MANUAL"
+                            ]
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "periodId": {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 32
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "label": {
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      }
+                    },
+                    "required": [
+                      "night",
+                      "amount",
+                      "source",
+                      "periodId",
+                      "label"
+                    ],
+                    "additionalProperties": false
+                  }
+                }
+              },
+              "required": [
+                "id",
+                "roomTypeId",
+                "physicalRoomId",
+                "stay",
+                "occupancy",
+                "subtotal",
+                "consumesInventory",
+                "nights"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "historySummary": {
+            "type": "object",
+            "properties": {
+              "createdAt": {
+                "type": "string",
+                "format": "date-time",
+                "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+              },
+              "statusChangedAt": {
+                "type": "string",
+                "format": "date-time",
+                "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+              },
+              "updatedAt": {
+                "type": "string",
+                "format": "date-time",
+                "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+              }
+            },
+            "required": [
+              "createdAt",
+              "statusChangedAt",
+              "updatedAt"
+            ],
+            "additionalProperties": false
+          },
+          "pmsEnteredAt": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time",
+                "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "pmsEnteredById": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 32
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "allowedActions": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "id",
+          "branchId",
+          "reference",
+          "status",
+          "source",
+          "stay",
+          "externalReference",
+          "createdAt",
+          "externalChannel",
+          "paymentMethod",
+          "paymentStatus",
+          "guest",
+          "internalNotes",
+          "couponCode",
+          "price",
+          "lines",
+          "historySummary",
+          "pmsEnteredAt",
+          "pmsEnteredById",
+          "allowedActions"
+        ],
+        "additionalProperties": false
+      },
+      "StaffReservationList": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 32
+                },
+                "branchId": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 32
+                },
+                "reference": {
+                  "type": "string"
+                },
+                "status": {
+                  "type": "string",
+                  "enum": [
+                    "AWAITING_PAYMENT",
+                    "CONFIRMED",
+                    "PAYMENT_FAILED",
+                    "CANCELLED",
+                    "CHECKED_IN",
+                    "CHECKED_OUT",
+                    "NO_SHOW"
+                  ]
+                },
+                "source": {
+                  "type": "string",
+                  "enum": [
+                    "WEBSITE",
+                    "STAFF",
+                    "EXTERNAL"
+                  ]
+                },
+                "stay": {
+                  "$ref": "#/components/schemas/Stay"
+                },
+                "externalReference": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "guestName": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "totalMinor": {
+                  "anyOf": [
+                    {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "createdAt": {
+                  "type": "string",
+                  "format": "date-time",
+                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+                }
+              },
+              "required": [
+                "id",
+                "branchId",
+                "reference",
+                "status",
+                "source",
+                "stay",
+                "externalReference",
+                "guestName",
+                "totalMinor",
+                "createdAt"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "page": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "pageSize": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "total": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          }
+        },
+        "required": [
+          "items",
+          "page",
+          "pageSize",
+          "total"
+        ],
+        "additionalProperties": false
+      },
+      "StaffReservationHistory": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 32
+                },
+                "occurredAt": {
+                  "type": "string",
+                  "format": "date-time",
+                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+                },
+                "action": {
+                  "type": "string"
+                },
+                "actorType": {
+                  "type": "string"
+                },
+                "staffActorId": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 32
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "changes": {
+                  "type": "object",
+                  "propertyNames": {
+                    "type": "string"
+                  },
+                  "additionalProperties": {
+                    "type": [
+                      "string",
+                      "number",
+                      "boolean",
+                      "null"
+                    ]
+                  }
+                }
+              },
+              "required": [
+                "id",
+                "occurredAt",
+                "action",
+                "actorType",
+                "staffActorId",
+                "changes"
+              ],
+              "additionalProperties": false
+            }
+          }
+        },
+        "required": [
+          "items"
         ],
         "additionalProperties": false
       },

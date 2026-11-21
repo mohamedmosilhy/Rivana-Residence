@@ -23,8 +23,10 @@ export type QuoteServiceInput = Readonly<{
   vehicles?: number | null;
 }>;
 
-export type QuoteInput = Readonly<{
-  lines: readonly Readonly<{ nights: readonly ResolvedNightPrice[] }>[];
+export type QuoteInput<
+  Night extends ResolvedNightPrice<string> = ResolvedNightPrice,
+> = Readonly<{
+  lines: readonly Readonly<{ nights: readonly Night[] }>[];
   guests: Readonly<{ adults: number; children: number }>;
   services: readonly QuoteServiceInput[];
   coupon?: QuoteCouponValue;
@@ -51,13 +53,17 @@ export type QuoteServiceLine = Readonly<{
   vehicles: number | null;
 }>;
 
-export type QuoteLine = Readonly<{
+export type QuoteLine<
+  Night extends ResolvedNightPrice<string> = ResolvedNightPrice,
+> = Readonly<{
   accommodationMinor: number;
-  nights: readonly ResolvedNightPrice[];
+  nights: readonly Night[];
 }>;
 
-export type Quote = Readonly<{
-  lines: readonly QuoteLine[];
+export type Quote<
+  Night extends ResolvedNightPrice<string> = ResolvedNightPrice,
+> = Readonly<{
+  lines: readonly QuoteLine<Night>[];
   serviceLines: readonly QuoteServiceLine[];
   accommodationMinor: number;
   servicesMinor: number;
@@ -106,7 +112,9 @@ function checkBasisPoints(value: unknown, min: number, path: string) {
  * no I/O, no floating point.
  */
 export class QuoteCalculator {
-  static compute(input: QuoteInput): Quote {
+  static compute<Night extends ResolvedNightPrice<string>>(
+    input: QuoteInput<Night>,
+  ): Quote<Night> {
     const first = input.lines[0];
     if (!first) fail("lines", "Supply at least one unit.");
     const nightCount = first.nights.length;
@@ -120,7 +128,7 @@ export class QuoteCalculator {
       fail("guests.children", "Use a nonnegative safe integer.");
 
     let accommodation = 0;
-    const lines = input.lines.map((line, index): QuoteLine => {
+    const lines = input.lines.map((line, index): QuoteLine<Night> => {
       if (line.nights.length !== nightCount)
         fail(`lines.${index}`, "Every unit must cover the same nights.");
       let lineTotal = 0;

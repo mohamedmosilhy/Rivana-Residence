@@ -2,7 +2,7 @@ import "server-only";
 
 import { createId } from "@paralleldrive/cuid2";
 
-import type { AuditLog } from "@/application/audit";
+import type { AuditLog, ReservationHistoryReader } from "@/application/audit";
 import type { AuditEvent } from "@/domain/audit";
 import type { Prisma } from "@/generated/prisma/client";
 import { getPrisma } from "@/infrastructure/db/prisma/client";
@@ -31,4 +31,60 @@ export class PrismaAuditLog implements AuditLog {
       },
     });
   }
+}
+
+export class PrismaReservationHistoryReader
+  implements ReservationHistoryReader
+{
+  constructor(private readonly client: DatabaseClient) {}
+
+  async listForReservation(branchId: string, id: string) {
+    const rows = await this.client.auditEvent.findMany({
+      where: { branchId, entityId: id, entityType: "Reservation" },
+      orderBy: [{ occurredAt: "desc" }, { id: "asc" }],
+      select: {
+        id: true,
+        occurredAt: true,
+        action: true,
+        actorId: true,
+        actorType: true,
+        changes: true,
+      },
+    });
+    return rows.map((row) => ({
+      id: row.id,
+      occurredAt: row.occurredAt.toISOString(),
+      action: row.action,
+      actorType: row.actorType,
+      staffActorId: row.actorType === "STAFF" ? row.actorId : null,
+      changes: reservationChanges(row.action, row.changes),
+    }));
+  }
+}
+
+function reservationChanges(action: string, changes: Prisma.JsonValue) {
+  const safe: Record<string, number | boolean | null> = {};
+  if (
+    (action !== "reservation.created" &&
+      action !== "reservation.staff-created") ||
+    !changes ||
+    typeof changes !== "object" ||
+    Array.isArray(changes)
+  )
+    return safe;
+  for (const key of [
+    "totalMinor",
+    "units",
+    "priceOverridden",
+    "confirmationRequested",
+  ] as const) {
+    const value = changes[key];
+    if (
+      typeof value === "number" ||
+      typeof value === "boolean" ||
+      value === null
+    )
+      safe[key] = value;
+  }
+  return safe;
 }

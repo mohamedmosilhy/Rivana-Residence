@@ -21,6 +21,12 @@ import {
 import { AvailabilityQuery, AvailabilityResponse } from "./availability";
 import { QuoteRequest, QuoteResponse } from "./quotes";
 import {
+  CreateStaffReservationRequest,
+  RecordExternalReservationRequest,
+  StaffReservationQuery,
+  StaffReservationDetail,
+  StaffReservationList,
+  StaffReservationHistory,
   IdempotencyKey,
   WebsiteReservationCreated,
   WebsiteReservationReplayed,
@@ -94,11 +100,53 @@ export type ApiRoute = Readonly<{
     schema: z.ZodType;
   }>[];
   responses: Readonly<
-    Record<number, Readonly<{ description: string; schema?: z.ZodType }>>
+    Record<
+      number,
+      Readonly<{
+        description: string;
+        schema?: z.ZodType;
+        headers?: Readonly<Record<string, string>>;
+      }>
+    >
   >;
   /** Problem codes this endpoint can return. */
   errors: readonly string[];
 }>;
+
+const staffReservationPath = "/api/v1/staff/reservations";
+const staffReservationKey = [
+  {
+    name: "Idempotency-Key",
+    required: true,
+    description:
+      "8 to 128 printable ASCII characters. Matching requests replay the reservation.",
+    schema: IdempotencyKey,
+  },
+];
+const staffReadErrors = ["UNAUTHENTICATED", "FORBIDDEN", "NOT_FOUND"];
+const staffWriteErrors = [
+  ...staffReadErrors,
+  "CROSS_SITE_REQUEST",
+  "MALFORMED_JSON",
+  "PAYLOAD_TOO_LARGE",
+  "UNSUPPORTED_MEDIA_TYPE",
+  "VALIDATION",
+  "MISSING_IDEMPOTENCY_KEY",
+  "IDEMPOTENCY_KEY_REUSED",
+  "INVENTORY_UNAVAILABLE",
+  "TRY_AGAIN",
+];
+const staffWriteResponses = {
+  201: {
+    description: "Confirmed reservation created.",
+    schema: StaffReservationDetail,
+    headers: { Location: "The staff reservation detail URL." },
+  },
+  200: {
+    description: "The current reservation on a matching replay.",
+    schema: StaffReservationDetail,
+  },
+};
 
 export const API_ROUTES: readonly ApiRoute[] = [
   {
@@ -151,6 +199,77 @@ export const API_ROUTES: readonly ApiRoute[] = [
       "RATE_LIMITED",
       "TRY_AGAIN",
     ],
+  },
+  {
+    method: "get",
+    path: staffReservationPath,
+    operationId: "listStaffReservations",
+    summary:
+      "API-S1. List reservations in authorized branches. Date filters overlap the half-open stay.",
+    tag: "Reservations",
+    security: "staff",
+    query: StaffReservationQuery,
+    responses: {
+      200: { description: "Reservation page.", schema: StaffReservationList },
+    },
+    errors: [...staffReadErrors, "INVALID_QUERY"],
+  },
+  {
+    method: "get",
+    path: staffReservationPath + "/{id}",
+    operationId: "getStaffReservation",
+    summary: "API-S2. Read a staff reservation and its version ETag.",
+    tag: "Reservations",
+    security: "staff",
+    responses: {
+      200: {
+        description: "Reservation detail.",
+        schema: StaffReservationDetail,
+        headers: { ETag: 'Reservation version formatted as "v<version>".' },
+      },
+    },
+    errors: staffReadErrors,
+  },
+  {
+    method: "post",
+    path: staffReservationPath,
+    operationId: "createStaffReservation",
+    summary:
+      "API-S3. Confirm a staff pay-at-hotel reservation from the branch’s current date onwards.",
+    tag: "Reservations",
+    security: "staff",
+    headers: staffReservationKey,
+    request: CreateStaffReservationRequest,
+    responses: staffWriteResponses,
+    errors: [...staffWriteErrors, "SERVICE_UNAVAILABLE", "COUPON_INVALID"],
+  },
+  {
+    method: "post",
+    path: "/api/v1/staff/external-reservations",
+    operationId: "recordExternalReservation",
+    summary:
+      "API-S4. Record an existing or historical hotel-system booking and reserve its inventory.",
+    tag: "Reservations",
+    security: "staff",
+    headers: staffReservationKey,
+    request: RecordExternalReservationRequest,
+    responses: staffWriteResponses,
+    errors: [...staffWriteErrors, "EXTERNAL_REFERENCE_EXISTS"],
+  },
+  {
+    method: "get",
+    path: staffReservationPath + "/{id}/history",
+    operationId: "getStaffReservationHistory",
+    summary: "API-S15. Read redacted audit events for a reservation.",
+    tag: "Reservations",
+    security: "staff",
+    responses: {
+      200: {
+        description: "Reservation audit history.",
+        schema: StaffReservationHistory,
+      },
+    },
+    errors: staffReadErrors,
   },
   {
     method: "post",

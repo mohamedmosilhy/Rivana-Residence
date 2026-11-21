@@ -153,6 +153,16 @@ export type AuditChanges = {
     couponCode: string | null;
     marketingOptIn: boolean;
   }>;
+  "reservation.staff-created": Readonly<{
+    reference: string;
+    source: "STAFF" | "EXTERNAL";
+    checkIn: string;
+    checkOut: string;
+    units: number;
+    totalMinor: number | null;
+    priceOverridden: boolean;
+    confirmationRequested: boolean;
+  }>;
   /** The outcome of an Admin test message; the recipient is never stored. */
   "whatsapp-test.sent": Readonly<{
     templateId: string | null;

@@ -62,6 +62,7 @@ export type ReservationInsert = Readonly<{
   contact: GuestContact;
   internalNotes: string | null;
   externalReference: string | null;
+  externalChannel?: string | null;
   snapshot: StoredReservationSnapshot | null;
   couponId: string | null;
   couponCode: string | null;
@@ -78,7 +79,9 @@ export type ReservationInsert = Readonly<{
 }>;
 /** Internal persistence view. Never return this directly from an endpoint. */
 export type StoredReservation = Readonly<
-  Omit<ReservationInsert, "contact" | "at" | "lines"> & {
+  Omit<ReservationInsert, "contact" | "at" | "lines" | "externalChannel"> & {
+    externalChannel: string | null;
+    branchTimeZone: string;
     contact: Omit<GuestContact, "phone"> & { readonly phone: string | null };
     lines: readonly StoredReservationLine[];
     version: number;

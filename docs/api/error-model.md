@@ -44,7 +44,7 @@ The application layer already returns `Result<T>` with `ApplicationErrorCode` (`
 | `STALE_VERSION` | 412 | `context.currentVersion` |
 | `IDEMPOTENCY_KEY_REUSED` | 422 | Same key, different body |
 | `IDEMPOTENCY_IN_PROGRESS` | 409 | Concurrent duplicate still running |
-| `EXTERNAL_REFERENCE_EXISTS` | 409 | `context.reservationId` (staff only) |
+| `EXTERNAL_REFERENCE_EXISTS` | 409 | The external reference already exists in the branch (S4) |
 | `TRY_AGAIN` | 503 | Lock timeout or transient failure |
 | `PHONE_NOT_VERIFIED` | 401 | Missing, expired, or already used phone verification token |
 | `PHONE_BLOCKED` | 403 | The number is blocked (Q-29); `detail` asks the guest to contact the hotel and reveals nothing else |

@@ -55,6 +55,7 @@ import type {
   ReservationUnitOfWork,
   StoredReservation,
 } from "./ports";
+import { manageTokenExpiry } from "./manage-token";
 import type { ReservationStorageContext } from "./storage-context";
 
 /** Ports bound to the booking transaction by composition. */
@@ -103,7 +104,6 @@ type State = Readonly<{
   couponId: string | null;
 }>;
 
-const MANAGE_TOKEN_DAYS_AFTER_CHECKOUT = 30;
 const REFERENCE_ATTEMPTS = 3;
 const NOT_VERIFIED = () =>
   failure("PHONE_NOT_VERIFIED", "Verify your phone number to continue.");
@@ -453,10 +453,7 @@ export class CreateWebsiteReservation {
     const phone = prepared.phone;
 
     const manageToken = crypto.generateToken();
-    const manageTokenExpiresAt = new Date(
-      Date.parse(`${stay.checkOut.value}T00:00:00Z`) +
-        MANAGE_TOKEN_DAYS_AFTER_CHECKOUT * 86_400_000,
-    );
+    const manageTokenExpiresAt = manageTokenExpiry(stay.checkOut);
     const couponValue: QuoteCouponValue | null = quote.appliedCoupon
       ? quote.appliedCoupon.kind === "PERCENT"
         ? {

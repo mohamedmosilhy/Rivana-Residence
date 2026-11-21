@@ -94,6 +94,7 @@ Relayed by the project owner on 2026-11-17, who approved the recommendations. Th
 | Q-88 | **Who sees website statistics:** Managers for their assigned branches and Admins for all, including the branch chooser and other pages outside a branch, through `reports:read`. On screen only (Q-14) | Owner, 2026-11-17; M12-T4b |
 | Q-89 | **Extra business statistics** in the M12 reports: RevPAR, booking pace (on the books for the next 30, 60, 90 days), lead time, average length of stay, arrival weekday pattern, cancellation lead time, no-show rate, payment-method share and Paymob success rate, coupon performance, service take-up (breakfast, transfer, average cars), repeat guests, guest country from the phone code; and, from the analytics events, unmet demand (searched dates that were sold out), price-changed and unavailable refusals at checkout, verification codes requested but not confirmed, and listing view-to-booking conversion | Owner, 2026-11-17; FR-RPT, FR-ANL; M12-T4, T4b |
 | Q-90 | **Order in M8:** M8-T3 was already implemented when these decisions arrived, so the car-count task is **M8-T3b**, after M8-T3 and before M8-T7 (which stores the quote on the reservation); it extends the T3 repository mapping | Owner, 2026-11-17; M8 task breakdown |
+| Q-91 | **Staff and external creation stay length.** S3 and S4 accept at most 366 nights. S3 uses the branch's current date as its earliest check-in under AV-5. S4 permits historical stays for reconciliation. | Owner, 2026-11-21. Implemented in M8-T8 |
 
 ## Superseded decisions
 

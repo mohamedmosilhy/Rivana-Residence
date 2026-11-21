@@ -6,7 +6,6 @@ import type {
 /** Errors the HTTP layer produces before a use case runs. */
 export type TransportErrorCode =
   | "MALFORMED_JSON"
-  | "MISSING_IDEMPOTENCY_KEY"
   | "INVALID_QUERY"
   | "PAYLOAD_TOO_LARGE"
   | "UNSUPPORTED_MEDIA_TYPE"
@@ -82,6 +81,10 @@ export const PROBLEMS: Readonly<Record<ProblemCode, ProblemDefinition>> = {
   IDEMPOTENCY_KEY_REUSED: {
     status: 422,
     title: "This idempotency key was used for a different request",
+  },
+  EXTERNAL_REFERENCE_EXISTS: {
+    status: 409,
+    title: "This external reference already exists in the branch",
   },
   PRICE_CHANGED: { status: 409, title: "The price changed" },
   MALFORMED_JSON: { status: 400, title: "The request body is not valid JSON" },

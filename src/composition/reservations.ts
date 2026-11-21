@@ -2,6 +2,12 @@ import "server-only";
 
 import {
   CreateWebsiteReservation,
+  CreateStaffReservation,
+  RecordExternalReservation,
+  ListReservations,
+  GetReservation,
+  GetReservationHistory,
+  type StaffBookingContext,
   type CreateWebsiteReservationContext,
   type ReservationStorageContext,
   type ReservationUnitOfWork,
@@ -19,6 +25,7 @@ import { PrismaReservationRepository } from "@/infrastructure/db/prisma/reposito
 import { PrismaGuestRepository } from "@/infrastructure/db/prisma/repositories/reservations/guests/guest-repository";
 import { PrismaPhoneVerificationRepository } from "@/infrastructure/db/prisma/repositories/reservations/guests/phone-verification-repository";
 import { PrismaReservationConsumptionReader } from "@/infrastructure/db/prisma/repositories/reservations/inventory/reservation-consumption-reader";
+import { PrismaAvailabilityCatalog } from "@/infrastructure/db/prisma/repositories/reservations/inventory/availability-catalog";
 import { PrismaInventoryLock } from "@/infrastructure/db/prisma/repositories/reservations/inventory/inventory-lock";
 import { PrismaInventoryReader } from "@/infrastructure/db/prisma/repositories/reservations/inventory/inventory-reader";
 import { PrismaRateRepository } from "@/infrastructure/db/prisma/repositories/reservations/pricing/rate-repository";
@@ -29,7 +36,12 @@ import {
 import { PrismaCouponRepository } from "@/infrastructure/db/prisma/repositories/reservations/commercial/coupon-repository";
 import { PrismaCommercialSettingsRepository } from "@/infrastructure/db/prisma/repositories/reservations/commercial/commercial-settings-repository";
 import { PrismaServiceOfferingRepository } from "@/infrastructure/db/prisma/repositories/reservations/commercial/service-repository";
-import { PrismaAuditLog } from "@/infrastructure/db/prisma/repositories/audit/audit-log";
+import { PrismaStaffReservationReader } from "@/infrastructure/db/prisma/repositories/reservations/staff-reservation-reader";
+import type { DatabaseClient } from "@/infrastructure/db/prisma/transaction";
+import {
+  PrismaAuditLog,
+  PrismaReservationHistoryReader,
+} from "@/infrastructure/db/prisma/repositories/audit/audit-log";
 import { Cuid2IdGenerator } from "@/infrastructure/ids/cuid2-id-generator";
 
 /** Storage foundation for later authorized reservation use cases. */
@@ -80,19 +92,7 @@ export function createWebsiteReservation(
             audit: new PrismaAuditLog(transaction),
             verifications: new PrismaPhoneVerificationRepository(transaction),
             redemptions: new PrismaCouponRedemptionStore(transaction),
-            quote: new QuoteBooking({
-              branches: new PrismaBranchRepository(transaction),
-              rooms: new PrismaPublicListingReader(transaction),
-              inventory: inventoryReader,
-              rates: new PrismaRateRepository(transaction),
-              services: new PrismaServiceOfferingRepository(transaction),
-              coupons: new PrismaCouponRepository(transaction),
-              redemptions: new PrismaCouponRedemptionReader(transaction, {
-                phoneAware: true,
-              }),
-              settings: new PrismaCommercialSettingsRepository(transaction),
-              clock,
-            }),
+            quote: transactionalQuote(transaction, inventoryReader, clock),
             messages: reservationMessageWriter(transaction),
           };
         },
@@ -106,4 +106,89 @@ export function createWebsiteReservation(
     clock,
     ids: new Cuid2IdGenerator(),
   });
+}
+
+function transactionalQuote(
+  transaction: DatabaseClient,
+  inventory: PrismaInventoryReader,
+  clock: Clock,
+) {
+  return new QuoteBooking({
+    branches: new PrismaBranchRepository(transaction),
+    rooms: new PrismaPublicListingReader(transaction),
+    inventory,
+    rates: new PrismaRateRepository(transaction),
+    services: new PrismaServiceOfferingRepository(transaction),
+    coupons: new PrismaCouponRepository(transaction),
+    redemptions: new PrismaCouponRedemptionReader(transaction, {
+      phoneAware: true,
+    }),
+    settings: new PrismaCommercialSettingsRepository(transaction),
+    clock,
+  });
+}
+
+export function staffReservationCommands(
+  options: Readonly<{
+    client?: ReturnType<typeof getPrisma>;
+    clock?: Clock;
+  }> = {},
+) {
+  const client = options.client ?? getPrisma();
+  const clock = options.clock ?? { now: () => new Date() };
+  const repository = new PrismaReservationRepository(client);
+  const deps = {
+    unitOfWork: new PrismaReservationUnitOfWork<StaffBookingContext>(
+      client,
+      (transaction) => {
+        const consumption = new PrismaReservationConsumptionReader(transaction);
+        const inventoryReader = new PrismaInventoryReader(
+          transaction,
+          consumption,
+        );
+        const reservations = new PrismaReservationRepository(transaction);
+        return {
+          reservations,
+          externalReferences: reservations,
+          catalog: new PrismaAvailabilityCatalog(transaction),
+          guests: new PrismaGuestRepository(transaction),
+          consumption,
+          inventoryLock: new PrismaInventoryLock(transaction),
+          inventoryReader,
+          audit: new PrismaAuditLog(transaction),
+          rates: new PrismaRateRepository(transaction),
+          redemptions: new PrismaCouponRedemptionStore(transaction),
+          quote: transactionalQuote(transaction, inventoryReader, clock),
+          messages: reservationMessageWriter(transaction),
+        };
+      },
+    ),
+    replays: repository,
+    externalReferences: repository,
+    crypto: new NodeBookingCrypto(),
+    ids: new Cuid2IdGenerator(),
+    clock,
+  };
+  return {
+    create: new CreateStaffReservation(deps),
+    recordExternal: new RecordExternalReservation(deps),
+  };
+}
+
+export function staffReservationQueries(
+  options: Readonly<{
+    client?: ReturnType<typeof getPrisma>;
+    clock?: Clock;
+  }> = {},
+) {
+  const client = options.client ?? getPrisma();
+  const reader = new PrismaStaffReservationReader(client);
+  return {
+    list: new ListReservations(reader),
+    get: new GetReservation(reader, options.clock),
+    history: new GetReservationHistory(
+      reader,
+      new PrismaReservationHistoryReader(client),
+    ),
+  };
 }

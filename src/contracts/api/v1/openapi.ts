@@ -6,6 +6,11 @@ import {
 } from "./phone-verifications";
 import { Coupon, CouponInput, CouponPatch, CouponList } from "./coupons";
 import {
+  CreateStaffReservationRequest,
+  RecordExternalReservationRequest,
+  StaffReservationDetail,
+  StaffReservationList,
+  StaffReservationHistory,
   WebsiteReservationCreated,
   WebsiteReservationReplayed,
   WebsiteReservationRequest,
@@ -92,6 +97,11 @@ const COMPONENTS: Readonly<Record<string, z.ZodType>> = {
   Quote,
   QuoteResponse,
   WebsiteReservationRequest,
+  CreateStaffReservationRequest,
+  RecordExternalReservationRequest,
+  StaffReservationDetail,
+  StaffReservationList,
+  StaffReservationHistory,
   WebsiteReservationCreated,
   WebsiteReservationReplayed,
   Image,
@@ -216,6 +226,16 @@ function operation(route: ApiRoute) {
   for (const [status, response] of Object.entries(route.responses)) {
     responses[status] = {
       description: response.description,
+      ...(response.headers
+        ? {
+            headers: Object.fromEntries(
+              Object.entries(response.headers).map(([name, description]) => [
+                name,
+                { description, schema: { type: "string" } },
+              ]),
+            ),
+          }
+        : {}),
       ...(response.schema
         ? {
             content: {

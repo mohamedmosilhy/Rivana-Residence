@@ -18,6 +18,7 @@ import {
   QuoteCalculator,
   parseQuoteRequest,
   type NightlyPriceResult,
+  type ResolvedNightPrice,
   type QuoteRequest,
   type Quote,
   type QuoteServiceLine,
@@ -27,6 +28,7 @@ import {
   type ServiceOffering,
 } from "@/domain/services";
 import type { DomainIssue } from "@/domain/shared/domain-error";
+import type { Occupancy } from "@/domain/shared/occupancy";
 import type { StayRange } from "@/domain/shared/stay-range";
 import {
   DEFAULT_STAY_POLICY,
@@ -80,6 +82,17 @@ export type QuoteResult = Readonly<{
   bookable: boolean;
   /** Null only when a line is unavailable. */
   quote: QuoteView | null;
+}>;
+
+type ResolvedQuoteRequest<Night> = Readonly<{
+  stay: StayRange;
+  lines: readonly Readonly<{
+    occupancy: Occupancy;
+    nights: readonly Night[];
+  }>[];
+  services: QuoteRequest["services"];
+  couponCode?: string | undefined;
+  phone?: string | undefined;
 }>;
 
 const BRANCH_NOT_FOUND = "This branch was not found.";
@@ -223,80 +236,19 @@ export class QuoteBooking {
       });
     }
 
-    // Services: unit and prices come from the branch's rows, never the client.
-    const offerings: ServiceOffering[] = (
-      await this.deps.services.listByBranch(branch.id)
-    ).map((offering) => ({
-      kind: offering.kind,
-      maxVehicles: offering.maxVehicles,
-      unit: offering.priceUnit,
-      price: offering.price,
-      childPrice: offering.childPrice,
-      active: offering.active,
-    }));
-    const selected = selectRequestedServices(request.services, offerings);
-    if (!selected.ok) {
-      return "kind" in selected
-        ? serviceUnavailable(selected.kind)
-        : invalid("Check the services.", selected.issues);
-    }
-
-    // Coupon: one refusal shape for every reason, so a guesser learns only
-    // whether this code works here. Nothing about other codes or guests.
-    let coupon: CouponValue | undefined;
-    let couponView: QuoteView["appliedCoupon"] = null;
-    if (request.couponCode !== undefined) {
-      const code = normalizeCouponCode(request.couponCode);
-      if (!code.ok) return couponInvalid("NOT_FOUND");
-      const record = await this.deps.coupons.findByCode(code.code);
-      const counts = record
-        ? await this.deps.redemptions.count({
-            code: code.code,
-            phone: request.phone,
-          })
-        : { total: 0, forPhone: 0 };
-      const verdict = CouponPolicy.validate(record, {
-        branchId: branch.id,
-        phone: request.phone,
-        now,
-        redemptionsTotal: counts.total,
-        redemptionsForPhone: counts.forPhone,
-      });
-      if (!verdict.valid) return couponInvalid(verdict.reason);
-      coupon = verdict.value;
-      couponView = {
-        code: code.code,
-        kind: verdict.value.kind,
-        percentBasisPoints:
-          verdict.value.kind === "PERCENT"
-            ? verdict.value.percentBasisPoints
-            : null,
-        amountMinor:
-          verdict.value.kind === "FIXED"
-            ? verdict.value.amount.amountMinor
-            : null,
-      };
-    }
-
-    const { vatRateBasisPoints } = await this.deps.settings.read();
-    const quote = QuoteCalculator.compute({
-      lines: lines.map((line) => ({
-        nights: prices.get(line.room.id)!.nights,
-      })),
-      guests: {
-        adults: lines.reduce((sum, line) => sum + line.occupancy.adults, 0),
-        children: lines.reduce((sum, line) => sum + line.occupancy.children, 0),
+    const priced = await this.priceResolved(
+      branch.id,
+      {
+        ...request,
+        lines: lines.map((line) => ({
+          occupancy: line.occupancy,
+          nights: prices.get(line.room.id)!.nights,
+        })),
       },
-      services: selected.services.map((service) => ({
-        kind: service.kind,
-        vehicles: service.vehicles,
-        unit: service.unit,
-        price: service.price,
-        childPrice: service.childPrice,
-      })),
-      ...(coupon ? { coupon } : {}),
-      vatRateBasisPoints,
-    });
+      now,
+    );
+    if (!priced.ok) return priced;
+    const { quote, couponView } = priced.value;
 
     return success({
       branchId: branch.id,
@@ -330,5 +282,101 @@ export class QuoteBooking {
         totalMinor: quote.totalMinor,
       },
     });
+  }
+
+  /** Shared price composition for public, staff and priced external reservations.
+   * Writers supply nights and call this with transaction readers under their locks.
+   */
+  async priceResolved<
+    Night extends ResolvedNightPrice<"BASE" | "PERIOD" | "MANUAL">,
+  >(
+    branchId: string,
+    request: ResolvedQuoteRequest<Night>,
+    now = this.deps.clock.now(),
+  ): Promise<
+    Result<{ quote: Quote<Night>; couponView: QuoteView["appliedCoupon"] }>
+  > {
+    // Services: unit and prices come from the branch's rows, never the client.
+    const offerings: ServiceOffering[] = (
+      request.services.length === 0
+        ? []
+        : await this.deps.services.listByBranch(branchId)
+    ).map((offering) => ({
+      kind: offering.kind,
+      maxVehicles: offering.maxVehicles,
+      unit: offering.priceUnit,
+      price: offering.price,
+      childPrice: offering.childPrice,
+      active: offering.active,
+    }));
+    const selected = selectRequestedServices(request.services, offerings);
+    if (!selected.ok) {
+      return "kind" in selected
+        ? serviceUnavailable(selected.kind)
+        : invalid("Check the services.", selected.issues);
+    }
+
+    // Coupon: one refusal shape for every reason, so a guesser learns only
+    // whether this code works here. Nothing about other codes or guests.
+    let coupon: CouponValue | undefined;
+    let couponView: QuoteView["appliedCoupon"] = null;
+    if (request.couponCode !== undefined) {
+      const code = normalizeCouponCode(request.couponCode);
+      if (!code.ok) return couponInvalid("NOT_FOUND");
+      const record = await this.deps.coupons.findByCode(code.code);
+      const counts = record
+        ? await this.deps.redemptions.count({
+            code: code.code,
+            phone: request.phone,
+          })
+        : { total: 0, forPhone: 0 };
+      const verdict = CouponPolicy.validate(record, {
+        branchId: branchId,
+        phone: request.phone,
+        now,
+        redemptionsTotal: counts.total,
+        redemptionsForPhone: counts.forPhone,
+      });
+      if (!verdict.valid) return couponInvalid(verdict.reason);
+      coupon = verdict.value;
+      couponView = {
+        code: code.code,
+        kind: verdict.value.kind,
+        percentBasisPoints:
+          verdict.value.kind === "PERCENT"
+            ? verdict.value.percentBasisPoints
+            : null,
+        amountMinor:
+          verdict.value.kind === "FIXED"
+            ? verdict.value.amount.amountMinor
+            : null,
+      };
+    }
+
+    const { vatRateBasisPoints } = await this.deps.settings.read();
+    const quote = QuoteCalculator.compute({
+      lines: request.lines,
+      guests: {
+        adults: request.lines.reduce(
+          (sum, line) => sum + line.occupancy.adults,
+          0,
+        ),
+        children: request.lines.reduce(
+          (sum, line) => sum + line.occupancy.children,
+          0,
+        ),
+      },
+      services: selected.services.map((service) => ({
+        kind: service.kind,
+        vehicles: service.vehicles,
+        unit: service.unit,
+        price: service.price,
+        childPrice: service.childPrice,
+      })),
+      ...(coupon ? { coupon } : {}),
+      vatRateBasisPoints,
+    });
+
+    return success({ quote, couponView });
   }
 }

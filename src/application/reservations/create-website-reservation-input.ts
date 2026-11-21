@@ -141,13 +141,16 @@ export function parseWebsiteBooking(
   };
 }
 
-function canonical(value: unknown): string {
-  if (Array.isArray(value)) return `[${value.map(canonical).join(",")}]`;
+export function canonicalBookingBody(value: unknown): string {
+  if (Array.isArray(value))
+    return `[${value.map(canonicalBookingBody).join(",")}]`;
   if (value && typeof value === "object")
     return `{${Object.entries(value)
       .filter(([, item]) => item !== undefined)
       .sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))
-      .map(([key, item]) => `${JSON.stringify(key)}:${canonical(item)}`)
+      .map(
+        ([key, item]) => `${JSON.stringify(key)}:${canonicalBookingBody(item)}`,
+      )
       .join(",")}}`;
   return JSON.stringify(value) ?? "null";
 }
@@ -170,8 +173,8 @@ export function bookingFingerprintSource(
           return normalized.ok ? normalized.code : quote.couponCode;
         })();
   const sortedCanonical = (items: readonly unknown[]) =>
-    items.map(canonical).sort();
-  return canonical({
+    items.map(canonicalBookingBody).sort();
+  return canonicalBookingBody({
     branchSlug: quote.branchSlug,
     stay: {
       checkIn: quote.stay.checkIn.value,

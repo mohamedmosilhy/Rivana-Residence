@@ -31,7 +31,7 @@ const m8 = migrations.filter((name) => name >= M8_START);
 // their populated upgrade is covered by transfer-vehicles-migration.test.ts.
 const M8_T3B_START = "20261117";
 const m8Reservations = m8.filter((name) => name < M8_T3B_START);
-const m8TransferVehicles = m8.filter((name) => name >= M8_T3B_START);
+const m8Followups = m8.filter((name) => name >= M8_T3B_START);
 
 const base = testDatabaseUrl();
 const scratchName = base.database.replace(/_test$/, "_m4_backfill_test");
@@ -304,6 +304,7 @@ describe("branches_and_staff_roles migration on M3 data", () => {
       "20261115120000_reservations",
       "20261117120000_transfer_vehicle_unit",
       "20261117120100_transfer_vehicles",
+      "20261121120000_reservation_external_channel",
     ]);
     await db.query(`
       INSERT INTO "ServiceOffering" (id,"branchId",kind,"priceUnit","priceMinor","updatedAt") VALUES ('m8-service','${DEFAULT_BRANCH_ID}','BREAKFAST','PER_BOOKING',1000,now());
@@ -352,8 +353,8 @@ describe("branches_and_staff_roles migration on M3 data", () => {
         (await db.query(`SELECT count(*)::int AS n FROM "${table}"`)).rows,
       ).toEqual([{ n: 0 }]);
     }
-    // Then the M8-T3b migrations, so the drift check sees the whole schema.
-    await apply(m8TransferVehicles);
+    // Apply the later M8 migrations so the drift check sees the whole schema.
+    await apply(m8Followups);
     expect(
       (
         await db.query(

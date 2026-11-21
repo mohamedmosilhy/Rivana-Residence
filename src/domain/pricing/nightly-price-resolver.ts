@@ -16,10 +16,10 @@ export type DateRatePeriod = Readonly<{
   label: string | null;
 }>;
 
-export type ResolvedNightPrice = Readonly<{
+export type ResolvedNightPrice<Source = "BASE" | "PERIOD"> = Readonly<{
   night: LocalDate;
   amount: Money | null;
-  source: "BASE" | "PERIOD" | null;
+  source: Source | null;
   periodId: string | null;
   label: string | null;
 }>;

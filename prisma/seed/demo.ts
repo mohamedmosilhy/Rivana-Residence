@@ -575,6 +575,7 @@ export async function seedDemoReservations(
           guestPhone: "+12025550101",
           internalNotes: "Fictional demo reservation for local review only.",
           externalReference: unpriced ? "FICTIONAL-EXT-1" : null,
+          externalChannel: unpriced ? "Fictional partner" : null,
           accommodationMinor: unpriced ? null : accommodation,
           servicesMinor: 0,
           subtotalMinor: unpriced ? null : accommodation,

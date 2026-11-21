@@ -78,6 +78,13 @@ describe("M8 create only seed", () => {
       expect(row.reference).toMatch(
         /^RR-[0123456789ABCDEFGHJKMNPQRSTVWXYZ]{8}$/,
       );
+    expect(
+      state.reservations.find((row) => row.source === "EXTERNAL"),
+    ).toMatchObject({
+      externalChannel: "Fictional partner",
+      externalReference: "FICTIONAL-EXT-1",
+      totalMinor: null,
+    });
     const websites = state.reservations.filter(
       (row) => row.source === "WEBSITE",
     );

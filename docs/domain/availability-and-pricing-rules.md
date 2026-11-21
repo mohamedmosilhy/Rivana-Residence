@@ -17,6 +17,7 @@ Status: **Partly implemented.** M7-T1 (quote arithmetic, service price units, 20
 | AV-7 | Check-in is at most `bookingHorizonDays` ahead, default 540 (Q-09, accepted for M6). |
 | AV-8 | Dates are `YYYY-MM-DD` calendar dates. Impossible dates such as `2027-02-30` are rejected. Leap days are valid only in leap years. |
 | AV-9 | Same-day bookings have no cut-off by default (Q-09, accepted for M6). There is no minimum stay beyond AV-4's positive night count. |
+| AV-10 | Staff creation and external recording accept at most 366 nights (Q-91, implemented in M8-T8). An excessive stay returns `422 VALIDATION` on `stay.checkOut` before inventory is loaded. |
 
 ## Occupancy
 

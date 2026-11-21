@@ -26,6 +26,8 @@ it("upgrades populated M8 storage, preserves monetary history, enforces car cons
   try {
     await db.connect();
     const directory = join(process.cwd(), "prisma/migrations");
+    const externalChannelMigration =
+      "20261121120000_reservation_external_channel";
     const names = readdirSync(directory)
       .filter((name) => /^\d/.test(name))
       .sort();
@@ -75,7 +77,9 @@ it("upgrades populated M8 storage, preserves monetary history, enforces car cons
       service: (await db.query(`SELECT * FROM "ReservationService"`)).rows,
       booking: (await db.query(`SELECT * FROM "Reservation"`)).rows,
     };
-    for (const name of names.filter((name) => name >= "20261117"))
+    for (const name of names.filter(
+      (name) => name >= "20261117" && name < externalChannelMigration,
+    ))
       await db.query(
         readFileSync(join(directory, name, "migration.sql"), "utf8"),
       );
@@ -136,6 +140,15 @@ it("upgrades populated M8 storage, preserves monetary history, enforces car cons
     await expect(
       db.query(`UPDATE "ReservationService" SET kind='BREAKFAST'`),
     ).rejects.toMatchObject({ code: "23514" });
+    // M8-T8 adds nullable metadata. The upgrade preserves an existing
+    // reservation, including its recorded prices, with no inferred channel.
+    for (const name of names.filter((name) => name >= externalChannelMigration))
+      await db.query(
+        readFileSync(join(directory, name, "migration.sql"), "utf8"),
+      );
+    expect((await db.query(`SELECT * FROM "Reservation"`)).rows).toEqual(
+      before.booking.map((row) => ({ ...row, externalChannel: null })),
+    );
     const output = execFileSync(
       "npx",
       [

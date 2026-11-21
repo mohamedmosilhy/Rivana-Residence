@@ -821,6 +821,7 @@ model Reservation {
   specialRequests      String?                  @db.VarChar(1000)
   internalNotes        String?                  @db.VarChar(2000)
   externalReference    String?                  @db.VarChar(80)
+  externalChannel      String?                  @db.VarChar(80)
   currency             String                   @default("USD") @db.Char(3)
   accommodationMinor   Int? // price snapshot (ADR 027); null only for unpriced EXTERNAL
   servicesMinor        Int                      @default(0)

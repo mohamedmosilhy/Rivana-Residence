@@ -56,16 +56,16 @@ type CancellationRequestDto = { id: string; status: "OPEN" | "APPROVED" | "REJEC
 
 ## Staff endpoints
 
-Authentication: staff session cookie. Authorization: listed capability **and** branch access. "Branch" is the reservation's or resource's branch. Lists require `branchId` unless the caller is Admin, in which case it is optional and means all branches.
+Authentication: staff session cookie. Authorization: listed capability **and** branch access. "Branch" is the reservation's or resource's branch. Lists require `branchId` unless the caller is Admin or the endpoint documents an implicit branch scope.
 
 ### Reservations
 
 | Id | Method & path | Capability | Request | Response | Notes |
 | --- | --- | --- | --- | --- | --- |
-| API-S1 | `GET /api/v1/staff/reservations?branchId&status&source&from&to&q&page&pageSize&sort` | `reservations:read` | filters; `q` matches reference, guest name, email, phone, external ref | `200 Paged<ReservationListItem>` | `from`/`to` filter stays overlapping the range. Personal data included only with `guests:read` |
-| API-S2 | `GET /api/v1/staff/reservations/{id}` | `reservations:read` | — | `200 StaffReservationDto` + `ETag` | Includes nights, assignment, history summary, allowed actions for this caller |
-| API-S3 | `POST /api/v1/staff/reservations` | `reservations:create` | `{ branchId, stay, lines: { roomTypeId, occupancy }[], services?: ServiceInput[], couponCode?, guest (email optional), notes?, priceOverride?: { lines: { nights: { night, amountMinor }[] }[], reason }, sendConfirmation: boolean }` | `201 StaffReservationDto` | **Tx, Lock, Idem, Audit**; status `CONFIRMED`; pay at hotel; override needs `pricing:override` |
-| API-S4 | `POST /api/v1/staff/external-reservations` | `reservations:record-external` | `{ branchId, stay, lines: { roomTypeId, occupancy, amounts?: { nights[] } }[], guest, externalReference, channel?: string, notes? }` | `201 StaffReservationDto` | **Tx, Lock, Idem, Audit**; `409 INVENTORY_UNAVAILABLE` here is a cross-system conflict, so the UI shows the escalation procedure; `409 EXTERNAL_REFERENCE_EXISTS` |
+| API-S1 | `GET /api/v1/staff/reservations?branchId&status&source&from&to&q&page&pageSize&sort` | `reservations:read` | filters; `q` matches reference, guest name, email, phone, external ref | `200 Paged<ReservationListItem>` | **Implemented (M8-T8).** Omitting `branchId` lists assigned branches for Receptionists and Managers and all branches for Admins. An unauthorized explicit branch returns `403`. `from`/`to` filter overlapping half-open stays. Guest fields and guest-field search require `guests:read`. Phone search matches stored E.164 values. |
+| API-S2 | `GET /api/v1/staff/reservations/{id}` | `reservations:read` | — | `200 StaffReservationDto` + `ETag` | **Implemented (M8-T8).** Includes nights, assignment, lifecycle timestamps, and allowed actions for this caller. Guest fields require `guests:read`. A missing or foreign reservation returns `404`. |
+| API-S3 | `POST /api/v1/staff/reservations` | `reservations:create` | `{ branchId, stay, lines: { roomTypeId, occupancy }[], services?: ServiceInput[], couponCode?, guest (email optional), notes?, priceOverride?: { lines: { nights: { night, amountMinor }[] }[], reason }, sendConfirmation: boolean }` | `201 StaffReservationDto` + `Location`, or `200 StaffReservationDto` on replay | **Implemented (M8-T8). Tx, Lock, Idem, Audit.** Confirms a pay at hotel booking. Check-in starts from the branch’s current date. Overrides require `pricing:override` and a reason. Guest confirmation is queued when requested. |
+| API-S4 | `POST /api/v1/staff/external-reservations` | `reservations:record-external` | `{ branchId, stay, lines: { roomTypeId, occupancy, amounts?: { nights[] } }[], guest, externalReference, channel?: string, notes? }` | `201 StaffReservationDto` + `Location`, or `200 StaffReservationDto` on replay | **Implemented (M8-T8). Tx, Lock, Idem, Audit.** Historical stays are allowed. Supply amounts for every unit and night or omit them all. `channel` is returned as `externalChannel`. `409 INVENTORY_UNAVAILABLE` signals a cross-system conflict. A duplicate reference in the branch returns `409 EXTERNAL_REFERENCE_EXISTS`. |
 | API-S5 | `PATCH /api/v1/staff/reservations/{id}` | `reservations:modify` | `If-Match`; `{ guest?: Partial<GuestInput>, internalNotes?, specialRequests? }` | `200 StaffReservationDto` | **Tx, Audit** (personal data redacted) |
 | API-S6 | `PUT /api/v1/staff/reservations/{id}/stay` | `reservations:modify` | `If-Match`; `{ stay, lines: { roomTypeId, occupancy }[], services?: ServiceInput[] /* planned M8-T9: omitted keeps the services */, acceptedTotal: Money, priceOverride? }` | `200 StaffReservationDto` | **Tx, Lock (old+new listings), Audit**; `409 PRICE_CHANGED` if `acceptedTotal` differs from the re-quote including VAT (PR-11); prepaid differences per Q-66 |
 | ~~API-S7~~, ~~API-S8~~ | ~~confirm / decline~~ | — | — | — | **Retired** (ADR 024): no `PENDING` status exists |
@@ -75,7 +75,7 @@ Authentication: staff session cookie. Authorization: listed capability **and** b
 | API-S12 | `POST /api/v1/staff/reservations/{id}/check-out` | `reservations:front-desk` | `If-Match` | `200` | Shortens an early departure (IN-3) |
 | API-S13 | `POST /api/v1/staff/reservations/{id}/no-show` | `reservations:front-desk` | `If-Match`; `{ note? }` | `200` | |
 | API-S14 | `POST /api/v1/staff/reservations/{id}/manage-link` | `reservations:modify` | — | `202` | Rotates token, sends it by email and WhatsApp |
-| API-S15 | `GET /api/v1/staff/reservations/{id}/history` | `reservations:read` | — | `200 { items: AuditEventDto[] }` | |
+| API-S15 | `GET /api/v1/staff/reservations/{id}/history` | `reservations:read` | — | `200 { items: AuditEventDto[] }` | **Implemented (M8-T8).** Returns allowlisted reservation audit history. A missing or foreign reservation returns `404`. |
 | API-S16 | `POST /api/v1/staff/reservations/{id}/pms-entry` | `reservations:pms-entry` | `If-Match`; `{ note? }` | `200 StaffReservationDto` | **Audit**; `WEBSITE` only; sets `pmsEnteredAt` once (`409` if already set) |
 | API-S55 | `POST /api/v1/staff/reservations/{id}/pms-update` | `reservations:pms-entry` | `If-Match`; `{ note? }` | `200 StaffReservationDto` | *Planned (M8-T9, Q-84).* **Audit**; clears "changed, update hotel system" (`409` when nothing is pending) |
 | API-S17 | `GET /api/v1/staff/cancellation-requests?branchId&status&page` | `cancellations:decide` | filters | `200 Paged<CancellationRequestListItem>` (reservation reference, arrival, deadline, payment method and amount, status) | |
@@ -84,6 +84,8 @@ Authentication: staff session cookie. Authorization: listed capability **and** b
 | API-S56 | `GET /api/v1/staff/change-requests?branchId&status&page` | `cancellations:decide` | filters | `200 Paged<ChangeRequestListItem>` (reference, arrival, current and requested summary, old and previewed totals, payment, status, last conflict) | *Planned (M9-T11, Q-85).* Shown in the same queue as S17 |
 | API-S57 | `POST /api/v1/staff/change-requests/{id}/approval` | `cancellations:decide` | `{ note? }` | `200 StaffReservationDto` | *Planned (M9-T11).* **Tx, Lock, Audit**; re-checks inventory and prices; `409 INVENTORY_UNAVAILABLE` leaves the request `OPEN` with the conflict recorded |
 | API-S58 | `POST /api/v1/staff/change-requests/{id}/rejection` | `cancellations:decide` | `{ reason: string }` | `200` | *Planned (M9-T11).* **Tx, Audit**; guest messaged with the reason |
+
+S3 and S4 accept stays of 1 to 366 nights (Q-91) and require an `Idempotency-Key` of 8 to 128 printable ASCII characters without spaces. The key is scoped to the staff actor and reservation source. A matching request returns the current reservation, and a changed request returns `422 IDEMPOTENCY_KEY_REUSED`. A missing key returns `400 MISSING_IDEMPOTENCY_KEY`.
 
 ### Availability and inventory
 

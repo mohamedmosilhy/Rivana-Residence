@@ -110,12 +110,12 @@ Each section states its status: **Implemented** (built and accepted in Phases 1�
 - **FR-TAX-2** VAT is calculated once on the final subtotal after services and the coupon, rounded half-up to the cent, and shown as a separate line at the final review and in confirmations.
 - **FR-TAX-3** Each reservation stores the rate and amount it used; later rate changes never alter it.
 
-## FR-RES Reservations — Planned (M8, online payment M9, UI M10–M11)
+## FR-RES Reservations — Partly implemented (M8-T7b and M8-T8, online payment M9, UI M10–M11)
 
 - **FR-RES-1** A guest submits a booking for one branch: one or more units (same dates, Q-39), occupancy per unit, verified phone (FR-GST-1), name, email, privacy consent, optional services and coupon, payment choice (Paymob or pay at hotel), and the quoted total. A pay-at-hotel booking is created **`CONFIRMED`** in the transaction that reserves its inventory. An online-payment booking is `AWAITING_PAYMENT` and becomes `CONFIRMED` only when Paymob's verified success arrives (Q-36, Q-37).
 - **FR-RES-2** The guest sees an on-screen result. Only a `CONFIRMED` booking is shown or messaged as confirmed: email and WhatsApp confirmations with the reference, details, price breakdown with VAT, payment method, cancellation terms, and the manage link, sent after commit (Q-53).
-- **FR-RES-3** Receptionist and above create reservations for guests (phone, walk-in, email), which start `CONFIRMED` and are paid at the hotel.
-- **FR-RES-4** Receptionist and above record reservations that exist in the hotel system (`EXTERNAL`), with the external reference. A conflict with Rivana's inventory is reported clearly.
+- **FR-RES-3** **Implemented (M8-T8).** Receptionist and above create reservations for guests (phone, walk-in, email), which start `CONFIRMED` and are paid at the hotel.
+- **FR-RES-4** **Implemented (M8-T8).** Receptionist and above record reservations that exist in the hotel system (`EXTERNAL`), with the external reference and optional channel. A conflict with Rivana's inventory is reported clearly.
 - **FR-RES-5** Staff mark each website reservation as entered in the hotel system; until then it is flagged and its age is shown (Q-40).
 - **FR-RES-6** Staff modify guest details and notes, and modify dates, units, occupancy, or services (including the number of cars and the flight details) with an inventory re-check and an explicit re-quote (PR-11, Q-83). Total changes on prepaid bookings follow Q-66. Staff and guest changes use one change engine and one change history (FR-GCHG-6).
 - **FR-RES-7** Staff cancel reservations with a reason. Receptionists cancel unpaid reservations; cancelling a paid one requires a Manager or Admin and refunds it (Q-62). Guests request cancellations (FR-CXL).
