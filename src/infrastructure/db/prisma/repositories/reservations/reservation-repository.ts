@@ -6,6 +6,7 @@ import type {
   ReservationRepository,
   StayReplacement,
   StoredReservation,
+  StoredReservationSnapshot,
 } from "@/application/reservations";
 import { failure, success } from "@/application/shared/result";
 import { consumesInventory, ReservationReference } from "@/domain/reservations";
@@ -253,92 +254,84 @@ export class PrismaReservationRepository implements ReservationRepository {
     const checkOut = new Date(input.stay.checkOut.value + "T00:00:00Z");
     const { reservationId, branchId } = input;
     const client = this.client;
-    // Rooms and nights are replaced, not patched, because they depend on the
-    // new stay (continuing units keep their id). Service rows are updated in
-    // place below.
     const previous = await client.reservation.findFirstOrThrow({
       where: { id: reservationId, branchId },
       select: { status: true, pmsUpdatePendingSince: true },
     });
-    await client.reservationRoom.deleteMany({ where: { reservationId } });
-    await client.reservationRoom.createMany({
-      data: input.lines.map((line) => ({
-        id: line.id,
-        reservationId,
-        branchId,
-        roomTypeId: line.roomTypeId,
-        physicalRoomId: line.physicalRoomId,
-        checkIn,
-        checkOut,
-        adults: line.occupancy.adults,
-        children: line.occupancy.children,
-        consumesInventory: consumesInventory(previous.status),
-        subtotalMinor: line.subtotal?.amountMinor ?? null,
-      })),
-    });
-    await client.reservationNight.createMany({
-      data: input.lines.flatMap((line) =>
-        line.nights.map((night) => ({
-          reservationRoomId: line.id,
-          night: new Date(night.night.value + "T00:00:00Z"),
-          amountMinor: night.amount?.amountMinor ?? null,
-          rateSource: night.source,
-          ratePeriodId: night.periodId,
-          label: night.label,
+    // Service-only changes leave room and night rows untouched.
+    if (input.lines) {
+      await client.reservationRoom.deleteMany({ where: { reservationId } });
+      await client.reservationRoom.createMany({
+        data: input.lines.map((line) => ({
+          id: line.id,
+          reservationId,
+          branchId,
+          roomTypeId: line.roomTypeId,
+          physicalRoomId: line.physicalRoomId,
+          checkIn,
+          checkOut,
+          adults: line.occupancy.adults,
+          children: line.occupancy.children,
+          consumesInventory: consumesInventory(previous.status),
+          subtotalMinor: line.subtotal?.amountMinor ?? null,
         })),
-      ),
-    });
-    // T9 keeps the services as stored: the same rows, the same unit, prices,
-    // cars and details. Only the counts and amounts that follow the nights and
-    // guests are written, and only when they changed.
+      });
+      await client.reservationNight.createMany({
+        data: input.lines.flatMap((line) =>
+          line.nights.map((night) => ({
+            reservationRoomId: line.id,
+            night: new Date(night.night.value + "T00:00:00Z"),
+            amountMinor: night.amount?.amountMinor ?? null,
+            rateSource: night.source,
+            ratePeriodId: night.periodId,
+            label: night.label,
+          })),
+        ),
+      });
+    }
     const services = await client.reservationService.findMany({
       where: { reservationId },
     });
-    if (
-      services.length !== snapshot.serviceLines.length ||
-      new Set(snapshot.serviceLines.map((line) => line.kind)).size !==
-        services.length ||
-      snapshot.serviceLines.some(
-        (line) => !services.some((row) => row.kind === line.kind),
-      )
-    )
-      throw new Error("A stay change cannot add or remove services.");
+    const nextKinds = new Set(snapshot.serviceLines.map((line) => line.kind));
+    if (nextKinds.size !== snapshot.serviceLines.length)
+      throw new Error("A reservation can have only one service per kind.");
+    const removed = services.filter((row) => !nextKinds.has(row.kind));
+    if (removed.length)
+      await client.reservationService.deleteMany({
+        where: { reservationId, kind: { in: removed.map((row) => row.kind) } },
+      });
     for (const line of snapshot.serviceLines) {
-      const row = services.find((candidate) => candidate.kind === line.kind)!;
+      const kind = serviceKind(line.kind);
+      const row = services.find((candidate) => candidate.kind === kind);
+      const { price, mutable, occupancyEffectiveFrom } = serviceData(line);
+      if (!row) {
+        await client.reservationService.create({
+          data: {
+            reservationId,
+            kind,
+            ...price,
+            ...mutable,
+            occupancyEffectiveFrom,
+          },
+        });
+        continue;
+      }
       if (
-        row.priceUnit !== line.unit ||
-        row.priceMinor !== line.priceMinor ||
-        row.childPriceMinor !== line.childPriceMinor ||
-        row.vehicles !== line.vehicles ||
-        row.details !== line.details
+        row.priceUnit !== price.priceUnit ||
+        row.priceMinor !== price.priceMinor ||
+        row.childPriceMinor !== price.childPriceMinor
       )
-        throw new Error("A stay change cannot alter a stored service price.");
-      const next = {
-        adults: line.adults,
-        children: line.children,
-        nights: line.nights,
-        adultQuantity: line.adultQuantity,
-        childQuantity: line.childQuantity,
-        amountMinor: line.amountMinor,
-      };
-      const effectiveFrom = line.occupancyEffectiveFrom?.value ?? null;
-      const storedEffectiveFrom = row.occupancyEffectiveFrom
-        ? date(row.occupancyEffectiveFrom).value
-        : null;
+        throw new Error("A change cannot alter a retained service price.");
       if (
-        effectiveFrom !== storedEffectiveFrom ||
-        (Object.keys(next) as (keyof typeof next)[]).some(
-          (key) => row[key] !== next[key],
+        row.occupancyEffectiveFrom?.getTime() !==
+          occupancyEffectiveFrom?.getTime() ||
+        (Object.keys(mutable) as (keyof typeof mutable)[]).some(
+          (key) => row[key] !== mutable[key],
         )
       )
         await client.reservationService.update({
-          where: { reservationId_kind: { reservationId, kind: row.kind } },
-          data: {
-            ...next,
-            occupancyEffectiveFrom: effectiveFrom
-              ? new Date(effectiveFrom + "T00:00:00Z")
-              : null,
-          },
+          where: { reservationId_kind: { reservationId, kind } },
+          data: { ...mutable, occupancyEffectiveFrom },
         });
     }
     await client.reservation.update({
@@ -580,21 +573,17 @@ export class PrismaReservationRepository implements ReservationRepository {
         });
         if (snapshot?.serviceLines.length)
           await transaction.reservationService.createMany({
-            data: snapshot.serviceLines.map((line) => ({
-              reservationId: input.id,
-              kind: serviceKind(line.kind),
-              vehicles: line.vehicles,
-              details: line.details,
-              priceUnit: line.unit,
-              priceMinor: line.priceMinor,
-              childPriceMinor: line.childPriceMinor,
-              adults: line.adults,
-              children: line.children,
-              nights: line.nights,
-              adultQuantity: line.adultQuantity,
-              childQuantity: line.childQuantity,
-              amountMinor: line.amountMinor,
-            })),
+            data: snapshot.serviceLines.map((line) => {
+              const { price, mutable, occupancyEffectiveFrom } =
+                serviceData(line);
+              return {
+                reservationId: input.id,
+                kind: serviceKind(line.kind),
+                ...price,
+                ...mutable,
+                occupancyEffectiveFrom,
+              };
+            }),
           });
         const stored = await new PrismaReservationRepository(
           transaction,
@@ -626,6 +615,30 @@ export class PrismaReservationRepository implements ReservationRepository {
       throw error;
     }
   }
+}
+
+function serviceData(line: StoredReservationSnapshot["serviceLines"][number]) {
+  const effectiveFrom = line.occupancyEffectiveFrom?.value;
+  return {
+    price: {
+      priceUnit: line.unit,
+      priceMinor: line.priceMinor,
+      childPriceMinor: line.childPriceMinor,
+    },
+    mutable: {
+      adults: line.adults,
+      children: line.children,
+      nights: line.nights,
+      adultQuantity: line.adultQuantity,
+      childQuantity: line.childQuantity,
+      amountMinor: line.amountMinor,
+      vehicles: line.vehicles,
+      details: line.details,
+    },
+    occupancyEffectiveFrom: effectiveFrom
+      ? new Date(effectiveFrom + "T00:00:00Z")
+      : null,
+  };
 }
 
 // Quote service kinds are extensible strings. Persistence accepts the fixed domain list.

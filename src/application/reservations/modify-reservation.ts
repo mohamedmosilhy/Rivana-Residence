@@ -6,6 +6,7 @@ import {
 } from "@/application/inventory";
 import type { QueueReservationMessages } from "@/application/notifications";
 import type { RateBatchReader } from "@/application/pricing";
+import type { ServiceOfferingRepository } from "@/application/services";
 import type { Clock, IdGenerator } from "@/application/shared/providers";
 import {
   failure,
@@ -30,6 +31,10 @@ import {
   type PlannedChangeLine,
   type ReservationChangePlan,
 } from "@/domain/reservations";
+import {
+  parseRequestedServices,
+  type NormalizedService,
+} from "@/domain/services";
 import { DomainValidationError } from "@/domain/shared/domain-error";
 import { LocalDate } from "@/domain/shared/local-date";
 import { Money } from "@/domain/shared/money";
@@ -44,6 +49,7 @@ import type {
   StoredReservationNight,
   StoredReservationSnapshot,
 } from "./ports";
+import { priceChangedServices } from "./reservation-change-services";
 import { manualNights, type Amounts } from "./staff-reservation-input";
 import {
   findStaffReservation,
@@ -61,6 +67,7 @@ export type ModifyReservationContext = ReservationStorageContext &
   Readonly<{
     catalog: AvailabilityCatalog;
     rates: RateBatchReader;
+    services: Pick<ServiceOfferingRepository, "listByBranch">;
     messages: Pick<QueueReservationMessages, "enqueue">;
   }>;
 
@@ -70,7 +77,6 @@ export type ModifyReservationInput = Readonly<{
     roomTypeId: string;
     occupancy: { adults: number; children: number };
   }[];
-  /** Accepted by the contract, refused until M8-T9b (service changes). */
   services?: readonly unknown[] | undefined;
   acceptedTotal: { amountMinor: number; currency: "USD" };
   priceOverride?: { lines: readonly Amounts[]; reason: string } | undefined;
@@ -87,6 +93,7 @@ type Dependencies = Readonly<{
 type Requested = Readonly<{
   stay: StayRange;
   lines: readonly { roomTypeId: string; occupancy: Occupancy }[];
+  services?: readonly NormalizedService[] | undefined;
 }>;
 type Override = Readonly<{
   nights: readonly (readonly ResolvedNightPrice<"MANUAL">[])[];
@@ -150,14 +157,23 @@ function parseRequest(input: ModifyReservationInput): {
       reason,
     };
   }
-  return { requested: { stay, lines }, override };
+  if (input.services === undefined)
+    return { requested: { stay, lines }, override };
+  const services = parseRequestedServices(input.services);
+  if (!services.ok)
+    throw new DomainValidationError("Check the services.", services.issues);
+  return { requested: { stay, lines, services: services.value }, override };
+}
+
+function changedServiceDetails(plan: ReservationChangePlan) {
+  return plan.services.flatMap((service) =>
+    !service.added && service.detailsChanged ? [service.kind] : [],
+  );
 }
 
 /**
- * M8-T9: the staff entry point of the shared change engine (Q-83). Stay,
- * unit and occupancy changes only; services are kept as stored (PR-11) and
- * their edits arrive with M8-T9b. Every write happens inside one
- * `InventoryGuard` transaction, in the global lock order: listings by id
+ * Staff entry point of the shared change engine (Q-83). Every write happens
+ * inside one `InventoryGuard` transaction. Lock order: listings by id
  * (old and new), then the reservation row. Availability and prices are read
  * only after those locks are held.
  */
@@ -190,13 +206,6 @@ export class ModifyReservation {
     if (row.version !== expectedVersion) return staleVersion(row.version);
     if (!submitted.ok) return submitted;
     const change = submitted.value;
-    if (change.services !== undefined)
-      return invalid("Check the services.", [
-        {
-          path: "services",
-          message: "Service changes are not available yet.",
-        },
-      ]);
     if (!canModifyReservationStay(row.status))
       return invalidTransition(
         row.status,
@@ -232,7 +241,7 @@ export class ModifyReservation {
             branchId: row.branchId,
             reservationId: id,
             stay: requested.stay,
-            lines: state.lines,
+            lines: state.plan.structureChanged || override ? state.lines : null,
             snapshot: state.snapshot,
             flagPmsUpdate: state.locked.pmsEnteredAt !== null,
             at: state.at,
@@ -245,7 +254,10 @@ export class ModifyReservation {
             actorType: "STAFF",
             actorId: principal.id,
             before: summarizeReservation(state.locked),
-            after: summarizeReservation(stored),
+            after: summarizeReservation(
+              stored,
+              changedServiceDetails(state.plan),
+            ),
             oldTotalMinor: state.locked.snapshot?.totalMinor ?? null,
             newTotalMinor: state.snapshot.totalMinor,
             override: override
@@ -279,7 +291,10 @@ export class ModifyReservation {
                 reference: stored.reference.value,
                 changeSeq: stored.changeSeq,
                 before: summarizeReservation(state.locked),
-                after: summarizeReservation(stored),
+                after: summarizeReservation(
+                  stored,
+                  changedServiceDetails(state.plan),
+                ),
                 oldTotalMinor: state.locked.snapshot?.totalMinor ?? null,
                 newTotalMinor: state.snapshot.totalMinor,
                 priceOverridden: override !== null,
@@ -334,6 +349,13 @@ export class ModifyReservation {
           message: "A reservation without recorded prices cannot be changed.",
         },
       ]);
+    if (current.source === "EXTERNAL" && requested.services?.length)
+      return invalid("Check the services.", [
+        {
+          path: "services",
+          message: "External reservations cannot include services.",
+        },
+      ]);
     const snapshot = current.snapshot;
     const at = this.deps.clock.now();
     const today = localDateAt(at, current.branchTimeZone);
@@ -347,32 +369,6 @@ export class ModifyReservation {
       )
     )
       return failure("TRY_AGAIN", "The reservation changed. Try again.");
-    const listings = new Map(
-      (await context.catalog.listRoomTypes(branchId, "ALL")).map((listing) => [
-        listing.id,
-        listing,
-      ]),
-    );
-    const quantities = new Map<string, number>();
-    for (const [index, line] of requested.lines.entries()) {
-      const listing = listings.get(line.roomTypeId);
-      if (!listing) return failure("NOT_FOUND", "This listing was not found.");
-      if (!line.occupancy.fits(listing))
-        return invalid("Check the units.", [
-          {
-            path: `lines.${index}.occupancy`,
-            message: "The occupancy exceeds this listing's limits.",
-          },
-        ]);
-      quantities.set(
-        line.roomTypeId,
-        (quantities.get(line.roomTypeId) ?? 0) + 1,
-      );
-    }
-
-    // Availability, with this reservation's own units taken out of what is sold.
-    // A stay that has started only needs capacity for the nights it gains: its
-    // nights before today are history and are not checked again.
     const started = current.stay.checkIn.compare(today) < 0;
     if (started && override)
       return invalid("Check the price override.", [
@@ -382,54 +378,82 @@ export class ModifyReservation {
             "Nights before today keep their price: a started stay cannot be overridden.",
         },
       ]);
-    const checkedStay = started
-      ? requested.stay.checkOut.compare(current.stay.checkOut) > 0
-        ? StayRange.create(current.stay.checkOut, requested.stay.checkOut)
-        : null
-      : requested.stay;
-    const inventory = checkedStay
-      ? await context.inventoryReader.readNights({
-          branchId,
-          roomTypeIds: [...quantities.keys()],
-          nights: [...checkedStay.nights()],
-        })
-      : success([]);
-    if (!inventory.ok) return inventory;
-    const own = new Map<string, number>();
-    for (const line of current.lines) {
-      if (!line.consumesInventory) continue;
-      for (const night of line.stay.nights()) {
-        const key = `${line.roomTypeId}\u0000${night.value}`;
-        own.set(key, (own.get(key) ?? 0) + 1);
-      }
-    }
-    for (const [roomTypeId, quantity] of checkedStay ? quantities : []) {
-      const free = AvailabilityCalculator.check({
-        stay: checkedStay!,
-        quantity,
-        nights: inventory.value
-          .filter((record) => record.roomTypeId === roomTypeId)
-          .map((record) => ({
-            ...record,
-            sold: Math.max(
-              0,
-              record.sold -
-                (own.get(`${roomTypeId}\u0000${record.night.value}`) ?? 0),
-            ),
-          })),
-      });
-      if (!free.available)
-        return {
-          ok: false,
-          error: {
-            code: "INVENTORY_UNAVAILABLE",
-            message: "The requested inventory is no longer available.",
-            context: {
-              roomTypeId,
-              firstUnavailableNight: free.firstUnavailableNight.value,
+    if (plan.structureChanged || override) {
+      const listings = new Map(
+        (await context.catalog.listRoomTypes(branchId, "ALL")).map(
+          (listing) => [listing.id, listing],
+        ),
+      );
+      const quantities = new Map<string, number>();
+      for (const [index, line] of requested.lines.entries()) {
+        const listing = listings.get(line.roomTypeId);
+        if (!listing)
+          return failure("NOT_FOUND", "This listing was not found.");
+        if (!line.occupancy.fits(listing))
+          return invalid("Check the units.", [
+            {
+              path: `lines.${index}.occupancy`,
+              message: "The occupancy exceeds this listing's limits.",
             },
-          },
-        } as const;
+          ]);
+        quantities.set(
+          line.roomTypeId,
+          (quantities.get(line.roomTypeId) ?? 0) + 1,
+        );
+      }
+
+      // Availability, with this reservation's own units taken out of what is sold.
+      // A stay that has started only needs capacity for the nights it gains: its
+      // nights before today are history and are not checked again.
+      const checkedStay = started
+        ? requested.stay.checkOut.compare(current.stay.checkOut) > 0
+          ? StayRange.create(current.stay.checkOut, requested.stay.checkOut)
+          : null
+        : requested.stay;
+      const inventory = checkedStay
+        ? await context.inventoryReader.readNights({
+            branchId,
+            roomTypeIds: [...quantities.keys()],
+            nights: [...checkedStay.nights()],
+          })
+        : success([]);
+      if (!inventory.ok) return inventory;
+      const own = new Map<string, number>();
+      for (const line of current.lines) {
+        if (!line.consumesInventory) continue;
+        for (const night of line.stay.nights()) {
+          const key = `${line.roomTypeId}\u0000${night.value}`;
+          own.set(key, (own.get(key) ?? 0) + 1);
+        }
+      }
+      for (const [roomTypeId, quantity] of checkedStay ? quantities : []) {
+        const free = AvailabilityCalculator.check({
+          stay: checkedStay!,
+          quantity,
+          nights: inventory.value
+            .filter((record) => record.roomTypeId === roomTypeId)
+            .map((record) => ({
+              ...record,
+              sold: Math.max(
+                0,
+                record.sold -
+                  (own.get(`${roomTypeId}\u0000${record.night.value}`) ?? 0),
+              ),
+            })),
+        });
+        if (!free.available)
+          return {
+            ok: false,
+            error: {
+              code: "INVENTORY_UNAVAILABLE",
+              message: "The requested inventory is no longer available.",
+              context: {
+                roomTypeId,
+                firstUnavailableNight: free.firstUnavailableNight.value,
+              },
+            },
+          } as const;
+      }
     }
 
     // Prices: kept nights keep their stored amount; only new nights are read.
@@ -471,59 +495,22 @@ export class ModifyReservation {
         0,
       ),
     };
-    const remainingOldNights = Math.max(
-      0,
-      today.daysUntil(current.stay.checkOut),
+    const needsOfferings = plan.services.some(
+      (service) => service.added || service.changedVehiclesAt !== null,
     );
-    const consumedNights = current.stay.nightCount - remainingOldNights;
-    const services = snapshot.serviceLines.map((line) => {
-      const common = {
-        kind: line.kind,
-        vehicles: line.vehicles,
-        unit: line.unit,
-        price: Money.create({ amountMinor: line.priceMinor, currency: "USD" }),
-        childPrice:
-          line.childPriceMinor === null
-            ? null
-            : Money.create({
-                amountMinor: line.childPriceMinor,
-                currency: "USD",
-              }),
-      };
-      const effectiveFrom = line.occupancyEffectiveFrom ?? null;
-      if (effectiveFrom && today.compare(effectiveFrom) < 0)
-        throw new DomainValidationError("Check the branch date.", [
-          {
-            path: "stay",
-            message:
-              "The branch date is before the latest service occupancy change.",
-          },
-        ]);
-      if (!started || line.unit !== "PER_PERSON_PER_NIGHT")
-        return {
-          pricing: common,
-          occupancyEffectiveFrom: null,
-          details: line.details,
-        };
-
-      // The stored total consists of already charged nights plus the last
-      // headcount on all remaining old nights. Subtract only that latter part.
-      const preservedPersonNights = {
-        nights: consumedNights,
-        adults: line.adultQuantity - line.adults * remainingOldNights,
-        children:
-          line.childPriceMinor === null
-            ? 0
-            : line.childQuantity - line.children * remainingOldNights,
-      };
-      const occupancyChanged =
-        line.adults !== guests.adults || line.children !== guests.children;
-      return {
-        pricing: { ...common, preservedPersonNights },
-        occupancyEffectiveFrom: occupancyChanged ? today : effectiveFrom,
-        details: line.details,
-      };
-    });
+    const offerings = needsOfferings
+      ? await context.services.listByBranch(branchId)
+      : [];
+    const pricedServices = priceChangedServices(
+      current.stay,
+      snapshot.serviceLines,
+      plan,
+      offerings,
+      today,
+      guests,
+    );
+    if (!pricedServices.ok) return pricedServices;
+    const services = pricedServices.value;
     const priceFrom = (
       nights: readonly (readonly ResolvedNightPrice<string>[])[],
     ) =>

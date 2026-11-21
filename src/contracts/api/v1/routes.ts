@@ -293,13 +293,18 @@ export const API_ROUTES: readonly ApiRoute[] = [
     path: staffReservationPath + "/{id}/stay",
     operationId: "modifyStaffReservationStay",
     summary:
-      "API-S6. Change the stay, units or occupancy of a confirmed reservation. Only new nights are re-priced (Q-19, PR-11); services are kept (service edits arrive in M8-T9b).",
+      "API-S6. Change the stay, units, occupancy or services of a confirmed reservation. New nights and added services use current prices; retained services keep their stored pricing terms (PR-11).",
     tag: "Reservations",
     security: "staff",
     headers: ifMatch,
     request: ModifyReservationStayRequest,
     responses: changeResponse("The changed reservation."),
-    errors: [...changeErrors, "INVENTORY_UNAVAILABLE", "PRICE_CHANGED"],
+    errors: [
+      ...changeErrors,
+      "INVENTORY_UNAVAILABLE",
+      "PRICE_CHANGED",
+      "SERVICE_UNAVAILABLE",
+    ],
   },
   {
     method: "post",

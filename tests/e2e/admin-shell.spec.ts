@@ -144,6 +144,9 @@ test("keyboard users can reach content and the account menu", async ({
   page,
 }, testInfo) => {
   await signInAs(page, accountsFor(testInfo.project.name).editor);
+  // The sign-in redirect can start tabbing inside the overview. Check the
+  // shell's tab order from a fresh document.
+  await page.goto("/admin");
 
   const skip = page.getByRole("link", { name: "Skip to admin content" });
   await expect(skip).toBeAttached();

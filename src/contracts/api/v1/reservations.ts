@@ -149,7 +149,7 @@ export const ModifyReservationStayRequest = z.strictObject({
     .array(ServiceInput)
     .optional()
     .describe(
-      "Not available until M8-T9b: sending it returns 422. Omit it to keep the services.",
+      "Omit to keep all services. Send the full list of selected kinds to add or remove services (an empty list removes all). Omitted cars or details on a retained service keep their values. Blank details clear the text. Car edits on a retained transfer use the branch limit even if the offering is disabled. They affect the price only for a stored PER_VEHICLE transfer. Once the stay has started, only details may change. External reservations cannot include services.",
     ),
   acceptedTotal: Money.describe(
     "The total from the last re-quote, including VAT. A different server total returns 409 PRICE_CHANGED.",

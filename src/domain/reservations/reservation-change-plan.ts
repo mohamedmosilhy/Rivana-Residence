@@ -1,3 +1,4 @@
+import type { NormalizedService, ServiceKind } from "@/domain/services";
 import { DomainValidationError } from "@/domain/shared/domain-error";
 import type { LocalDate } from "@/domain/shared/local-date";
 import { Occupancy } from "@/domain/shared/occupancy";
@@ -32,12 +33,34 @@ export type PlannedChangeLine = Readonly<{
   needsCurrentPrice: readonly LocalDate[];
 }>;
 
+type CurrentChangeService = Readonly<{
+  kind: string;
+  vehicles: number | null;
+  details: string | null;
+}>;
+
+type PlannedService = Readonly<
+  | {
+      kind: ServiceKind;
+      added: true;
+      index: number;
+      request: NormalizedService;
+    }
+  | (CurrentChangeService & {
+      added: false;
+      changedVehiclesAt: number | null;
+      detailsChanged: boolean;
+    })
+>;
+
 export type ReservationChangePlan = Readonly<{
   lines: readonly PlannedChangeLine[];
   removedLineIds: readonly string[];
   stayChanged: boolean;
-  /** Stay, units or occupancy differ from the reservation. False only for a price-only request. */
+  /** Stay, units or occupancy differ from the reservation. */
   structureChanged: boolean;
+  services: readonly PlannedService[];
+  removedServices: readonly string[];
   /** Listings of the old and the new lines, sorted: the set to lock (Decision 1). */
   roomTypeIds: readonly string[];
   /** Nights of the new stay that were not in the old one for that unit. */
@@ -48,25 +71,70 @@ function invalid(path: string, message: string): never {
   throw new DomainValidationError("Check the change.", [{ path, message }]);
 }
 
+function planServiceChanges(
+  current: readonly CurrentChangeService[],
+  requested: readonly NormalizedService[] | undefined,
+) {
+  const kept = (service: CurrentChangeService): PlannedService => ({
+    ...service,
+    added: false,
+    changedVehiclesAt: null,
+    detailsChanged: false,
+  });
+  const services =
+    requested === undefined
+      ? current.map(kept)
+      : requested.map((service, index): PlannedService => {
+          const previous = current.find((line) => line.kind === service.kind);
+          if (!previous)
+            return { kind: service.kind, added: true, index, request: service };
+          const vehicles = service.vehicles ?? previous.vehicles;
+          const details =
+            service.details === undefined
+              ? previous.details
+              : service.details || null;
+          return {
+            kind: service.kind,
+            added: false,
+            vehicles,
+            details,
+            changedVehiclesAt: vehicles === previous.vehicles ? null : index,
+            detailsChanged: details !== previous.details,
+          };
+        });
+  const removedServices = current
+    .filter((line) => !services.some((service) => service.kind === line.kind))
+    .map((line) => line.kind);
+  return { services, removedServices };
+}
+
 /**
- * Pure comparison of a reservation with a requested stay and units (Q-19,
+ * Pure comparison of a reservation with a requested stay, units and services (Q-19,
  * PR-11). Units are matched by listing: an exact occupancy match first, then
  * the next unit of the same listing in id order. Unchanged nights keep their
- * stored amount; only new nights need today's rate.
+ * stored amount; only new nights need today's rate. Services are matched by kind.
  *
  * Rules for a stay that has started (check in before branch `today`): the
  * check in and the nights before today are history and cannot change, units
  * cannot be added, removed or moved to another listing, and only the check
  * out may move (not before today). Otherwise a new check in must be today or
- * later. A request that changes nothing throws, unless `allowPriceOnly` (a
+ * later. On started stays, only service details can be edited. A request that
+ * changes nothing throws, unless `allowPriceOnly` (a
  * staff price override on an otherwise unchanged stay), so a no-op never
  * writes a history row.
  */
 export function planReservationChange(
-  current: Readonly<{ stay: StayRange; lines: readonly CurrentChangeLine[] }>,
+  current: Readonly<{
+    stay: StayRange;
+    lines: readonly CurrentChangeLine[];
+    snapshot?: Readonly<{
+      serviceLines: readonly CurrentChangeService[];
+    }> | null;
+  }>,
   requested: Readonly<{
     stay: StayRange;
     lines: readonly RequestedChangeLine[];
+    services?: readonly NormalizedService[] | undefined;
   }>,
   options: Readonly<{ today: LocalDate; allowPriceOnly: boolean }>,
 ): ReservationChangePlan {
@@ -82,7 +150,8 @@ export function planReservationChange(
       .map((line) => line.roomTypeId)
       .sort()
       .join("|");
-  if (current.stay.checkIn.compare(options.today) < 0) {
+  const started = current.stay.checkIn.compare(options.today) < 0;
+  if (started) {
     if (checkInChanged)
       invalid(
         "stay.checkIn",
@@ -170,13 +239,32 @@ export function planReservationChange(
       );
     });
   const structureChanged = stayChanged || !unchangedUnits;
-  if (!structureChanged && !options.allowPriceOnly)
+  const { services, removedServices } = planServiceChanges(
+    current.snapshot?.serviceLines ?? [],
+    requested.services,
+  );
+  const selectionOrCarsChanged =
+    removedServices.length > 0 ||
+    services.some(
+      (service) => service.added || service.changedVehiclesAt !== null,
+    );
+  if (started && selectionOrCarsChanged)
+    invalid(
+      "services",
+      "Once a stay has started, only service details can be changed.",
+    );
+  const servicesChanged =
+    selectionOrCarsChanged ||
+    services.some((service) => !service.added && service.detailsChanged);
+  if (!structureChanged && !servicesChanged && !options.allowPriceOnly)
     invalid("stay", "Nothing was changed.");
   return Object.freeze({
     lines: Object.freeze(lines),
     removedLineIds: Object.freeze(available.map((line) => line.id)),
     stayChanged,
     structureChanged,
+    services: Object.freeze(services),
+    removedServices: Object.freeze(removedServices),
     roomTypeIds: Object.freeze(
       [
         ...new Set([
@@ -202,6 +290,11 @@ export type ChangeSummary = Readonly<{
     children: number;
   }>[];
   accommodationMinor: number | null;
+  services: readonly Readonly<{
+    kind: string;
+    vehicles: number | null;
+    detailsChanged: boolean;
+  }>[];
   servicesMinor: number | null;
   discountMinor: number | null;
   vatMinor: number | null;
@@ -219,12 +312,14 @@ export function summarizeReservation(
     }>[];
     snapshot: Readonly<{
       accommodationMinor: number;
+      serviceLines: readonly Pick<CurrentChangeService, "kind" | "vehicles">[];
       servicesMinor: number;
       discountMinor: number;
       vatMinor: number;
       totalMinor: number;
     }> | null;
   }>,
+  changedDetails: readonly string[] = [],
 ): ChangeSummary {
   const snapshot = reservation.snapshot;
   return {
@@ -240,6 +335,11 @@ export function summarizeReservation(
       children: line.occupancy.children,
     })),
     accommodationMinor: snapshot?.accommodationMinor ?? null,
+    services: (snapshot?.serviceLines ?? []).map(({ kind, vehicles }) => ({
+      kind,
+      vehicles,
+      detailsChanged: changedDetails.includes(kind),
+    })),
     servicesMinor: snapshot?.servicesMinor ?? null,
     discountMinor: snapshot?.discountMinor ?? null,
     vatMinor: snapshot?.vatMinor ?? null,

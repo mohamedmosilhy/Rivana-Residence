@@ -117,7 +117,9 @@ export type StayReplacement = Readonly<{
   branchId: string;
   reservationId: string;
   stay: StayRange;
-  lines: readonly Omit<StoredReservationLine, "stay" | "consumesInventory">[];
+  lines:
+    | readonly Omit<StoredReservationLine, "stay" | "consumesInventory">[]
+    | null;
   snapshot: StoredReservationSnapshot;
   /** True when the booking was already entered in the hotel system (Q-84). */
   flagPmsUpdate: boolean;
@@ -173,9 +175,11 @@ export interface ReservationRepository {
     id: string,
   ): Promise<Result<StoredReservation | null>>;
   /**
-   * Transaction only, after `lockById`. Writes the new stay, units, nights and
-   * price snapshot (service rows are updated in place, never replaced), bumps `version` and `changeSeq`, and sets the hotel system
-   * flag when asked. Units that continue keep their id.
+   * Transaction only, after `lockById`. Writes the price snapshot, bumps
+   * `version` and `changeSeq`, and sets the hotel system flag when asked.
+   * A null lines value keeps rooms and nights as stored. Otherwise continuing
+   * units keep their ids. Services are reconciled by kind and retained rows
+   * keep their stored pricing terms.
    */
   replaceStay(input: StayReplacement): Promise<StoredReservation>;
   /** Transaction only. Appends the history row; `seq` is the reservation's new `changeSeq`. */

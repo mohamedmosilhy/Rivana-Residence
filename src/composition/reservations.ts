@@ -71,6 +71,7 @@ export function modifyReservationContext(
     ...storageContext(transaction),
     catalog: new PrismaAvailabilityCatalog(transaction),
     rates: new PrismaRateRepository(transaction),
+    services: new PrismaServiceOfferingRepository(transaction),
     messages: reservationMessageWriter(transaction),
   };
 }

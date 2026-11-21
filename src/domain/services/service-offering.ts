@@ -197,31 +197,21 @@ export type RequestedServices =
   | Readonly<{ ok: false; kind: ServiceKind }>
   | Readonly<{ ok: false; issues: readonly DomainIssue[] }>;
 
-type NormalizedService = Readonly<{
+export type NormalizedService = Readonly<{
   kind: ServiceKind;
   vehicles: number | undefined;
   details: string | undefined;
 }>;
 
-const fieldIssue = (path: string, message: string): RequestedServices => ({
-  ok: false,
+const fieldIssue = (path: string, message: string) => ({
+  ok: false as const,
   issues: [{ path, message }],
 });
 
-/**
- * SV-2 and SV-5: a service joins the quote only when it was requested. The
- * whole list is validated first (shape, duplicates, a car count on
- * breakfast), so a malformed request is a field error before any offering is
- * consulted. Then a requested service with no offering, or an inactive one,
- * refuses the whole quote (the API reports it as SERVICE_UNAVAILABLE), and a
- * transfer's car count is checked against the branch's maximum. Unrequested
- * services are never returned, even when active. The order is the request
- * order. An omitted car count is one car.
- */
-export function selectRequestedServices(
+/** Shared shape and field validation for initial quotes and reservation changes. */
+export function parseRequestedServices(
   requested: unknown,
-  offerings: readonly ServiceOffering[],
-): RequestedServices {
+): Parsed<readonly NormalizedService[]> {
   if (!Array.isArray(requested))
     return fieldIssue("services", "Send a list of services.");
   const seen = new Set<ServiceKind>();
@@ -254,26 +244,61 @@ export function selectRequestedServices(
     seen.add(value.kind);
     normalized.push(value);
   }
-  const services: SelectedService[] = [];
-  for (const [index, value] of normalized.entries()) {
-    const offering = offerings.find(
-      (candidate) => candidate.kind === value.kind,
+  return { ok: true, value: normalized };
+}
+
+/** SV-5 uses the offering's car limit for newly requested or changed counts. */
+export function validateRequestedVehicles(
+  vehicles: number,
+  maximum: number,
+  index: number,
+): Parsed<number> {
+  return vehicles > maximum
+    ? fieldIssue(
+        `services.${index}.vehicles`,
+        `Choose from 1 to ${maximum} cars.`,
+      )
+    : { ok: true, value: vehicles };
+}
+
+export function selectService(
+  value: NormalizedService,
+  index: number,
+  offerings: readonly ServiceOffering[],
+):
+  | Readonly<{ ok: true; service: SelectedService }>
+  | Exclude<RequestedServices, { ok: true }> {
+  const offering = offerings.find((candidate) => candidate.kind === value.kind);
+  if (!offering?.active) return { ok: false, kind: value.kind };
+  let vehicles: number | null = null;
+  if (value.kind === "AIRPORT_TRANSFER") {
+    if (offering.maxVehicles === null) return { ok: false, kind: value.kind };
+    const checked = validateRequestedVehicles(
+      value.vehicles ?? 1,
+      offering.maxVehicles,
+      index,
     );
-    if (!offering || !offering.active) return { ok: false, kind: value.kind };
-    let vehicles: number | null = null;
-    if (value.kind === "AIRPORT_TRANSFER") {
-      // The database requires a maximum on every transfer offering; a missing
-      // one fails closed as unavailable rather than guessing a limit.
-      if (offering.maxVehicles === null) return { ok: false, kind: value.kind };
-      vehicles = value.vehicles ?? 1;
-      if (vehicles > offering.maxVehicles)
-        return fieldIssue(
-          `services.${index}.vehicles`,
-          `Choose from 1 to ${offering.maxVehicles} cars.`,
-        );
-    }
-    // Details are trimmed by the schema; blank text is stored as no details.
-    services.push({ ...offering, vehicles, details: value.details || null });
+    if (!checked.ok) return checked;
+    vehicles = checked.value;
+  }
+  return {
+    ok: true,
+    service: { ...offering, vehicles, details: value.details || null },
+  };
+}
+
+/** Select and price only the services requested for a new quote, in request order. */
+export function selectRequestedServices(
+  requested: unknown,
+  offerings: readonly ServiceOffering[],
+): RequestedServices {
+  const parsed = parseRequestedServices(requested);
+  if (!parsed.ok) return parsed;
+  const services: SelectedService[] = [];
+  for (const [index, value] of parsed.value.entries()) {
+    const selected = selectService(value, index, offerings);
+    if (!selected.ok) return selected;
+    services.push(selected.service);
   }
   return { ok: true, services: Object.freeze(services) };
 }

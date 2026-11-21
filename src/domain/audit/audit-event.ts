@@ -217,6 +217,11 @@ type ChangeSummaryAudit = Readonly<{
     children: number;
   }>[];
   accommodationMinor: number | null;
+  services: readonly Readonly<{
+    kind: string;
+    vehicles: number | null;
+    detailsChanged: boolean;
+  }>[];
   servicesMinor: number | null;
   discountMinor: number | null;
   vatMinor: number | null;

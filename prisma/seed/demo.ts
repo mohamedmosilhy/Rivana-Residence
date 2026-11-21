@@ -555,8 +555,25 @@ export async function seedDemoReservations(
       const checkOut = new Date(checkIn.getTime() + 86_400_000);
       const unpriced = fixture.source === "EXTERNAL";
       const accommodation = 6000;
+      const transfer = fixture.entered
+        ? {
+            kind: "AIRPORT_TRANSFER" as const,
+            priceUnit: "PER_BOOKING" as const,
+            priceMinor: 3000,
+            adults: 2,
+            children: 0,
+            nights: 1,
+            adultQuantity: 1,
+            childQuantity: 0,
+            amountMinor: 3000,
+            vehicles: 1,
+            details: "Demo pickup 10:30",
+          }
+        : null;
+      const servicesMinor = transfer?.amountMinor ?? 0;
+      const subtotal = accommodation + servicesMinor;
       const discount = index === 0 ? 600 : 0;
-      const taxable = accommodation - discount;
+      const taxable = subtotal - discount;
       const vatMinor = Math.floor(
         (taxable * vat.vatRateBasisPoints + 5000) / 10000,
       );
@@ -567,7 +584,16 @@ export async function seedDemoReservations(
         checkOut: checkOut.toISOString().slice(0, 10),
         units: [{ roomTypeId: room.id, adults: 2, children: 0 }],
         accommodationMinor: unpriced ? null : accommodation,
-        servicesMinor: 0,
+        services: transfer
+          ? [
+              {
+                kind: transfer.kind,
+                vehicles: transfer.vehicles,
+                detailsChanged: false,
+              },
+            ]
+          : [],
+        servicesMinor,
         discountMinor: discount,
         vatMinor: unpriced ? null : vatMinor,
         totalMinor: unpriced ? null : taxable + vatMinor,
@@ -589,8 +615,9 @@ export async function seedDemoReservations(
           externalReference: unpriced ? "FICTIONAL-EXT-1" : null,
           externalChannel: unpriced ? "Fictional partner" : null,
           accommodationMinor: unpriced ? null : accommodation,
-          servicesMinor: 0,
-          subtotalMinor: unpriced ? null : accommodation,
+          servicesMinor,
+          subtotalMinor: unpriced ? null : subtotal,
+          ...(transfer ? { services: { create: transfer } } : {}),
           discountMinor: discount,
           taxableMinor: unpriced ? null : taxable,
           vatRateBasisPoints: unpriced ? null : vat.vatRateBasisPoints,

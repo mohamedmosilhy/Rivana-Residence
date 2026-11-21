@@ -158,7 +158,97 @@ describe("planReservationChange (Q-19, PR-11)", () => {
     ).toThrow(DomainValidationError);
   });
 
+  it("plans the retained edits, additions, and removals of a full service selection", () => {
+    const booked = {
+      stay: current,
+      lines: [line("a")],
+      snapshot: {
+        serviceLines: [
+          { kind: "AIRPORT_TRANSFER", vehicles: 2, details: "MS100 10:30" },
+        ],
+      },
+    };
+    const same = request(current, ["garden", 2]);
+    expect(() =>
+      planReservationChange(
+        booked,
+        {
+          ...same,
+          services: [
+            {
+              kind: "AIRPORT_TRANSFER",
+              vehicles: undefined,
+              details: undefined,
+            },
+          ],
+        },
+        options,
+      ),
+    ).toThrow("Check the change.");
+    const edited = planReservationChange(
+      booked,
+      {
+        ...same,
+        services: [
+          { kind: "BREAKFAST", vehicles: undefined, details: undefined },
+          { kind: "AIRPORT_TRANSFER", vehicles: 3, details: "" },
+        ],
+      },
+      options,
+    );
+    expect(edited.structureChanged).toBe(false);
+    expect(edited.services).toMatchObject([
+      { kind: "BREAKFAST", index: 0, added: true },
+      {
+        kind: "AIRPORT_TRANSFER",
+        vehicles: 3,
+        details: null,
+        changedVehiclesAt: 1,
+        detailsChanged: true,
+      },
+    ]);
+    expect(
+      planReservationChange(booked, { ...same, services: [] }, options)
+        .removedServices,
+    ).toEqual(["AIRPORT_TRANSFER"]);
+  });
+
+  it("allows details corrections on a started stay and refuses a change to selection or cars", () => {
+    const booked = {
+      stay: current,
+      lines: [line("a")],
+      snapshot: {
+        serviceLines: [
+          { kind: "AIRPORT_TRANSFER", vehicles: 2, details: null },
+        ],
+      },
+    };
+    const started = { ...options, today: LocalDate.parse("2031-04-11") };
+    const same = request(current, ["garden", 2]);
+    const edit = {
+      kind: "AIRPORT_TRANSFER",
+      vehicles: undefined,
+      details: "MS200",
+    } as const;
+    expect(
+      planReservationChange(booked, { ...same, services: [edit] }, started)
+        .services,
+    ).toMatchObject([{ vehicles: 2, details: "MS200", detailsChanged: true }]);
+    for (const services of [
+      [],
+      [{ ...edit, vehicles: 3 }],
+      [
+        edit,
+        { kind: "BREAKFAST" as const, vehicles: undefined, details: undefined },
+      ],
+    ])
+      expect(() =>
+        planReservationChange(booked, { ...same, services }, started),
+      ).toThrow("Check the change.");
+  });
+
   it("summarizes without personal values", () => {
+    const service = { kind: "AIRPORT_TRANSFER", vehicles: 2, details: "MS100" };
     const summary = summarizeReservation({
       stay: current,
       status: "CONFIRMED",
@@ -171,6 +261,7 @@ describe("planReservationChange (Q-19, PR-11)", () => {
       ],
       snapshot: {
         accommodationMinor: 30_000,
+        serviceLines: [service],
         servicesMinor: 0,
         discountMinor: 0,
         vatMinor: 4500,
@@ -184,6 +275,9 @@ describe("planReservationChange (Q-19, PR-11)", () => {
       checkOut: "2031-04-13",
       units: [{ roomTypeId: "garden", adults: 2, children: 1 }],
       accommodationMinor: 30_000,
+      services: [
+        { kind: "AIRPORT_TRANSFER", vehicles: 2, detailsChanged: false },
+      ],
       servicesMinor: 0,
       discountMinor: 0,
       vatMinor: 4500,

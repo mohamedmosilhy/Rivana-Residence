@@ -37,6 +37,7 @@ import { blockUseCase } from "./support/blocks";
 import { deferred, withIndependentClients } from "./support/concurrency";
 import {
   NOW,
+  pausedAudit,
   phoneOf,
   seedBookable,
   waitForLockWaiters,
@@ -89,7 +90,7 @@ async function book(
     phone?: number;
     couponCode?: string;
     notify?: boolean;
-    services?: string[];
+    services?: ModifyReservationInput["services"];
     email?: boolean;
   }> = {},
 ) {
@@ -165,6 +166,7 @@ function modifier(
     audit?: (inner: AuditLog) => AuditLog;
     reservations?: (inner: ReservationRepository) => ReservationRepository;
     enqueue?: () => Promise<void>;
+    forbidAccommodationReads?: boolean;
   }> = {},
 ) {
   return new ModifyReservation({
@@ -173,6 +175,14 @@ function modifier(
       db,
       (transaction) => {
         const context = modifyReservationContext(transaction);
+        if (hooks.forbidAccommodationReads) {
+          vi.spyOn(context.inventoryReader, "readNights").mockRejectedValue(
+            new Error("A service-only change read inventory."),
+          );
+          vi.spyOn(context.rates, "readMany").mockRejectedValue(
+            new Error("A service-only change read nightly rates."),
+          );
+        }
         return {
           ...context,
           reservations: hooks.reservations
@@ -285,7 +295,7 @@ describe("ModifyReservation (S6)", () => {
     ).toEqual([10_000, 10_000, 10_000]);
   });
 
-  it("refuses a wrong accepted total, a stale version, a missing If-Match, services, and a no-op, writing nothing", async () => {
+  it("refuses a wrong accepted total, a stale version, a missing If-Match, an unavailable service, and a no-op", async () => {
     const room = await seedBookable(client);
     const created = await book(room.id);
     const before = await state(created.id);
@@ -321,7 +331,7 @@ describe("ModifyReservation (S6)", () => {
         ...modifyBody(room.id, 46_000),
         services: ["BREAKFAST"],
       }),
-    ).toMatchObject({ ok: false, error: { code: "VALIDATION" } });
+    ).toMatchObject({ ok: false, error: { code: "SERVICE_UNAVAILABLE" } });
     expect(
       await commands().modify.execute(admin, created.id, created.version, {
         ...modifyBody(room.id, 34_500),
@@ -1775,7 +1785,7 @@ describe("a price-only override (S6 supports it)", () => {
   });
 });
 
-describe("services stay as stored in T9", () => {
+describe("retained services on stay and occupancy changes", () => {
   const rowVersion = async () =>
     client.$queryRaw<
       { kind: string; xmin: string }[]
@@ -2171,7 +2181,7 @@ describe("stale versions, no-op overrides, ownership and service guards", () => 
     ).toBe(false);
   });
 
-  it("replaceStay refuses to add, remove or reprice a service, and rolls back", async () => {
+  it("replaceStay refuses duplicate services or changed pricing terms for retained services", async () => {
     const room = await seedBookable(client);
     await client.serviceOffering.create({
       data: {
@@ -2212,24 +2222,12 @@ describe("stale versions, no-op overrides, ownership and service guards", () => 
       (line) => line.kind === "BREAKFAST",
     )!;
     const attempts = {
-      added: {
-        ...snapshot,
-        serviceLines: [...snapshot.serviceLines, breakfast],
-      },
-      removed: { ...snapshot, serviceLines: [] },
       duplicate: { ...snapshot, serviceLines: [breakfast, breakfast] },
       repriced: {
         ...snapshot,
         serviceLines: snapshot.serviceLines.map((line) => ({
           ...line,
           priceMinor: line.priceMinor + 1,
-        })),
-      },
-      details: {
-        ...snapshot,
-        serviceLines: snapshot.serviceLines.map((line) => ({
-          ...line,
-          details: "changed",
         })),
       },
     };
@@ -2311,4 +2309,564 @@ describe("S15 history for the change actions", () => {
     });
     expect(JSON.stringify(items)).not.toContain("private internal note");
   });
+});
+
+describe("S6 service edits (AC-12, T-CHG-5…7)", () => {
+  async function seedTransfer(
+    priceUnit: "PER_VEHICLE" | "PER_BOOKING" = "PER_VEHICLE",
+  ) {
+    await client.serviceOffering.create({
+      data: {
+        id: "transfer",
+        branchId: TEST_BRANCH_ID,
+        kind: "AIRPORT_TRANSFER",
+        active: true,
+        priceUnit,
+        priceMinor: 1500,
+        maxVehicles: 4,
+      },
+    });
+  }
+
+  async function seedBreakfast() {
+    await client.serviceOffering.create({
+      data: {
+        id: "breakfast",
+        branchId: TEST_BRANCH_ID,
+        kind: "BREAKFAST",
+        active: true,
+        priceUnit: "PER_PERSON_PER_NIGHT",
+        priceMinor: 1000,
+        childPriceMinor: 500,
+      },
+    });
+  }
+
+  const transfer = (vehicles?: number, details?: string) => ({
+    kind: "AIRPORT_TRANSFER",
+    ...(vehicles === undefined ? {} : { vehicles }),
+    ...(details === undefined ? {} : { details }),
+  });
+
+  it("keeps stored transfer pricing terms and adds breakfast at the current branch price on a combined change", async () => {
+    const room = await seedBookable(client);
+    await seedTransfer();
+    await client.coupon.create({
+      data: {
+        id: "service-edit-coupon",
+        code: "SERVICES10",
+        allBranches: true,
+        kind: "PERCENT",
+        percentBasisPoints: 1000,
+      },
+    });
+    const booking = await book(room.id, {
+      services: [transfer(2, "MS100")],
+      couponCode: "SERVICES10",
+    });
+    await client.coupon.updateMany({ data: { active: false } });
+    await client.commercialSettings.update({
+      where: { id: "default" },
+      data: { vatRateBasisPoints: 2000 },
+    });
+    await client.serviceOffering.update({
+      where: { id: "transfer" },
+      data: { priceUnit: "PER_BOOKING", priceMinor: 8800 },
+    });
+    await seedBreakfast();
+    await client.roomBaseRate.update({
+      where: { roomTypeId: room.id },
+      data: { amountMinor: 12_000 },
+    });
+    const body = modifyBody(room.id, 1, {
+      lines: [{ roomTypeId: room.id, occupancy: { adults: 2, children: 1 } }],
+      services: ["BREAKFAST", transfer(3)],
+    });
+    const serviceRows = () =>
+      client.reservationService.findMany({
+        where: { reservationId: booking.id },
+      });
+    const before = await state(booking.id);
+    const beforeServices = await serviceRows();
+    const quote = await call(
+      stayRoute,
+      booking.id,
+      "PUT",
+      body,
+      "admin",
+      booking.version,
+    );
+    expect(quote.status).toBe(409);
+    expect(await quote.json()).toMatchObject({
+      code: "PRICE_CHANGED",
+      context: {
+        quote: {
+          accommodationMinor: 42_000,
+          servicesMinor: 14_500,
+          discountMinor: 5650,
+          vatMinor: 7628,
+          totalMinor: 58_478,
+        },
+      },
+    });
+    expect(await state(booking.id)).toEqual(before);
+    expect(await serviceRows()).toEqual(beforeServices);
+    const applied = await call(
+      stayRoute,
+      booking.id,
+      "PUT",
+      {
+        ...body,
+        acceptedTotal: money(58_478),
+      },
+      "admin",
+      booking.version,
+    );
+    expect(applied.status).toBe(200);
+    expect(await applied.json()).toMatchObject({
+      price: {
+        totalMinor: 58_478,
+        vatRateBasisPoints: 1500,
+        services: expect.arrayContaining([
+          {
+            kind: "BREAKFAST",
+            unit: "PER_PERSON_PER_NIGHT",
+            details: null,
+            vehicles: null,
+            priceMinor: 1000,
+            childPriceMinor: 500,
+            adultQuantity: 8,
+            childQuantity: 4,
+            amountMinor: 10_000,
+          },
+          {
+            kind: "AIRPORT_TRANSFER",
+            unit: "PER_VEHICLE",
+            details: "MS100",
+            vehicles: 3,
+            priceMinor: 1500,
+            childPriceMinor: null,
+            adultQuantity: 3,
+            childQuantity: 0,
+            amountMinor: 4500,
+          },
+        ]),
+      },
+    });
+    expect(
+      await client.reservationService.count({
+        where: { reservationId: booking.id },
+      }),
+    ).toBe(2);
+  });
+
+  it("lets staff correct flight details and remove a service without rewriting rooms or prices", async () => {
+    const room = await seedBookable(client);
+    await seedTransfer("PER_BOOKING");
+    const bookPrice = 36_225;
+    const booking = await book(room.id, {
+      services: [transfer(3, "MS-private-100")],
+    });
+    await enter(booking.id);
+    await client.serviceOffering.update({
+      where: { id: "transfer" },
+      data: { active: false, maxVehicles: 1, priceMinor: 8800 },
+    });
+    const roomRevisions = () => client.$queryRaw`
+      SELECT r.id, r.xmin::text AS room_version, n.night, n.xmin::text AS night_version
+      FROM "ReservationRoom" r JOIN "ReservationNight" n ON n."reservationRoomId" = r.id
+      WHERE r."reservationId" = ${booking.id} ORDER BY r.id, n.night`;
+    const before = await roomRevisions();
+    await client.physicalRoom.updateMany({
+      where: { roomTypeId: room.id },
+      data: { active: false },
+    });
+    const body = modifyBody(room.id, bookPrice, {
+      stay,
+      services: [transfer(undefined, "MS-private-200")],
+    });
+    const logs = [
+      vi.spyOn(console, "info"),
+      vi.spyOn(console, "warn"),
+      vi.spyOn(console, "error"),
+    ];
+    try {
+      const edited = await call(
+        stayRoute,
+        booking.id,
+        "PUT",
+        body,
+        "reception",
+        booking.version,
+      );
+      expect(edited.status).toBe(200);
+      expect(edited.headers.get("etag")).toBe('"v2"');
+      expect(await edited.json()).toMatchObject({
+        changeSeq: 1,
+        pmsUpdatePendingSince: expect.any(String),
+        price: {
+          totalMinor: bookPrice,
+          services: [
+            {
+              kind: "AIRPORT_TRANSFER",
+              vehicles: 3,
+              details: "MS-private-200",
+              priceMinor: 1500,
+              amountMinor: 1500,
+            },
+          ],
+        },
+      });
+    } finally {
+      const captured = JSON.stringify(logs.flatMap((log) => log.mock.calls));
+      for (const log of logs) log.mockRestore();
+      expect(captured).not.toMatch(/MS-private-/);
+    }
+    expect(await roomRevisions()).toEqual(before);
+    const changes = await client.reservationChange.findMany({
+      where: { reservationId: booking.id },
+    });
+    const audits = await client.auditEvent.findMany({
+      where: { entityId: booking.id, action: "reservation.stay-modified" },
+    });
+    expect(changes).toHaveLength(1);
+    expect(audits).toHaveLength(1);
+    expect(changes[0]).toMatchObject({
+      before: {
+        services: [
+          { kind: "AIRPORT_TRANSFER", vehicles: 3, detailsChanged: false },
+        ],
+      },
+      after: {
+        services: [
+          { kind: "AIRPORT_TRANSFER", vehicles: 3, detailsChanged: true },
+        ],
+      },
+      oldTotalMinor: bookPrice,
+      newTotalMinor: bookPrice,
+    });
+    expect(audits[0]?.changes).toMatchObject({
+      before: changes[0]?.before,
+      after: changes[0]?.after,
+    });
+    expect(JSON.stringify({ changes, audits })).not.toMatch(/MS-private-/);
+    const removed = await modifier(client, {
+      forbidAccommodationReads: true,
+    }).execute(
+      principals.get("reception")!,
+      booking.id,
+      booking.version + 1,
+      modifyBody(room.id, 34_500, { stay, services: [] }),
+    );
+    expect(removed).toMatchObject({
+      ok: true,
+      value: {
+        reservation: { snapshot: { serviceLines: [], totalMinor: 34_500 } },
+      },
+    });
+    expect(await client.reservationService.count()).toBe(0);
+    expect(await roomRevisions()).toEqual(before);
+    expect((await pmsAck(booking.id, 1, booking.version + 2)).status).toBe(409);
+    expect((await pmsAck(booking.id, 2, booking.version + 2)).status).toBe(200);
+  });
+
+  it("applies the current car limit to changes, preserves a booked non-vehicle price, and rejects invalid or stale requests", async () => {
+    const room = await seedBookable(client);
+    await seedTransfer("PER_BOOKING");
+    const booking = await book(room.id, { services: [transfer(3, "MS100")] });
+    await client.serviceOffering.update({
+      where: { id: "transfer" },
+      data: { maxVehicles: 2 },
+    });
+    const body = modifyBody(room.id, 36_225, { stay });
+    const send = (
+      services: ModifyReservationInput["services"],
+      actor = "admin",
+      version = booking.version,
+    ) =>
+      call(stayRoute, booking.id, "PUT", { ...body, services }, actor, version);
+    const before = await state(booking.id);
+    for (const [services, field] of [
+      [[transfer(4)], "services.0.vehicles"],
+      [[{ kind: "BREAKFAST", vehicles: 2 }], "services.0.vehicles"],
+      [[transfer(2), "AIRPORT_TRANSFER"], "services.1"],
+    ] as const) {
+      const response = await send(services);
+      expect(response.status).toBe(422);
+      expect(await response.json()).toMatchObject({
+        fieldErrors: { [field]: expect.anything() },
+      });
+    }
+    expect((await send([transfer(2)], "foreign")).status).toBe(404);
+    expect((await send([transfer(2)], "anonymous")).status).toBe(401);
+    const stale = await send(
+      [{ kind: "AIRPORT_TRANSFER", vehicles: "2" }],
+      "admin",
+      99,
+    );
+    expect(stale.status).toBe(412);
+    expect((await send(["AIRPORT_TRANSFER"])).status).toBe(422);
+    expect(await state(booking.id)).toEqual(before);
+    // Disabling new selections leaves the current limit usable for a booked transfer.
+    await client.serviceOffering.update({
+      where: { id: "transfer" },
+      data: { active: false },
+    });
+    const reduced = await send([transfer(2)]);
+    expect(reduced.status).toBe(200);
+    expect(await reduced.json()).toMatchObject({
+      price: {
+        totalMinor: 36_225,
+        services: [{ vehicles: 2, details: "MS100", amountMinor: 1500 }],
+      },
+    });
+  });
+
+  it("refuses adding a disabled offering without changing the booking", async () => {
+    const room = await seedBookable(client);
+    await seedTransfer();
+    await client.serviceOffering.update({
+      where: { id: "transfer" },
+      data: { active: false },
+    });
+    const booking = await book(room.id);
+    const before = await state(booking.id);
+    const rejected = await call(
+      stayRoute,
+      booking.id,
+      "PUT",
+      modifyBody(room.id, 36_225, { stay, services: ["AIRPORT_TRANSFER"] }),
+      "admin",
+      booking.version,
+    );
+    expect(rejected.status).toBe(409);
+    expect(await rejected.json()).toMatchObject({
+      code: "SERVICE_UNAVAILABLE",
+      context: { kind: "AIRPORT_TRANSFER" },
+    });
+    expect(await state(booking.id)).toEqual(before);
+    expect(await client.reservationService.count()).toBe(0);
+  });
+
+  it("permits details corrections on a started stay, retaining previously charged breakfast quantities", async () => {
+    const room = await seedBookable(client);
+    await seedTransfer();
+    await seedBreakfast();
+    const booking = await book(room.id, {
+      services: ["BREAKFAST", transfer(1)],
+    });
+    const change = (
+      now: string,
+      version: number,
+      services: ModifyReservationInput["services"],
+      total: number,
+      people = occupancy,
+    ) =>
+      staffReservationCommands({
+        client,
+        clock: { now: () => new Date(now) },
+      }).modify.execute(
+        admin,
+        booking.id,
+        version,
+        modifyBody(room.id, total, {
+          stay,
+          services,
+          lines: [{ roomTypeId: room.id, occupancy: people }],
+        }),
+      );
+    expect(
+      await change(
+        "2031-04-10T12:00:00Z",
+        booking.version,
+        ["BREAKFAST", transfer(2)],
+        44_850,
+      ),
+    ).toMatchObject({ ok: true });
+    const started = "2031-04-10T22:10:00Z"; // April 11 in Cairo.
+    for (const services of [[], [transfer(2)], ["BREAKFAST", transfer(3)]])
+      expect(
+        await change(started, booking.version + 1, services, 44_850),
+      ).toMatchObject({
+        ok: false,
+        error: {
+          code: "VALIDATION",
+          fieldErrors: { services: expect.anything() },
+        },
+      });
+    const moreGuests = { adults: 3, children: 1 };
+    expect(
+      await change(started, booking.version + 1, undefined, 48_300, moreGuests),
+    ).toMatchObject({ ok: true });
+    const breakfast = () =>
+      client.reservationService.findUniqueOrThrow({
+        where: {
+          reservationId_kind: { reservationId: booking.id, kind: "BREAKFAST" },
+        },
+      });
+    const charges = await breakfast();
+    expect(charges).toMatchObject({
+      amountMinor: 9000,
+      adultQuantity: 8,
+      childQuantity: 2,
+      occupancyEffectiveFrom: new Date("2031-04-11T00:00:00Z"),
+    });
+    expect(
+      await change(
+        "2031-04-12T12:00:00Z",
+        booking.version + 2,
+        ["BREAKFAST", transfer(undefined, "MS200")],
+        48_300,
+        moreGuests,
+      ),
+    ).toMatchObject({
+      ok: true,
+      value: {
+        reservation: {
+          snapshot: {
+            totalMinor: 48_300,
+            serviceLines: expect.arrayContaining([
+              expect.objectContaining({
+                kind: "AIRPORT_TRANSFER",
+                vehicles: 2,
+                details: "MS200",
+              }),
+            ]),
+          },
+        },
+      },
+    });
+    expect(await breakfast()).toEqual(charges);
+  });
+
+  it("keeps priced external reservations ineligible for services", async () => {
+    const room = await seedBookable(client);
+    await seedTransfer();
+    const booking = await book(room.id);
+    await client.reservation.update({
+      where: { id: booking.id },
+      data: {
+        source: "EXTERNAL",
+        externalReference: "change-external",
+        externalChannel: "Partner",
+      },
+    });
+    await client.reservationNight.updateMany({
+      data: { rateSource: "MANUAL" },
+    });
+    const before = await state(booking.id);
+    const result = await call(
+      stayRoute,
+      booking.id,
+      "PUT",
+      modifyBody(room.id, 36_225, {
+        stay,
+        services: ["AIRPORT_TRANSFER"],
+      }),
+      "admin",
+      booking.version,
+    );
+    expect(result.status).toBe(422);
+    expect(await result.json()).toMatchObject({
+      fieldErrors: { services: expect.anything() },
+    });
+    expect(await state(booking.id)).toEqual(before);
+    expect(await client.reservationService.count()).toBe(0);
+  });
+
+  it("rolls back service rows, totals, audit, flag and outbox if the change cannot commit", async () => {
+    const room = await seedBookable(client);
+    await seedTransfer();
+    const booking = await book(room.id);
+    await enter(booking.id);
+    const before = await state(booking.id);
+    const useCase = modifier(client, {
+      audit: (inner) => ({
+        append: async (event) => {
+          await inner.append(event);
+          throw new Error("test audit rollback");
+        },
+      }),
+    });
+    await expect(
+      useCase.execute(
+        admin,
+        booking.id,
+        booking.version,
+        modifyBody(room.id, 36_225, {
+          stay,
+          services: ["AIRPORT_TRANSFER"],
+          notifyGuest: true,
+        }),
+      ),
+    ).rejects.toThrow("test audit rollback");
+    expect(await state(booking.id)).toEqual(before);
+    expect(await client.reservationService.count()).toBe(0);
+  });
+
+  it("commits one competing service edit at the same version in 20 observed lock races", async () => {
+    for (let round = 0; round < 20; round += 1) {
+      await resetDatabase(client);
+      await createActor(client);
+      const room = await seedBookable(client);
+      await seedTransfer();
+      const booking = await book(room.id);
+      await withIndependentClients(2, async ([winner, contender]) => {
+        const gate = pausedAudit();
+        const first = modifier(winner!, { audit: gate.audit }).execute(
+          admin,
+          booking.id,
+          booking.version,
+          modifyBody(room.id, 37_950, {
+            stay,
+            services: [transfer(2, "First pickup")],
+          }),
+        );
+        const second = gate.reached.then(() =>
+          modifier(contender!).execute(
+            admin,
+            booking.id,
+            booking.version,
+            modifyBody(room.id, 39_675, {
+              stay,
+              services: [transfer(3, "Second pickup")],
+            }),
+          ),
+        );
+        try {
+          await Promise.race([
+            gate.reached,
+            first.then(() => {
+              throw new Error("First change did not reach audit.");
+            }),
+          ]);
+          await waitForLockWaiters(client, 1);
+        } finally {
+          gate.release();
+        }
+        const [committed, stale] = await Promise.all([first, second]);
+        expect(committed.ok).toBe(true);
+        expect(stale).toMatchObject({
+          ok: false,
+          error: { code: "STALE_VERSION" },
+        });
+      });
+      expect(await state(booking.id)).toMatchObject({
+        reservation: {
+          version: booking.version + 1,
+          changeSeq: 1,
+          totalMinor: 37_950,
+        },
+        changes: 1,
+        audits: 1,
+      });
+      expect(
+        await client.reservationService.findMany({
+          where: { reservationId: booking.id },
+        }),
+      ).toMatchObject([
+        { vehicles: 2, details: "First pickup", amountMinor: 3000 },
+      ]);
+    }
+  }, 120_000);
 });

@@ -30,7 +30,11 @@ afterAll(() => client.$disconnect());
 const snapshot = async () => ({
   reservations: await client.reservation.findMany({
     orderBy: { id: "asc" },
-    include: { rooms: { include: { nights: true } }, redemption: true },
+    include: {
+      rooms: { include: { nights: true } },
+      redemption: true,
+      services: true,
+    },
   }),
   guests: await client.guest.findMany({ orderBy: { id: "asc" } }),
   sync: await client.branchSyncCheckpoint.findMany({ orderBy: { id: "asc" } }),
@@ -90,6 +94,12 @@ describe("M8 create only seed", () => {
     );
     expect(websites.filter((row) => row.pmsEnteredAt === null)).toHaveLength(1);
     expect(websites.filter((row) => row.pmsEnteredAt !== null)).toHaveLength(1);
+    expect(websites.find((row) => row.pmsEnteredAt !== null)).toMatchObject({
+      servicesMinor: 3000,
+      subtotalMinor: 9000,
+      totalMinor: 10_350,
+      services: [{ kind: "AIRPORT_TRANSFER", vehicles: 1, amountMinor: 3000 }],
+    });
     expect(state.guests.filter((row) => row.blockedAt !== null)).toHaveLength(
       1,
     );
@@ -142,6 +152,9 @@ describe("M8 create only seed", () => {
     await seedDemoReservations(client, "actor-admin");
     await client.reservation.updateMany({
       data: { internalNotes: "Edited by staff" },
+    });
+    await client.reservationService.updateMany({
+      data: { details: "Edited pickup" },
     });
     await client.guest.updateMany({ data: { name: "Edited by staff" } });
     await client.whatsAppTemplate.updateMany({

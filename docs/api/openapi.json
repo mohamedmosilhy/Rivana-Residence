@@ -426,7 +426,7 @@
     "/api/v1/staff/reservations/{id}/stay": {
       "put": {
         "operationId": "modifyStaffReservationStay",
-        "summary": "API-S6. Change the stay, units or occupancy of a confirmed reservation. Only new nights are re-priced (Q-19, PR-11); services are kept (service edits arrive in M8-T9b).",
+        "summary": "API-S6. Change the stay, units, occupancy or services of a confirmed reservation. New nights and added services use current prices; retained services keep their stored pricing terms (PR-11).",
         "tags": [
           "Reservations"
         ],
@@ -485,7 +485,7 @@
             }
           },
           "default": {
-            "description": "Problem details. Codes: INTERNAL, UNAUTHENTICATED, FORBIDDEN, NOT_FOUND, CROSS_SITE_REQUEST, MALFORMED_JSON, PAYLOAD_TOO_LARGE, UNSUPPORTED_MEDIA_TYPE, VALIDATION, PRECONDITION_REQUIRED, STALE_VERSION, INVALID_TRANSITION, TRY_AGAIN, INVENTORY_UNAVAILABLE, PRICE_CHANGED.",
+            "description": "Problem details. Codes: INTERNAL, UNAUTHENTICATED, FORBIDDEN, NOT_FOUND, CROSS_SITE_REQUEST, MALFORMED_JSON, PAYLOAD_TOO_LARGE, UNSUPPORTED_MEDIA_TYPE, VALIDATION, PRECONDITION_REQUIRED, STALE_VERSION, INVALID_TRANSITION, TRY_AGAIN, INVENTORY_UNAVAILABLE, PRICE_CHANGED, SERVICE_UNAVAILABLE.",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -4113,7 +4113,7 @@
             }
           },
           "services": {
-            "description": "Not available until M8-T9b: sending it returns 422. Omit it to keep the services.",
+            "description": "Omit to keep all services. Send the full list of selected kinds to add or remove services (an empty list removes all). Omitted cars or details on a retained service keep their values. Blank details clear the text. Car edits on a retained transfer use the branch limit even if the offering is disabled. They affect the price only for a stored PER_VEHICLE transfer. Once the stay has started, only details may change. External reservations cannot include services.",
             "type": "array",
             "items": {
               "anyOf": [
