@@ -62,11 +62,21 @@ export class PrismaReservationHistoryReader
   }
 }
 
+const CANCELLATION_REASON_CODES: ReadonlySet<string> = new Set([
+  "GUEST_REQUEST",
+  "CROSS_SYSTEM_CONFLICT",
+  "INVALID_DETAILS",
+  "OTHER",
+]);
+
 function reservationChanges(action: string, changes: Prisma.JsonValue) {
-  const safe: Record<string, number | boolean | null> = {};
+  const safe: Record<string, string | number | boolean | null> = {};
   if (
     (action !== "reservation.created" &&
-      action !== "reservation.staff-created") ||
+      action !== "reservation.staff-created" &&
+      action !== "reservation.stay-modified" &&
+      action !== "reservation.cancelled" &&
+      action !== "reservation.pms-update-entered") ||
     !changes ||
     typeof changes !== "object" ||
     Array.isArray(changes)
@@ -77,6 +87,15 @@ function reservationChanges(action: string, changes: Prisma.JsonValue) {
     "units",
     "priceOverridden",
     "confirmationRequested",
+    "oldTotalMinor",
+    "newTotalMinor",
+    "overrideFromMinor",
+    "overrideToMinor",
+    "flagPmsUpdate",
+    "changeSeq",
+    "couponReleased",
+    "guestNotified",
+    "noteProvided",
   ] as const) {
     const value = changes[key];
     if (
@@ -86,5 +105,12 @@ function reservationChanges(action: string, changes: Prisma.JsonValue) {
     )
       safe[key] = value;
   }
+  // The cancellation reason is a fixed code, never the free text note.
+  if (
+    action === "reservation.cancelled" &&
+    typeof changes.reason === "string" &&
+    CANCELLATION_REASON_CODES.has(changes.reason)
+  )
+    safe.reason = changes.reason;
   return safe;
 }

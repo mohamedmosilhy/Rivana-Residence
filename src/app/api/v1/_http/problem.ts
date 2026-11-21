@@ -87,6 +87,20 @@ export const PROBLEMS: Readonly<Record<ProblemCode, ProblemDefinition>> = {
     title: "This external reference already exists in the branch",
   },
   PRICE_CHANGED: { status: 409, title: "The price changed" },
+  INVALID_TRANSITION: {
+    status: 409,
+    title: "This reservation cannot change that way",
+  },
+  STALE_VERSION: { status: 412, title: "This reservation has changed" },
+  PRECONDITION_REQUIRED: { status: 428, title: "Send an If-Match header" },
+  PMS_UPDATE_STALE: {
+    status: 409,
+    title: "A newer change needs entering in the hotel system",
+  },
+  NO_PMS_UPDATE_PENDING: {
+    status: 409,
+    title: "No hotel system update is pending",
+  },
   MALFORMED_JSON: { status: 400, title: "The request body is not valid JSON" },
   INVALID_QUERY: { status: 400, title: "The query parameters are not valid" },
   PAYLOAD_TOO_LARGE: { status: 413, title: "The request body is too large" },

@@ -23,6 +23,7 @@ export function renderReservationEmail(
   const heading = {
     "reservation.confirmed": "Your reservation is confirmed",
     "reservation.cancelled": "The hotel has cancelled your reservation",
+    "reservation.modified": "Your reservation was changed",
     "reservation.manage-link": "Your reservation manage link",
     "reservation.staff-alert": "New confirmed website reservation",
   }[kind];

@@ -1,6 +1,6 @@
 # M8 — Reservations, immediate confirmation, phone verification, and messages
 
-Status: **In progress** (14/19 tasks accepted: M8-T0 on 2026-11-13, M8-T0b on 2026-11-14, M8-T1 and M8-T2 on 2026-11-15, M8-T3 and M8-T3b on 2026-11-17, M8-T4 backend, M8-T4b screen, M8-T5 phone verification on 2026-11-18, M8-T5b browser coverage, M8-T6 notifications, M8-T7 website reservation use case and M8-T7b public booking API on 2026-11-20, and M8-T8 staff and external reservations on 2026-11-21; spec [0005](../../specs/0005-m8-reservations.md) and the task breakdown approved, 2026-11-14; scope extended by the owner on 2026-11-17 with the transfer car count, M8-T3b, and the shared change engine for guest changes, M8-T9 and T9b, Q-82…Q-85, Q-90). Branch: `m8-reservations`. Follow the [milestone loop](./README.md#the-loop-every-milestone-follows).
+Status: **In progress** (15/19 tasks accepted: M8-T0 on 2026-11-13, M8-T0b on 2026-11-14, M8-T1 and M8-T2 on 2026-11-15, M8-T3 and M8-T3b on 2026-11-17, M8-T4 backend, M8-T4b screen, M8-T5 phone verification on 2026-11-18, M8-T5b browser coverage, M8-T6 notifications, M8-T7 website reservation use case and M8-T7b public booking API on 2026-11-20, M8-T8 staff and external reservations, and M8-T9 stay changes and cancellation on 2026-11-21; spec [0005](../../specs/0005-m8-reservations.md) and the task breakdown approved, 2026-11-14; scope extended by the owner on 2026-11-17 with the transfer car count, M8-T3b, and the shared change engine for guest changes, M8-T9 and T9b, Q-82…Q-85, Q-90). Branch: `m8-reservations`. Follow the [milestone loop](./README.md#the-loop-every-milestone-follows).
 
 > **Done first (accepted 2026-11-13): [M8-T0, application ports consolidation](#0-prerequisite-task-m8-t0-application-ports-consolidation).** The owner decided on 2026-11-13 that the old shared `src/application/ports/` files move into their modules before any other M8 task starts, so every M8 repository and port is written in the module layout from the start. [M8-T0b](#0b-follow-up-task-m8-t0b-public-surfaces-for-the-cms-modules) was accepted on 2026-11-14. Next: the rest of M8, task by task.
 
@@ -74,7 +74,7 @@ Planned, reviewed, and accepted one task at a time ([agent-workflow.md](../../en
 | M8-T7 | `CreateWebsiteReservation` (pay at hotel): persistence, per phone caps, coupon lock and redemption, guest upsert, audit, outbox, `PublicListingReader` | Critical | T3b, T5, T6, M7 | AC 1–4; T-RES, C-1…C-3, C-11 | Accepted (2026-11-20) |
 | M8-T7b | Public API P7, idempotency replay over HTTP, P6 per phone limit change, OpenAPI, captured log test, mid-milestone security review | Critical | T7 | AC 1, 8; T-HTTP, C-9 | Accepted (2026-11-20) |
 | M8-T8 | Staff and external reservations: `CreateStaffReservation`, `RecordExternalReservation`, plus the reads S1, S2, S15 | Critical | T7 | AC 9; T-RES, T-AUTHZ-2, C-5, C-8 | Accepted (2026-11-21) |
-| M8-T9 | Inventory-changing transitions: staff cancellation with coupon release; the shared change engine `ModifyReservation` for stay changes (dates, units, occupancy), migration `reservation_changes` (`ReservationChange`, hotel-system update flag), S55 (Q-84) | Critical | T8 | AC 6, 12; C-4 (block vs booking), C-10; T-CHG-1…4 | Not started |
+| M8-T9 | Inventory-changing transitions: staff cancellation with coupon release; the shared change engine `ModifyReservation` for stay changes (dates, units, occupancy), migration `reservation_changes` (`ReservationChange`, hotel-system update flag), S55 (Q-84) | Critical | T8 | AC 6, 12; C-4 (block vs booking), C-10; T-CHG-1…4 | Accepted (2026-11-21) |
 | M8-T9b | Service changes through the change engine: add, remove, car count, flight details on S6 (Q-83); PR-11 for added and kept services | Critical | T9, T3b | AC 12; T-CHG-5…7 | Not started |
 | M8-T10 | Operational transitions: guest edit, unit assignment, check-in, check-out, no-show, `MarkEnteredInHotelSystem`, resend link | Critical | T8 | AC 5; T-PMS-1…2, C-7, C-9 | Not started |
 | M8-T11 | Guests and guest access: search, profile, block and unblock; manage-token and guest-session reads | Critical | T5, T7b | AC 7, 8; T-GST, T-LKP-1…4 | Not started |
@@ -168,7 +168,7 @@ P7 (pay at hotel), P9, P10, G1, G3, G4 (view only), S1–S6, S9–S16, S28, S29,
 
 ## Database impact
 
-Additive migrations: `reservations` (M8-T1), `transfer_vehicle_unit` and `transfer_vehicles` (M8-T3b), `reservation_changes` (M8-T9). Demo seed: reservations in every status (fictional guests, `+1 555 01xx` numbers), a blocked guest, a coupon redemption, unentered and entered website bookings, sync history.
+Additive migrations: `reservations` (M8-T1), `transfer_vehicle_unit` and `transfer_vehicles` (M8-T3b), `reservation_external_channel` (M8-T8), and `reservation_changes`, `reservation_change_cancel` and `service_occupancy_effective_date` (M8-T9). Demo seed: reservations in every status (fictional guests, `+1 555 01xx` numbers), a blocked guest, a coupon redemption, unentered and entered website bookings, sync history.
 
 ## API impact
 

@@ -13,6 +13,7 @@ const vars = {
 it.each([
   ["reservation.confirmed", "confirmed"],
   ["reservation.cancelled", "cancelled"],
+  ["reservation.modified", "was changed"],
   ["reservation.manage-link", "manage link"],
   ["reservation.staff-alert", "enter this booking in the hotel system"],
 ] as const)("renders %s in English text and escaped HTML", (kind, expected) => {

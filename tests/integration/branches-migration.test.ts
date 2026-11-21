@@ -305,6 +305,9 @@ describe("branches_and_staff_roles migration on M3 data", () => {
       "20261117120000_transfer_vehicle_unit",
       "20261117120100_transfer_vehicles",
       "20261121120000_reservation_external_channel",
+      "20261122120000_reservation_changes",
+      "20261122120100_reservation_change_cancel",
+      "20261122120200_service_occupancy_effective_date",
     ]);
     await db.query(`
       INSERT INTO "ServiceOffering" (id,"branchId",kind,"priceUnit","priceMinor","updatedAt") VALUES ('m8-service','${DEFAULT_BRANCH_ID}','BREAKFAST','PER_BOOKING',1000,now());

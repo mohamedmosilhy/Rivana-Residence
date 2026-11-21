@@ -169,6 +169,7 @@ export interface StaffActionLimiter {
 type GuestMessageKind =
   | "reservation.confirmed"
   | "reservation.cancelled"
+  | "reservation.modified"
   | "reservation.manage-link";
 export type MessageKind = GuestMessageKind | "reservation.staff-alert";
 export type MessageChannel = "EMAIL" | "WHATSAPP";
@@ -218,6 +219,7 @@ export type ReservationMessageEvent =
       manageToken?: string;
     }
   | { kind: "reservation.cancelled"; notifyGuest: boolean; reason: string }
+  | { kind: "reservation.modified"; notifyGuest: boolean }
   | { kind: "reservation.manage-link"; manageToken: string };
 
 export type ClaimedMessage = {

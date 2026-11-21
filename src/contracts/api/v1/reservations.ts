@@ -140,6 +140,44 @@ export const CreateStaffReservationRequest = z.strictObject({
     .optional(),
   sendConfirmation: z.boolean(),
 });
+const Version = z.number().int().min(1).max(2_147_483_647);
+/** S6. The `If-Match` header carries the reservation version. */
+export const ModifyReservationStayRequest = z.strictObject({
+  stay: Stay.describe("Branch-local dates with a stay of 1 to 366 nights."),
+  lines: z.array(StaffLine).min(1).max(5),
+  services: z
+    .array(ServiceInput)
+    .optional()
+    .describe(
+      "Not available until M8-T9b: sending it returns 422. Omit it to keep the services.",
+    ),
+  acceptedTotal: Money.describe(
+    "The total from the last re-quote, including VAT. A different server total returns 409 PRICE_CHANGED.",
+  ),
+  priceOverride: z
+    .strictObject({
+      lines: z.array(Amounts).min(1).max(5),
+      reason: PlainText(500).min(1),
+    })
+    .optional(),
+  notifyGuest: z.boolean().optional(),
+});
+/** S9. The `If-Match` header carries the reservation version. */
+export const CancelReservationRequest = z.strictObject({
+  reason: z.enum([
+    "GUEST_REQUEST",
+    "CROSS_SYSTEM_CONFLICT",
+    "INVALID_DETAILS",
+    "OTHER",
+  ]),
+  note: PlainText(500).optional(),
+  notifyGuest: z.boolean(),
+});
+/** S55. `changeSeq` is the change the staff member entered into the hotel system. */
+export const PmsUpdateRequest = z.strictObject({
+  changeSeq: Version,
+  note: PlainText(500).optional(),
+});
 export const RecordExternalReservationRequest = z.strictObject({
   ...StaffFields,
   guest: StaffGuestInput.required({ email: true }),
@@ -284,6 +322,8 @@ export const StaffReservationDetail = ListItem.omit({
   }),
   pmsEnteredAt: z.iso.datetime().nullable(),
   pmsEnteredById: Id.nullable(),
+  changeSeq: z.number().int().min(0),
+  pmsUpdatePendingSince: z.iso.datetime().nullable(),
   allowedActions: z.array(z.string()),
 });
 

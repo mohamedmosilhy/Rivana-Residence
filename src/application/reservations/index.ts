@@ -9,6 +9,8 @@ export type {
   StoredReservationLine,
   StoredReservationNight,
   StoredReservationSnapshot,
+  StayReplacement,
+  ReservationChangeInsert,
 } from "./ports";
 export type { ReservationStorageContext } from "./storage-context";
 export {
@@ -36,3 +38,19 @@ export {
   type StaffReservationQuery,
   type ReservationListItem,
 } from "./staff-reservation-reads";
+export {
+  ModifyReservation,
+  type ModifyReservationContext,
+  type ModifyReservationInput,
+} from "./modify-reservation";
+export {
+  CancelReservation,
+  CANCELLATION_REASONS,
+  type CancelReservationContext,
+  type CancelReservationInput,
+  type CancellationReason,
+} from "./cancel-reservation";
+export {
+  MarkChangeEnteredInHotelSystem,
+  type MarkChangeEnteredInput,
+} from "./mark-change-entered";

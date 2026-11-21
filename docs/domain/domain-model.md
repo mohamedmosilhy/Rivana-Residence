@@ -217,7 +217,7 @@ Reservation
   paymentStatus: NOT_REQUIRED | AWAITING | PAID | REFUND_PENDING | REFUNDED
   holdExpiresAt?                       (AWAITING_PAYMENT only)
   pmsEnteredAt?, pmsEnteredById?       (WEBSITE source; Q-40)
-  pmsUpdatePendingSince?               (planned M8-T9: changed after entry, Q-84)
+  pmsUpdatePendingSince?               (M8-T9: changed after entry, kept from the first change until S55, plus changeSeq, Q-84)
   changes: ReservationChange[]         (planned M8-T9: actor kind, before and after totals and details)
   externalReference?                   (required when source = EXTERNAL)
   internalNotes?                       (staff only)

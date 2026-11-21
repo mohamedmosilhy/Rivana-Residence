@@ -116,6 +116,8 @@ export function staffReservation(
     },
     pmsEnteredAt: row.pmsEnteredAt?.toISOString() ?? null,
     pmsEnteredById: row.pmsEnteredById,
+    changeSeq: row.changeSeq,
+    pmsUpdatePendingSince: row.pmsUpdatePendingSince?.toISOString() ?? null,
     allowedActions: [...row.allowedActions],
   };
 }

@@ -19,3 +19,12 @@ export {
   type ReservationRecord,
 } from "./reservation";
 export { planNightlyRepricing } from "./stay-modification";
+export {
+  planReservationChange,
+  summarizeReservation,
+  type ChangeSummary,
+  type CurrentChangeLine,
+  type PlannedChangeLine,
+  type RequestedChangeLine,
+  type ReservationChangePlan,
+} from "./reservation-change-plan";

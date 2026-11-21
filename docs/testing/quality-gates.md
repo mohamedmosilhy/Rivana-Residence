@@ -39,7 +39,11 @@ Record exact commands and counts in the review package. If a gate cannot run, sa
 
 The owner selected Node **26.13.0 LTS** for the Mac, CI, and hosting. On macOS with npm **11.20.0**, clean `npm ci --no-audit` and `npm run check` passed (format, lint, typecheck, **67 unit files / 1,373 tests**, production build). The full PostgreSQL integration suite passed **29 files / 391 tests**; full Chromium E2E passed **175 tests**, with **30 intentionally skipped**. Independent review by `gpt-6-astra` approved with zero findings. The [runtime report](../delivery/reports/node-26-runtime-alignment.md) records exact commands, unchanged development audit findings, and the nonfatal upstream Tailwind loader deprecation under Node 26. Those Tailwind and media tracing warnings were subsequently resolved in M6-T10. These results do not replace the historical task acceptance evidence below or claim remote Linux CI has run.
 
-## Latest accepted task results (2026-11-21, M8-T8)
+## Latest accepted task results (2026-11-21, M8-T9)
+
+`npm run check` passed formatting, lint, typecheck, 2,176 unit tests across 99 files, and the production build. PostgreSQL integration passed 804 tests across 50 files. The four dedicated change concurrency scenarios passed 20 rounds each. The populated upgrades and Prisma drift check passed. Full Chromium passed 204 tests with 33 intentional skips, including the new staff reservation change case on desktop and mobile. [Task log](../delivery/reports/m8-reservations.md#task-log) and [independent review](../reviews/2026-11-21-m8-t9.md).
+
+## Previous accepted task results (2026-11-21, M8-T8)
 
 `npm run check` passed formatting, lint, typecheck, 2,154 unit tests across 98 files, and the production build. `npm run test:integration` passed 761 tests across 49 files. The dedicated staff reservation concurrency run passed five scenarios at 20 rounds each. The populated upgrade and Prisma drift check passed. The full `npm run test:e2e` run exited 0 with 201 passed, 33 skipped and one flaky mobile admin keyboard focus test. The new reservation API tests passed on both Chromium projects. [Task log](../delivery/reports/m8-reservations.md#task-log) and [independent review](../reviews/2026-11-21-m8-t8.md).
 

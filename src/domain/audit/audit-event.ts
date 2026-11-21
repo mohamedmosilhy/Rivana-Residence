@@ -163,6 +163,39 @@ export type AuditChanges = {
     priceOverridden: boolean;
     confirmationRequested: boolean;
   }>;
+  /** Totals and unit counts only. An override keeps original, overridden amount and the reason is the event's `reason`. */
+  "reservation.stay-modified": Readonly<{
+    reference: string;
+    changeSeq: number;
+    before: ChangeSummaryAudit;
+    after: ChangeSummaryAudit;
+    oldTotalMinor: number | null;
+    newTotalMinor: number | null;
+    priceOverridden: boolean;
+    overrideFromMinor: number | null;
+    overrideToMinor: number | null;
+    flagPmsUpdate: boolean;
+    guestNotified: boolean;
+  }>;
+  "reservation.cancelled": Readonly<{
+    reference: string;
+    reason:
+      | "GUEST_REQUEST"
+      | "CROSS_SYSTEM_CONFLICT"
+      | "INVALID_DETAILS"
+      | "OTHER";
+    noteProvided: boolean;
+    couponReleased: boolean;
+    guestNotified: boolean;
+    /** Set when the booking was already in the hotel system: the cancellation is a pending change (Q-84). */
+    flagPmsUpdate: boolean;
+    changeSeq: number | null;
+  }>;
+  "reservation.pms-update-entered": Readonly<{
+    reference: string;
+    changeSeq: number;
+    pendingSince: string;
+  }>;
   /** The outcome of an Admin test message; the recipient is never stored. */
   "whatsapp-test.sent": Readonly<{
     templateId: string | null;
@@ -171,6 +204,24 @@ export type AuditChanges = {
     failure: string | null;
   }>;
 };
+
+/** No personal values: dates, unit counts per listing and money only. */
+type ChangeSummaryAudit = Readonly<{
+  status: string;
+  assignedUnits: number;
+  checkIn: string;
+  checkOut: string;
+  units: readonly Readonly<{
+    roomTypeId: string;
+    adults: number;
+    children: number;
+  }>[];
+  accommodationMinor: number | null;
+  servicesMinor: number | null;
+  discountMinor: number | null;
+  vatMinor: number | null;
+  totalMinor: number | null;
+}>;
 
 /** The staff preview text is not copied; only that it changed. */
 type WhatsAppTemplateSnapshot = Readonly<{

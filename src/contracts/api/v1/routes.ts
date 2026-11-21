@@ -5,7 +5,7 @@ import {
   CouponQuery,
   CouponList,
 } from "./coupons";
-import type { z } from "zod";
+import { z } from "zod";
 
 import {
   RoomTypeQuery,
@@ -21,7 +21,10 @@ import {
 import { AvailabilityQuery, AvailabilityResponse } from "./availability";
 import { QuoteRequest, QuoteResponse } from "./quotes";
 import {
+  CancelReservationRequest,
   CreateStaffReservationRequest,
+  ModifyReservationStayRequest,
+  PmsUpdateRequest,
   RecordExternalReservationRequest,
   StaffReservationQuery,
   StaffReservationDetail,
@@ -148,6 +151,35 @@ const staffWriteResponses = {
   },
 };
 
+const ifMatch = [
+  {
+    name: "If-Match",
+    required: true,
+    description:
+      'The reservation version from the last read, formatted as "v<version>". Missing returns 428, an old one 412.',
+    schema: z.string().regex(/^(?:W\/)?"?v\d{1,10}"?$/),
+  },
+];
+const changeErrors = [
+  ...staffReadErrors,
+  "CROSS_SITE_REQUEST",
+  "MALFORMED_JSON",
+  "PAYLOAD_TOO_LARGE",
+  "UNSUPPORTED_MEDIA_TYPE",
+  "VALIDATION",
+  "PRECONDITION_REQUIRED",
+  "STALE_VERSION",
+  "INVALID_TRANSITION",
+  "TRY_AGAIN",
+];
+const changeResponse = (description: string) => ({
+  200: {
+    description,
+    schema: StaffReservationDetail,
+    headers: { ETag: 'New reservation version formatted as "v<version>".' },
+  },
+});
+
 export const API_ROUTES: readonly ApiRoute[] = [
   {
     method: "post",
@@ -255,6 +287,45 @@ export const API_ROUTES: readonly ApiRoute[] = [
     request: RecordExternalReservationRequest,
     responses: staffWriteResponses,
     errors: [...staffWriteErrors, "EXTERNAL_REFERENCE_EXISTS"],
+  },
+  {
+    method: "put",
+    path: staffReservationPath + "/{id}/stay",
+    operationId: "modifyStaffReservationStay",
+    summary:
+      "API-S6. Change the stay, units or occupancy of a confirmed reservation. Only new nights are re-priced (Q-19, PR-11); services are kept (service edits arrive in M8-T9b).",
+    tag: "Reservations",
+    security: "staff",
+    headers: ifMatch,
+    request: ModifyReservationStayRequest,
+    responses: changeResponse("The changed reservation."),
+    errors: [...changeErrors, "INVENTORY_UNAVAILABLE", "PRICE_CHANGED"],
+  },
+  {
+    method: "post",
+    path: staffReservationPath + "/{id}/cancellation",
+    operationId: "cancelStaffReservation",
+    summary:
+      "API-S9. Cancel an unpaid reservation, freeing its units and coupon redemption. Repeating it returns the cancelled reservation. Paid cancellation arrives in M9.",
+    tag: "Reservations",
+    security: "staff",
+    headers: ifMatch,
+    request: CancelReservationRequest,
+    responses: changeResponse("The cancelled reservation."),
+    errors: changeErrors,
+  },
+  {
+    method: "post",
+    path: staffReservationPath + "/{id}/pms-update",
+    operationId: "markReservationChangeEntered",
+    summary:
+      'API-S55. Record that the latest change was entered in the hotel system, clearing "changed, update hotel system".',
+    tag: "Reservations",
+    security: "staff",
+    headers: ifMatch,
+    request: PmsUpdateRequest,
+    responses: changeResponse("The reservation without the pending flag."),
+    errors: [...changeErrors, "NO_PMS_UPDATE_PENDING", "PMS_UPDATE_STALE"],
   },
   {
     method: "get",

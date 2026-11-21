@@ -33,6 +33,8 @@ export class QueueReservationMessages {
       booking.status !== "CANCELLED"
     )
       return;
+    if (event.kind === "reservation.modified" && booking.status !== "CONFIRMED")
+      return;
     if ("notifyGuest" in event && !event.notifyGuest && !websiteConfirmation)
       return;
 
@@ -57,7 +59,11 @@ export class QueueReservationMessages {
       payload.checkIn = booking.checkIn;
       payload.checkOut = booking.checkOut;
     }
-    if (event.kind === "reservation.confirmed" && booking.totalMinor !== null)
+    if (
+      (event.kind === "reservation.confirmed" ||
+        event.kind === "reservation.modified") &&
+      booking.totalMinor !== null
+    )
       payload.total = `USD ${(booking.totalMinor / 100).toFixed(2)}`;
     if (event.kind === "reservation.cancelled") payload.reason = event.reason;
     if ("manageToken" in event && event.manageToken) {

@@ -8,7 +8,7 @@ import type { StaffPrincipal } from "@/application/auth/ports";
 import type { ReservationHistoryReader } from "@/application/audit";
 import type { PagedResult, PageRequest } from "@/application/shared/pagination";
 import { failure, success, type Result } from "@/application/shared/result";
-import { roleHasCapability } from "@/domain/auth/capabilities";
+import { roleHasCapability, type Capability } from "@/domain/auth/capabilities";
 import {
   canEditReservationGuest,
   canModifyReservationStay,
@@ -94,7 +94,7 @@ export class GetReservation {
   ) {}
 
   async execute(staff: StaffPrincipal | null, id: string) {
-    const found = await findReservation(this.reader, staff, id);
+    const found = await findStaffReservation(this.reader, staff, id);
     if (!found.ok) return found;
     const { row, principal } = found.value;
     return success({
@@ -110,7 +110,7 @@ export class GetReservationHistory {
   ) {}
 
   async execute(staff: StaffPrincipal | null, id: string) {
-    const result = await findReservation(this.reader, staff, id);
+    const result = await findStaffReservation(this.reader, staff, id);
     if (!result.ok) return result;
     const { row } = result.value;
     return success({
@@ -119,12 +119,18 @@ export class GetReservationHistory {
   }
 }
 
-async function findReservation(
+/**
+ * The unlocked, branch scoped read every staff command starts with. A foreign
+ * or missing reservation is `NOT_FOUND`; the use case re-reads it under its
+ * locks before changing anything.
+ */
+export async function findStaffReservation(
   reader: Pick<StaffReservationReader, "findVisible">,
   staff: StaffPrincipal | null,
   id: string,
+  capability: Capability = "reservations:read",
 ): Promise<Result<{ row: StoredReservation; principal: StaffPrincipal }>> {
-  const access = authorize(staff, "reservations:read");
+  const access = authorize(staff, capability);
   if (!access.ok) return access;
   const scope = branchScope(access.value);
   if (
@@ -134,8 +140,7 @@ async function findReservation(
   )
     return notFound();
   const row = await reader.findVisible(id, scope);
-  return row &&
-    authorizeBranch(access.value, "reservations:read", row.branchId).ok
+  return row && authorizeBranch(access.value, capability, row.branchId).ok
     ? success({ row, principal: access.value })
     : notFound();
 }
@@ -175,6 +180,11 @@ function staffReservationActions(
     (state.status === "CONFIRMED" || state.status === "CHECKED_IN")
   )
     actions.push("MARK_ENTERED_IN_HOTEL_SYSTEM");
+  if (
+    roleHasCapability(staff.role, "reservations:pms-entry") &&
+    state.pmsUpdatePendingSince !== null
+  )
+    actions.push("MARK_CHANGE_ENTERED_IN_HOTEL_SYSTEM");
   return actions;
 }
 
@@ -209,6 +219,8 @@ export function staffReservationView(
     },
     pmsEnteredAt: row.pmsEnteredAt,
     pmsEnteredById: row.pmsEnteredById,
+    changeSeq: row.changeSeq,
+    pmsUpdatePendingSince: row.pmsUpdatePendingSince,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
     statusChangedAt: row.statusChangedAt,

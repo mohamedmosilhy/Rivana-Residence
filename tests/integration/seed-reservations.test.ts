@@ -94,6 +94,19 @@ describe("M8 create only seed", () => {
       1,
     );
     expect(await client.couponRedemption.count()).toBe(1);
+    expect(await client.reservationChange.count()).toBe(1);
+    const demoChange = await client.reservationChange.findFirstOrThrow({
+      include: { reservation: true },
+    });
+    expect(demoChange.oldTotalMinor).toBe(demoChange.reservation.totalMinor);
+    expect((demoChange.before as { totalMinor: number }).totalMinor).toBe(
+      demoChange.reservation.totalMinor,
+    );
+    expect(
+      await client.reservation.count({
+        where: { pmsUpdatePendingSince: { not: null } },
+      }),
+    ).toBe(1);
     expect(state.sync.map((row) => row.kind)).toEqual(["STARTED", "COMPLETED"]);
     expect(state.templates).toHaveLength(2);
     expect(

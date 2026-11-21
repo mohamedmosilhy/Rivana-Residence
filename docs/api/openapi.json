@@ -423,6 +423,228 @@
         }
       }
     },
+    "/api/v1/staff/reservations/{id}/stay": {
+      "put": {
+        "operationId": "modifyStaffReservationStay",
+        "summary": "API-S6. Change the stay, units or occupancy of a confirmed reservation. Only new nights are re-priced (Q-19, PR-11); services are kept (service edits arrive in M8-T9b).",
+        "tags": [
+          "Reservations"
+        ],
+        "security": [
+          {
+            "staffSession": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "required": true,
+            "description": "The reservation version from the last read, formatted as \"v<version>\". Missing returns 428, an old one 412.",
+            "schema": {
+              "type": "string",
+              "pattern": "^(?:W\\/)?\"?v\\d{1,10}\"?$"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ModifyReservationStayRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The changed reservation.",
+            "headers": {
+              "ETag": {
+                "description": "New reservation version formatted as \"v<version>\".",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StaffReservationDetail"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Problem details. Codes: INTERNAL, UNAUTHENTICATED, FORBIDDEN, NOT_FOUND, CROSS_SITE_REQUEST, MALFORMED_JSON, PAYLOAD_TOO_LARGE, UNSUPPORTED_MEDIA_TYPE, VALIDATION, PRECONDITION_REQUIRED, STALE_VERSION, INVALID_TRANSITION, TRY_AGAIN, INVENTORY_UNAVAILABLE, PRICE_CHANGED.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/staff/reservations/{id}/cancellation": {
+      "post": {
+        "operationId": "cancelStaffReservation",
+        "summary": "API-S9. Cancel an unpaid reservation, freeing its units and coupon redemption. Repeating it returns the cancelled reservation. Paid cancellation arrives in M9.",
+        "tags": [
+          "Reservations"
+        ],
+        "security": [
+          {
+            "staffSession": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "required": true,
+            "description": "The reservation version from the last read, formatted as \"v<version>\". Missing returns 428, an old one 412.",
+            "schema": {
+              "type": "string",
+              "pattern": "^(?:W\\/)?\"?v\\d{1,10}\"?$"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CancelReservationRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The cancelled reservation.",
+            "headers": {
+              "ETag": {
+                "description": "New reservation version formatted as \"v<version>\".",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StaffReservationDetail"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Problem details. Codes: INTERNAL, UNAUTHENTICATED, FORBIDDEN, NOT_FOUND, CROSS_SITE_REQUEST, MALFORMED_JSON, PAYLOAD_TOO_LARGE, UNSUPPORTED_MEDIA_TYPE, VALIDATION, PRECONDITION_REQUIRED, STALE_VERSION, INVALID_TRANSITION, TRY_AGAIN.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/staff/reservations/{id}/pms-update": {
+      "post": {
+        "operationId": "markReservationChangeEntered",
+        "summary": "API-S55. Record that the latest change was entered in the hotel system, clearing \"changed, update hotel system\".",
+        "tags": [
+          "Reservations"
+        ],
+        "security": [
+          {
+            "staffSession": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "required": true,
+            "description": "The reservation version from the last read, formatted as \"v<version>\". Missing returns 428, an old one 412.",
+            "schema": {
+              "type": "string",
+              "pattern": "^(?:W\\/)?\"?v\\d{1,10}\"?$"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PmsUpdateRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The reservation without the pending flag.",
+            "headers": {
+              "ETag": {
+                "description": "New reservation version formatted as \"v<version>\".",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StaffReservationDetail"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Problem details. Codes: INTERNAL, UNAUTHENTICATED, FORBIDDEN, NOT_FOUND, CROSS_SITE_REQUEST, MALFORMED_JSON, PAYLOAD_TOO_LARGE, UNSUPPORTED_MEDIA_TYPE, VALIDATION, PRECONDITION_REQUIRED, STALE_VERSION, INVALID_TRANSITION, TRY_AGAIN, NO_PMS_UPDATE_PENDING, PMS_UPDATE_STALE.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/staff/reservations/{id}/history": {
       "get": {
         "operationId": "getStaffReservationHistory",
@@ -3648,6 +3870,32 @@
         ],
         "additionalProperties": false
       },
+      "CancelReservationRequest": {
+        "type": "object",
+        "properties": {
+          "reason": {
+            "type": "string",
+            "enum": [
+              "GUEST_REQUEST",
+              "CROSS_SYSTEM_CONFLICT",
+              "INVALID_DETAILS",
+              "OTHER"
+            ]
+          },
+          "note": {
+            "type": "string",
+            "maxLength": 500
+          },
+          "notifyGuest": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "reason",
+          "notifyGuest"
+        ],
+        "additionalProperties": false
+      },
       "CreateStaffReservationRequest": {
         "type": "object",
         "properties": {
@@ -3831,6 +4079,164 @@
           "guest",
           "lines",
           "sendConfirmation"
+        ],
+        "additionalProperties": false
+      },
+      "ModifyReservationStayRequest": {
+        "type": "object",
+        "properties": {
+          "stay": {
+            "description": "Branch-local dates with a stay of 1 to 366 nights.",
+            "$ref": "#/components/schemas/Stay"
+          },
+          "lines": {
+            "minItems": 1,
+            "maxItems": 5,
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "roomTypeId": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 32
+                },
+                "occupancy": {
+                  "$ref": "#/components/schemas/Occupancy"
+                }
+              },
+              "required": [
+                "roomTypeId",
+                "occupancy"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "services": {
+            "description": "Not available until M8-T9b: sending it returns 422. Omit it to keep the services.",
+            "type": "array",
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "enum": [
+                    "BREAKFAST",
+                    "AIRPORT_TRANSFER"
+                  ]
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "kind": {
+                      "type": "string",
+                      "enum": [
+                        "BREAKFAST",
+                        "AIRPORT_TRANSFER"
+                      ]
+                    },
+                    "vehicles": {
+                      "type": "integer",
+                      "minimum": 1,
+                      "maximum": 10,
+                      "description": "Airport transfer only; cars needed, default 1."
+                    },
+                    "details": {
+                      "type": "string",
+                      "maxLength": 300,
+                      "description": "Optional plain text, such as a flight number and time."
+                    }
+                  },
+                  "required": [
+                    "kind"
+                  ],
+                  "additionalProperties": false
+                }
+              ]
+            }
+          },
+          "acceptedTotal": {
+            "description": "The total from the last re-quote, including VAT. A different server total returns 409 PRICE_CHANGED.",
+            "$ref": "#/components/schemas/Money"
+          },
+          "priceOverride": {
+            "type": "object",
+            "properties": {
+              "lines": {
+                "minItems": 1,
+                "maxItems": 5,
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "nights": {
+                      "minItems": 1,
+                      "maxItems": 366,
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "night": {
+                            "type": "string",
+                            "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                          },
+                          "amountMinor": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "maximum": 2147483647
+                          }
+                        },
+                        "required": [
+                          "night",
+                          "amountMinor"
+                        ],
+                        "additionalProperties": false
+                      }
+                    }
+                  },
+                  "required": [
+                    "nights"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              "reason": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 500
+              }
+            },
+            "required": [
+              "lines",
+              "reason"
+            ],
+            "additionalProperties": false
+          },
+          "notifyGuest": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "stay",
+          "lines",
+          "acceptedTotal"
+        ],
+        "additionalProperties": false
+      },
+      "PmsUpdateRequest": {
+        "type": "object",
+        "properties": {
+          "changeSeq": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647
+          },
+          "note": {
+            "type": "string",
+            "maxLength": 500
+          }
+        },
+        "required": [
+          "changeSeq"
         ],
         "additionalProperties": false
       },
@@ -4411,6 +4817,23 @@
               }
             ]
           },
+          "changeSeq": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "pmsUpdatePendingSince": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time",
+                "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "allowedActions": {
             "type": "array",
             "items": {
@@ -4438,6 +4861,8 @@
           "historySummary",
           "pmsEnteredAt",
           "pmsEnteredById",
+          "changeSeq",
+          "pmsUpdatePendingSince",
           "allowedActions"
         ],
         "additionalProperties": false

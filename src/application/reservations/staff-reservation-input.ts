@@ -13,7 +13,7 @@ import { StayRange } from "@/domain/shared/stay-range";
 // Operational limit for S3 and S4. Public stay policy is applied separately.
 const MAX_STAFF_STAY_NIGHTS = 366;
 
-type Amounts = Readonly<{
+export type Amounts = Readonly<{
   nights: readonly Readonly<{ night: string; amountMinor: number }>[];
 }>;
 type CommonInput = Readonly<{
@@ -66,7 +66,7 @@ function freeText(value: string | undefined, path: string, maximum: number) {
   return value.trim() || null;
 }
 
-function manualNights(
+export function manualNights(
   stay: StayRange,
   amounts: readonly (Amounts | undefined)[],
   path: string,

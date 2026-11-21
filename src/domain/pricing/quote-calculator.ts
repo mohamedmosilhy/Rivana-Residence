@@ -21,6 +21,12 @@ export type QuoteServiceInput = Readonly<{
   price: Money;
   childPrice: Money | null;
   vehicles?: number | null;
+  /** Charged quantities for the consumed nights of an amended stay. */
+  preservedPersonNights?: Readonly<{
+    nights: number;
+    adults: number;
+    children: number;
+  }>;
 }>;
 
 export type QuoteInput<
@@ -167,12 +173,49 @@ export class QuoteCalculator {
           `services.${index}.vehicles`,
           "Cars apply only to airport transfers.",
         );
-      const quantity = serviceQuantity(
-        service.unit,
-        input.guests,
-        nightCount,
-        vehicles ?? 1,
-      );
+      const preserved = service.preservedPersonNights;
+      if (
+        preserved &&
+        (service.unit !== "PER_PERSON_PER_NIGHT" ||
+          !Number.isSafeInteger(preserved.nights) ||
+          preserved.nights < 1 ||
+          preserved.nights > nightCount ||
+          !Number.isSafeInteger(preserved.adults) ||
+          preserved.adults < preserved.nights ||
+          !Number.isSafeInteger(preserved.children) ||
+          preserved.children < 0)
+      )
+        fail(
+          `services.${index}`,
+          "The consumed service quantities are invalid.",
+        );
+      const quantity = preserved
+        ? {
+            adults: safeSum(
+              preserved.adults,
+              safeProduct(
+                input.guests.adults,
+                nightCount - preserved.nights,
+                `services.${index}`,
+              ),
+              `services.${index}`,
+            ),
+            children: safeSum(
+              preserved.children,
+              safeProduct(
+                input.guests.children,
+                nightCount - preserved.nights,
+                `services.${index}`,
+              ),
+              `services.${index}`,
+            ),
+          }
+        : serviceQuantity(
+            service.unit,
+            input.guests,
+            nightCount,
+            vehicles ?? 1,
+          );
       const adultPart = safeProduct(
         service.price.amountMinor,
         quantity.adults,

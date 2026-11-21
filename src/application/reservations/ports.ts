@@ -2,6 +2,7 @@ import type { Result } from "@/application/shared/result";
 
 import type { GuestContact, PhoneNumber } from "@/domain/guests";
 import type {
+  ChangeSummary,
   ReservationReference,
   ReservationSnapshot,
   ReservationNightSnapshot,
@@ -33,7 +34,10 @@ export type StoredReservationSnapshot = Omit<
 > &
   Readonly<{
     serviceLines: readonly (ReservationSnapshot["serviceLines"][number] &
-      Readonly<{ details: string | null }>)[];
+      Readonly<{
+        details: string | null;
+        occupancyEffectiveFrom?: LocalDate | null;
+      }>)[];
   }>;
 
 export type StoredReservationNight = ReservationNightSnapshot &
@@ -88,6 +92,10 @@ export type StoredReservation = Readonly<
     holdExpiresAt: Date | null;
     pmsEnteredAt: Date | null;
     pmsEnteredById: string | null;
+    /** Sequence of the latest `ReservationChange`, 0 when none (M8-T9). */
+    changeSeq: number;
+    /** Set by a change after hotel-system entry until S55 acknowledges it (Q-84). */
+    pmsUpdatePendingSince: Date | null;
     statusChangedAt: Date;
     createdAt: Date;
     updatedAt: Date;
@@ -102,6 +110,36 @@ export type PhoneBookingRow = Readonly<{
   checkIn: LocalDate;
   branchTimeZone: string;
   holdExpiresAt: Date | null;
+}>;
+
+/** The new shape of a stay change. Lines keep their id when they continue an existing unit. */
+export type StayReplacement = Readonly<{
+  branchId: string;
+  reservationId: string;
+  stay: StayRange;
+  lines: readonly Omit<StoredReservationLine, "stay" | "consumesInventory">[];
+  snapshot: StoredReservationSnapshot;
+  /** True when the booking was already entered in the hotel system (Q-84). */
+  flagPmsUpdate: boolean;
+  at: Date;
+}>;
+export type ReservationChangeInsert = Readonly<{
+  id: string;
+  branchId: string;
+  reservationId: string;
+  kind: "STAY" | "CANCEL";
+  actorType: "STAFF";
+  actorId: string;
+  before: ChangeSummary;
+  after: ChangeSummary;
+  oldTotalMinor: number | null;
+  newTotalMinor: number | null;
+  override: Readonly<{
+    fromMinor: number;
+    toMinor: number;
+    reason: string;
+  }> | null;
+  at: Date;
 }>;
 
 export interface ReservationRepository {
@@ -126,6 +164,54 @@ export interface ReservationRepository {
     createdById: string | null,
     keyHash: string,
   ): Promise<StoredReservation | null>;
+  /**
+   * Transaction only. Locks the reservation row (`FOR UPDATE`, five second
+   * timeout, `TRY_AGAIN`) and returns the committed state seen after the lock.
+   */
+  lockById(
+    branchId: string,
+    id: string,
+  ): Promise<Result<StoredReservation | null>>;
+  /**
+   * Transaction only, after `lockById`. Writes the new stay, units, nights and
+   * price snapshot (service rows are updated in place, never replaced), bumps `version` and `changeSeq`, and sets the hotel system
+   * flag when asked. Units that continue keep their id.
+   */
+  replaceStay(input: StayReplacement): Promise<StoredReservation>;
+  /** Transaction only. Appends the history row; `seq` is the reservation's new `changeSeq`. */
+  appendChange(input: ReservationChangeInsert): Promise<void>;
+  /**
+   * Transaction only, after `lockById`. Sets `CANCELLED`, clears
+   * `consumesInventory` on every unit, and bumps `version` (R-6).
+   */
+  markCancelled(
+    branchId: string,
+    id: string,
+    at: Date,
+    /**
+     * True when the booking was already entered in the hotel system: the
+     * cancellation then bumps `changeSeq` and sets the pending flag (Q-84).
+     */
+    flagPmsUpdate: boolean,
+  ): Promise<StoredReservation>;
+  /**
+   * Whether a physical unit can keep an assignment for a new stay: the unit
+   * belongs to that listing (checked here, not left to the caller), is active, no other reservation holds it on those nights and no active block
+   * covers them. Transaction only; the listing lock is held.
+   */
+  unitFree(
+    branchId: string,
+    physicalRoomId: string,
+    roomTypeId: string,
+    stay: StayRange,
+    exceptReservationId: string,
+  ): Promise<boolean>;
+  /** Transaction only, after `lockById`. Clears the hotel system flag and bumps `version`. */
+  clearPmsUpdate(
+    branchId: string,
+    id: string,
+    at: Date,
+  ): Promise<StoredReservation>;
   /** Website reservations that can count toward the per phone cap, in every branch. */
   listPhoneBookings(phone: PhoneNumber): Promise<readonly PhoneBookingRow[]>;
 }

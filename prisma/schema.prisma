@@ -879,7 +879,7 @@ model ReservationChange {
   reservationId     String      @db.VarChar(32)
   branchId          String      @db.VarChar(32)
   seq               Int // 1, 2, … per reservation; matches Reservation.changeSeq after the write
-  kind              String      @db.VarChar(24) // STAY (T9); SERVICES arrives with T9b
+  kind              String      @db.VarChar(24) // STAY or CANCEL (T9); SERVICES arrives with T9b
   actorType         String      @db.VarChar(16)
   actorId           String?     @db.VarChar(32)
   before            Json
@@ -930,20 +930,21 @@ model ReservationNight {
 }
 
 model ReservationService {
-  reservationId   String           @db.VarChar(32) // → Reservation CASCADE
-  kind            ServiceKind
-  priceUnit       ServicePriceUnit // snapshot of the unit used
-  priceMinor      Int // adult price used
-  childPriceMinor Int? // child price used, null = children not charged
-  adults          Int
-  children        Int
-  nights          Int
-  adultQuantity   Int
-  childQuantity   Int
-  amountMinor     Int
-  vehicles        Int? // cars for AIRPORT_TRANSFER (1–10, every unit); null for BREAKFAST (Q-82)
-  details         String?          @db.VarChar(300) // e.g. flight number (Q-56), plain text
-  reservation     Reservation      @relation(fields: [reservationId], references: [id], onDelete: Cascade, onUpdate: Restrict)
+  reservationId          String           @db.VarChar(32) // → Reservation CASCADE
+  kind                   ServiceKind
+  priceUnit              ServicePriceUnit // snapshot of the unit used
+  priceMinor             Int // adult price used
+  childPriceMinor        Int? // child price used, null = children not charged
+  adults                 Int
+  children               Int
+  nights                 Int
+  adultQuantity          Int
+  childQuantity          Int
+  amountMinor            Int
+  occupancyEffectiveFrom DateTime?        @db.Date
+  vehicles               Int? // cars for AIRPORT_TRANSFER (1–10, every unit); null for BREAKFAST (Q-82)
+  details                String?          @db.VarChar(300) // e.g. flight number (Q-56), plain text
+  reservation            Reservation      @relation(fields: [reservationId], references: [id], onDelete: Cascade, onUpdate: Restrict)
 
   @@id([reservationId, kind])
 }

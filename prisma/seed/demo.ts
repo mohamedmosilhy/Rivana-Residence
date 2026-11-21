@@ -560,6 +560,18 @@ export async function seedDemoReservations(
       const vatMinor = Math.floor(
         (taxable * vat.vatRateBasisPoints + 5000) / 10000,
       );
+      const demoSummary = {
+        status: fixture.status,
+        assignedUnits: 0,
+        checkIn: fixture.day,
+        checkOut: checkOut.toISOString().slice(0, 10),
+        units: [{ roomTypeId: room.id, adults: 2, children: 0 }],
+        accommodationMinor: unpriced ? null : accommodation,
+        servicesMinor: 0,
+        discountMinor: discount,
+        vatMinor: unpriced ? null : vatMinor,
+        totalMinor: unpriced ? null : taxable + vatMinor,
+      };
       await tx.reservation.create({
         data: {
           id: fixture.id,
@@ -593,6 +605,28 @@ export async function seedDemoReservations(
             ? new Date("2026-11-01T00:00:00Z")
             : null,
           pmsEnteredById: fixture.entered ? staffId : null,
+          // The entered booking carries one pending change (Q-84, M8-T9).
+          changeSeq: fixture.entered ? 1 : 0,
+          pmsUpdatePendingSince: fixture.entered
+            ? new Date("2026-11-02T00:00:00Z")
+            : null,
+          ...(fixture.entered
+            ? {
+                changes: {
+                  create: {
+                    id: "qvmrseeddemochangeaaaaaaaa",
+                    seq: 1,
+                    kind: "STAY",
+                    actorType: "STAFF",
+                    actorId: staffId,
+                    before: demoSummary,
+                    after: demoSummary,
+                    oldTotalMinor: demoSummary.totalMinor,
+                    newTotalMinor: demoSummary.totalMinor,
+                  },
+                },
+              }
+            : {}),
           statusChangedAt: new Date("2026-11-01T00:00:00Z"),
           rooms: {
             create: {

@@ -67,4 +67,11 @@ export class PrismaCouponRedemptionStore implements CouponRedemptionStore {
       },
     });
   }
+
+  async release(reservationId: string, at: Date) {
+    await this.client.couponRedemption.updateMany({
+      where: { reservationId, releasedAt: null },
+      data: { releasedAt: at },
+    });
+  }
 }

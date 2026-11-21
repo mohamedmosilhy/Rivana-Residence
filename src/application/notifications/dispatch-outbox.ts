@@ -17,6 +17,7 @@ export const MAX_ATTEMPTS = RETRY_MINUTES.length + 1;
 const purposes = {
   "reservation.confirmed": "BOOKING_CONFIRMED",
   "reservation.cancelled": "CANCELLED_BY_HOTEL",
+  "reservation.modified": "RESERVATION_MODIFIED",
   "reservation.manage-link": "MANAGE_LINK",
 } as const;
 const variables = z.strictObject({
@@ -35,6 +36,7 @@ function validVariables(input: unknown): input is MessageVariables {
 const kinds = z.enum([
   "reservation.confirmed",
   "reservation.cancelled",
+  "reservation.modified",
   "reservation.manage-link",
   "reservation.staff-alert",
 ]);

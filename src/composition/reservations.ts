@@ -4,6 +4,11 @@ import {
   CreateWebsiteReservation,
   CreateStaffReservation,
   RecordExternalReservation,
+  ModifyReservation,
+  CancelReservation,
+  MarkChangeEnteredInHotelSystem,
+  type ModifyReservationContext,
+  type CancelReservationContext,
   ListReservations,
   GetReservation,
   GetReservationHistory,
@@ -44,19 +49,46 @@ import {
 } from "@/infrastructure/db/prisma/repositories/audit/audit-log";
 import { Cuid2IdGenerator } from "@/infrastructure/ids/cuid2-id-generator";
 
+function storageContext(
+  transaction: DatabaseClient,
+): ReservationStorageContext {
+  const consumption = new PrismaReservationConsumptionReader(transaction);
+  return {
+    reservations: new PrismaReservationRepository(transaction),
+    guests: new PrismaGuestRepository(transaction),
+    consumption,
+    inventoryLock: new PrismaInventoryLock(transaction),
+    inventoryReader: new PrismaInventoryReader(transaction, consumption),
+    audit: new PrismaAuditLog(transaction),
+  };
+}
+
+/** The transaction-bound ports of S6 (also used by tests to wrap one adapter). */
+export function modifyReservationContext(
+  transaction: DatabaseClient,
+): ModifyReservationContext {
+  return {
+    ...storageContext(transaction),
+    catalog: new PrismaAvailabilityCatalog(transaction),
+    rates: new PrismaRateRepository(transaction),
+    messages: reservationMessageWriter(transaction),
+  };
+}
+
+/** The transaction-bound ports of S9. */
+export function cancelReservationContext(
+  transaction: DatabaseClient,
+): CancelReservationContext {
+  return {
+    ...storageContext(transaction),
+    redemptions: new PrismaCouponRedemptionStore(transaction),
+    messages: reservationMessageWriter(transaction),
+  };
+}
+
 /** Storage foundation for later authorized reservation use cases. */
 export function reservationUnitOfWork(): ReservationUnitOfWork<ReservationStorageContext> {
-  return new PrismaReservationUnitOfWork(getPrisma(), (transaction) => {
-    const consumption = new PrismaReservationConsumptionReader(transaction);
-    return {
-      reservations: new PrismaReservationRepository(transaction),
-      guests: new PrismaGuestRepository(transaction),
-      consumption,
-      inventoryLock: new PrismaInventoryLock(transaction),
-      inventoryReader: new PrismaInventoryReader(transaction, consumption),
-      audit: new PrismaAuditLog(transaction),
-    };
-  });
+  return new PrismaReservationUnitOfWork(getPrisma(), storageContext);
 }
 
 /**
@@ -169,9 +201,36 @@ export function staffReservationCommands(
     ids: new Cuid2IdGenerator(),
     clock,
   };
+  const reads = new PrismaStaffReservationReader(client);
   return {
     create: new CreateStaffReservation(deps),
     recordExternal: new RecordExternalReservation(deps),
+    modify: new ModifyReservation({
+      unitOfWork: new PrismaReservationUnitOfWork<ModifyReservationContext>(
+        client,
+        modifyReservationContext,
+      ),
+      reads,
+      ids: deps.ids,
+      clock,
+    }),
+    cancel: new CancelReservation({
+      unitOfWork: new PrismaReservationUnitOfWork<CancelReservationContext>(
+        client,
+        cancelReservationContext,
+      ),
+      reads,
+      ids: deps.ids,
+      clock,
+    }),
+    markChangeEntered: new MarkChangeEnteredInHotelSystem({
+      unitOfWork: new PrismaReservationUnitOfWork<ReservationStorageContext>(
+        client,
+        storageContext,
+      ),
+      reads,
+      clock,
+    }),
   };
 }
 

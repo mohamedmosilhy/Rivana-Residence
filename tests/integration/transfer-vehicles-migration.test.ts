@@ -152,7 +152,10 @@ it("upgrades populated M8 storage, preserves monetary history, enforces car cons
     expect((await db.query(`SELECT * FROM "Reservation"`)).rows).toEqual(
       before.booking.map((row) => ({ ...row, externalChannel: null })),
     );
-    // M8-T9 adds the change sequence, the pending flag, and the history table.
+    const serviceBeforeT9 = (
+      await db.query('SELECT * FROM "ReservationService"')
+    ).rows;
+    // M8-T9 adds the change sequence, history, and service occupancy date.
     for (const name of names.filter((name) => name >= changesMigration))
       await db.query(
         readFileSync(join(directory, name, "migration.sql"), "utf8"),
@@ -165,6 +168,14 @@ it("upgrades populated M8 storage, preserves monetary history, enforces car cons
         pmsUpdatePendingSince: null,
       })),
     );
+    expect((await db.query('SELECT * FROM "ReservationService"')).rows).toEqual(
+      serviceBeforeT9.map((row) => ({ ...row, occupancyEffectiveFrom: null })),
+    );
+    await expect(
+      db.query(
+        `UPDATE "ReservationService" SET "occupancyEffectiveFrom" = '2031-04-11'`,
+      ),
+    ).rejects.toMatchObject({ code: "23514" });
     const change = (overrides: string, values: unknown[]) =>
       db.query(
         `INSERT INTO "ReservationChange" (id,"reservationId","branchId",seq,kind,"actorType",before,after${overrides.split("|")[0]}) VALUES ($1,'old-reservation',$2,$3,'STAY','STAFF','{}','{}'${overrides.split("|")[1]})`,
@@ -194,6 +205,23 @@ it("upgrades populated M8 storage, preserves monetary history, enforces car cons
       ',"overrideFromMinor","overrideToMinor","overrideReason"|,100,90,\'Goodwill\'',
       ["c4", TEST_BRANCH_ID, 4],
     );
+    // A cancellation is a change; other kinds and actors are refused.
+    await db.query(
+      `INSERT INTO "ReservationChange" (id,"reservationId","branchId",seq,kind,"actorType",before,after) VALUES ('c5','old-reservation',$1,5,'CANCEL','STAFF','{}','{}')`,
+      [TEST_BRANCH_ID],
+    );
+    await expect(
+      db.query(
+        `INSERT INTO "ReservationChange" (id,"reservationId","branchId",seq,kind,"actorType",before,after) VALUES ('c6','old-reservation',$1,6,'OTHER','STAFF','{}','{}')`,
+        [TEST_BRANCH_ID],
+      ),
+    ).rejects.toMatchObject({ code: "23514" });
+    await expect(
+      db.query(
+        `INSERT INTO "ReservationChange" (id,"reservationId","branchId",seq,kind,"actorType",before,after) VALUES ('c7','old-reservation',$1,7,'STAY','ROBOT','{}','{}')`,
+        [TEST_BRANCH_ID],
+      ),
+    ).rejects.toMatchObject({ code: "23514" });
     // The pending flag needs a hotel-system entry.
     await expect(
       db.query(`UPDATE "Reservation" SET "pmsUpdatePendingSince"=now()`),

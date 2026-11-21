@@ -31,7 +31,12 @@ export type ApplicationErrorCode =
   | "EXTERNAL_REFERENCE_EXISTS"
   | "MISSING_IDEMPOTENCY_KEY"
   | "IDEMPOTENCY_KEY_REUSED"
-  | "PRICE_CHANGED";
+  | "PRICE_CHANGED"
+  | "INVALID_TRANSITION"
+  | "STALE_VERSION"
+  | "PRECONDITION_REQUIRED"
+  | "PMS_UPDATE_STALE"
+  | "NO_PMS_UPDATE_PENDING";
 
 type StandardApplicationErrorCode = Exclude<
   ApplicationErrorCode,
@@ -41,6 +46,9 @@ type StandardApplicationErrorCode = Exclude<
   | "VERIFICATION_CODE_INVALID"
   | "PRICE_CHANGED"
   | "BRANCH_NOT_BOOKABLE"
+  | "INVALID_TRANSITION"
+  | "STALE_VERSION"
+  | "PMS_UPDATE_STALE"
 >;
 
 export type BranchNotBookableReason =
@@ -104,8 +112,33 @@ export type PriceChangedError = Readonly<{
   fieldErrors?: never;
 }>;
 
+/** The reservation's current status, so a client can see why an action is refused. */
+export type InvalidTransitionError = Readonly<{
+  code: "INVALID_TRANSITION";
+  message: string;
+  context: Readonly<{ status: string }>;
+  fieldErrors?: never;
+}>;
+/** An `If-Match` version that no longer matches (412). */
+export type StaleVersionError = Readonly<{
+  code: "STALE_VERSION";
+  message: string;
+  context: Readonly<{ currentVersion: number }>;
+  fieldErrors?: never;
+}>;
+/** The acknowledged change is not the latest one; the flag stays set (Q-84). */
+export type PmsUpdateStaleError = Readonly<{
+  code: "PMS_UPDATE_STALE";
+  message: string;
+  context: Readonly<{ currentChangeSeq: number }>;
+  fieldErrors?: never;
+}>;
+
 export type ApplicationError =
   | StandardApplicationError
+  | InvalidTransitionError
+  | StaleVersionError
+  | PmsUpdateStaleError
   | BranchNotBookableError
   | PriceChangedError
   | InventoryUnavailableError
@@ -191,6 +224,39 @@ export function priceChanged(quote: PriceChangedQuote): Result<never> {
       code: "PRICE_CHANGED",
       message: "The price changed. Review the new total.",
       context: { quote },
+    },
+  };
+}
+
+export function invalidTransition(
+  status: string,
+  message: string,
+): Result<never> {
+  return {
+    ok: false,
+    error: { code: "INVALID_TRANSITION", message, context: { status } },
+  };
+}
+
+export function staleVersion(currentVersion: number): Result<never> {
+  return {
+    ok: false,
+    error: {
+      code: "STALE_VERSION",
+      message: "This reservation changed. Reload it and try again.",
+      context: { currentVersion },
+    },
+  };
+}
+
+export function pmsUpdateStale(currentChangeSeq: number): Result<never> {
+  return {
+    ok: false,
+    error: {
+      code: "PMS_UPDATE_STALE",
+      message:
+        "A newer change was made after the one you entered. Review the latest change and enter it.",
+      context: { currentChangeSeq },
     },
   };
 }

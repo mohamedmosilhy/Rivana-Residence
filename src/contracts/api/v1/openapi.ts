@@ -6,7 +6,10 @@ import {
 } from "./phone-verifications";
 import { Coupon, CouponInput, CouponPatch, CouponList } from "./coupons";
 import {
+  CancelReservationRequest,
   CreateStaffReservationRequest,
+  ModifyReservationStayRequest,
+  PmsUpdateRequest,
   RecordExternalReservationRequest,
   StaffReservationDetail,
   StaffReservationList,
@@ -97,7 +100,10 @@ const COMPONENTS: Readonly<Record<string, z.ZodType>> = {
   Quote,
   QuoteResponse,
   WebsiteReservationRequest,
+  CancelReservationRequest,
   CreateStaffReservationRequest,
+  ModifyReservationStayRequest,
+  PmsUpdateRequest,
   RecordExternalReservationRequest,
   StaffReservationDetail,
   StaffReservationList,

@@ -455,3 +455,80 @@ it("runs both CLI jobs; captured stdout and stderr expose only counts for succes
   expect(run("expire-tokens")).toEqual({ verification: 1, manage: 0 });
   expect(run("expire-tokens")).toEqual({ verification: 0, manage: 0 });
 }, 30000);
+
+it("M8-T9: dispatches the modified and cancelled kinds to the right email kind and WhatsApp purpose with their variables", async () => {
+  const stayVariables = {
+    reference: "RR-00000001",
+    branchName: "Hotel",
+    guestFirstName: "Example",
+    checkIn: "2030-01-01",
+    checkOut: "2030-01-03",
+  };
+  const rows = [
+    [
+      "m-mail",
+      "EMAIL",
+      "reservation.modified",
+      email,
+      { ...stayVariables, total: "USD 100.00" },
+    ],
+    [
+      "m-chat",
+      "WHATSAPP",
+      "reservation.modified",
+      phone,
+      { ...stayVariables, total: "USD 100.00" },
+    ],
+    [
+      "c-mail",
+      "EMAIL",
+      "reservation.cancelled",
+      email,
+      { ...stayVariables, reason: "Cancelled by the hotel" },
+    ],
+    [
+      "c-chat",
+      "WHATSAPP",
+      "reservation.cancelled",
+      phone,
+      { ...stayVariables, reason: "Cancelled by the hotel" },
+    ],
+  ] as const;
+  for (const [id, channel, kind, recipient, payload] of rows)
+    await db.notificationOutbox.create({
+      data: { id, channel, kind, recipient, payload, availableAt: at },
+    });
+  const chat = vi.fn(async () => ({
+    ok: true as const,
+    providerMessageId: "p",
+  }));
+  const mail = vi.fn(async () => ({ ok: true as const }));
+  const result = await new DispatchOutbox(
+    store,
+    { send: mail },
+    { send: chat },
+    clock,
+  ).run();
+  expect(result).toMatchObject({ sent: 4, failed: 0 });
+  const calls = mail.mock.calls as unknown as unknown[][];
+  expect(calls.map((call) => [call[1], call[2]]).sort()).toEqual([
+    [email, "reservation.cancelled"],
+    [email, "reservation.modified"],
+  ]);
+  const sent = (
+    chat.mock.calls as unknown as {
+      purpose: string;
+      to: { value: string };
+      variables: unknown;
+    }[][]
+  ).map(([message]) => message!);
+  expect(sent.map((message) => message.purpose).sort()).toEqual([
+    "CANCELLED_BY_HOTEL",
+    "RESERVATION_MODIFIED",
+  ]);
+  expect(sent.every((message) => message.to.value === phone)).toBe(true);
+  const modified = sent.find(
+    (message) => message.purpose === "RESERVATION_MODIFIED",
+  )!;
+  expect(modified.variables).toEqual({ ...stayVariables, total: "USD 100.00" });
+});

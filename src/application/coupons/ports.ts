@@ -77,4 +77,10 @@ export interface CouponRedemptionStore {
       at: Date;
     }>,
   ): Promise<void>;
+  /**
+   * Frees the reservation's redemption (CP-2). Idempotent: a redemption that
+   * is already released, or none at all, changes nothing. Runs in the
+   * transaction of the cancellation.
+   */
+  release(reservationId: string, at: Date): Promise<void>;
 }

@@ -36,12 +36,15 @@ The application layer already returns `Result<T>` with `ApplicationErrorCode` (`
 | `RATE_LIMITED` | 429 | `Retry-After` |
 | `INVENTORY_UNAVAILABLE` | 409 | `context.firstUnavailableNight` (staff also get `roomTypeId`) |
 | `PRICE_CHANGED` | 409 | `context.quote` (new full quote including services, discount, and VAT) |
-| `INVALID_TRANSITION` | 409 | `context.status` (current) |
+| `INVALID_TRANSITION` | 409 | `context.status` (current). **Implemented (M8-T9)** |
 | `ROOM_ALREADY_ASSIGNED` | 409 | |
 | `ROOM_BLOCKED` | 409 | |
 | `BRANCH_NOT_BOOKABLE` | 409 | Branch inactive, online booking disabled, WhatsApp not configured, or check-in time missing; `context.reason` is `ONLINE_BOOKING_DISABLED`, `CHECK_IN_TIME_MISSING` or `WHATSAPP_NOT_CONFIGURED` (**implemented M8-T7b**; public inactive branch: 404 instead) |
 | `ROOM_TYPE_NOT_BOOKABLE` | 409 | Unpublished, no units, or unpriced nights |
-| `STALE_VERSION` | 412 | `context.currentVersion` |
+| `STALE_VERSION` | 412 | `context.currentVersion`. **Implemented (M8-T9)**: the `If-Match` version no longer matches |
+| `PRECONDITION_REQUIRED` | 428 | **Implemented (M8-T9)**: a reservation write sent no usable `If-Match` |
+| `PMS_UPDATE_STALE` | 409 | **Implemented (M8-T9)**: S55 named a change that is not the latest; `context.currentChangeSeq`; the flag stays set |
+| `NO_PMS_UPDATE_PENDING` | 409 | **Implemented (M8-T9)**: S55 on a reservation with no pending hotel system update |
 | `IDEMPOTENCY_KEY_REUSED` | 422 | Same key, different body |
 | `IDEMPOTENCY_IN_PROGRESS` | 409 | Concurrent duplicate still running |
 | `EXTERNAL_REFERENCE_EXISTS` | 409 | The external reference already exists in the branch (S4) |

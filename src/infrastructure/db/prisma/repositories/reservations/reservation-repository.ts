@@ -1,8 +1,10 @@
 import "server-only";
 
 import type {
+  ReservationChangeInsert,
   ReservationInsert,
   ReservationRepository,
+  StayReplacement,
   StoredReservation,
 } from "@/application/reservations";
 import { failure, success } from "@/application/shared/result";
@@ -84,6 +86,9 @@ function map(row: Row): StoredReservation {
               kind: line.kind,
               vehicles: line.vehicles,
               details: line.details,
+              occupancyEffectiveFrom: line.occupancyEffectiveFrom
+                ? date(line.occupancyEffectiveFrom)
+                : null,
               unit: line.priceUnit,
               priceMinor: line.priceMinor,
               childPriceMinor: line.childPriceMinor,
@@ -109,6 +114,8 @@ function map(row: Row): StoredReservation {
     holdExpiresAt: row.holdExpiresAt,
     pmsEnteredAt: row.pmsEnteredAt,
     pmsEnteredById: row.pmsEnteredById,
+    changeSeq: row.changeSeq,
+    pmsUpdatePendingSince: row.pmsUpdatePendingSince,
     statusChangedAt: row.statusChangedAt,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
@@ -218,6 +225,267 @@ export class PrismaReservationRepository implements ReservationRepository {
       branchTimeZone: row.branch.timeZone,
       holdExpiresAt: row.holdExpiresAt,
     }));
+  }
+
+  async lockById(branchId: string, id: string) {
+    try {
+      await this.client.$executeRaw`SET LOCAL lock_timeout = '5s'`;
+      const locked = await this.client.$queryRaw<Readonly<{ id: string }>[]>`
+        SELECT id FROM "Reservation"
+        WHERE id = ${id} AND "branchId" = ${branchId} FOR UPDATE
+      `;
+      if (locked.length === 0) return success(null);
+      return success(await this.findById(branchId, id));
+    } catch (error) {
+      if (postgresErrorCode(error) === "55P03")
+        return failure(
+          "TRY_AGAIN",
+          "This reservation is busy. Try again shortly.",
+        );
+      throw error;
+    }
+  }
+
+  async replaceStay(input: StayReplacement) {
+    const snapshot = input.snapshot;
+    const coupon = snapshot.couponValue;
+    const checkIn = new Date(input.stay.checkIn.value + "T00:00:00Z");
+    const checkOut = new Date(input.stay.checkOut.value + "T00:00:00Z");
+    const { reservationId, branchId } = input;
+    const client = this.client;
+    // Rooms and nights are replaced, not patched, because they depend on the
+    // new stay (continuing units keep their id). Service rows are updated in
+    // place below.
+    const previous = await client.reservation.findFirstOrThrow({
+      where: { id: reservationId, branchId },
+      select: { status: true, pmsUpdatePendingSince: true },
+    });
+    await client.reservationRoom.deleteMany({ where: { reservationId } });
+    await client.reservationRoom.createMany({
+      data: input.lines.map((line) => ({
+        id: line.id,
+        reservationId,
+        branchId,
+        roomTypeId: line.roomTypeId,
+        physicalRoomId: line.physicalRoomId,
+        checkIn,
+        checkOut,
+        adults: line.occupancy.adults,
+        children: line.occupancy.children,
+        consumesInventory: consumesInventory(previous.status),
+        subtotalMinor: line.subtotal?.amountMinor ?? null,
+      })),
+    });
+    await client.reservationNight.createMany({
+      data: input.lines.flatMap((line) =>
+        line.nights.map((night) => ({
+          reservationRoomId: line.id,
+          night: new Date(night.night.value + "T00:00:00Z"),
+          amountMinor: night.amount?.amountMinor ?? null,
+          rateSource: night.source,
+          ratePeriodId: night.periodId,
+          label: night.label,
+        })),
+      ),
+    });
+    // T9 keeps the services as stored: the same rows, the same unit, prices,
+    // cars and details. Only the counts and amounts that follow the nights and
+    // guests are written, and only when they changed.
+    const services = await client.reservationService.findMany({
+      where: { reservationId },
+    });
+    if (
+      services.length !== snapshot.serviceLines.length ||
+      new Set(snapshot.serviceLines.map((line) => line.kind)).size !==
+        services.length ||
+      snapshot.serviceLines.some(
+        (line) => !services.some((row) => row.kind === line.kind),
+      )
+    )
+      throw new Error("A stay change cannot add or remove services.");
+    for (const line of snapshot.serviceLines) {
+      const row = services.find((candidate) => candidate.kind === line.kind)!;
+      if (
+        row.priceUnit !== line.unit ||
+        row.priceMinor !== line.priceMinor ||
+        row.childPriceMinor !== line.childPriceMinor ||
+        row.vehicles !== line.vehicles ||
+        row.details !== line.details
+      )
+        throw new Error("A stay change cannot alter a stored service price.");
+      const next = {
+        adults: line.adults,
+        children: line.children,
+        nights: line.nights,
+        adultQuantity: line.adultQuantity,
+        childQuantity: line.childQuantity,
+        amountMinor: line.amountMinor,
+      };
+      const effectiveFrom = line.occupancyEffectiveFrom?.value ?? null;
+      const storedEffectiveFrom = row.occupancyEffectiveFrom
+        ? date(row.occupancyEffectiveFrom).value
+        : null;
+      if (
+        effectiveFrom !== storedEffectiveFrom ||
+        (Object.keys(next) as (keyof typeof next)[]).some(
+          (key) => row[key] !== next[key],
+        )
+      )
+        await client.reservationService.update({
+          where: { reservationId_kind: { reservationId, kind: row.kind } },
+          data: {
+            ...next,
+            occupancyEffectiveFrom: effectiveFrom
+              ? new Date(effectiveFrom + "T00:00:00Z")
+              : null,
+          },
+        });
+    }
+    await client.reservation.update({
+      where: { id: reservationId },
+      data: {
+        checkIn,
+        checkOut,
+        accommodationMinor: snapshot.accommodationMinor,
+        servicesMinor: snapshot.servicesMinor,
+        subtotalMinor: snapshot.subtotalMinor,
+        discountMinor: snapshot.discountMinor,
+        taxableMinor: snapshot.taxableMinor,
+        vatRateBasisPoints: snapshot.vatRateBasisPoints,
+        vatMinor: snapshot.vatMinor,
+        totalMinor: snapshot.totalMinor,
+        couponKind: coupon?.kind ?? null,
+        couponValue: coupon
+          ? coupon.kind === "PERCENT"
+            ? coupon.percentBasisPoints
+            : coupon.amount.amountMinor
+          : null,
+        version: { increment: 1 },
+        changeSeq: { increment: 1 },
+        updatedAt: input.at,
+        // The flag keeps its first date across further changes (its age matters
+        // to the front desk); only S55 clears it.
+        ...(input.flagPmsUpdate && previous.pmsUpdatePendingSince === null
+          ? { pmsUpdatePendingSince: input.at }
+          : {}),
+      },
+    });
+    const stored = await this.findById(branchId, reservationId);
+    if (!stored) throw new Error("Reservation aggregate was not persisted.");
+    return stored;
+  }
+
+  async appendChange(input: ReservationChangeInsert) {
+    const current = await this.client.reservation.findFirstOrThrow({
+      where: { id: input.reservationId, branchId: input.branchId },
+      select: { changeSeq: true },
+    });
+    await this.client.reservationChange.create({
+      data: {
+        id: input.id,
+        reservationId: input.reservationId,
+        branchId: input.branchId,
+        seq: current.changeSeq,
+        kind: input.kind,
+        actorType: input.actorType,
+        actorId: input.actorId,
+        before: input.before,
+        after: input.after,
+        oldTotalMinor: input.oldTotalMinor,
+        newTotalMinor: input.newTotalMinor,
+        overrideFromMinor: input.override?.fromMinor ?? null,
+        overrideToMinor: input.override?.toMinor ?? null,
+        overrideReason: input.override?.reason ?? null,
+        createdAt: input.at,
+      },
+    });
+  }
+
+  async unitFree(
+    branchId: string,
+    physicalRoomId: string,
+    roomTypeId: string,
+    stay: StayRange,
+    exceptReservationId: string,
+  ) {
+    const checkIn = new Date(stay.checkIn.value + "T00:00:00Z");
+    const checkOut = new Date(stay.checkOut.value + "T00:00:00Z");
+    const unit = await this.client.physicalRoom.findFirst({
+      where: { id: physicalRoomId, branchId, roomTypeId, active: true },
+      select: { id: true },
+    });
+    if (!unit) return false;
+    const held = await this.client.reservationRoom.findFirst({
+      where: {
+        physicalRoomId,
+        consumesInventory: true,
+        reservationId: { not: exceptReservationId },
+        checkIn: { lt: checkOut },
+        checkOut: { gt: checkIn },
+      },
+      select: { id: true },
+    });
+    if (held) return false;
+    const blocked = await this.client.inventoryBlock.findFirst({
+      where: {
+        physicalRoomId,
+        cancelledAt: null,
+        startDate: { lt: checkOut },
+        endDate: { gt: checkIn },
+      },
+      select: { id: true },
+    });
+    return blocked === null;
+  }
+
+  async markCancelled(
+    branchId: string,
+    id: string,
+    at: Date,
+    flagPmsUpdate: boolean,
+  ) {
+    const previous = await this.client.reservation.findFirstOrThrow({
+      where: { id, branchId },
+      select: { pmsUpdatePendingSince: true },
+    });
+    await this.client.reservationRoom.updateMany({
+      where: { reservationId: id, branchId },
+      data: { consumesInventory: consumesInventory("CANCELLED") },
+    });
+    await this.client.reservation.update({
+      where: { id },
+      data: {
+        status: "CANCELLED",
+        statusChangedAt: at,
+        updatedAt: at,
+        version: { increment: 1 },
+        ...(flagPmsUpdate
+          ? {
+              changeSeq: { increment: 1 },
+              ...(previous.pmsUpdatePendingSince === null
+                ? { pmsUpdatePendingSince: at }
+                : {}),
+            }
+          : {}),
+      },
+    });
+    const stored = await this.findById(branchId, id);
+    if (!stored) throw new Error("Reservation aggregate was not persisted.");
+    return stored;
+  }
+
+  async clearPmsUpdate(branchId: string, id: string, at: Date) {
+    await this.client.reservation.update({
+      where: { id },
+      data: {
+        pmsUpdatePendingSince: null,
+        updatedAt: at,
+        version: { increment: 1 },
+      },
+    });
+    const stored = await this.findById(branchId, id);
+    if (!stored) throw new Error("Reservation aggregate was not persisted.");
+    return stored;
   }
 
   async insert(input: ReservationInsert) {
