@@ -25,6 +25,9 @@ import {
   CreateStaffReservationRequest,
   ModifyReservationStayRequest,
   PmsUpdateRequest,
+  UpdateReservationGuestRequest,
+  RoomAssignmentInput,
+  ReservationOperationNote,
   RecordExternalReservationRequest,
   StaffReservationQuery,
   StaffReservationDetail,
@@ -93,6 +96,7 @@ export type ApiRoute = Readonly<{
   tag: string;
   security: "public" | "staff" | "webhook";
   request?: z.ZodType;
+  requestOptional?: boolean;
   /** Query parameters, documented from the object's keys. */
   query?: z.ZodObject;
   /** Request headers the endpoint reads (for example `Idempotency-Key`). */
@@ -287,6 +291,102 @@ export const API_ROUTES: readonly ApiRoute[] = [
     request: RecordExternalReservationRequest,
     responses: staffWriteResponses,
     errors: [...staffWriteErrors, "EXTERNAL_REFERENCE_EXISTS"],
+  },
+  {
+    method: "patch",
+    path: staffReservationPath + "/{id}",
+    operationId: "updateReservationGuest",
+    summary:
+      "API-S5. Edit a nonterminal reservation’s guest details and notes. A website booking keeps its verified phone. Correcting the delivery phone or an existing email revokes the current manage link.",
+    tag: "Reservations",
+    security: "staff",
+    headers: ifMatch,
+    request: UpdateReservationGuestRequest,
+    responses: changeResponse("The edited reservation."),
+    errors: changeErrors,
+  },
+  {
+    method: "put",
+    path: staffReservationPath + "/{id}/rooms/{lineId}/assignment",
+    operationId: "assignPhysicalRoom",
+    summary:
+      "API-S10. Assign an available unit to a confirmed reservation line, or unassign it with null.",
+    tag: "Reservations",
+    security: "staff",
+    headers: ifMatch,
+    request: RoomAssignmentInput,
+    responses: changeResponse("The reservation with its current assignments."),
+    errors: [...changeErrors, "ROOM_BLOCKED", "ROOM_ALREADY_ASSIGNED"],
+  },
+  {
+    method: "post",
+    path: staffReservationPath + "/{id}/check-in",
+    operationId: "checkInReservation",
+    summary:
+      "API-S11. Check in a confirmed reservation from its arrival date when every line is assigned.",
+    tag: "Reservations",
+    security: "staff",
+    headers: ifMatch,
+    responses: changeResponse("The checked-in reservation."),
+    errors: changeErrors,
+  },
+  {
+    method: "post",
+    path: staffReservationPath + "/{id}/check-out",
+    operationId: "checkOutReservation",
+    summary:
+      "API-S12. Check out a reservation. Early departure shortens the operational stay and caps the existing manage link expiry at 30 days after checkout.",
+    tag: "Reservations",
+    security: "staff",
+    headers: ifMatch,
+    responses: changeResponse("The checked-out reservation."),
+    errors: changeErrors,
+  },
+  {
+    method: "post",
+    path: staffReservationPath + "/{id}/no-show",
+    operationId: "markReservationNoShow",
+    summary:
+      "API-S13. Mark a confirmed reservation as a no-show on or after its arrival date.",
+    tag: "Reservations",
+    security: "staff",
+    headers: ifMatch,
+    request: ReservationOperationNote,
+    requestOptional: true,
+    responses: changeResponse("The no-show reservation."),
+    errors: changeErrors,
+  },
+  {
+    method: "post",
+    path: staffReservationPath + "/{id}/manage-link",
+    operationId: "resendReservationManageLink",
+    summary: "API-S14. Rotate a manage link and queue it for delivery.",
+    tag: "Reservations",
+    security: "staff",
+    responses: { 202: { description: "Manage link queued." } },
+    errors: [
+      ...staffReadErrors,
+      "CROSS_SITE_REQUEST",
+      "INVALID_TRANSITION",
+      "CONFLICT",
+      "TRY_AGAIN",
+    ],
+  },
+  {
+    method: "post",
+    path: staffReservationPath + "/{id}/pms-entry",
+    operationId: "markReservationEntered",
+    summary:
+      "API-S16. Record manual hotel-system entry once for a website booking.",
+    tag: "Reservations",
+    security: "staff",
+    headers: ifMatch,
+    request: ReservationOperationNote,
+    requestOptional: true,
+    responses: changeResponse(
+      "The reservation with its hotel-system entry marker.",
+    ),
+    errors: [...changeErrors, "CONFLICT"],
   },
   {
     method: "put",

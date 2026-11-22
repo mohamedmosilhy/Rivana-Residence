@@ -196,6 +196,21 @@ export type AuditChanges = {
     changeSeq: number;
     pendingSince: string;
   }>;
+  "reservation.contact-edited": Readonly<Record<string, true>>;
+  "reservation.room-assigned": Readonly<{
+    lineId: string;
+    fromPhysicalRoomId: string | null;
+    toPhysicalRoomId: string | null;
+    assigned: boolean;
+  }>;
+  "reservation.checked-in": FrontDeskAudit;
+  "reservation.checked-out": FrontDeskAudit;
+  "reservation.no-show": FrontDeskAudit;
+  "reservation.pms-entered": Readonly<{ noteProvided: boolean }>;
+  "reservation.manage-link-resent": Readonly<{
+    emailQueued: boolean;
+    whatsappQueued: boolean;
+  }>;
   /** The outcome of an Admin test message; the recipient is never stored. */
   "whatsapp-test.sent": Readonly<{
     templateId: string | null;
@@ -204,6 +219,14 @@ export type AuditChanges = {
     failure: string | null;
   }>;
 };
+
+type FrontDeskAudit = Readonly<{
+  fromStatus: string;
+  toStatus: string;
+  fromCheckOut: string;
+  toCheckOut: string;
+  noteProvided: boolean;
+}>;
 
 /** No personal values: dates, unit counts per listing and money only. */
 type ChangeSummaryAudit = Readonly<{

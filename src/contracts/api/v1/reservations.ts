@@ -178,6 +178,27 @@ export const PmsUpdateRequest = z.strictObject({
   changeSeq: Version,
   note: PlainText(500).optional(),
 });
+/** S5. Missing fields keep their stored value. Nullable fields may be cleared. */
+export const UpdateReservationGuestRequest = z.strictObject({
+  guest: StaffGuestInput.extend({
+    email: z.email().max(320).nullable().optional(),
+    country: z.string().length(2).nullable().optional(),
+    specialRequests: PlainText(1000).nullable().optional(),
+  })
+    .partial()
+    .optional(),
+  internalNotes: PlainText(2000).nullable().optional(),
+  specialRequests: PlainText(1000).nullable().optional(),
+});
+/** S10. Null releases a physical unit assignment. */
+export const RoomAssignmentInput = z.strictObject({
+  physicalRoomId: Id.nullable(),
+});
+/** S13 and S16 only. */
+export const ReservationOperationNote = z.strictObject({
+  note: PlainText(500).optional(),
+});
+
 export const RecordExternalReservationRequest = z.strictObject({
   ...StaffFields,
   guest: StaffGuestInput.required({ email: true }),

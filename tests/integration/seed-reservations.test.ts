@@ -78,6 +78,26 @@ describe("M8 create only seed", () => {
     expect(state.reservations.every((row) => row.branchId === "demo")).toBe(
       true,
     );
+    expect(
+      state.reservations.find((row) => row.status === "CHECKED_IN"),
+    ).toMatchObject({
+      checkIn: new Date("2027-03-04"),
+      checkOut: new Date("2027-03-07"),
+      accommodationMinor: 18_000,
+      rooms: [
+        {
+          physicalRoomId: expect.any(String),
+          nights: expect.arrayContaining(
+            ["04", "05", "06"].map((day) =>
+              expect.objectContaining({
+                night: new Date(`2027-03-${day}`),
+                amountMinor: 6000,
+              }),
+            ),
+          ),
+        },
+      ],
+    });
     for (const row of state.reservations)
       expect(row.reference).toMatch(
         /^RR-[0123456789ABCDEFGHJKMNPQRSTVWXYZ]{8}$/,

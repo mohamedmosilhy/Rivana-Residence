@@ -275,7 +275,7 @@ Changes against the brief's table are marked **changed**. Brief ids stay.
 | M8-T8 | Staff and external reservations (S3, S4) **and the reads S1, S2, S15** (changed: the brief assigns these three endpoints to no task) | Critical | T7 | AC-9, T-RES, T-AUTHZ-2, C-5, C-8 | Accepted (2026-11-21) |
 | M8-T9 | Inventory changing transitions: staff cancellation with coupon release, stay modification (S6, S9); **changed 2026-11-17:** built as the shared change engine `ModifyReservation` with migration `reservation_changes` (`ReservationChange`, `pmsUpdatePendingSince`), and S55 (Q-83, Q-84) | Critical | T8 | AC-6, AC-12, C-4, C-10, T-CHG-1…4 | Accepted (2026-11-21) |
 | **M8-T9b** (new, 2026-11-17) | Service changes through the change engine (S6 `services`: add, remove, car count, flight details; PR-11) | Critical | T9, T3b | AC-12, T-CHG-5…7 | Accepted (2026-11-21) |
-| M8-T10 | Operational transitions (S5, S10 to S14, S16) | Critical | T8 | AC-5, T-PMS, C-7, C-9 | Not started |
+| M8-T10 | Operational transitions (S5, S10 to S14, S16) | Critical | T8 | AC-5, T-PMS, C-7, C-9 | Accepted (2026-11-22) |
 | M8-T11 | Guests and guest access (S50 to S53, G1, G3, G4) | Critical | T5, T7b | AC-7, T-GST, T-LKP | Not started |
 | M8-T12 | Sync status and checkpoints API (S28, S29), replaces the null checkpoint reader | Medium | T7 | T-SYNCAPI-1…4 | Not started |
 

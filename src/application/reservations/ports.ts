@@ -144,6 +144,23 @@ export type ReservationChangeInsert = Readonly<{
   at: Date;
 }>;
 
+export type ReservationContactPatch = Partial<
+  StoredReservation["contact"] & { internalNotes: string | null }
+>;
+export type ReservationContactChange = Readonly<{
+  patch: ReservationContactPatch;
+  newGuestId: string | null;
+  revokeManageToken: boolean;
+}>;
+
+export type RoomAssignmentRequest = Readonly<{
+  branchId: string;
+  roomTypeId: string;
+  lineId: string;
+  physicalRoomId: string;
+  stay: StayRange;
+}>;
+
 export interface ReservationRepository {
   /** Every lookup has an explicit authorized branch. Missing or foreign means null. */
   findById(branchId: string, id: string): Promise<StoredReservation | null>;
@@ -216,6 +233,41 @@ export interface ReservationRepository {
     id: string,
     at: Date,
   ): Promise<StoredReservation>;
+  /** Operational writes run in the caller's transaction after locking the reservation. */
+  updateContact(
+    current: StoredReservation,
+    change: ReservationContactChange,
+    at: Date,
+  ): Promise<StoredReservation>;
+  /** Check under the listing lock. Exclude only the line being assigned. */
+  checkAssignment(input: RoomAssignmentRequest): Promise<Result<void>>;
+  assignRoom(
+    current: StoredReservation,
+    lineId: string,
+    physicalRoomId: string | null,
+    at: Date,
+  ): Promise<Result<StoredReservation>>;
+  recordTransition(
+    current: StoredReservation,
+    next: Readonly<{
+      status: ReservationStatus;
+      stay: StayRange;
+      consumesInventory: boolean;
+      manageTokenExpiresAt?: Date;
+    }>,
+    at: Date,
+  ): Promise<StoredReservation>;
+  markPmsEntered(
+    current: StoredReservation,
+    actorId: string,
+    at: Date,
+  ): Promise<StoredReservation>;
+  rotateManageToken(
+    current: StoredReservation,
+    hash: string,
+    expiresAt: Date,
+    at: Date,
+  ): Promise<void>;
   /** Website reservations that can count toward the per phone cap, in every branch. */
   listPhoneBookings(phone: PhoneNumber): Promise<readonly PhoneBookingRow[]>;
 }

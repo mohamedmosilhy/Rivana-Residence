@@ -46,17 +46,17 @@ stateDiagram-v2
 | payment failure or expiry → `PAYMENT_FAILED` | Paymob callback, or the hold-expiry job, or a booking transaction for the same listings | Not yet confirmed | Inventory and coupon redemption released; "payment not completed" message; audit |
 | create (staff) → `CONFIRMED` | `reservations:create` + branch | As website, minus public-only rules; pay at hotel; manual price needs `pricing:override` | Audit; confirmation by email and WhatsApp if staff tick "send" |
 | record external → `CONFIRMED` | `reservations:record-external` + branch | `externalReference` required and unique per branch; inventory free under lock, otherwise a conflict is reported | Audit, flagged source `EXTERNAL`; already in the PMS, so no PMS-entry flag |
-| mark entered in hotel system | `reservations:pms-entry` + branch | `WEBSITE` source; `pmsEnteredAt` not set | Sets `pmsEnteredAt` and `pmsEnteredById`; audit |
+| mark entered in hotel system *(implemented M8-T10)* | `reservations:pms-entry` + branch | `WEBSITE` source; `pmsEnteredAt` not set | Sets `pmsEnteredAt` and `pmsEnteredById`; audit |
 | mark change entered in hotel system *(implemented M8-T9, Q-84; names the latest `changeSeq`)* | `reservations:pms-entry` + branch | A pending "changed, update hotel system" flag | Clears the flag with user and time; audit |
 | cancel (staff), unpaid | `reservations:cancel` + branch | `CONFIRMED`; not paid online | Inventory and coupon redemption released (Q-57, idempotent); optional guest message; audit; a booking already entered in the hotel system gets a numbered `CANCEL` change and the "changed, update hotel system" flag (Q-84) |
 | cancel (staff), paid | `reservations:cancel-paid` (Manager, Admin) + branch | `CONFIRMED`; payment `SUCCEEDED` | Refund requested through Paymob; `CANCELLED` when Paymob confirms; then release and messages; audit (Q-62) |
 | modify stay or services *(implemented M8-T9 and M8-T9b)* | `reservations:modify` | `CONFIRMED`; new dates or units pass inventory under locks for old and new listings; re-quote with VAT (PR-11); prepaid differences per Q-66 | New snapshot for changed nights and services, version bump and change history. A booking already entered in the hotel system gets the update flag (GC-6). History and audit record service kinds, car counts and whether retained details changed. Flight text stays in the reservation snapshot. |
 | guest change *(planned M9, Q-83…Q-85)* | Manage token or guest session for the reservation's phone | See [Guest changes](#guest-changes-q-83q-85) | Same as modify stay; guest and staff messages |
-| edit guest details/notes | `reservations:modify` | Not terminal | Audit (personal fields redacted to "changed") |
-| assign unit | `reservations:front-desk` | Unit of the same listing and branch, active, unblocked, not assigned to an overlapping stay | Exclusion constraint is the final guard; audit |
-| check in | `reservations:front-desk` | `CONFIRMED`; branch today ≥ check-in; every line assigned | Audit |
-| no-show | `reservations:front-desk` | `CONFIRMED`; branch today ≥ check-in | Inventory released; no automatic refund (Q-65); audit |
-| check out | `reservations:front-desk` | `CHECKED_IN`; branch today > check-in (arrival-day checkout is refused with `INVALID_TRANSITION`, Q-79) | If branch today < check-out, shorten the operational stay to today (IN-3) and keep the price snapshot unchanged (Q-76); feedback request queued (M13, ADR 028); audit |
+| edit guest details/notes *(implemented M8-T10)* | `reservations:modify` | Not terminal | Audit (personal fields redacted to "changed") |
+| assign unit *(implemented M8-T10)* | `reservations:front-desk` | Unit of the same listing and branch, active, unblocked, not assigned to an overlapping stay | Exclusion constraint is the final guard; audit |
+| check in *(implemented M8-T10)* | `reservations:front-desk` | `CONFIRMED`; branch today ≥ check-in; every line assigned | Audit |
+| no-show *(implemented M8-T10)* | `reservations:front-desk` | `CONFIRMED`; branch today ≥ check-in | Inventory released; no automatic refund (Q-65); audit |
+| check out *(implemented M8-T10)* | `reservations:front-desk` | `CHECKED_IN`; branch today > check-in (arrival-day checkout is refused with `INVALID_TRANSITION`, Q-79) | If branch today < check-out, shorten the operational stay to today (IN-3) and keep the price snapshot unchanged (Q-76); feedback request queued (M13, ADR 028); audit |
 
 Every transition:
 

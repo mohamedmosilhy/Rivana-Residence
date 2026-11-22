@@ -11,6 +11,8 @@ export type {
   StoredReservationSnapshot,
   StayReplacement,
   ReservationChangeInsert,
+  ReservationContactChange,
+  RoomAssignmentRequest,
 } from "./ports";
 export type { ReservationStorageContext } from "./storage-context";
 export {
@@ -54,3 +56,13 @@ export {
   MarkChangeEnteredInHotelSystem,
   type MarkChangeEnteredInput,
 } from "./mark-change-entered";
+export { UpdateReservationGuest } from "./update-reservation-guest";
+export {
+  AssignPhysicalRoom,
+  RecordFrontDeskTransition,
+} from "./reservation-front-desk";
+export {
+  MarkEnteredInHotelSystem,
+  ResendManageLink,
+  type ResendManageLinkContext,
+} from "./reservation-guest-access";

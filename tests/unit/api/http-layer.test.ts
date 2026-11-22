@@ -219,6 +219,62 @@ describe("staffRoute refusals (AC-3)", () => {
     );
   });
 
+  it("accepts a streamed empty optional body and validates any supplied bytes", async () => {
+    const { staffRoute } = setup();
+    const POST = staffRoute(
+      {
+        route: "/api/v1/test",
+        body: z.strictObject({ note: z.string().optional() }),
+        bodyOptional: true,
+        maxBytes: 32,
+      },
+      async ({ body }) => json(200, body),
+    );
+    const empty = new ReadableStream<Uint8Array>({
+      start(controller) {
+        controller.close();
+      },
+    });
+    const textHeaders = { "content-type": "text/plain" };
+    expect(
+      await read(await POST(post({ body: empty, headers: textHeaders }))),
+    ).toMatchObject({
+      status: 200,
+      body: {},
+    });
+    const cases = [
+      {
+        body: "unexpected",
+        headers: textHeaders,
+        status: 415,
+        code: "UNSUPPORTED_MEDIA_TYPE",
+      },
+      {
+        body: "x".repeat(33),
+        headers: textHeaders,
+        status: 413,
+        code: "PAYLOAD_TOO_LARGE",
+      },
+      { body: "{", headers: {}, status: 400, code: "MALFORMED_JSON" },
+      {
+        body: '{"invalid":true}',
+        headers: {},
+        status: 422,
+        code: "VALIDATION",
+      },
+    ];
+    for (const testCase of cases) {
+      expect(
+        await read(
+          await POST(post({ body: testCase.body, headers: testCase.headers })),
+        ),
+      ).toMatchObject({
+        status: testCase.status,
+        body: { code: testCase.code },
+      });
+    }
+  });
+
   it("returns 415 for a non-JSON content type without reading the body (T-HTTP-1)", async () => {
     const { POST, handler } = route();
     const result = await read(

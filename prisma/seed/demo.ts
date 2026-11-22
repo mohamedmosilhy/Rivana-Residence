@@ -472,7 +472,7 @@ const RESERVATION_FIXTURES = [
     reference: "RR-DEM00003",
     status: "CHECKED_IN",
     source: "STAFF",
-    day: "2027-03-05",
+    day: "2027-03-04",
     entered: false,
   },
   {
@@ -552,9 +552,11 @@ export async function seedDemoReservations(
       if (await tx.reservation.findUnique({ where: { id: fixture.id } }))
         continue;
       const checkIn = new Date(`${fixture.day}T00:00:00Z`);
-      const checkOut = new Date(checkIn.getTime() + 86_400_000);
+      const nightCount = fixture.status === "CHECKED_IN" ? 3 : 1;
+      const checkOut = new Date(checkIn.getTime() + nightCount * 86_400_000);
       const unpriced = fixture.source === "EXTERNAL";
-      const accommodation = 6000;
+      const pricePerNight = 6000;
+      const accommodation = nightCount * pricePerNight;
       const transfer = fixture.entered
         ? {
             kind: "AIRPORT_TRANSFER" as const,
@@ -674,11 +676,11 @@ export async function seedDemoReservations(
                 fixture.status === "CHECKED_OUT",
               subtotalMinor: unpriced ? null : accommodation,
               nights: {
-                create: {
-                  night: checkIn,
-                  amountMinor: unpriced ? null : accommodation,
+                create: Array.from({ length: nightCount }, (_, night) => ({
+                  night: new Date(checkIn.getTime() + night * 86_400_000),
+                  amountMinor: unpriced ? null : pricePerNight,
                   rateSource: unpriced ? null : "BASE",
-                },
+                })),
               },
             },
           },

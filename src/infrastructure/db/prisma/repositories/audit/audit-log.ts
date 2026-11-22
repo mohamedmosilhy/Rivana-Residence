@@ -69,17 +69,38 @@ const CANCELLATION_REASON_CODES: ReadonlySet<string> = new Set([
   "OTHER",
 ]);
 
+const operationFlags: Readonly<Partial<Record<string, readonly string[]>>> = {
+  "reservation.contact-edited": [
+    "fullName",
+    "email",
+    "phone",
+    "country",
+    "specialRequests",
+    "internalNotes",
+  ],
+  "reservation.room-assigned": ["assigned"],
+  "reservation.no-show": ["noteProvided"],
+  "reservation.pms-entered": ["noteProvided"],
+  "reservation.manage-link-resent": ["emailQueued", "whatsappQueued"],
+};
+
 function reservationChanges(action: string, changes: Prisma.JsonValue) {
   const safe: Record<string, string | number | boolean | null> = {};
+  if (!changes || typeof changes !== "object" || Array.isArray(changes))
+    return safe;
+  if (Object.hasOwn(operationFlags, action)) {
+    for (const key of operationFlags[action] ?? []) {
+      const value = changes[key];
+      if (typeof value === "boolean") safe[key] = value;
+    }
+    return safe;
+  }
   if (
-    (action !== "reservation.created" &&
-      action !== "reservation.staff-created" &&
-      action !== "reservation.stay-modified" &&
-      action !== "reservation.cancelled" &&
-      action !== "reservation.pms-update-entered") ||
-    !changes ||
-    typeof changes !== "object" ||
-    Array.isArray(changes)
+    action !== "reservation.created" &&
+    action !== "reservation.staff-created" &&
+    action !== "reservation.stay-modified" &&
+    action !== "reservation.cancelled" &&
+    action !== "reservation.pms-update-entered"
   )
     return safe;
   for (const key of [

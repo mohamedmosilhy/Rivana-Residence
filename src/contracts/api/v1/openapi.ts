@@ -10,6 +10,9 @@ import {
   CreateStaffReservationRequest,
   ModifyReservationStayRequest,
   PmsUpdateRequest,
+  UpdateReservationGuestRequest,
+  RoomAssignmentInput,
+  ReservationOperationNote,
   RecordExternalReservationRequest,
   StaffReservationDetail,
   StaffReservationList,
@@ -104,6 +107,9 @@ const COMPONENTS: Readonly<Record<string, z.ZodType>> = {
   CreateStaffReservationRequest,
   ModifyReservationStayRequest,
   PmsUpdateRequest,
+  UpdateReservationGuestRequest,
+  RoomAssignmentInput,
+  ReservationOperationNote,
   RecordExternalReservationRequest,
   StaffReservationDetail,
   StaffReservationList,
@@ -264,7 +270,7 @@ function operation(route: ApiRoute) {
     ...(route.request
       ? {
           requestBody: {
-            required: true,
+            required: !route.requestOptional,
             content: { "application/json": { schema: refFor(route.request) } },
           },
         }

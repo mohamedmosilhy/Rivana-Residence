@@ -23,6 +23,8 @@ import type {
 import type { Clock } from "@/application/shared/providers";
 
 import type { StoredReservation } from "./ports";
+import { canMarkPmsEntered } from "./staff-reservation-operation";
+import { manageTokenExpiry } from "./manage-token";
 
 export type StaffReservationQuery = PageRequest &
   Readonly<{
@@ -157,8 +159,14 @@ function staffReservationActions(
   };
   const actions: string[] = [];
   if (roleHasCapability(staff.role, "reservations:modify")) {
-    if (canEditReservationGuest(state.status))
-      actions.push("EDIT_GUEST", "SEND_MANAGE_LINK");
+    if (canEditReservationGuest(state.status)) {
+      actions.push("EDIT_GUEST");
+      if (
+        (row.contact.email || row.contact.phone) &&
+        manageTokenExpiry(row.stay.checkOut) > now
+      )
+        actions.push("SEND_MANAGE_LINK");
+    }
     if (canModifyReservationStay(state.status)) actions.push("MODIFY_STAY");
   }
   if (
@@ -175,9 +183,7 @@ function staffReservationActions(
   }
   if (
     roleHasCapability(staff.role, "reservations:pms-entry") &&
-    state.source === "WEBSITE" &&
-    state.pmsEnteredAt === null &&
-    (state.status === "CONFIRMED" || state.status === "CHECKED_IN")
+    canMarkPmsEntered(row)
   )
     actions.push("MARK_ENTERED_IN_HOTEL_SYSTEM");
   if (

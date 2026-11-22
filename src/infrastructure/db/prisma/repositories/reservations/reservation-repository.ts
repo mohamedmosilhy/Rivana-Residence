@@ -1,9 +1,11 @@
 import "server-only";
 
 import type {
+  ReservationContactChange,
   ReservationChangeInsert,
   ReservationInsert,
   ReservationRepository,
+  RoomAssignmentRequest,
   StayReplacement,
   StoredReservation,
   StoredReservationSnapshot,
@@ -481,6 +483,165 @@ export class PrismaReservationRepository implements ReservationRepository {
     return stored;
   }
 
+  private async writeOperation(
+    current: StoredReservation,
+    data: Prisma.ReservationUncheckedUpdateInput,
+    at: Date,
+  ) {
+    return map(
+      await this.client.reservation.update({
+        where: { id: current.id, branchId: current.branchId },
+        data: { ...data, updatedAt: at, version: { increment: 1 } },
+        include: graph,
+      }),
+    );
+  }
+
+  updateContact(
+    current: StoredReservation,
+    { patch, newGuestId, revokeManageToken }: ReservationContactChange,
+    at: Date,
+  ) {
+    return this.writeOperation(
+      current,
+      {
+        ...(patch.fullName === undefined ? {} : { guestName: patch.fullName }),
+        ...(patch.email === undefined ? {} : { guestEmail: patch.email }),
+        ...(patch.phone === undefined ? {} : { guestPhone: patch.phone }),
+        ...(patch.country === undefined ? {} : { guestCountry: patch.country }),
+        ...(patch.specialRequests === undefined
+          ? {}
+          : { specialRequests: patch.specialRequests }),
+        ...(patch.internalNotes === undefined
+          ? {}
+          : { internalNotes: patch.internalNotes }),
+        ...(newGuestId === null ? {} : { guestId: newGuestId }),
+        ...(revokeManageToken
+          ? { manageTokenHash: null, manageTokenExpiresAt: null }
+          : {}),
+      },
+      at,
+    );
+  }
+
+  async checkAssignment(input: RoomAssignmentRequest) {
+    const { branchId, roomTypeId, physicalRoomId, lineId, stay } = input;
+    const unit = await this.client.physicalRoom.findFirst({
+      where: { id: physicalRoomId, branchId, roomTypeId, active: true },
+      select: { id: true },
+    });
+    if (!unit)
+      return failure(
+        "NOT_FOUND",
+        "An active room was not found for this listing.",
+      );
+    const checkIn = new Date(stay.checkIn.value + "T00:00:00Z");
+    const checkOut = new Date(stay.checkOut.value + "T00:00:00Z");
+    const blocked = await this.client.inventoryBlock.findFirst({
+      where: {
+        physicalRoomId,
+        branchId,
+        cancelledAt: null,
+        startDate: { lt: checkOut },
+        endDate: { gt: checkIn },
+      },
+      select: { id: true },
+    });
+    if (blocked)
+      return failure("ROOM_BLOCKED", "This room is blocked during the stay.");
+    const held = await this.client.reservationRoom.findFirst({
+      where: {
+        physicalRoomId,
+        branchId,
+        id: { not: lineId },
+        consumesInventory: true,
+        checkIn: { lt: checkOut },
+        checkOut: { gt: checkIn },
+      },
+      select: { id: true },
+    });
+    return held ? roomAlreadyAssigned() : success(undefined);
+  }
+
+  async assignRoom(
+    current: StoredReservation,
+    lineId: string,
+    physicalRoomId: string | null,
+    at: Date,
+  ) {
+    try {
+      await this.client.reservationRoom.update({
+        where: {
+          id: lineId,
+          branchId: current.branchId,
+          reservationId: current.id,
+        },
+        data: { physicalRoomId },
+      });
+    } catch (error) {
+      const code = postgresErrorCode(error);
+      if (code === "23P01" || code === "40P01") return roomAlreadyAssigned();
+      throw error;
+    }
+    return success(await this.writeOperation(current, {}, at));
+  }
+
+  async recordTransition(
+    current: StoredReservation,
+    next: Parameters<ReservationRepository["recordTransition"]>[1],
+    at: Date,
+  ) {
+    const shorter = next.stay.checkOut.compare(current.stay.checkOut) < 0;
+    const checkOut = new Date(next.stay.checkOut.value + "T00:00:00Z");
+    if (shorter || !next.consumesInventory) {
+      await this.client.reservationRoom.updateMany({
+        where: { reservationId: current.id, branchId: current.branchId },
+        data: {
+          consumesInventory: next.consumesInventory,
+          ...(shorter ? { checkOut } : {}),
+        },
+      });
+    }
+    return this.writeOperation(
+      current,
+      {
+        status: next.status,
+        statusChangedAt: at,
+        ...(shorter ? { checkOut } : {}),
+        ...(next.manageTokenExpiresAt
+          ? { manageTokenExpiresAt: next.manageTokenExpiresAt }
+          : {}),
+      },
+      at,
+    );
+  }
+
+  markPmsEntered(current: StoredReservation, actorId: string, at: Date) {
+    return this.writeOperation(
+      current,
+      { pmsEnteredAt: at, pmsEnteredById: actorId },
+      at,
+    );
+  }
+
+  async rotateManageToken(
+    current: StoredReservation,
+    hash: string,
+    expiresAt: Date,
+    at: Date,
+  ) {
+    await this.client.reservation.update({
+      where: { id: current.id, branchId: current.branchId },
+      data: {
+        manageTokenHash: hash,
+        manageTokenExpiresAt: expiresAt,
+        updatedAt: at,
+        version: { increment: 1 },
+      },
+      select: { id: true },
+    });
+  }
+
   async insert(input: ReservationInsert) {
     try {
       return await withTransaction(this.client, async (transaction) => {
@@ -615,6 +776,13 @@ export class PrismaReservationRepository implements ReservationRepository {
       throw error;
     }
   }
+}
+
+function roomAlreadyAssigned() {
+  return failure(
+    "ROOM_ALREADY_ASSIGNED",
+    "This room is already assigned during the stay.",
+  );
 }
 
 function serviceData(line: StoredReservationSnapshot["serviceLines"][number]) {

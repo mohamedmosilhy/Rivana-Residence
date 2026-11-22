@@ -53,6 +53,7 @@ type RouteOptions<Body, Query> = Readonly<{
   /** The route pattern, logged instead of the raw path. */
   route: string;
   body?: z.ZodType<Body>;
+  bodyOptional?: boolean;
   query?: z.ZodType<Query>;
   maxBytes?: number;
 }>;
@@ -201,6 +202,7 @@ export function createRoutes(deps: HttpDependencies) {
             fromBody(
               await parseJson(request, {
                 maxBytes: options.maxBytes ?? DEFAULT_MAX_BODY_BYTES,
+                allowEmpty: options.bodyOptional,
               }),
               requestId,
             ),

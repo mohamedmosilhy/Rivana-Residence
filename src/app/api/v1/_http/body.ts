@@ -52,15 +52,16 @@ export async function readRawBody(
   return { ok: true, value: bytes };
 }
 
-/**
- * `parseJson(request, { maxBytes })`: 415 for a non-JSON content type
- * (checked before reading), 413 over the cap, 400 for invalid UTF-8 or JSON.
- */
+/** Parse bounded JSON. Routes with optional bodies also accept zero bytes. */
 export async function parseJson(
   request: Request,
-  options: Readonly<{ maxBytes?: number }> = {},
+  options: Readonly<{
+    maxBytes?: number;
+    allowEmpty?: boolean | undefined;
+  }> = {},
 ): Promise<BodyResult<unknown>> {
-  if (!JSON_TYPE.test(request.headers.get("content-type") ?? "")) {
+  const isJson = JSON_TYPE.test(request.headers.get("content-type") ?? "");
+  if (!isJson && !options.allowEmpty) {
     return { ok: false, code: "UNSUPPORTED_MEDIA_TYPE" };
   }
   const raw = await readRawBody(
@@ -68,6 +69,9 @@ export async function parseJson(
     options.maxBytes ?? DEFAULT_MAX_BODY_BYTES,
   );
   if (!raw.ok) return raw;
+  if (options.allowEmpty && raw.value.byteLength === 0)
+    return { ok: true, value: {} };
+  if (!isJson) return { ok: false, code: "UNSUPPORTED_MEDIA_TYPE" };
   try {
     const text = new TextDecoder("utf-8", { fatal: true }).decode(raw.value);
     return { ok: true, value: JSON.parse(text) as unknown };

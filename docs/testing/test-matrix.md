@@ -88,7 +88,7 @@ M4 (2026-11-06), M5 (2026-11-07), M6-T1 through M6-T10 (latest 2026-11-10), and 
 | T-RPT-1…10 | Report definitions on a fixed dataset (occupancy, revenue excluding VAT, VAT, discounts, payments and refunds, cancellations, PMS-entry ages); planned 2026-11-17: T-RPT-7…10 insights (Q-89) and website figures (FR-ANL) on fixtures, branch scope of S46, S47 |
 | T-GST-1…10 | **Verification implemented (M8-T5):** request/confirm, HMAC code storage, 10-minute expiry, five committed attempts, rolling phone/client limits, blocked-number refusal, one token issuance and provider failure handling (files above). Booking token consumption and guest upsert/consent remain T7; staff linking T8; staff blocking and guest-session reads T11 |
 | T-SYNCAPI-1…4 | Sync status (including not-entered count) and checkpoints per branch; one checkpoint clears all receptionists of the branch; branch access enforced; audit appended |
-| T-PMS-1…2 | Mark entered in hotel system: once only, audited, branch-scoped, `WEBSITE` only |
+| T-PMS-1…2 | Mark entered in hotel system: once only, audited, branch-scoped, `WEBSITE` only. **Implemented (M8-T10)** in `tests/integration/reservations/staff-operations.test.ts` (first entry after check in and after no show, replay, external source refused) and `tests/e2e/staff-operations-api.spec.ts` |
 | T-AUD-1…3 | Audit appended in the same transaction (rollback leaves none); redaction |
 | T-NTF-1…3 | Outbox claim `SKIP LOCKED`; retry with backoff; token scrubbed after send; confirmation rows only for `CONFIRMED` |
 | T-WA-1…3 | `WhatsAppSender` contract with a fake adapter: template resolution by purpose and language and variable order, delivery failure maps to `VERIFICATION_UNAVAILABLE` or an outbox retry, no secrets or codes in logs |

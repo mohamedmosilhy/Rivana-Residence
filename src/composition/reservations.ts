@@ -7,6 +7,12 @@ import {
   ModifyReservation,
   CancelReservation,
   MarkChangeEnteredInHotelSystem,
+  AssignPhysicalRoom,
+  RecordFrontDeskTransition,
+  UpdateReservationGuest,
+  MarkEnteredInHotelSystem,
+  ResendManageLink,
+  type ResendManageLinkContext,
   type ModifyReservationContext,
   type CancelReservationContext,
   ListReservations,
@@ -203,6 +209,11 @@ export function staffReservationCommands(
     clock,
   };
   const reads = new PrismaStaffReservationReader(client);
+  const operations = {
+    unitOfWork: new PrismaReservationUnitOfWork(client, storageContext),
+    reads,
+    clock,
+  };
   return {
     create: new CreateStaffReservation(deps),
     recordExternal: new RecordExternalReservation(deps),
@@ -224,13 +235,24 @@ export function staffReservationCommands(
       ids: deps.ids,
       clock,
     }),
-    markChangeEntered: new MarkChangeEnteredInHotelSystem({
-      unitOfWork: new PrismaReservationUnitOfWork<ReservationStorageContext>(
-        client,
-        storageContext,
-      ),
+    markChangeEntered: new MarkChangeEnteredInHotelSystem(operations),
+    updateGuest: new UpdateReservationGuest({ ...operations, ids: deps.ids }),
+    assignRoom: new AssignPhysicalRoom(operations),
+    checkIn: new RecordFrontDeskTransition(operations, "CHECK_IN"),
+    checkOut: new RecordFrontDeskTransition(operations, "CHECK_OUT"),
+    markNoShow: new RecordFrontDeskTransition(operations, "MARK_NO_SHOW"),
+    markEntered: new MarkEnteredInHotelSystem(operations),
+    resendManageLink: new ResendManageLink({
       reads,
       clock,
+      crypto: deps.crypto,
+      unitOfWork: new PrismaReservationUnitOfWork<ResendManageLinkContext>(
+        client,
+        (transaction) => ({
+          ...storageContext(transaction),
+          messages: reservationMessageWriter(transaction),
+        }),
+      ),
     }),
   };
 }

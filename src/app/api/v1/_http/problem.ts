@@ -34,6 +34,11 @@ export const PROBLEMS: Readonly<Record<ProblemCode, ProblemDefinition>> = {
     status: 409,
     title: "The requested inventory is unavailable",
   },
+  ROOM_ALREADY_ASSIGNED: {
+    status: 409,
+    title: "This room is already assigned",
+  },
+  ROOM_BLOCKED: { status: 409, title: "This room is blocked" },
   SERVICE_UNAVAILABLE: {
     status: 409,
     title: "This service is not available",
