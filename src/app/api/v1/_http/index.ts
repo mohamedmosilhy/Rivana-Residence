@@ -13,3 +13,4 @@ export { json, toHttp, type HandlerResult } from "./routes";
 export { parseJson, validate } from "./body";
 export { problem } from "./problem";
 export { ifMatchVersion } from "./if-match";
+export { bearerToken } from "./bearer";

@@ -2,7 +2,11 @@ import "server-only";
 
 import { createId } from "@paralleldrive/cuid2";
 
-import type { AuditLog, ReservationHistoryReader } from "@/application/audit";
+import type {
+  AuditLog,
+  GuestHistoryReader,
+  ReservationHistoryReader,
+} from "@/application/audit";
 import type { AuditEvent } from "@/domain/audit";
 import type { Prisma } from "@/generated/prisma/client";
 import { getPrisma } from "@/infrastructure/db/prisma/client";
@@ -58,6 +62,40 @@ export class PrismaReservationHistoryReader
       actorType: row.actorType,
       staffActorId: row.actorType === "STAFF" ? row.actorId : null,
       changes: reservationChanges(row.action, row.changes),
+    }));
+  }
+}
+
+export class PrismaGuestHistoryReader implements GuestHistoryReader {
+  constructor(private readonly client: DatabaseClient) {}
+
+  async listForGuest(id: string) {
+    const rows = await this.client.auditEvent.findMany({
+      where: {
+        entityType: "Guest",
+        entityId: id,
+        action: { in: ["guest.blocked", "guest.unblocked"] },
+      },
+      orderBy: [{ occurredAt: "desc" }, { id: "asc" }],
+      take: 100,
+      select: {
+        id: true,
+        occurredAt: true,
+        action: true,
+        actorId: true,
+        actorType: true,
+        reason: true,
+      },
+    });
+    return rows.map((row) => ({
+      id: row.id,
+      occurredAt: row.occurredAt.toISOString(),
+      action:
+        row.action === "guest.blocked"
+          ? ("guest.blocked" as const)
+          : ("guest.unblocked" as const),
+      staffActorId: row.actorType === "STAFF" ? row.actorId : null,
+      reason: row.reason,
     }));
   }
 }

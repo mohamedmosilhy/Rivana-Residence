@@ -69,6 +69,52 @@ export class PrismaGuestRepository implements GuestRepository {
     });
   }
 
+  findById(id: string) {
+    return this.client.guest.findUnique({ where: { id } });
+  }
+
+  async lockById(id: string) {
+    try {
+      await this.client.$executeRaw`SET LOCAL lock_timeout = '5s'`;
+      const rows = await this.client.$queryRaw<Readonly<{ id: string }>[]>`
+        SELECT id FROM "Guest" WHERE id = ${id} FOR UPDATE
+      `;
+      if (rows.length === 0) return success(null);
+      return success(await this.findById(id));
+    } catch (error) {
+      if (postgresErrorCode(error) === "55P03")
+        return failure(
+          "TRY_AGAIN",
+          "Guest record is busy. Please try again shortly.",
+        );
+      throw error;
+    }
+  }
+
+  setBlocked(input: Parameters<GuestRepository["setBlocked"]>[0]) {
+    return this.client.guest.update({
+      where: { id: input.id },
+      data: {
+        blockedAt: input.at,
+        blockedById: input.by,
+        blockReason: input.reason,
+        updatedAt: input.at,
+      },
+    });
+  }
+
+  clearBlocked(input: Parameters<GuestRepository["clearBlocked"]>[0]) {
+    return this.client.guest.update({
+      where: { id: input.id },
+      data: {
+        blockedAt: null,
+        blockedById: null,
+        blockReason: null,
+        updatedAt: input.at,
+      },
+    });
+  }
+
   updateContact(input: Parameters<GuestRepository["updateContact"]>[0]) {
     return this.client.guest.update({
       where: { id: input.id },

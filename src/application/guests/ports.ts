@@ -1,6 +1,12 @@
 import type { PhoneNumber } from "@/domain/guests";
 import type { VerificationPurpose } from "@/domain/shared/types";
+import type { BranchScope } from "@/application/auth/authorize-branch";
+import type { PagedResult, PageRequest } from "@/application/shared/pagination";
 import type { Result } from "@/application/shared/result";
+import type {
+  ReservationSource,
+  ReservationStatus,
+} from "@/domain/shared/types";
 
 export type GuestProfile = Readonly<{
   id: string;
@@ -45,6 +51,17 @@ export interface GuestRepository {
       verifiedAt: Date;
       marketingConsentVersion: string | null;
     }>,
+  ): Promise<GuestProfile>;
+  findById(id: string): Promise<GuestProfile | null>;
+  /** Transaction only. Locks the guest row by id (the row `lockByPhone` locks). */
+  lockById(id: string): Promise<Result<GuestProfile | null>>;
+  /** Transaction only, after lock. Blocks the phone for every branch (Q-29). */
+  setBlocked(
+    input: Readonly<{ id: string; by: string; reason: string; at: Date }>,
+  ): Promise<GuestProfile>;
+  /** Transaction only, after lock. Clears the block; history stays in the audit log. */
+  clearBlocked(
+    input: Readonly<{ id: string; at: Date }>,
   ): Promise<GuestProfile>;
   /** Transaction only, after lock. Updates contact only, preserving verification, block and consent. */
   updateContact(
@@ -95,6 +112,46 @@ export interface PhoneVerificationRepository {
   ): Promise<void>;
   /** Retain the request for rolling limits, but make its code unusable. */
   invalidate(id: string): Promise<void>;
+  /**
+   * Transaction only, after the phone and guest locks. Makes every unexpired
+   * code and every live token of the phone unusable (S52) and reports how
+   * many rows changed. Rows stay for the rolling limits.
+   */
+  invalidateOpenForPhone(phone: PhoneNumber, at: Date): Promise<number>;
+}
+
+/** One reservation of a guest, limited to the caller's branches (S51). */
+export type GuestReservationItem = Readonly<{
+  id: string;
+  branchId: string;
+  reference: string;
+  source: ReservationSource;
+  status: ReservationStatus;
+  stay: Readonly<{ checkIn: string; checkOut: string }>;
+  totalMinor: number | null;
+}>;
+export type GuestListItem = Readonly<{
+  id: string;
+  phone: string;
+  name: string;
+  verified: boolean;
+  blocked: boolean;
+  /** Reservations in the caller's branches only. */
+  reservationCount: number;
+}>;
+export type GuestDirectoryQuery = PageRequest &
+  Readonly<{ q?: string | undefined; blocked?: boolean | undefined }>;
+export type GuestDetail = Readonly<{
+  guest: GuestProfile;
+  reservations: readonly GuestReservationItem[];
+}>;
+/** Unlocked staff reads. Callers authorize first and pass the branch scope. */
+export interface GuestDirectoryReader {
+  list(
+    scope: BranchScope,
+    query: GuestDirectoryQuery,
+  ): Promise<PagedResult<GuestListItem>>;
+  find(id: string, scope: BranchScope): Promise<GuestDetail | null>;
 }
 
 export interface PhoneVerificationCrypto {

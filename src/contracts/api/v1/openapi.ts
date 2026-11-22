@@ -6,6 +6,13 @@ import {
 } from "./phone-verifications";
 import { Coupon, CouponInput, CouponPatch, CouponList } from "./coupons";
 import {
+  BlockGuestRequest,
+  GuestDetail,
+  GuestList,
+  GuestReservation,
+  GuestReservationList,
+} from "./guests";
+import {
   CancelReservationRequest,
   CreateStaffReservationRequest,
   ModifyReservationStayRequest,
@@ -155,6 +162,11 @@ const COMPONENTS: Readonly<Record<string, z.ZodType>> = {
   WhatsAppTemplateList,
   WhatsAppTestMessageInput,
   WhatsAppTestMessageResult,
+  BlockGuestRequest,
+  GuestList,
+  GuestDetail,
+  GuestReservationList,
+  GuestReservation,
 };
 
 function componentSchemas() {
@@ -265,7 +277,12 @@ function operation(route: ApiRoute) {
     operationId: route.operationId,
     summary: route.summary,
     tags: [route.tag],
-    security: route.security === "staff" ? [{ staffSession: [] }] : [],
+    security:
+      route.security === "staff"
+        ? [{ staffSession: [] }]
+        : route.security === "guest"
+          ? [{ guestToken: [] }]
+          : [],
     ...(parameters(route).length > 0 ? { parameters: parameters(route) } : {}),
     ...(route.request
       ? {
@@ -297,6 +314,12 @@ export function buildOpenApiDocument() {
     components: {
       schemas: componentSchemas(),
       securitySchemes: {
+        guestToken: {
+          type: "http",
+          scheme: "bearer",
+          description:
+            "A 43 character token: the manage link token (API-G1) or a GUEST_SESSION token from API-P10 (API-G3, G4). Only its SHA-256 is stored. Never put it in a URL the server sees.",
+        },
         staffSession: {
           type: "apiKey",
           in: "cookie",

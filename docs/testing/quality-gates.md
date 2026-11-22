@@ -39,11 +39,15 @@ Record exact commands and counts in the review package. If a gate cannot run, sa
 
 The owner selected Node **26.13.0 LTS** for the Mac, CI, and hosting. On macOS with npm **11.20.0**, clean `npm ci --no-audit` and `npm run check` passed (format, lint, typecheck, **67 unit files / 1,373 tests**, production build). The full PostgreSQL integration suite passed **29 files / 391 tests**; full Chromium E2E passed **175 tests**, with **30 intentionally skipped**. Independent review by `gpt-6-astra` approved with zero findings. The [runtime report](../delivery/reports/node-26-runtime-alignment.md) records exact commands, unchanged development audit findings, and the nonfatal upstream Tailwind loader deprecation under Node 26. Those Tailwind and media tracing warnings were subsequently resolved in M6-T10. These results do not replace the historical task acceptance evidence below or claim remote Linux CI has run.
 
-## Latest accepted task results (2026-11-22, M8-T10)
+## Latest accepted task results (2026-11-22, M8-T11)
+
+`npm run check` passed formatting, lint, typecheck, 2,226 unit tests across 100 files, and the production build. PostgreSQL integration passed 846 tests across 52 files. Parallel blocks, a block waiting on a held guest lock, and a real code confirmation racing a block each passed 20 rounds, with the overlap observed as PostgreSQL lock waits. The audit failure rollback test passed. Full Playwright passed 210 tests with 33 intentional skips, including the guest access scenario on desktop and mobile. [Task log](../delivery/reports/m8-reservations.md#task-log) and [independent review](../reviews/2026-11-22-m8-t11.md).
+
+## Previous accepted task results (2026-11-22, M8-T10)
 
 `npm run check` passed formatting, lint, typecheck, 2,197 unit tests across 99 files, and the production build. PostgreSQL integration passed 834 tests across 51 files. C-7 (double assignment), assignment against a block, concurrent link rotation and C-9 each passed 20 rounds. Full Chromium passed 208 tests with 33 intentional skips, including the live seven endpoint staff operations scenario on desktop and mobile. [Task log](../delivery/reports/m8-reservations.md#task-log) and [independent review](../reviews/2026-11-22-m8-t10.md).
 
-## Previous accepted task results (2026-11-21, M8-T9b)
+## Earlier accepted task results (2026-11-21, M8-T9b)
 
 `npm run check` passed formatting, lint, typecheck, 2,178 unit tests across 99 files, and the production build. PostgreSQL integration passed 812 tests across 50 files. Five dedicated concurrency scenarios passed at 20 rounds each. The unfiltered Chromium rerun passed 206 tests with 33 intentional skips, including the S6 service flow and the admin keyboard case on desktop and mobile. The keyboard test now opens a fresh authenticated document to check the first Tab. Earlier unit and contact-map failures cleared on rerun. [Task log](../delivery/reports/m8-reservations.md#task-log) and [independent review](../reviews/2026-11-21-m8-t9b.md).
 

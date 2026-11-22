@@ -211,6 +211,9 @@ export type AuditChanges = {
     emailQueued: boolean;
     whatsappQueued: boolean;
   }>;
+  /** S52 and S53. The reason is the event's `reason`; the phone and name are never copied. */
+  "guest.blocked": Readonly<{ verificationsInvalidated: number }>;
+  "guest.unblocked": Readonly<Record<string, never>>;
   /** The outcome of an Admin test message; the recipient is never stored. */
   "whatsapp-test.sent": Readonly<{
     templateId: string | null;
@@ -281,7 +284,8 @@ export type AuditEvent<A extends AuditAction = AuditAction> = Readonly<{
     | "Coupon"
     | "WhatsAppSettings"
     | "WhatsAppTemplate"
-    | "Reservation";
+    | "Reservation"
+    | "Guest";
   entityId: string;
   branchId: string | null;
   reason: string | null;

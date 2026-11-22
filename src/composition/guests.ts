@@ -2,8 +2,25 @@ import "server-only";
 import {
   RequestPhoneVerification,
   ConfirmPhoneVerification,
+  ListGuests,
+  GetGuest,
+  ChangeGuestBlock,
+  type ChangeGuestBlockContext,
   type VerificationContext,
 } from "@/application/guests";
+import {
+  ViewGuestReservation,
+  ListGuestReservations,
+  ViewGuestSessionReservation,
+} from "@/application/reservations";
+import type { Clock } from "@/application/shared/providers";
+import { NodeBookingCrypto } from "@/infrastructure/crypto/booking-crypto";
+import {
+  PrismaAuditLog,
+  PrismaGuestHistoryReader,
+} from "@/infrastructure/db/prisma/repositories/audit/audit-log";
+import { PrismaGuestDirectoryReader } from "@/infrastructure/db/prisma/repositories/reservations/guests/guest-directory-reader";
+import { PrismaGuestReservationReader } from "@/infrastructure/db/prisma/repositories/reservations/guests/guest-reservation-reader";
 import { throttleKeys } from "@/composition/auth";
 import { clientAddressFrom } from "@/composition/http";
 import {
@@ -51,4 +68,57 @@ export function requestPhoneVerification(input: unknown, headers: Headers) {
 export function confirmPhoneVerification(id: unknown, input: unknown) {
   const secret = getServerEnv().PHONE_VERIFICATION_SECRET;
   return new ConfirmPhoneVerification(dependencies(secret)).execute(id, input);
+}
+
+/** S50 to S53 (M8-T11). */
+export function staffGuests(
+  options: Readonly<{
+    client?: ReturnType<typeof getPrisma>;
+    clock?: Clock;
+  }> = {},
+) {
+  const client = options.client ?? getPrisma();
+  const clock = options.clock ?? { now: () => new Date() };
+  const reader = new PrismaGuestDirectoryReader(client);
+  const history = new PrismaGuestHistoryReader(client);
+  const unitOfWork = new PrismaReservationUnitOfWork<ChangeGuestBlockContext>(
+    client,
+    (transaction) => ({
+      guests: new PrismaGuestRepository(transaction),
+      verifications: new PrismaPhoneVerificationRepository(transaction),
+      audit: new PrismaAuditLog(transaction),
+    }),
+  );
+  const deps = { unitOfWork, reader, history, clock };
+  return {
+    list: new ListGuests(reader),
+    get: new GetGuest(reader, history),
+    block: new ChangeGuestBlock(deps, "BLOCK"),
+    unblock: new ChangeGuestBlock(deps, "UNBLOCK"),
+  };
+}
+
+/** G1, G3 and G4 (M8-T11). Bearer tokens are hashed here and never stored. */
+export function guestReservationReads(
+  options: Readonly<{
+    client?: ReturnType<typeof getPrisma>;
+    clock?: Clock;
+  }> = {},
+) {
+  const client = options.client ?? getPrisma();
+  const deps = {
+    reader: new PrismaGuestReservationReader(client),
+    crypto: new NodeBookingCrypto(),
+    clock: options.clock ?? { now: () => new Date() },
+  };
+  const session = {
+    ...deps,
+    verifications: new PrismaPhoneVerificationRepository(client),
+    guests: new PrismaGuestRepository(client),
+  };
+  return {
+    view: new ViewGuestReservation(deps),
+    list: new ListGuestReservations(session),
+    viewBySession: new ViewGuestSessionReservation(session),
+  };
 }

@@ -3061,6 +3061,360 @@
           }
         }
       }
+    },
+    "/api/v1/staff/guests": {
+      "get": {
+        "operationId": "listGuests",
+        "summary": "API-S50. Search guests by name or phone (guests:read). Admin sees every guest. A Receptionist or Manager sees only guests with a reservation in their assigned branches, and counts only those reservations.",
+        "tags": [
+          "Guests"
+        ],
+        "security": [
+          {
+            "staffSession": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "q",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 160
+            }
+          },
+          {
+            "name": "blocked",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "true",
+                "false"
+              ]
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "default": "1",
+              "type": "string",
+              "pattern": "^[1-9]\\d*$"
+            }
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "default": "25",
+              "type": "string",
+              "pattern": "^[1-9]\\d*$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Guest page.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GuestList"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Problem details. Codes: INTERNAL, UNAUTHENTICATED, FORBIDDEN, NOT_FOUND, INVALID_QUERY.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/staff/guests/{id}": {
+      "get": {
+        "operationId": "getGuest",
+        "summary": "API-S51. Guest profile with reservations in the caller's branches and the block history (guests:read). A Receptionist or Manager gets 404 for a guest with no reservation in their branches.",
+        "tags": [
+          "Guests"
+        ],
+        "security": [
+          {
+            "staffSession": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Guest detail.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GuestDetail"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Problem details. Codes: INTERNAL, UNAUTHENTICATED, FORBIDDEN, NOT_FOUND.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/staff/guests/{id}/block": {
+      "post": {
+        "operationId": "blockGuest",
+        "summary": "API-S52. Block a guest's phone for every branch (guests:block). Invalidates the phone's open codes and tokens. Repeating it changes nothing.",
+        "tags": [
+          "Guests"
+        ],
+        "security": [
+          {
+            "staffSession": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BlockGuestRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The guest.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GuestDetail"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Problem details. Codes: INTERNAL, UNAUTHENTICATED, FORBIDDEN, NOT_FOUND, CROSS_SITE_REQUEST, MALFORMED_JSON, PAYLOAD_TOO_LARGE, UNSUPPORTED_MEDIA_TYPE, VALIDATION, TRY_AGAIN.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "operationId": "unblockGuest",
+        "summary": "API-S53. Lift a block (guests:block). The history stays in the audit log. Repeating it changes nothing.",
+        "tags": [
+          "Guests"
+        ],
+        "security": [
+          {
+            "staffSession": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BlockGuestRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The guest.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GuestDetail"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Problem details. Codes: INTERNAL, UNAUTHENTICATED, FORBIDDEN, NOT_FOUND, CROSS_SITE_REQUEST, MALFORMED_JSON, PAYLOAD_TOO_LARGE, UNSUPPORTED_MEDIA_TYPE, VALIDATION, TRY_AGAIN.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/guest/reservation": {
+      "get": {
+        "operationId": "getGuestReservation",
+        "summary": "API-G1. One reservation for the holder of a manage link token (`Authorization: Bearer`). Sixty requests per client per minute. View only in M8.",
+        "tags": [
+          "Guests"
+        ],
+        "security": [
+          {
+            "guestToken": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The reservation.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GuestReservation"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Problem details. Codes: INTERNAL, UNAUTHENTICATED, RATE_LIMITED.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/guest/reservations": {
+      "get": {
+        "operationId": "listGuestReservations",
+        "summary": "API-G3. Reservations of a verified phone, newest first (`Authorization: Bearer` guest session token from API-P10).",
+        "tags": [
+          "Guests"
+        ],
+        "security": [
+          {
+            "guestToken": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Reservation summaries.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GuestReservationList"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Problem details. Codes: INTERNAL, PHONE_NOT_VERIFIED, PHONE_BLOCKED, RATE_LIMITED.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/guest/reservations/{reference}": {
+      "get": {
+        "operationId": "getGuestSessionReservation",
+        "summary": "API-G4. One reservation of a verified phone by reference. A reference that is not this phone's is a 404.",
+        "tags": [
+          "Guests"
+        ],
+        "security": [
+          {
+            "guestToken": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "reference",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The reservation.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GuestReservation"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Problem details. Codes: INTERNAL, PHONE_NOT_VERIFIED, PHONE_BLOCKED, NOT_FOUND, RATE_LIMITED.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -7653,9 +8007,684 @@
           "providerMessageId"
         ],
         "additionalProperties": false
+      },
+      "BlockGuestRequest": {
+        "type": "object",
+        "properties": {
+          "reason": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 500
+          }
+        },
+        "required": [
+          "reason"
+        ],
+        "additionalProperties": false
+      },
+      "GuestList": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 32
+                },
+                "phone": {
+                  "type": "string"
+                },
+                "name": {
+                  "type": "string"
+                },
+                "verified": {
+                  "type": "boolean"
+                },
+                "blocked": {
+                  "type": "boolean"
+                },
+                "reservationCount": {
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991,
+                  "description": "Reservations in the caller's branches only."
+                }
+              },
+              "required": [
+                "id",
+                "phone",
+                "name",
+                "verified",
+                "blocked",
+                "reservationCount"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "page": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "pageSize": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "total": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          }
+        },
+        "required": [
+          "items",
+          "page",
+          "pageSize",
+          "total"
+        ],
+        "additionalProperties": false
+      },
+      "GuestDetail": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 32
+          },
+          "phone": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "email": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "verified": {
+            "type": "boolean"
+          },
+          "phoneVerifiedAt": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time",
+                "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "marketingOptInAt": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time",
+                "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "marketingOptOutAt": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time",
+                "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "blocked": {
+            "type": "boolean"
+          },
+          "blockedAt": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time",
+                "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "blockedById": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 32
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "blockReason": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+          },
+          "reservations": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 32
+                },
+                "branchId": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 32
+                },
+                "reference": {
+                  "type": "string"
+                },
+                "source": {
+                  "type": "string",
+                  "enum": [
+                    "WEBSITE",
+                    "STAFF",
+                    "EXTERNAL"
+                  ]
+                },
+                "status": {
+                  "type": "string"
+                },
+                "stay": {
+                  "$ref": "#/components/schemas/Stay"
+                },
+                "totalMinor": {
+                  "anyOf": [
+                    {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                }
+              },
+              "required": [
+                "id",
+                "branchId",
+                "reference",
+                "source",
+                "status",
+                "stay",
+                "totalMinor"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "blockHistory": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 32
+                },
+                "occurredAt": {
+                  "type": "string",
+                  "format": "date-time",
+                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+                },
+                "action": {
+                  "type": "string",
+                  "enum": [
+                    "guest.blocked",
+                    "guest.unblocked"
+                  ]
+                },
+                "staffActorId": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 32
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "reason": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                }
+              },
+              "required": [
+                "id",
+                "occurredAt",
+                "action",
+                "staffActorId",
+                "reason"
+              ],
+              "additionalProperties": false
+            }
+          }
+        },
+        "required": [
+          "id",
+          "phone",
+          "name",
+          "email",
+          "verified",
+          "phoneVerifiedAt",
+          "marketingOptInAt",
+          "marketingOptOutAt",
+          "blocked",
+          "blockedAt",
+          "blockedById",
+          "blockReason",
+          "createdAt",
+          "reservations",
+          "blockHistory"
+        ],
+        "additionalProperties": false
+      },
+      "GuestReservationList": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "reference": {
+                  "type": "string"
+                },
+                "status": {
+                  "type": "string"
+                },
+                "branchName": {
+                  "type": "string"
+                },
+                "branchSlug": {
+                  "type": "string"
+                },
+                "stay": {
+                  "$ref": "#/components/schemas/Stay"
+                },
+                "units": {
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991
+                },
+                "total": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/Money"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "createdAt": {
+                  "type": "string",
+                  "format": "date-time",
+                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+                }
+              },
+              "required": [
+                "reference",
+                "status",
+                "branchName",
+                "branchSlug",
+                "stay",
+                "units",
+                "total",
+                "createdAt"
+              ],
+              "additionalProperties": false
+            }
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "additionalProperties": false
+      },
+      "GuestReservation": {
+        "type": "object",
+        "properties": {
+          "reference": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "paymentMethod": {
+            "type": "string",
+            "enum": [
+              "PAY_AT_HOTEL",
+              "PAYMOB"
+            ]
+          },
+          "paymentStatus": {
+            "type": "string"
+          },
+          "branch": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "slug": {
+                "type": "string"
+              },
+              "phone": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "email": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            },
+            "required": [
+              "name",
+              "slug",
+              "phone",
+              "email"
+            ],
+            "additionalProperties": false
+          },
+          "stay": {
+            "type": "object",
+            "properties": {
+              "checkIn": {
+                "type": "string",
+                "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+              },
+              "checkOut": {
+                "type": "string",
+                "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+              }
+            },
+            "required": [
+              "checkIn",
+              "checkOut"
+            ],
+            "additionalProperties": false
+          },
+          "units": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "roomName": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "occupancy": {
+                  "$ref": "#/components/schemas/Occupancy"
+                },
+                "subtotal": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/Money"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                }
+              },
+              "required": [
+                "roomName",
+                "occupancy",
+                "subtotal"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "contact": {
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "fullName": {
+                    "type": "string"
+                  },
+                  "email": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "phone": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "country": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "specialRequests": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  }
+                },
+                "required": [
+                  "fullName",
+                  "email",
+                  "phone",
+                  "country",
+                  "specialRequests"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "price": {
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "currency": {
+                    "type": "string",
+                    "const": "USD"
+                  },
+                  "accommodationMinor": {
+                    "type": "integer",
+                    "minimum": -9007199254740991,
+                    "maximum": 9007199254740991
+                  },
+                  "servicesMinor": {
+                    "type": "integer",
+                    "minimum": -9007199254740991,
+                    "maximum": 9007199254740991
+                  },
+                  "subtotalMinor": {
+                    "type": "integer",
+                    "minimum": -9007199254740991,
+                    "maximum": 9007199254740991
+                  },
+                  "discountMinor": {
+                    "type": "integer",
+                    "minimum": -9007199254740991,
+                    "maximum": 9007199254740991
+                  },
+                  "taxableMinor": {
+                    "type": "integer",
+                    "minimum": -9007199254740991,
+                    "maximum": 9007199254740991
+                  },
+                  "vatRateBasisPoints": {
+                    "type": "integer",
+                    "minimum": -9007199254740991,
+                    "maximum": 9007199254740991
+                  },
+                  "vatMinor": {
+                    "type": "integer",
+                    "minimum": -9007199254740991,
+                    "maximum": 9007199254740991
+                  },
+                  "totalMinor": {
+                    "type": "integer",
+                    "minimum": -9007199254740991,
+                    "maximum": 9007199254740991
+                  },
+                  "services": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "kind": {
+                          "type": "string"
+                        },
+                        "amountMinor": {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991
+                        },
+                        "vehicles": {
+                          "anyOf": [
+                            {
+                              "type": "integer",
+                              "minimum": -9007199254740991,
+                              "maximum": 9007199254740991
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "details": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "kind",
+                        "amountMinor",
+                        "vehicles",
+                        "details"
+                      ],
+                      "additionalProperties": false
+                    }
+                  }
+                },
+                "required": [
+                  "currency",
+                  "accommodationMinor",
+                  "servicesMinor",
+                  "subtotalMinor",
+                  "discountMinor",
+                  "taxableMinor",
+                  "vatRateBasisPoints",
+                  "vatMinor",
+                  "totalMinor",
+                  "services"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "cancellationDeadline": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time",
+                "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "cancellationRequest": {
+            "type": "null"
+          },
+          "allowedActions": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+          }
+        },
+        "required": [
+          "reference",
+          "status",
+          "paymentMethod",
+          "paymentStatus",
+          "branch",
+          "stay",
+          "units",
+          "contact",
+          "price",
+          "cancellationDeadline",
+          "cancellationRequest",
+          "allowedActions",
+          "createdAt"
+        ],
+        "additionalProperties": false
       }
     },
     "securitySchemes": {
+      "guestToken": {
+        "type": "http",
+        "scheme": "bearer",
+        "description": "A 43 character token: the manage link token (API-G1) or a GUEST_SESSION token from API-P10 (API-G3, G4). Only its SHA-256 is stored. Never put it in a URL the server sees."
+      },
       "staffSession": {
         "type": "apiKey",
         "in": "cookie",

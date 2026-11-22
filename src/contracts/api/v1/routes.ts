@@ -40,6 +40,14 @@ import {
 } from "./reservations";
 import { HealthResponse } from "./health";
 import {
+  BlockGuestRequest,
+  GuestDetail,
+  GuestList,
+  GuestQuery,
+  GuestReservation,
+  GuestReservationList,
+} from "./guests";
+import {
   Block,
   BlockInput,
   AvailabilityGrid,
@@ -94,7 +102,7 @@ export type ApiRoute = Readonly<{
   operationId: string;
   summary: string;
   tag: string;
-  security: "public" | "staff" | "webhook";
+  security: "public" | "staff" | "guest" | "webhook";
   request?: z.ZodType;
   requestOptional?: boolean;
   /** Query parameters, documented from the object's keys. */
@@ -1169,6 +1177,116 @@ export const API_ROUTES: readonly ApiRoute[] = [
       "RATE_LIMITED",
       "WHATSAPP_TEST_FAILED",
       "WHATSAPP_NOT_CONFIGURED",
+    ],
+  },
+  {
+    method: "get",
+    path: "/api/v1/staff/guests",
+    operationId: "listGuests",
+    summary:
+      "API-S50. Search guests by name or phone (guests:read). Admin sees every guest. A Receptionist or Manager sees only guests with a reservation in their assigned branches, and counts only those reservations.",
+    tag: "Guests",
+    security: "staff",
+    query: GuestQuery,
+    responses: { 200: { description: "Guest page.", schema: GuestList } },
+    errors: [...staffReadErrors, "INVALID_QUERY"],
+  },
+  {
+    method: "get",
+    path: "/api/v1/staff/guests/{id}",
+    operationId: "getGuest",
+    summary:
+      "API-S51. Guest profile with reservations in the caller's branches and the block history (guests:read). A Receptionist or Manager gets 404 for a guest with no reservation in their branches.",
+    tag: "Guests",
+    security: "staff",
+    responses: { 200: { description: "Guest detail.", schema: GuestDetail } },
+    errors: staffReadErrors,
+  },
+  {
+    method: "post",
+    path: "/api/v1/staff/guests/{id}/block",
+    operationId: "blockGuest",
+    summary:
+      "API-S52. Block a guest's phone for every branch (guests:block). Invalidates the phone's open codes and tokens. Repeating it changes nothing.",
+    tag: "Guests",
+    security: "staff",
+    request: BlockGuestRequest,
+    responses: { 200: { description: "The guest.", schema: GuestDetail } },
+    errors: [
+      ...staffReadErrors,
+      "CROSS_SITE_REQUEST",
+      "MALFORMED_JSON",
+      "PAYLOAD_TOO_LARGE",
+      "UNSUPPORTED_MEDIA_TYPE",
+      "VALIDATION",
+      "TRY_AGAIN",
+    ],
+  },
+  {
+    method: "delete",
+    path: "/api/v1/staff/guests/{id}/block",
+    operationId: "unblockGuest",
+    summary:
+      "API-S53. Lift a block (guests:block). The history stays in the audit log. Repeating it changes nothing.",
+    tag: "Guests",
+    security: "staff",
+    request: BlockGuestRequest,
+    responses: { 200: { description: "The guest.", schema: GuestDetail } },
+    errors: [
+      ...staffReadErrors,
+      "CROSS_SITE_REQUEST",
+      "MALFORMED_JSON",
+      "PAYLOAD_TOO_LARGE",
+      "UNSUPPORTED_MEDIA_TYPE",
+      "VALIDATION",
+      "TRY_AGAIN",
+    ],
+  },
+  {
+    method: "get",
+    path: "/api/v1/guest/reservation",
+    operationId: "getGuestReservation",
+    summary:
+      "API-G1. One reservation for the holder of a manage link token (`Authorization: Bearer`). Sixty requests per client per minute. View only in M8.",
+    tag: "Guests",
+    security: "guest",
+    responses: {
+      200: { description: "The reservation.", schema: GuestReservation },
+    },
+    errors: ["UNAUTHENTICATED", "RATE_LIMITED"],
+  },
+  {
+    method: "get",
+    path: "/api/v1/guest/reservations",
+    operationId: "listGuestReservations",
+    summary:
+      "API-G3. Reservations of a verified phone, newest first (`Authorization: Bearer` guest session token from API-P10).",
+    tag: "Guests",
+    security: "guest",
+    responses: {
+      200: {
+        description: "Reservation summaries.",
+        schema: GuestReservationList,
+      },
+    },
+    errors: ["PHONE_NOT_VERIFIED", "PHONE_BLOCKED", "RATE_LIMITED"],
+  },
+  {
+    method: "get",
+    path: "/api/v1/guest/reservations/{reference}",
+    operationId: "getGuestSessionReservation",
+    summary:
+      "API-G4. One reservation of a verified phone by reference. A reference that is not this phone's is a 404.",
+    tag: "Guests",
+    security: "guest",
+    responses: {
+      200: { description: "The reservation.", schema: GuestReservation },
+    },
+    errors: [
+      "PHONE_NOT_VERIFIED",
+      "PHONE_BLOCKED",
+      "NOT_FOUND",
+      "RATE_LIMITED",
     ],
   },
 ];

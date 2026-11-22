@@ -70,6 +70,35 @@ export class PrismaPhoneVerificationRepository
   ) {
     await this.client.phoneVerification.update({ where: { id }, data: values });
   }
+  async invalidateOpenForPhone(phone: PhoneNumber, at: Date) {
+    // Only credentials that still work: unexpired, unused tokens and codes
+    // that are unconfirmed with guesses left. Consumed booking tokens, expired
+    // rows and exhausted codes are not counted. Rows stay for the rolling limits.
+    const changed = await this.client.phoneVerification.updateMany({
+      where: {
+        phone: phone.value,
+        OR: [
+          {
+            tokenHash: { not: null },
+            consumedAt: null,
+            tokenExpiresAt: { gt: at },
+          },
+          {
+            verifiedAt: null,
+            expiresAt: { gt: at },
+            attempts: { lt: VERIFICATION_POLICY.maxAttempts },
+          },
+        ],
+      },
+      data: {
+        attempts: VERIFICATION_POLICY.maxAttempts,
+        tokenHash: null,
+        tokenExpiresAt: null,
+      },
+    });
+    return changed.count;
+  }
+
   async invalidate(id: string) {
     // Preserve the domain expiry ordering and request history. Exhaust the code instead.
     await this.client.phoneVerification.update({

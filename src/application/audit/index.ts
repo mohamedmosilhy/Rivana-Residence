@@ -3,4 +3,6 @@ export type {
   AuditLog,
   ReservationHistoryReader,
   ReservationHistoryItem,
+  GuestHistoryReader,
+  GuestHistoryItem,
 } from "./ports";

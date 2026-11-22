@@ -47,8 +47,15 @@ export const BOOKING_CREATE_RATE_LIMIT = {
   rule: { maxFailures: 5, windowMs: 3_600_000, lockMs: 3_600_000 },
 } as const;
 
+/** API-G1, G3 and G4: guest token reads, 60 per client per minute (M8-T11). */
+export const GUEST_READ_RATE_LIMIT = {
+  name: "guest-read",
+  rule: { maxFailures: 60, windowMs: 60_000, lockMs: 60_000 },
+} as const;
+
 /** Every limiter namespace on the shared store; cleanup prunes each one. */
 export const PUBLIC_RATE_LIMITS = [
+  GUEST_READ_RATE_LIMIT,
   BOOKING_CREATE_RATE_LIMIT,
   AVAILABILITY_RATE_LIMIT,
   QUOTE_RATE_LIMIT,

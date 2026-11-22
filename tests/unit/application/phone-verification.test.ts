@@ -49,9 +49,18 @@ const repository: PhoneVerificationRepository = {
   invalidate: async (id) => {
     rows.set(id, { ...rows.get(id)!, attempts: 5 });
   },
+  invalidateOpenForPhone: async () => 0,
 };
 const guests: GuestRepository = {
   findByPhone: async () => null,
+  findById: async () => null,
+  lockById: async () => success(null),
+  setBlocked: async () => {
+    throw new Error("Not used");
+  },
+  clearBlocked: async () => {
+    throw new Error("Not used");
+  },
   ensureExists: async () => {
     throw new Error("Not used");
   },

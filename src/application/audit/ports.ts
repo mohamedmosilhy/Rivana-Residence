@@ -24,3 +24,16 @@ export interface ReservationHistoryReader {
     id: string,
   ): Promise<readonly ReservationHistoryItem[]>;
 }
+
+/** A guest's block and unblock events (S51). The reason is staff text, shown with `guests:read`. */
+export type GuestHistoryItem = Readonly<{
+  id: string;
+  occurredAt: string;
+  action: "guest.blocked" | "guest.unblocked";
+  staffActorId: string | null;
+  reason: string | null;
+}>;
+
+export interface GuestHistoryReader {
+  listForGuest(id: string): Promise<readonly GuestHistoryItem[]>;
+}
