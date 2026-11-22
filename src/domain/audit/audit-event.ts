@@ -1,3 +1,5 @@
+import type { SyncCheckpointKind } from "@/domain/shared/types";
+
 // Append-only history of sensitive changes (FR-AUD-1). `changes` carries only
 // the keys listed for its action below: never free-form dumps, personal data,
 // passwords, or tokens.
@@ -207,6 +209,10 @@ export type AuditChanges = {
   "reservation.checked-out": FrontDeskAudit;
   "reservation.no-show": FrontDeskAudit;
   "reservation.pms-entered": Readonly<{ noteProvided: boolean }>;
+  "sync-checkpoint.recorded": Readonly<{
+    kind: SyncCheckpointKind;
+    noteProvided: boolean;
+  }>;
   "reservation.manage-link-resent": Readonly<{
     emailQueued: boolean;
     whatsappQueued: boolean;
@@ -285,6 +291,7 @@ export type AuditEvent<A extends AuditAction = AuditAction> = Readonly<{
     | "WhatsAppSettings"
     | "WhatsAppTemplate"
     | "Reservation"
+    | "SyncCheckpoint"
     | "Guest";
   entityId: string;
   branchId: string | null;

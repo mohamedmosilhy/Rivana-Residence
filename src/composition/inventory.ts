@@ -16,7 +16,7 @@ import { getPrisma } from "@/infrastructure/db/prisma/client";
 import { PrismaAuditLog } from "@/infrastructure/db/prisma/repositories/audit/audit-log";
 import { PrismaReservationConsumptionReader } from "@/infrastructure/db/prisma/repositories/reservations/inventory/reservation-consumption-reader";
 import { PrismaAvailabilityCatalog } from "@/infrastructure/db/prisma/repositories/reservations/inventory/availability-catalog";
-import { NullLastSyncCheckpointReader } from "@/infrastructure/db/prisma/repositories/reservations/inventory/null-sync-checkpoint-reader";
+import { PrismaSyncCheckpointRepository } from "@/infrastructure/db/prisma/repositories/reservations/sync-checkpoint-repository";
 import { PrismaBlockRepository } from "@/infrastructure/db/prisma/repositories/reservations/inventory/block-repository";
 import { PrismaInventoryLock } from "@/infrastructure/db/prisma/repositories/reservations/inventory/inventory-lock";
 import { PrismaInventoryReader } from "@/infrastructure/db/prisma/repositories/reservations/inventory/inventory-reader";
@@ -86,7 +86,7 @@ export function getAvailabilityGrid() {
       client,
       new PrismaReservationConsumptionReader(client),
     ),
-    checkpoints: new NullLastSyncCheckpointReader(),
+    checkpoints: new PrismaSyncCheckpointRepository(client),
   });
 }
 

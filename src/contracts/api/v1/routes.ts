@@ -19,6 +19,7 @@ import {
   StaffBranchList,
 } from "./branches";
 import { AvailabilityQuery, AvailabilityResponse } from "./availability";
+import { SyncCheckpointRequest, SyncQuery, SyncStatus } from "./branch-sync";
 import { QuoteRequest, QuoteResponse } from "./quotes";
 import {
   CancelReservationRequest,
@@ -751,6 +752,50 @@ export const API_ROUTES: readonly ApiRoute[] = [
       "VALIDATION",
       "INVALID_QUERY",
     ],
+  },
+  {
+    method: "post",
+    path: "/api/v1/staff/branches/{branchId}/sync-checkpoints",
+    operationId: "recordSyncCheckpoint",
+    summary:
+      "API-S28. Record a manual sync start or completion for the branch. Needs reservations:record-external.",
+    tag: "Reservations",
+    security: "staff",
+    request: SyncCheckpointRequest,
+    query: SyncQuery,
+    responses: {
+      201: {
+        description:
+          "The branch sync status after the checkpoint was recorded.",
+        schema: SyncStatus,
+      },
+    },
+    errors: [
+      ...staffReadErrors,
+      "CROSS_SITE_REQUEST",
+      "MALFORMED_JSON",
+      "PAYLOAD_TOO_LARGE",
+      "UNSUPPORTED_MEDIA_TYPE",
+      "VALIDATION",
+      "INVALID_QUERY",
+    ],
+  },
+  {
+    method: "get",
+    path: "/api/v1/staff/branches/{branchId}/sync-status",
+    operationId: "getSyncStatus",
+    summary:
+      "API-S29. Read the branch reminder deadline and the backlog of website reservations awaiting hotel system entry. Needs reservations:read.",
+    tag: "Reservations",
+    security: "staff",
+    query: SyncQuery,
+    responses: {
+      200: {
+        description: "The current branch sync status.",
+        schema: SyncStatus,
+      },
+    },
+    errors: [...staffReadErrors, "INVALID_QUERY"],
   },
   {
     method: "get",

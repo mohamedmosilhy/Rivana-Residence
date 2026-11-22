@@ -222,7 +222,7 @@ export interface AvailabilityCatalog {
   ): Promise<readonly CatalogRoomType[]>;
 }
 
-/** The last manual hotel system sync (UTC instant), null until M8 stores one. */
+/** The last completed manual sync (UTC instant), or null before the first completion. */
 export interface LastSyncCheckpointReader {
   read(branchId: string): Promise<Date | null>;
 }

@@ -16,6 +16,7 @@ import type {
   ReservationStatus,
   PaymentMethod,
   ReservationPaymentStatus,
+  SyncCheckpointKind,
 } from "@/domain/shared/types";
 
 /**
@@ -26,6 +27,34 @@ export interface ReservationUnitOfWork<Context> {
   run<T>(
     operation: (context: Context) => Promise<Result<T>>,
   ): Promise<Result<T>>;
+}
+
+/** Branch settings, checkpoint history and backlog from one database snapshot. */
+export type SyncStatusSnapshot = Readonly<{
+  intervalMinutes: number;
+  followUpMinutes: number;
+  lastCompletedAt: Date | null;
+  lastCompletedBy: string | null;
+  lastStartedAt: Date | null;
+  notEnteredInHotelSystem: number;
+  oldestNotEnteredAt: Date | null;
+}>;
+
+export interface SyncStatusReader {
+  readStatus(branchId: string): Promise<SyncStatusSnapshot | null>;
+}
+
+export interface SyncCheckpointWriter {
+  append(
+    checkpoint: Readonly<{
+      id: string;
+      branchId: string;
+      recordedById: string;
+      recordedAt: Date;
+      kind: SyncCheckpointKind;
+      note: string | null;
+    }>,
+  ): Promise<void>;
 }
 
 export type StoredReservationSnapshot = Omit<

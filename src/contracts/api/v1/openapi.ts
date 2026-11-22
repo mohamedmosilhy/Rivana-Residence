@@ -44,6 +44,7 @@ import {
   StaffBranchList,
 } from "./branches";
 import { AvailabilityResult, AvailabilityResponse } from "./availability";
+import { SyncCheckpointRequest, SyncStatus } from "./branch-sync";
 import { Quote, QuoteRequest, QuoteResponse } from "./quotes";
 import {
   CommercialSettings,
@@ -106,6 +107,8 @@ const COMPONENTS: Readonly<Record<string, z.ZodType>> = {
   HealthResponse,
   AvailabilityResult,
   AvailabilityResponse,
+  SyncCheckpointRequest,
+  SyncStatus,
   QuoteRequest,
   Quote,
   QuoteResponse,

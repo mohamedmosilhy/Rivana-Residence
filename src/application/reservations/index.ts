@@ -13,6 +13,9 @@ export type {
   ReservationChangeInsert,
   ReservationContactChange,
   RoomAssignmentRequest,
+  SyncCheckpointWriter,
+  SyncStatusReader,
+  SyncStatusSnapshot,
 } from "./ports";
 export type { ReservationStorageContext } from "./storage-context";
 export {
@@ -76,3 +79,9 @@ export {
   ResendManageLink,
   type ResendManageLinkContext,
 } from "./reservation-guest-access";
+export {
+  GetSyncStatus,
+  RecordSyncCheckpoint,
+  type SyncCheckpointContext,
+  type SyncStatusView,
+} from "./branch-sync";

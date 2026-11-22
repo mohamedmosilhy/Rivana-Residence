@@ -154,10 +154,12 @@ export const AvailabilityGrid = z
         ),
       }),
     ),
-    lastSyncCheckpoint: z
-      .string()
+    lastSyncCheckpoint: z.iso
+      .datetime()
       .nullable()
-      .describe("UTC instant of the last manual sync. Null until M8."),
+      .describe(
+        "UTC instant of the last completed manual sync, or null if none.",
+      ),
   })
   .describe(
     "Per listing and night: capacity (active unblocked units), sold, free, and blocked units. Every listing of the branch appears, whatever its publication status.",

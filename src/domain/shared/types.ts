@@ -63,3 +63,5 @@ export type ReservationPaymentStatus =
   (typeof RESERVATION_PAYMENT_STATUSES)[number];
 export const VERIFICATION_PURPOSES = ["BOOKING", "GUEST_SESSION"] as const;
 export type VerificationPurpose = (typeof VERIFICATION_PURPOSES)[number];
+export const SYNC_CHECKPOINT_KINDS = ["STARTED", "COMPLETED"] as const;
+export type SyncCheckpointKind = (typeof SYNC_CHECKPOINT_KINDS)[number];

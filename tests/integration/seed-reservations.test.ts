@@ -7,6 +7,7 @@ import {
 } from "../../prisma/seed/demo";
 import { seedWhatsAppSettings } from "../../prisma/seed/whatsapp";
 import { parseWhatsAppTemplateInput } from "@/domain/notifications";
+import { PrismaSyncCheckpointRepository } from "@/infrastructure/db/prisma/repositories/reservations/sync-checkpoint-repository";
 import {
   createActor,
   createBranch,
@@ -138,6 +139,20 @@ describe("M8 create only seed", () => {
       }),
     ).toBe(1);
     expect(state.sync.map((row) => row.kind)).toEqual(["STARTED", "COMPLETED"]);
+    const checkpoints = new PrismaSyncCheckpointRepository(client);
+    const completedAt = new Date("2026-11-01T01:00:00Z");
+    expect(await checkpoints.read("demo")).toEqual(completedAt);
+    expect(await checkpoints.readStatus("demo")).toMatchObject({
+      lastCompletedAt: completedAt,
+      lastCompletedBy: "actor-admin",
+      notEnteredInHotelSystem: 1,
+    });
+    expect(await checkpoints.read(TEST_BRANCH_ID)).toBeNull();
+    expect(await checkpoints.readStatus(TEST_BRANCH_ID)).toMatchObject({
+      lastCompletedAt: null,
+      notEnteredInHotelSystem: 0,
+      oldestNotEnteredAt: null,
+    });
     expect(state.templates).toHaveLength(2);
     expect(
       state.templates.every(

@@ -5,6 +5,7 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
 import { Money, Stay } from "@/contracts/api/v1/primitives";
+import { AvailabilityGrid } from "@/contracts/api/v1/inventory";
 import {
   buildOpenApiDocument,
   serializeOpenApiDocument,
@@ -35,6 +36,13 @@ describe("OpenAPI document", () => {
   it("exposes no version or environment detail beyond the API version", () => {
     const text = serializeOpenApiDocument();
     expect(text).not.toMatch(/localhost|127\.0\.0\.1|NODE_ENV|DATABASE_URL/);
+  });
+
+  it("accepts only a UTC instant or null for the availability checkpoint", () => {
+    const checkpoint = AvailabilityGrid.shape.lastSyncCheckpoint;
+    expect(checkpoint.safeParse("2026-11-22T09:30:00.000Z").success).toBe(true);
+    expect(checkpoint.safeParse(null).success).toBe(true);
+    expect(checkpoint.safeParse("yesterday").success).toBe(false);
   });
 });
 

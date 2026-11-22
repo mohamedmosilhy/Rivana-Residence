@@ -16,7 +16,7 @@ Status: **Implemented in M4** (2026-11-06): the shared HTTP layer (`src/app/api/
 | Situation | Code |
 | --- | --- |
 | Read | `200` |
-| Created | `201` with a `Location` header |
+| Created | `201` with a `Location` header. S28 returns the updated branch sync status with `201` and omits `Location` because checkpoints have no detail endpoint. |
 | Idempotent replay of a create | `200` (same body shape) |
 | Accepted, outcome delivered out of band (manage-link request) | `202` |
 | Success without body (delete a block) | `204` |

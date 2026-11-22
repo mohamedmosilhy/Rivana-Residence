@@ -285,8 +285,10 @@ Consent versions (Q-73) are server constants, placeholders until the privacy and
 
 ### Sync checkpoints
 
+**Implemented (M8-T12)** for S28, S29, and the last completion on S20. The staff reminder UI is planned for M11.
+
 - `BranchSyncCheckpoint` (`branchId`, `kind` `COMPLETED|STARTED`, `recordedById`, `note`, `recordedAt`).
-- A branch is **due** when `now ≥ last COMPLETED + interval`. Once a `STARTED` is recorded, the branch is due again at `STARTED + follow-up delay` until a `COMPLETED` arrives. Interval and delay are branch settings ([branch-model.md](./branch-model.md#sync-reminders)).
+- A branch is **due** when `now ≥ last COMPLETED + interval`. The branch uses `STARTED + follow-up delay` when the most recent start is strictly newer than the most recent completion or when there is only a start. A completion wins a timestamp tie. An empty history is due immediately. Interval and delay are branch settings ([branch-model.md](./branch-model.md#sync-reminders)).
 
 ### Branch and staff
 
