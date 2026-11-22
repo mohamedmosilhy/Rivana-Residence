@@ -27,7 +27,7 @@ src/contracts (HTTP DTO Zod schemas) <─ src/app, src/presentation
 | D-11 | No Server Action under `src/app` calls a reservation mutation use case unless an ADR records the exception | Enforced since M4 (`module-boundaries.test.ts`; the allow list is empty) |
 | D-12 | Replace the `booking scope` test (forbidden schema words) with a test that reservation models are referenced only by allowed infrastructure folders | Done in M4: the `booking scope` test is replaced by the D-9 test, and the schema integration test checks that no reservation table exists before its milestone |
 | D-13 | Client Components (`"use client"`) import neither `server-only` modules nor `src/application/**` code that could pull server code | Enforced in part (D-3); the client-component extension is not yet automated (not in the M4 brief) |
-| D-14 | Payment provider code (Paymob SDKs, payload types, HMAC secrets) lives only in `src/infrastructure/payments/**`; the application sees the `PaymentGateway` port only | Enforce in M9 (ESLint pattern and architecture test) |
+| D-14 | Payment provider code (any provider's SDK, payload types, and secrets) lives only in `src/infrastructure/payments/**`, WhatsApp and email provider code only in `src/infrastructure/whatsapp/**` and `src/infrastructure/email/**` (ADR 030); the application sees the ports only | Enforce in M9 (ESLint pattern and architecture test) |
 
 ## Practical guidance
 

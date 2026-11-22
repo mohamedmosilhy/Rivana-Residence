@@ -9,7 +9,7 @@ One brief per forward milestone. Each brief is the contract for one tested slice
 | [M6](./m6-inventory-and-availability.md) | Inventory, date prices, availability |
 | [M7](./m7-booking-quote.md) | Booking quote: services, coupons, VAT |
 | [M8](./m8-reservations.md) | Reservations, immediate confirmation, verification, messages, transfer car count, change engine (API) |
-| [M9](./m9-payments-and-cancellations.md) | Paymob payments, holds, cancellation requests, refunds, guest booking changes (API) |
+| [M9](./m9-payments-and-cancellations.md) | Provider neutral online payments with fake adapters, holds, cancellation requests, refunds, guest booking changes, email verification fallback (API) |
 | [M10](./m10-guest-booking-journey.md) | Guest booking journey and change booking (UI); website analytics collection |
 | [M11](./m11-front-desk.md) | Front-desk operations (UI) |
 | [M12](./m12-manager-admin.md) | Manager and admin tools (UI), reports with insights and the website funnel |
@@ -143,13 +143,13 @@ Add the line in the last column under the prompt above.
 | [M6](./m6-inventory-and-availability.md) Inventory and availability | `m6-inventory-and-availability` | Nothing extra |
 | [M7](./m7-booking-quote.md) Booking quote | `m7-booking-quote` | Nothing extra (VAT starts at 15% as migration data and is an Admin setting; no rate is hard-coded in logic) |
 | [M8](./m8-reservations.md) Reservations | `m8-reservations` | If the client has sent the WhatsApp number and token: "The WhatsApp access token is in `.env.local`; I'll enter the number in the dashboard." Otherwise: "Use the fake WhatsApp adapter; the number stays a placeholder." |
-| [M9](./m9-payments-and-cancellations.md) Payments and cancellations | `m9-payments-and-cancellations` | "The Paymob sandbox keys are in `.env.local`." (Put them there yourself first.) |
+| [M9](./m9-payments-and-cancellations.md) Payments and cancellations | `m9-payments-and-cancellations` | Nothing to supply. No provider keys are needed in M9 (ADR 030). |
 | [M10](./m10-guest-booking-journey.md) Guest booking journey | `m10-guest-booking-journey` | Any approved wording (privacy, cancellation terms, child policy), or: "Use placeholder text flagged by the content audit." |
 | [M11](./m11-front-desk.md) Front desk | `m11-front-desk` | Nothing extra |
 | [M12](./m12-manager-admin.md) Manager and admin | `m12-manager-admin` | Nothing extra |
 | [M13](./m13-whatsapp-marketing.md) WhatsApp marketing | `m13-whatsapp-marketing` | The consent wording, the feedback delay, and confirmation that the marketing and feedback templates are approved in Meta (Q-58, Q-59) |
 | [M14](./m14-hardening.md) Hardening | `m14-hardening` | Whether to add the authenticator-app second sign-in step for Admin and Manager (Q-33) |
-| [M15](./m15-joint-launch.md) Launch | `m15-joint-launch` | Live Paymob keys (in the server environment), room and apartment numbers, the staff list with roles and branches, the PMS name, and the approved legal texts |
+| [M15](./m15-joint-launch.md) Launch | `m15-joint-launch` | The chosen payment, WhatsApp, and email providers with their live credentials (in the server environment), room and apartment numbers, the staff list with roles and branches, the PMS name, and the approved legal texts |
 
 ### 3. After the milestone closes
 
@@ -176,7 +176,7 @@ Merge <branch> into main and push main.
 
 ### Tips
 
-- Put secrets (Paymob keys, the WhatsApp access token) in `.env.local` yourself and tell the agent they are there. Never paste them into the chat.
+- Put secrets (the chosen providers' keys and tokens, at launch) in `.env.local` yourself and tell the agent they are there. Never paste them into the chat.
 - If the agent asks a business question the briefs do not answer, answer it and add: "Record this decision in docs/requirements/assumptions-and-open-questions.md."
 
 ## Gates (run on the final tree)

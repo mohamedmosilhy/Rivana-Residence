@@ -1,6 +1,6 @@
 # ADR 025 — Online payment through Paymob hosted checkout, with payment holds and refunds
 
-Status: **Accepted** (2026-11-06, client decisions Q-37, Q-38, Q-54, Q-55). The Paymob account charges in US dollars (Q-54); the client supplies the sandbox and live keys when M9 starts (Q-55). Extends [ADR 016](./016-inventory-and-concurrency.md) and [ADR 024](./024-immediate-confirmation.md). Replaces the "pay at hotel only" recommendation (Q-08).
+Status: **Accepted** (2026-11-06, client decisions Q-37, Q-38, Q-54, Q-55). **Superseded in part by [ADR 030](./030-provider-neutral-integrations.md) (2026-11-22, Q-92):** the payment provider is chosen at launch and plugged in behind the `PaymentGateway` port, so read "Paymob" below as "the chosen payment gateway", `PAYMOB` as `ONLINE`, and the callback as `POST /api/v1/payments/callback`. The flow, holds, refunds, and state rules stay in force. The Paymob account charged in US dollars (Q-54); the keys rule (Q-55) is replaced by ADR 030: M9 builds against a fake gateway and the real provider is plugged in at launch (M15-T4). Extends [ADR 016](./016-inventory-and-concurrency.md) and [ADR 024](./024-immediate-confirmation.md). Replaces the "pay at hotel only" recommendation (Q-08).
 
 ## Context
 
@@ -56,6 +56,6 @@ Reserving before paying keeps the inventory rule in PostgreSQL, where ADR 016 al
 
 ## Risks
 
-- Keys arrive late (Q-55). Mitigation: M8 and earlier use the fake gateway; M9 starts when the sandbox keys arrive; pay at hotel works without Paymob.
+- Keys arrive late (Q-55). Mitigation (revised by ADR 030): M8 to M14 use the fake gateway; the chosen provider is plugged in at launch; pay at hotel works without any provider.
 - Callbacks are lost. Mitigation: the return page and a reconciliation job query the transaction through `getTransaction` for holds that have a Paymob session but no result.
 - Duplicate or replayed callbacks. Mitigation: HMAC, unique transaction id, idempotent state transitions.

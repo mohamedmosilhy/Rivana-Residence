@@ -25,14 +25,14 @@ flowchart LR
   Inventory["Inventory: physical rooms, blocks (planned)"]
   Pricing["Pricing: base rate, date periods, services, coupons, VAT, quotes (planned)"]
   Reservations["Reservations: lifecycle, cancellation requests (planned)"]
-  Payments["Payments: Paymob holds, callbacks, refunds (planned)"]
+  Payments["Payments: The payment gateway holds, callbacks, refunds (planned)"]
   Marketing["Marketing: consent, broadcasts, feedback (planned)"]
   Reporting["Reporting (planned, read-only)"]
   Analytics["Website analytics: page views, funnel steps (planned, ADR 029)"]
   Audit["Audit log (planned)"]
   Guests["Guests: verified phone profiles, blocking (planned)"]
   Notify["Notifications: email + WhatsApp (planned)"]
-  PSP["Paymob (payment gateway port)"]
+  PSP["the payment gateway (payment gateway port)"]
   Payments --> PSP
   PMS["Hotel system sync port (manual, no adapter)"]
 
@@ -168,7 +168,7 @@ Better Auth owns user, account, session, and verification records. Rivana adds a
 
 ### Payments and cancellation requests (planned, ADRs 024–025)
 
-- `Payment` (reservation, provider `PAYMOB`, provider ids, amount, currency, status `INITIATED|SUCCEEDED|FAILED|REFUND_PENDING|REFUNDED|REFUND_FAILED`) and `PaymentEvent` (verified callbacks, unique per provider transaction). Rules PY-1…8.
+- `Payment` (reservation, provider adapter name, provider ids, amount, currency, status `INITIATED|SUCCEEDED|FAILED|REFUND_PENDING|REFUNDED|REFUND_FAILED`) and `PaymentEvent` (verified callbacks, unique per provider transaction). Rules PY-1…8.
 - `CancellationRequest` (reservation, reason, status `OPEN|APPROVED|REJECTED|REFUND_PENDING|REFUND_FAILED|COMPLETED`, decided by and at, decision reason). Rules CX-1…7.
 - `ChangeRequest` *(planned M9-T11, Q-85)* (reservation, requested change, previewed total, status `OPEN|APPROVED|REJECTED`, decided by and at, decision reason, last conflict). At most one open request of either kind per reservation. Rules GC-4, GC-5.
 
@@ -213,7 +213,7 @@ Reservation
   services: ReservationService[0..2]   (kind, unit, adult and child quantities, amountMinor; vehicles for the transfer, SV-5, M8-T3b)
   coupon?: { couponId, code, kind, value }
   price: accommodation, services, subtotal, discount, taxable, vatRateBasisPoints, vat, total (Money)
-  paymentMethod: PAY_AT_HOTEL | PAYMOB (Q-37)
+  paymentMethod: PAY_AT_HOTEL | ONLINE (Q-37)
   paymentStatus: NOT_REQUIRED | AWAITING | PAID | REFUND_PENDING | REFUNDED
   holdExpiresAt?                       (AWAITING_PAYMENT only)
   pmsEnteredAt?, pmsEnteredById?       (WEBSITE source; Q-40)
@@ -236,7 +236,7 @@ Invariants:
 - R-7: `EXTERNAL` requires an `externalReference` that is unique within the branch.
 - R-8: Guest contact is never returned by a public endpoint without a valid manage token or a guest session for the same verified phone.
 - R-9: A `WEBSITE` reservation has a guest profile whose phone was verified for this booking (GV-2), and the phone is not blocked at creation.
-- R-10: A reservation is `CONFIRMED` only when its inventory is held in the same database state and, for `PAYMOB`, a verified success has been processed. Confirmation messages are written only in the transaction that sets `CONFIRMED`.
+- R-10: A reservation is `CONFIRMED` only when its inventory is held in the same database state and, for `ONLINE`, a verified success has been processed. Confirmation messages are written only in the transaction that sets `CONFIRMED`.
 
 The structural and snapshot parts of R-1…R-10 are implemented as pure checks in `src/domain/reservations/reservation.ts` (M8-T2). They include Q-76 for `EXTERNAL` snapshots: nightly amounts entered for all nights or none, and no services or coupon. Facts that need the database (uniqueness, verified-phone match, blocked phone, inventory held) are supplied by the transactional use cases in later tasks; a pure check does not prove them.
 
@@ -280,6 +280,7 @@ Rules:
 - GV-4: Blocking and unblocking need `guests:block` (Manager, Admin) and a reason. They apply to all branches and are audited. Existing reservations are not changed automatically.
 - GV-5: Staff-created and external reservations link to the guest with the same normalized phone, or create an unverified profile. Staff entry never marks a phone verified.
 - GV-6: Guest data is never deleted automatically (Q-13).
+- GV-7 (planned, M9-T12, ADR 031): a verification may use the `EMAIL` channel. It proves the email, not the phone: the phone is stored as given with `phoneVerified = false`, per phone coupon limits are skipped for it, blocked phones are still refused, a guest session from email matches reservations by email only, and the GV-1 limits also apply per email.
 
 Consent versions (Q-73) are server constants, placeholders until the privacy and marketing wording is approved (Q-30, Q-58). `GUEST_CONSENT_VERSIONS` and the pure check `validateGuestConsent` are implemented in `src/domain/guests/consent-policy.ts` (M8-T2); storing the opt-in and auditing it remain M8-T7.
 
@@ -328,7 +329,7 @@ Operations (planned)
   CommercialSettingsRepository  VAT rate
   PaymentRepository          payments, events (unique per provider transaction)
   CancellationRequestRepository  open, decide, refund state
-  PaymentGateway             createCheckout, verifyCallback, getTransaction, refund (Paymob adapter; ADR 025)
+  PaymentGateway             createCheckout, verifyCallback, getTransaction, refund (gateway adapter; ADR 025)
   BroadcastRepository        broadcasts and audience query (ADR 028)
   BranchRepository           findActiveBySlug, findById, list, save
   StaffBranchAccess          branchIds for a user; assign/unassign
@@ -358,7 +359,7 @@ Every command and sensitive query authorizes itself, with branch scope for opera
 
 ## Sequence: website booking
 
-Pay at hotel (immediate confirmation, ADR 024). The Paymob path creates `AWAITING_PAYMENT` instead and confirms in `ProcessPaymentCallback` ([reservation-lifecycle.md](./reservation-lifecycle.md#payments-adr-025), ADR 025).
+Pay at hotel (immediate confirmation, ADR 024). The the payment gateway path creates `AWAITING_PAYMENT` instead and confirms in `ProcessPaymentCallback` ([reservation-lifecycle.md](./reservation-lifecycle.md#payments-adr-025), ADR 025).
 
 ```mermaid
 sequenceDiagram

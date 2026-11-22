@@ -53,6 +53,6 @@ Never seed real guest data or real credentials. Demo staff accounts for Receptio
 
 - `npm run reservations -- outbox` every minute as the app user from the application directory. Processes up to 50 reservation emails and WhatsApp messages per invocation. Overlapping invocations skip locked rows. A crash after provider acceptance may duplicate a delivery. The JSON summary reports sent, failed, retried and stale completion counts.
 - `npm run reservations -- expire-holds` every minute (M9): moves `AWAITING_PAYMENT` past `holdExpiresAt` to `PAYMENT_FAILED`, releasing units and coupon redemptions.
-- `npm run reservations -- reconcile-payments` every 5 minutes (M9): asks Paymob for the result of sessions that expired with no callback.
+- `npm run reservations -- reconcile-payments` every 5 minutes (M9): asks the gateway (`getTransaction`) for the result of sessions that expired with no callback.
 - `npm run reservations -- expire-tokens` daily as the app user. Clears expired reservation manage hashes and expired or consumed phone verification token hashes, preserving verification history. Both commands load the application environment.
 - No data-retention purge: guest and reservation data is kept indefinitely (Q-13).

@@ -1,6 +1,6 @@
 # ADR 028 — WhatsApp guest messaging: confirmations, feedback requests, and consented marketing broadcasts
 
-Status: **Accepted** (2026-11-06, client decisions Q-50, Q-51, Q-53, Q-67). The provider choice remains open (Q-10; Meta Cloud API recommended), as do consent wording and broadcast rules (Q-58) and feedback timing (Q-59). Extends [ADR 019](./019-guest-reservation-access.md), which limited WhatsApp to verification codes and booking messages.
+Status: **Accepted** (2026-11-06, client decisions Q-50, Q-51, Q-53, Q-67). The provider choice remains open and is made at launch (Q-10, Q-92; the Meta Cloud API adapter exists, another provider is one more adapter behind the same port, [ADR 030](./030-provider-neutral-integrations.md)); verification can also go by email ([ADR 031](./031-email-verification-fallback.md)), as do consent wording and broadcast rules (Q-58) and feedback timing (Q-59). Extends [ADR 019](./019-guest-reservation-access.md), which limited WhatsApp to verification codes and booking messages.
 
 ## Context
 

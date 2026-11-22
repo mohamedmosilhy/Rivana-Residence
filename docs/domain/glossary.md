@@ -23,11 +23,11 @@ Terms as used in code, documents, and conversation. When the CMS and reservation
 | **Phone verification** | Proving a phone number with a 6-digit code sent by WhatsApp. Required for every online booking and for "My reservations". |
 | **Blocked number** | A phone number blocked by a Manager or Admin. It cannot receive codes or book online at any branch. |
 | **Source** | Where a reservation came from: `WEBSITE` (guest online), `STAFF` (phone, walk-in, or email taken by a receptionist), or `EXTERNAL` (already accepted by the hotel's operational system and recorded here by staff). |
-| **Immediate confirmation** | A website booking becomes `CONFIRMED` as soon as Rivana's database holds its inventory (pay at hotel) or a verified Paymob success arrives (online). It is not checked against the PMS (Q-36). |
-| **Payment hold** | The `AWAITING_PAYMENT` state of an online booking: its units are held for about 15 minutes while the guest pays on Paymob. |
+| **Immediate confirmation** | A website booking becomes `CONFIRMED` as soon as Rivana's database holds its inventory (pay at hotel) or a verified payment success arrives (online). It is not checked against the PMS (Q-36). |
+| **Payment hold** | The `AWAITING_PAYMENT` state of an online booking: its units are held for about 15 minutes while the guest pays on the payment page. |
 | **Entered in hotel system** | The marker (`pmsEnteredAt`) a receptionist sets after copying a website booking into the PMS (Q-40). |
 | **Cancellation request** | A guest's request, made until 24 hours before check-in time, to cancel a confirmed booking; a Manager or Admin approves or rejects it (Q-38). |
-| **Refund** | Money returned through Paymob's refund API for a paid booking whose cancellation was approved or that staff cancelled. |
+| **Refund** | Money returned through the gateway's refund API for a paid booking whose cancellation was approved or that staff cancelled. |
 | **PMS / hotel operational system** | The hotel's existing reservation and property-management software. It is not integrated; staff copy reservations by hand. |
 | **Synchronization (manual)** | Staff work that makes Rivana and the PMS agree. It is not real-time and does not guarantee zero overbooking. |
 | **Sync checkpoint** | A timestamped record that a receptionist has reconciled a branch with the PMS (`COMPLETED`), or has started doing so (`STARTED`). |

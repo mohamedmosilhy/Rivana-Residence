@@ -1,6 +1,6 @@
 # Booking and operations UI
 
-The booking journey and the staff reservation screens: journey, state, components, accessibility. Status: **Planned**, design accepted 2026-10-24 and revised 2026-11-06 (immediate confirmation, several units, services, coupon, VAT review, Paymob, cancellation requests; built in M10–M13). Routes are listed in [route-map.md](./route-map.md). It reuses the design system ([../design-system.md](./design-system.md), [../component-architecture.md](./component-architecture.md)), the Tailwind tokens in `src/app/globals.css`, and the class helpers in `src/presentation/site/classes.ts` and `src/presentation/admin/ui/`.
+The booking journey and the staff reservation screens: journey, state, components, accessibility. Status: **Planned**, design accepted 2026-10-24 and revised 2026-11-06 (immediate confirmation, several units, services, coupon, VAT review, online payment, cancellation requests; built in M10–M13). Routes are listed in [route-map.md](./route-map.md). It reuses the design system ([../design-system.md](./design-system.md), [../component-architecture.md](./component-architecture.md)), the Tailwind tokens in `src/app/globals.css`, and the class helpers in `src/presentation/site/classes.ts` and `src/presentation/admin/ui/`.
 
 ## Customer journey
 
@@ -12,10 +12,10 @@ flowchart LR
   D --> V["Verify phone: WhatsApp code"]
   V -->|blocked number| X["Please contact the hotel"]
   V --> E["Extras (breakfast, transfer) + coupon"]
-  E --> P["Payment choice: Paymob or pay at hotel"]
+  E --> P["Payment choice: online payment or pay at hotel"]
   P --> R["Review: lines, extras, discount, subtotal, VAT, total, cancellation terms, optional cross-sell"]
   R -->|pay at hotel, 201 CONFIRMED| F["/{branch}/book/confirmed: reference"]
-  R -->|Paymob, 201 AWAITING_PAYMENT| K["Paymob hosted checkout"]
+  R -->|online payment, 201 AWAITING_PAYMENT| K["hosted checkout"]
   K --> Q["/{branch}/book/payment: server status"]
   Q -->|CONFIRMED| F
   Q -->|PAYMENT_FAILED| N["Payment not completed; units released"]
@@ -45,7 +45,7 @@ State strategy:
 | `BranchChooser`, `BranchSwitcher` | Server + small client disclosure | Chooser cards at `/`; header switcher that keeps the page type (M5) |
 | `ServicesPicker` | Client | Breakfast and airport transfer priced by each service's unit (per booking, per night, per person, or per person per night, with child prices where set); nothing preselected |
 | `CouponField` | Client | One code; apply re-quotes; refusal reason announced |
-| `PaymentChoice` | Client | Paymob or pay at hotel; Paymob hidden when unavailable or the total is zero |
+| `PaymentChoice` | Client | online payment or pay at hotel; online hidden when no payment gateway is configured or the total is zero |
 | `PriceSummary` | Server or client | Lines, services, discount, subtotal, VAT (rate shown), total; a `<table>` with caption |
 | `CrossSellOffer` | Client | At review, offers skipped services; adds nothing until accepted |
 | `PaymentReturnStatus` | Client | Polls API-G1; waiting, confirmed, not completed |
@@ -79,4 +79,4 @@ Feature code lives in `src/presentation/features/booking/` and `src/presentation
 
 ## CSP impact
 
-None. All requests are same-origin (`connect-src 'self'`), the reminder chime is a same-origin file, and there are no third-party scripts. WhatsApp and Paymob APIs are called only from the server. Paymob's hosted checkout is a top-level navigation to Paymob's domain, not a frame or script, so `frame-src` stays `https://www.google.com` (maps only) and `form-action` is unaffected because the redirect is a link, not a form post.
+None. All requests are same-origin (`connect-src 'self'`), the reminder chime is a same-origin file, and there are no third-party scripts. WhatsApp and the payment gateway APIs are called only from the server. The gateway's hosted checkout is a top-level navigation to the gateway's domain, not a frame or script, so `frame-src` stays `https://www.google.com` (maps only) and `form-action` is unaffected because the redirect is a link, not a form post.

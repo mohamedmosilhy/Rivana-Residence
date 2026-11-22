@@ -92,7 +92,7 @@ available(T, stay, q) ⇔ for every night n in stay: free(T, n) ≥ q      (q = 
 | CP-3 | The booking transaction locks the coupon row (`FOR UPDATE`) before counting redemptions, so limits hold under concurrent bookings. |
 | CP-4 | One code per booking. It applies to the whole subtotal (accommodation + services). |
 | CP-5 | `PERCENT`: discount = round half-up (subtotal × basis points ÷ 10 000). `FIXED`: discount = min(amount, subtotal). |
-| CP-6 | A booking whose total becomes zero cannot choose Paymob; it is pay at hotel. |
+| CP-6 | A booking whose total becomes zero cannot choose online payment; it is pay at hotel. |
 | CP-7 | A refused code returns a reason (`NOT_FOUND`, `INACTIVE`, `NOT_YET_VALID`, `EXPIRED`, `WRONG_BRANCH`, `LIMIT_REACHED`, `PHONE_LIMIT_REACHED`). The per-phone check runs once the phone is verified. |
 
 ## VAT (Q-45)
@@ -133,6 +133,6 @@ All amounts in these examples are **illustrations**, not approved prices or rate
 
 **Example 3 — half-up rounding.** Taxable 10010 ($100.10) at 15%: 10010 × 1500 ÷ 10000 = 1501.5 → **1502** ($15.02); total 11512 ($115.12). A 10% coupon on a subtotal of 33333: 3333.3 → **3333**.
 
-**Example 4 — fixed coupon above the subtotal.** Subtotal 4000 ($40.00), fixed coupon $50: discount 4000, taxable 0, VAT 0, total 0; Paymob is not offered (CP-6).
+**Example 4 — fixed coupon above the subtotal.** Subtotal 4000 ($40.00), fixed coupon $50: discount 4000, taxable 0, VAT 0, total 0; online payment is not offered (CP-6).
 
 **Example 5 — service units** (illustration only, not approved prices). One room at 8000 per night for three nights; 2 adults and 1 child. Breakfast per person per night, adult 1000, child 500: (2 × 1000 + 1 × 500) × 3 = 7500. Airport transfer per booking 2500. Subtotal 24000 + 7500 + 2500 = 34000; no coupon; VAT 15%: 34000 × 1500 ÷ 10000 = 5100; total 39100.

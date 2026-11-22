@@ -25,7 +25,7 @@ Production and staging run on a Hostinger KVM VPS ([ADR 023](../adr/023-hostinge
 - [ ] The real client address reaches the app: `AUTH_TRUST_PROXY_HEADERS` is on only because Nginx overwrites `X-Forwarded-For`, and a proxied Cloudflare zone restores the visitor address before Nginx. Public buckets are per client, and the booking bucket (`booking-create`, 5 per hour) is strict: without a trusted address every guest shares one anonymous bucket, so five bookings an hour for the whole site. Rehearse this before public exposure.
 - [ ] Release layout (`releases/<id>` plus a `current` symlink) and the restart command proven with a dummy release and a rollback.
 - [ ] App user's crontab runs `npm run media -- cleanup` hourly, plus the reservation jobs from M8 and M9 (outbox, hold expiry every minute, payment reconciliation, token expiry).
-- [ ] Nginx passes `POST /api/v1/payments/paymob/callback` to the app unchanged (no body rewriting, so the HMAC can be verified), and the callback URL is registered in the Paymob dashboard for staging (test keys) and production (live keys) separately.
+- [ ] Nginx passes `POST /api/v1/payments/callback` to the app unchanged (no body rewriting, so the chosen gateway's signature can be verified), and the callback URL is registered in the chosen gateway's dashboard for staging (test keys) and production (live keys) separately (M15-T4a; no gateway is chosen before launch, ADR 030).
 
 ## Database
 

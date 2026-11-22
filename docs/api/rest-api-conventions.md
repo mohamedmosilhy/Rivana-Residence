@@ -48,7 +48,7 @@ Status: **Implemented in M4** (2026-11-06): the shared HTTP layer (`src/app/api/
 - **Guest**: `Authorization: Bearer <manage token>` (ADR 019).
 - **Staff**: the Better Auth session cookie (`HttpOnly`, `Secure` in production, `SameSite=Lax`, `Path=/`): `__Secure-rivana-staff.session_token` in production, `rivana-staff.session_token` in development. The root path covers both `/admin` and `/api/v1/staff`; the retired `rivana` cookie is ignored, so existing staff sign in again after upgrading. Every handler resolves the database session from its request headers. Branch assignments are reloaded per request.
 - **CSRF** for cookie-authenticated, state-changing requests: require an `Origin` equal to `APP_URL` and `Sec-Fetch-Site: same-origin` when present (the existing `isSameOriginRequest`), plus `Content-Type: application/json`, which forces a CORS preflight that the API does not grant. Never mutate on `GET`.
-- **Webhooks**: the Paymob callback (`/api/v1/payments/paymob/callback`, ADR 025) uses the `webhookRoute` wrapper instead: no session and no browser CSRF check, the raw body is kept for HMAC verification, and an unverified request gets `401` with no detail.
+- **Webhooks**: the payment callback (`/api/v1/payments/callback`, ADR 025 and 030) uses the `webhookRoute` wrapper instead: no session and no browser CSRF check, the raw body, headers, and query are passed to the gateway adapter, which verifies the signature, and an unverified request gets `401` with no detail.
 - **CORS**: none. The API answers same-origin only until a future client is approved. A non-browser client would then need a token mechanism (for example a Better Auth bearer or API-key plugin), added under its own ADR.
 
 ## Handler anatomy

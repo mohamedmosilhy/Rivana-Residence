@@ -16,9 +16,9 @@ Status: **Partly implemented**, design accepted 2026-10-24 (ADR 016, ADR 022), e
 | Two staff edit one reservation | Lost update | `version` column; `If-Match` / `expectedVersion`; `412` on mismatch |
 | A cron job and a request process the same outbox row | Double email | `SELECT … FOR UPDATE SKIP LOCKED` claim with an `attempts` increment |
 | Two guests use the last redemption of a limited coupon | Limit exceeded | Booking transaction locks the coupon row (`FOR UPDATE`) and counts unreleased redemptions before inserting |
-| A guest abandons the Paymob page | Units held forever | `holdExpiresAt`; expiry job every minute; any booking for the same listing expires overdue holds under the lock first |
-| Paymob success arrives after the hold expired and the unit was resold | Oversell, or a charge with no room | Late success re-locks the listings and re-checks; if not free, automatic refund (PY-5) |
-| Paymob sends the same callback twice, or two callbacks race | Double confirmation or double message | Unique `providerEventId`; reservation row `FOR UPDATE`; transitions only from `AWAITING_PAYMENT` |
+| A guest abandons the payment page | Units held forever | `holdExpiresAt`; expiry job every minute; any booking for the same listing expires overdue holds under the lock first |
+| payment success arrives after the hold expired and the unit was resold | Oversell, or a charge with no room | Late success re-locks the listings and re-checks; if not free, automatic refund (PY-5) |
+| The payment gateway sends the same callback twice, or two callbacks race | Double confirmation or double message | Unique `providerEventId`; reservation row `FOR UPDATE`; transitions only from `AWAITING_PAYMENT` |
 | Hold expiry job and a success callback race | Confirmed after release, or released after confirmation | Both lock the reservation row; whichever commits first wins; the other sees the new status and follows PY-5 |
 | A booking with several units needs two listings | Partial booking | All listings locked in id order in one transaction; all units checked before any insert |
 | More than one Node process (deploy overlap, restarts, a later second instance) | In-memory locks useless | All coordination in PostgreSQL |
@@ -54,13 +54,13 @@ unitOfWork.transaction(async (tx) => {
   tx.guests.upsertFromBooking(…); tx.audit.append(…)
   if reservation.status == CONFIRMED: tx.outbox.enqueue(confirmation email + WhatsApp, staff alert)
 })
-// after commit: outbox dispatcher; for PAYMOB, PaymentGateway.createCheckout (no network I/O inside the transaction)
+// after commit: outbox dispatcher; for ONLINE, PaymentGateway.createCheckout (no network I/O inside the transaction)
 ```
 
 Payment callback (ADR 025):
 
 ```text
-verified = gateway.verifyCallback(rawBody, headers)          // HMAC; reject otherwise
+verified = gateway.verifyCallback(rawBody, headers)          // adapter checks the signature; reject otherwise
 unitOfWork.transaction(async (tx) => {
   if !tx.paymentEvents.insertOnce(verified.eventId): return ok   // duplicate
   reservation = tx.reservations.findForUpdate(payment.reservationId)

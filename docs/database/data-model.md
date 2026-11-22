@@ -1,6 +1,6 @@
 # Data model
 
-PostgreSQL is the system of record for content, staff identity, enquiries, promotions (retired), media metadata, branches, inventory, prices, services, coupons, VAT, reservation and guest storage (including marketing consent), and (planned) payments. Reservation workflows remain planned beyond M8-T1. Card data is never stored (Paymob hosted checkout, ADR 025). Binary images live in the configured media store (a persistent server directory). Prisma is the migration and persistence adapter, not the domain model; it is imported only under `src/infrastructure/db`.
+PostgreSQL is the system of record for content, staff identity, enquiries, promotions (retired), media metadata, branches, inventory, prices, services, coupons, VAT, reservation and guest storage (including marketing consent), and (planned) payments. Reservation workflows remain planned beyond M8-T1. Card data is never stored (hosted checkout, ADR 025). Binary images live in the configured media store (a persistent server directory). Prisma is the migration and persistence adapter, not the domain model; it is imported only under `src/infrastructure/db`.
 
 The implemented schema is `prisma/schema.prisma` (9 migrations; M4 added `…_staff_roles_enum` and `…_branches_and_staff_roles`, M5 `…_reserve_legacy_branch_slugs`, M6-T3 `…_inventory_and_rates`, M7-T3 `20261111120000_commercial_rules`, M8-T1 `20261115120000_reservations`). Tables marked *planned* are specified here and added by milestone migrations ([migrations-and-seeding.md](./migrations-and-seeding.md)).
 
@@ -214,7 +214,7 @@ enum BranchStatus       { ACTIVE INACTIVE }
 enum AccommodationType  { ROOM APARTMENT }
 enum ReservationStatus  { AWAITING_PAYMENT CONFIRMED PAYMENT_FAILED CANCELLED CHECKED_IN CHECKED_OUT NO_SHOW }   // PENDING and DECLINED removed (ADR 024)
 enum ReservationSource  { WEBSITE STAFF EXTERNAL }
-enum PaymentMethod      { PAY_AT_HOTEL PAYMOB }
+enum PaymentMethod      { PAY_AT_HOTEL ONLINE }   // the M8 migration stores PAYMOB; M9-T1 renames it ONLINE (ADR 030)
 enum ReservationPaymentStatus { NOT_REQUIRED AWAITING PAID REFUND_PENDING REFUNDED }
 enum NightRateSource    { BASE PERIOD MANUAL }
 enum ServiceKind        { BREAKFAST AIRPORT_TRANSFER }
@@ -531,9 +531,9 @@ model WhatsAppTemplate {               // Admin-managed (Q-67)
 }
 
 model Payment {
-  id                    String        @id @db.VarChar(32)   // also the merchant reference sent to Paymob
+  id                    String        @id @db.VarChar(32)   // also the merchant reference sent to the payment gateway
   reservationId         String        @db.VarChar(32)
-  provider              String        @default("PAYMOB") @db.VarChar(16)
+  provider              String        @db.VarChar(32)       // adapter name: fake until launch, then the chosen provider (ADR 030)
   providerOrderId       String?       @db.VarChar(80)
   providerIntentionId   String?       @db.VarChar(120)
   providerTransactionId String?       @unique @db.VarChar(80)
@@ -705,7 +705,7 @@ ALTER TABLE "Coupon"          ADD CHECK ("endsAt" IS NULL OR "startsAt" IS NULL 
 CREATE UNIQUE INDEX "Coupon_code_upper_key" ON "Coupon" (upper("code")); -- implemented (M7-T3)
 ALTER TABLE "CommercialSettings" ADD CHECK ("vatRateBasisPoints" BETWEEN 0 AND 10000); -- implemented (M7-T3), column also NOT NULL
 ALTER TABLE "CommercialSettings" ADD CHECK ("id" = 'default'); -- implemented (M7-T3), migration inserts the singleton at 1500
-ALTER TABLE "Reservation"     ADD CHECK ("status" <> 'AWAITING_PAYMENT' OR ("paymentMethod" = 'PAYMOB' AND "holdExpiresAt" IS NOT NULL));
+ALTER TABLE "Reservation"     ADD CHECK ("status" <> 'AWAITING_PAYMENT' OR ("paymentMethod" = 'ONLINE' AND "holdExpiresAt" IS NOT NULL));
 ALTER TABLE "Reservation"
   ADD CONSTRAINT "Reservation_snapshot_check" CHECK (
     ("source" = 'EXTERNAL' AND "accommodationMinor" IS NULL AND "subtotalMinor" IS NULL
@@ -856,4 +856,4 @@ erDiagram
 | DB-13 | Stored totals are internally consistent (`total = taxable + vat`, `taxable = subtotal − discount ≥ 0`) | CHECK |
 | DB-14 | Coupon codes are unique case-insensitively; values match their kind | Unique index on `upper(code)`; CHECK |
 | DB-15 | A provider transaction is processed once; at most one open cancellation request per reservation | Unique `providerEventId`, `providerTransactionId`; partial unique index |
-| DB-16 | `AWAITING_PAYMENT` always has a Paymob method and a hold expiry | CHECK |
+| DB-16 | `AWAITING_PAYMENT` always has a the payment gateway method and a hold expiry | CHECK |

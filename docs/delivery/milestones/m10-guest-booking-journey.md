@@ -4,7 +4,7 @@ Status: **Not started.** Scope extended by the owner on 2026-11-17 with first-pa
 
 ## Objective
 
-Guests book end to end on their branch's site: choose dates and guests, see only available rooms and apartments with prices before VAT, choose one or more units, verify their phone, add optional services and a coupon, choose Paymob or pay at the hotel, review the VAT line and total, and submit. They see a confirmation only for a `CONFIRMED` booking, and can view their bookings and request cancellations later.
+Guests book end to end on their branch's site: choose dates and guests, see only available rooms and apartments with prices before VAT, choose one or more units, verify their contact (a WhatsApp code, or by email when WhatsApp is not ready, ADR 031), add optional services and a coupon, choose to pay online or at the hotel, review the VAT line and total, and submit. They see a confirmation only for a `CONFIRMED` booking, and can view their bookings and request cancellations later.
 
 ## Read first
 
@@ -12,7 +12,7 @@ Guests book end to end on their branch's site: choose dates and guests, see only
 - [requirements/user-stories-and-acceptance-criteria.md](../../requirements/user-stories-and-acceptance-criteria.md) (US-G1…G7)
 - [api/api-contracts.md](../../api/api-contracts.md) (P5, P6, P7, P9, P10, P11, G1–G6)
 - [ADR 029](../../adr/029-first-party-site-analytics.md) and FR-ANL (analytics); FR-GCHG and GC-1…6 (guest changes); SV-5 (cars)
-- ADRs [009](../../adr/009-server-components.md), [012](../../adr/012-motion-library.md), [024](../../adr/024-immediate-confirmation.md), [025](../../adr/025-paymob-online-payment.md), [027](../../adr/027-booking-price-composition.md)
+- ADRs [009](../../adr/009-server-components.md), [012](../../adr/012-motion-library.md), [024](../../adr/024-immediate-confirmation.md), [025](../../adr/025-paymob-online-payment.md) (flow only; provider neutral, [030](../../adr/030-provider-neutral-integrations.md)), [031](../../adr/031-email-verification-fallback.md), [027](../../adr/027-booking-price-composition.md)
 - Next.js guides: Server and Client Components, forms, `searchParams`, `redirect`
 
 ## Blocking questions
@@ -23,7 +23,7 @@ Guests book end to end on their branch's site: choose dates and guests, see only
 
 | Step | Skill | Notes |
 | --- | --- | --- |
-| Spec | `/architect` (`FEATURE`) | Step structure, state in URL vs component, typed API client, return-from-Paymob page |
+| Spec | `/architect` (`FEATURE`) | Step structure, state in URL vs component, typed API client, return-from-checkout page |
 | Build | `/develop` (UI track; logic track for the API client and `BookingProvider` mode) | Reuse design tokens, `site/classes.ts`, existing form patterns |
 | Tests | `/test` | E2E with the fake WhatsApp adapter and fake payment gateway |
 | Failures | `/debug` | |
@@ -37,7 +37,7 @@ Booking pages under `/{branch}/book`, manage page, "My reservations", cancellati
 
 ## Out of scope (binding)
 
-- Staff screens (M11, M12), including the website report (M12-T4b). Broadcast UI (M13). Currency conversion (Q-46). Embedded card forms or Paymob frames.
+- Staff screens (M11, M12), including the website report (M12-T4b). Broadcast UI (M13). Currency conversion (Q-46). Embedded card forms or provider frames. Naming a payment provider in the interface.
 
 ## Task breakdown
 
@@ -46,11 +46,11 @@ Planned, reviewed, and accepted one task at a time ([agent-workflow.md](../../en
 | Task | Title | Risk | Depends on | Covers (criteria, tests) | Status |
 | --- | --- | --- | --- | --- | --- |
 | M10-T0a | Analytics foundation (ADR 029): migration `site_analytics` (`SiteEvent`, `SiteDailyTotal`, `AnalyticsSalt`), pure event and funnel rules, `RecordSiteEvent`, API P11 with strict parsing, `analytics` limiter bucket, bot and GPC/DNT filtering, daily salt rotation | Critical | M9 | AC 11; T-ANL-1…6 | Not started |
-| M10-T0b | Server-side funnel steps from P5, P6, P9, P10, P7, and the Paymob result (after the use case, outside its transaction); `analyticsSessionId` on P7; `npm run analytics -- rollup` (daily totals, 90-day deletion) | Medium | T0a | AC 11; T-ANL-7…10 | Not started |
+| M10-T0b | Server-side funnel steps from P5, P6, P9, P10, P7, and the payment result (after the use case, outside its transaction); `analyticsSessionId` on P7; `npm run analytics -- rollup` (daily totals, 90-day deletion) | Medium | T0a | AC 11; T-ANL-7…10 | Not started |
 | M10-T1 | Typed API client on the contracts (`src/presentation/api-client/`) | Medium | M9 | client unit tests | Not started |
 | M10-T2 | Search and results page | Medium | T1 | AC 1, 9 | Not started |
 | M10-T3 | Selection basket with server-computed subtotal | Medium | T2 | AC 2 | Not started |
-| M10-T4 | Guest details and phone verification step | Medium | T3 | AC 9 | Not started |
+| M10-T4 | Guest details and verification step (WhatsApp or email channel, ADR 031) | Medium | T3 | AC 9 | Not started |
 | M10-T5 | Extras (with the transfer car selector and flight details, Q-82) and coupon | Medium | T3 | AC 3, 4 | Not started |
 | M10-T6 | Payment choice, review, submit, confirmation, conflict and price-change paths | Critical | T4, T5 | AC 5–7 | Not started |
 | M10-T7 | Payment return page | Critical | T6 | AC 6 | Not started |
@@ -63,12 +63,12 @@ Planned, reviewed, and accepted one task at a time ([agent-workflow.md](../../en
 
 1. **Search** `/{branch}/book?checkIn&checkOut&adults&children`: a plain GET form (works without JavaScript), native date inputs, errors next to fields and announced; results from API-P5 rendered on the server: each available listing with its Room or Apartment badge, price per night and stay total **before VAT**, and a units selector up to the available count (cap per booking from the spec); unavailable listings with a reason.
 2. **Selection basket**: one or more units across listings (same dates); a running accommodation subtotal from API-P6 (server computed).
-3. **Details**: guest name, email, phone (country selector, E.164), special requests; phone verification step (`PhoneVerificationStep`, API-P9 and P10) with resend timing, attempts left, and the neutral blocked-number message.
+3. **Details**: guest name, email, phone (country selector, E.164), special requests; verification step (`PhoneVerificationStep`, API-P9 and P10) with a channel choice offered only for ready channels (WhatsApp by default; email when WhatsApp is not ready, fails to send, or the guest prefers it), resend timing, attempts left, and the neutral blocked-number message; an email verified guest is told the hotel will confirm the phone on arrival.
 4. **Extras**: breakfast and airport transfer offered with their prices by unit (per booking, per night, per person, per person per night, or per car, child price where set) when the branch has them active; nothing preselected. The transfer has a car selector (1 to the branch's maximum, default 1) and optional flight number and arrival time; changing the cars re-quotes (Q-82).
 5. **Coupon**: one code field; applying re-quotes through API-P6; a refusal shows the reason in plain words.
-6. **Payment choice**: "Pay online now (Paymob)" and "Pay at the hotel", each with a one-line explanation; online hidden when Paymob is not configured for the branch.
+6. **Payment choice**: "Pay online now" and "Pay at the hotel", each with a one-line explanation; online hidden when no payment gateway is configured for the branch (the fake gateway's simulated checkout page serves development and tests).
 7. **Review**: every unit, nights, per-night breakdown, services, discount, **subtotal, VAT (rate shown), total**, payment choice, cancellation terms (request online until 24 hours before check-in time; within 24 hours contact the hotel; Q-64 note when already inside the window), unselected services as an optional cross-sell ("Add breakfast for $X?") that changes nothing until the guest accepts, the marketing opt-in checkbox (unticked) with its wording, privacy consent.
-8. **Submit** (API-P7 with an `Idempotency-Key` kept across retries): pay at hotel → confirmation page (reference, "Confirmed", details, manage link note); Paymob → navigate to `checkoutUrl`. Conflict and price-change paths as designed.
+8. **Submit** (API-P7 with an `Idempotency-Key` kept across retries): pay at hotel → confirmation page (reference, "Confirmed", details, manage link note); online → navigate to `checkoutUrl`. Conflict and price-change paths as designed.
 9. **Payment return** `/{branch}/book/payment`: reads the manage token kept in `sessionStorage`, polls API-G1 briefly, shows "Confirmed" only when the status is `CONFIRMED`, "Payment not completed" for `PAYMENT_FAILED`, and a waiting state otherwise; never trusts the return query string.
 10. **Manage** `/reservations/manage#t=…` and **My reservations** `/reservations/find`: status, details, payment status, and "Request cancellation" (with reason) when before the deadline; otherwise the branch's contact details. Shows open, approved, rejected, and refund states.
 11. **Book Now**: `BookingProvider` internal mode per branch: when the branch has online booking on and the listing is bookable, Book Now goes to `/{branch}/book` prefilled with the listing; otherwise the honest disabled control.
@@ -88,7 +88,7 @@ One additive migration, `site_analytics` (M10-T0a), and one public endpoint, API
 3. Services and the cross-sell are never added without an explicit guest action; removing them updates the total.
 4. A valid coupon changes the quote and total; an invalid one shows its reason and leaves the total unchanged.
 5. The review shows the VAT line and a total that equals the server quote; no total is computed in the browser.
-6. Pay at hotel: the confirmation page appears only after a `201` with `CONFIRMED`. Paymob: the guest is sent to the hosted checkout; the return page says "Confirmed" only for `CONFIRMED` and never on a failed or pending payment.
+6. Pay at hotel: the confirmation page appears only after a `201` with `CONFIRMED`. Online: the guest is sent to the hosted checkout; the return page says "Confirmed" only for `CONFIRMED` and never on a failed or pending payment.
 7. Conflict (`INVENTORY_UNAVAILABLE`) returns the guest to results with an explanation; `PRICE_CHANGED` shows the new total and requires explicit acceptance.
 8. Cancellation request works before the deadline and is replaced by contact details after it.
 9. Every booking step passes axe with no serious or critical issues, works by keyboard, has no overflow at 320 px, and meets the 44 px touch target rule.
@@ -107,7 +107,7 @@ Screenshots of every step (desktop and mobile), including errors, conflict, coup
 ## Risks
 
 - Legal and tax wording not ready: online booking stays off until approved text replaces the placeholders.
-- Paymob return-page timing: polling with a clear waiting state.
+- Payment return-page timing: polling with a clear waiting state.
 
 ## Handoff
 

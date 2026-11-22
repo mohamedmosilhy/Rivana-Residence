@@ -64,8 +64,8 @@ Planned, reviewed, and accepted one task at a time ([agent-workflow.md](../../en
 2. **Services** `/admin/services`: per branch breakfast and airport transfer price unit (per car for the transfer, Q-82), adult price, optional child price (person units only), maximum cars for the transfer (default 3), on/off, description.
 3. **Coupons** `/admin/coupons`: list with redemption counts, create and edit (code, percent or fixed, validity, limits, branches, active); Managers limited to their branches.
 4. **VAT** in `/admin/settings` (Admin only, Q-05): the Admin types any rate in percent with up to two decimals (for example 5, 6, 15), stored as basis points; it starts at 15% and is never empty; values below 0 or above 100 are refused with an error; a warning that changes apply to new bookings only. Hidden from every other role.
-5. **Reports** `/admin/reports` (API-S40–S42): reservations by status, source, and payment method; room-nights sold and available; occupancy; revenue excluding VAT; VAT; discounts; online payments captured and refunded; cancellations and requests; PMS-entry ages; each figure with its definition and limitations. **Insights** (API-S46, Q-89): RevPAR, booking pace, lead time, length of stay, arrival weekdays, cancellation lead time, no-show rate, payment mix and Paymob success rate, coupon performance, service take-up and average cars, repeat guests, guest countries, changes.
-6. **Branches** `/admin/branches`: create, edit, activate and deactivate, online booking switch (refused, with the reason shown, while WhatsApp is not configured, the check-in time is missing, or the branch has no published bookable listing), map, check-in and check-out times, sync settings.
+5. **Reports** `/admin/reports` (API-S40–S42): reservations by status, source, and payment method; room-nights sold and available; occupancy; revenue excluding VAT; VAT; discounts; online payments captured and refunded; cancellations and requests; PMS-entry ages; each figure with its definition and limitations. **Insights** (API-S46, Q-89): RevPAR, booking pace, lead time, length of stay, arrival weekdays, cancellation lead time, no-show rate, payment mix and online payment success rate, coupon performance, service take-up and average cars, repeat guests, guest countries, changes.
+6. **Branches** `/admin/branches`: create, edit, activate and deactivate, online booking switch (refused, with the reason shown, while no verification channel is ready (neither WhatsApp nor email, ADR 031), the check-in time is missing, or the branch has no published bookable listing), map, check-in and check-out times, sync settings.
 7. **Staff** `/admin/staff`: role and branch assignment (API-A4); last-Admin rule.
 8. **Audit** `/admin/audit` (S43): filters by branch, user, entity, date.
 9. **WhatsApp settings** `/admin/settings/whatsapp` (from M8): polish the minimal screen into the final design; no new behavior.
@@ -75,7 +75,7 @@ Planned, reviewed, and accepted one task at a time ([agent-workflow.md](../../en
 
 1. Managers change prices, services, and coupons only for their branches; VAT and branches are Admin-only; every change is audited with before and after values.
 2. Report figures match the fixture dataset for every definition, and only include the caller's branches.
-3. Turning online booking on is refused with a clear reason when WhatsApp is not configured; only the Admin sees the VAT setting.
+3. Turning online booking on is refused with a clear reason when neither WhatsApp nor email is ready; only the Admin sees the VAT setting.
 4. E2E-M-1/2/4 and E2E-A-1…4 pass; axe clean.
 5. Every insight figure matches the fixture dataset by its definition and includes only the caller's branches (Q-89).
 6. Website figures match a fixture of events and daily totals (visitors, sessions, every funnel step, drop-off, exit pages, unmet demand); a Manager never sees another branch or pages outside a branch; no figure identifies a visitor (Q-86…Q-88).

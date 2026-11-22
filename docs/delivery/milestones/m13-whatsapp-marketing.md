@@ -12,7 +12,7 @@ Rivana sends consented marketing broadcasts (offers and coupon codes) by WhatsAp
 - [requirements/functional-requirements.md](../../requirements/functional-requirements.md) (FR-MKT)
 - [security/threat-model.md](../../security/threat-model.md) (marketing consent)
 - [api/api-contracts.md](../../api/api-contracts.md) (S54, S60–S62)
-- The chosen WhatsApp provider's documentation for marketing templates, opt-out, and rate limits
+- [ADR 030](../../adr/030-provider-neutral-integrations.md): build against the `WhatsAppTransport` port and the fake adapter; the chosen provider's documentation for marketing templates, opt-out, and rate limits is read at launch (M15-T4)
 
 ## Blocking questions (must be answered before starting)
 

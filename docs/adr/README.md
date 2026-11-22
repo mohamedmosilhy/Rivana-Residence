@@ -28,11 +28,13 @@ ADRs record the decisions that materially shape Rivana, in one numbered sequence
 | [022](./022-deployment-transaction-compatibility.md) | Transaction-scoped primitives only; PostgreSQL provider requirements | Accepted 2026-10-24 |
 | [023](./023-hostinger-vps-deployment.md) | Hostinger VPS: Node under systemd, Nginx, PostgreSQL 17+, local media | Accepted 2026-10-24 (supersedes 011) |
 | [024](./024-immediate-confirmation.md) | Immediate confirmation of website reservations; `PENDING`/`DECLINED` removed; cancellation requests; PMS-entry tracking | Accepted 2026-11-06 (supersedes request to book; amends 013, 019) |
-| [025](./025-paymob-online-payment.md) | Online payment through Paymob hosted checkout; 15-minute payment holds; verified callbacks; refunds | Accepted 2026-11-06 (extends 016, 024) |
+| [025](./025-paymob-online-payment.md) | Online payment through Paymob hosted checkout; 15-minute payment holds; verified callbacks; refunds | Accepted 2026-11-06 (extends 016, 024); the Paymob specific parts are superseded by 030 (2026-11-22) |
 | [026](./026-branch-websites-and-accommodation.md) | Branch-owned websites at `/{branchSlug}/…`; rooms and apartments in one catalog; per-branch maps | Accepted 2026-11-06 (extends 006, 017) |
 | [027](./027-booking-price-composition.md) | Price composition: date prices, services, coupons, VAT; promotion popup retired | Accepted 2026-11-06 (amends 020); `PER_VEHICLE` amendment accepted 2026-11-17 (M8-T3b) |
 | [028](./028-whatsapp-guest-messaging.md) | WhatsApp confirmations, feedback requests, consented marketing broadcasts; Admin-managed number, templates, and test message | Accepted 2026-11-06 (extends 019) |
 | [029](./029-first-party-site-analytics.md) | First-party, cookieless website analytics and booking funnel inside the Next.js app | Proposed 2026-11-17 |
+| [030](./030-provider-neutral-integrations.md) | Provider neutral payment, WhatsApp, and email: ports, fake reference adapters, contract tests, real adapters plugged in at launch | Accepted 2026-11-22 (supersedes parts of 025; amends 028) |
+| [031](./031-email-verification-fallback.md) | Verification by email as a fallback to WhatsApp; the phone stays a claimed contact | Accepted 2026-11-22 (extends 019, 028) |
 
 Consequences that run through all of them:
 

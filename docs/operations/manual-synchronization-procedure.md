@@ -17,7 +17,7 @@ Status: **Draft for client review**, revised for immediate confirmation (Q-36, 2
 | Event | Action | Target time |
 | --- | --- | --- |
 | New website booking (already **Confirmed** in Rivana) | Enter it in the PMS, then **Mark entered in hotel system** in Rivana. If the PMS has no room for it, follow *Conflicts* below at once | Within 30 minutes during staffed hours; overnight bookings at the start of the morning shift (Q-61) |
-| Guest cancellation request | Manager or Admin approves (refund through Paymob if paid) or rejects with a reason; after approval, cancel the booking in the PMS | Before the guest's arrival; same day where possible |
+| Guest cancellation request | Manager or Admin approves (refund through the payment gateway if paid) or rejects with a reason; after approval, cancel the booking in the PMS | Before the guest's arrival; same day where possible |
 | Booking made in the PMS (phone, OTA, travel agent, walk-in at another desk) | **Record external reservation** in Rivana with the PMS reference | Within 30 minutes during staffed hours |
 | Booking taken by Rivana staff | Create it in **Rivana first**, then in the PMS | Immediately |
 | Change or cancellation in either system | Make the same change in the other system in the same sitting | Immediately |
@@ -50,7 +50,7 @@ A conflict means the same room-night was sold in both systems. With immediate co
 1. **Do not cancel anything yet.** Note both references and whether the website booking was paid online.
 2. Check whether another unit of the same or a better listing is free in both systems that night. If so, assign it in both systems and tell the affected guest about the change according to hotel policy.
 3. If not, escalate to the Manager immediately (phone). The Manager decides which booking is kept, using the hotel's policy (for example: the earlier booking wins, or the one with arrival soonest).
-4. If the website booking is the one cancelled, the Manager cancels it in Rivana with the reason "Cross-system conflict". A paid booking is refunded through Paymob automatically by that cancellation; tell the guest personally, by phone or WhatsApp, before or with the automatic message.
+4. If the website booking is the one cancelled, the Manager cancels it in Rivana with the reason "Cross-system conflict". A paid booking is refunded through the payment gateway automatically by that cancellation; tell the guest personally, by phone or WhatsApp, before or with the automatic message.
 5. Record the outcome in both systems so it appears in the audit log and the manager review.
 
 ## When Rivana is unavailable

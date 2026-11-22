@@ -11,7 +11,7 @@ Constraints already in force:
 - Next.js is the only application framework; no second server (AGENTS.md). A self-hosted analytics product would be a second application.
 - Public pages have a script budget of ≤ 260 KB and no third-party script in the critical path ([frontend/performance.md](../frontend/performance.md)).
 - A privacy notice is published before analytics are collected, and analytics are minimal ([security/security-controls.md](../security/security-controls.md)). Egypt's PDPL applies (risk RK-14).
-- The booking funnel steps already pass through our own API: P5 search, P6 quote, P9 code requested, P10 phone verified, P7 booking, P8 Paymob result.
+- The booking funnel steps already pass through our own API: P5 search, P6 quote, P9 code requested, P10 phone verified, P7 booking, P8 payment result.
 
 ## Options considered
 

@@ -22,7 +22,7 @@ Since M5 every public page lives under its branch, at `/{branch}/…` (ADR 026, 
 | `/{branch}/book?checkIn&checkOut&adults&children` | Search form plus results; a plain GET form that works without JavaScript and is shareable | Planned (M10) |
 | `/{branch}/book/details` | Selected units, guest details, phone verification, extras, coupon, payment choice, review with VAT, submit (`POST /api/v1/reservations`) | Planned (M10) |
 | `/{branch}/book/confirmed` | Confirmation for a `CONFIRMED` booking | Planned (M10) |
-| `/{branch}/book/payment` | Return page after Paymob: shows the server status (confirmed, waiting, payment not completed) | Planned (M10) |
+| `/{branch}/book/payment` | Return page after the payment gateway: shows the server status (confirmed, waiting, payment not completed) | Planned (M10) |
 | `/reservations/manage` | Guest manage page; reads the token from `#t=`; shows status, payment, and the cancellation request action | Planned (M10) |
 | `/reservations/find` | "My reservations": phone number plus WhatsApp code, then that number's reservations (30 minutes) | Planned (M10) |
 
@@ -70,4 +70,4 @@ The **sync reminder** is part of the shell, not a page: on every dashboard page,
 | `/media/[...key]` | Public delivery of `READY` media with its own sandbox CSP | Implemented |
 | `/admin/media/upload` | Authenticated, same-origin streaming image upload | Implemented |
 | `/sitemap.xml`, `/robots.txt` | Search engine files (published content only, per active branch; `/` only while it is the chooser) | Implemented |
-| `/api/v1/**` | REST API: health (M4) and branches, API-P1…P4 and A1…A3 (M5); planned: availability, quotes, reservations, payments (including the Paymob callback), guest access, and staff operations ([../api/api-contracts.md](../api/api-contracts.md)) | Implemented: health, branches; the rest planned (M6–M13) |
+| `/api/v1/**` | REST API: health (M4) and branches, API-P1…P4 and A1…A3 (M5); planned: availability, quotes, reservations, payments (including the payment callback), guest access, and staff operations ([../api/api-contracts.md](../api/api-contracts.md)) | Implemented: health, branches; the rest planned (M6–M13) |

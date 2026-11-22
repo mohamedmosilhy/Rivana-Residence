@@ -27,7 +27,7 @@ This index lists every reservation business rule with its authoritative definiti
 2. Never compute availability or prices with another branch's data (IN-1, DB-1).
 3. Never change a stored reservation price without an explicit, authorized, audited action (PR-8, PR-10).
 4. Never show guest personal data without staff authorization or the guest's token (R-8).
-5. Never tell a guest a booking is confirmed unless it is committed as `CONFIRMED`, and for online payment only after a verified Paymob success; never imply the confirmation was checked against the PMS (NFR-13, Q-36, Q-53).
+5. Never tell a guest a booking is confirmed unless it is committed as `CONFIRMED`, and for online payment only after a verified payment success; never imply the confirmation was checked against the PMS (NFR-13, Q-36, Q-53).
 6. Never claim Rivana knows about PMS reservations that staff have not recorded (BR-11).
 7. Never accept an online booking without a WhatsApp-verified, non-blocked phone (GV-2, GV-3).
 8. Never add a service, discount, or charge the guest did not choose, and never compute a total in the browser (SV-2, PR-7).

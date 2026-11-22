@@ -2,7 +2,7 @@
 
 Rivana is **one deployable Next.js application**, a modular monolith. The public website, the booking journey, the staff dashboard (content management and reservation operations), and the REST API share one codebase, one database, one authentication system, and one design system. Module boundaries are enforced in source by lint rules and architecture tests, not by separate services. A separate CMS, booking service, or API server would duplicate deployment, authentication, schema, and UI without a business need (ADR 001, ADR 014).
 
-Status: everything described here for content, media, enquiries, promotions, and staff accounts is **implemented** (single site; the promotion popup is retired and removed in M5). Branch websites, inventory, pricing, services, coupons, VAT, reservations, Paymob payments, WhatsApp messaging, the `/api/v1` REST API, and audit are **planned** (milestones M4–M13, replanned 2026-11-06). Diagrams show both, and planned parts are labelled where it matters.
+Status: everything described here for content, media, enquiries, promotions, and staff accounts is **implemented** (single site; the promotion popup is retired and removed in M5). Branch websites, inventory, pricing, services, coupons, VAT, reservations, online payments, WhatsApp messaging, the `/api/v1` REST API, and audit are **planned** (milestones M4–M13, replanned 2026-11-06). Diagrams show both, and planned parts are labelled where it matters.
 
 **M6 domain foundation:** shared date, stay, occupancy, and money values (T1), plus pure availability, inventory reduction, and nightly price rules (T2), are implemented and accepted 2026-11-08. Inventory and pricing persistence, application workflows, locks, and endpoints remain planned; calculations alone do not enforce concurrency. See [module boundaries](./module-boundaries.md) and the [M6 report](../delivery/reports/m6-inventory-and-availability.md).
 
@@ -21,7 +21,7 @@ flowchart LR
   Media[("Persistent media directory")]
   SMTP["SMTP provider"]
   WA["WhatsApp Business provider (planned)"]
-  PSP["Paymob hosted checkout + API (planned)"]
+  PSP["hosted checkout + API (planned)"]
   Maps["Google Maps embed (branch maps)"]
   PMS["Hotel operational system (PMS)"]
   Future["Future clients (mobile app, partner, PMS adapter)"]
@@ -153,7 +153,7 @@ Client Components receive serializable DTOs, never database records or Prisma ty
 - `ContactDelivery` sends enquiry notifications independently of persistence. Reservation emails reuse its SMTP configuration through an outbox.
 - Operations ports (`ReservationUnitOfWork`, `InventoryLock`, `RateRepository`, `RoomTypeCatalog`, and others) are listed in [../domain/domain-model.md](../domain/domain-model.md#application-ports).
 - `WhatsAppSender` (planned) sends verification codes, transactional messages, feedback requests, and consented marketing broadcasts through the templates the Admin manages in the dashboard (ADR 028, Q-67); the business number is an Admin setting and the access token a server secret. The provider (Meta Cloud API or a provider such as Twilio, Q-10) stays inside the adapter; secrets are server-only.
-- `PaymentGateway` (planned, ADR 025) creates Paymob hosted checkouts, verifies HMAC-signed callbacks, queries transactions, and requests refunds. Paymob SDKs and payloads stay in `src/infrastructure/payments/paymob/`; no card data reaches Rivana.
+- `PaymentGateway` (planned, ADR 025 and 030; a fake gateway first, the chosen provider's adapter at launch) creates hosted checkouts, verifies signed callbacks (the adapter's scheme), queries transactions, and requests refunds. The payment gateway SDKs and payloads stay in `src/infrastructure/payments/<provider>/`; no card data reaches Rivana.
 - `HotelSystemSync` reserves the place for a future PMS integration. It has no adapter; synchronization is manual (ADR 013).
 - `Clock`, ids, and tokens are injected where logic needs deterministic tests.
 
@@ -247,7 +247,7 @@ Exact versions are pinned (`save-exact`). Preview and release-candidate dependen
 | Authorization | Capabilities plus branch assignments | 018 |
 | Guests | Verified phone profiles by WhatsApp code; blocking; no accounts | 019 |
 | Confirmation | Website bookings confirmed immediately when inventory (and payment) is secured; cancellation requests | 024 |
-| Payments | Paymob hosted checkout, holds, verified callbacks, refunds | 025 |
+| Payments | hosted checkout, holds, verified callbacks, refunds | 025 |
 | Price composition | Date prices, services, coupons, VAT; popup retired | 027 |
 | Guest messaging | WhatsApp confirmations, feedback, consented broadcasts | 028 |
 | Dates and money | `DATE`, branch time zone, US dollars as integer cents | 020 |

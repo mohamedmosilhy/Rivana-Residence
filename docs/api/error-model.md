@@ -39,7 +39,7 @@ The application layer already returns `Result<T>` with `ApplicationErrorCode` (`
 | `INVALID_TRANSITION` | 409 | `context.status` (current). **Implemented (M8-T9)** |
 | `ROOM_ALREADY_ASSIGNED` | 409 | |
 | `ROOM_BLOCKED` | 409 | |
-| `BRANCH_NOT_BOOKABLE` | 409 | Branch inactive, online booking disabled, WhatsApp not configured, or check-in time missing; `context.reason` is `ONLINE_BOOKING_DISABLED`, `CHECK_IN_TIME_MISSING` or `WHATSAPP_NOT_CONFIGURED` (**implemented M8-T7b**; public inactive branch: 404 instead) |
+| `BRANCH_NOT_BOOKABLE` | 409 | Branch inactive, online booking disabled, WhatsApp not configured, or check-in time missing; `context.reason` is `ONLINE_BOOKING_DISABLED`, `CHECK_IN_TIME_MISSING` or `WHATSAPP_NOT_CONFIGURED` (**implemented M8-T7b**; public inactive branch: 404 instead). **Planned (M9-T12, ADR 031):** the WhatsApp reason becomes `NO_VERIFICATION_CHANNEL` and applies only when neither WhatsApp nor email is ready |
 | `ROOM_TYPE_NOT_BOOKABLE` | 409 | Unpublished, no units, or unpriced nights |
 | `STALE_VERSION` | 412 | `context.currentVersion`. **Implemented (M8-T9)**: the `If-Match` version no longer matches |
 | `PRECONDITION_REQUIRED` | 428 | **Implemented (M8-T9)**: a reservation write sent no usable `If-Match` |
@@ -57,14 +57,15 @@ The application layer already returns `Result<T>` with `ApplicationErrorCode` (`
 | `COUPON_INVALID` | 422 | `context.reason`: `NOT_FOUND`, `INACTIVE`, `NOT_YET_VALID`, `EXPIRED`, `WRONG_BRANCH`, `LIMIT_REACHED`, `PHONE_LIMIT_REACHED`; `fieldErrors.couponCode`. The message never confirms whether a code exists at another branch beyond `WRONG_BRANCH` **Implemented (M7-T6)**: the same message for every reason, a malformed or over long code is `NOT_FOUND`. |
 | `SERVICE_UNAVAILABLE` | 409 | `context.kind`; the service is off at this branch. **Implemented (M7-T6).** |
 | `BOOKING_LIMIT_REACHED` | 429 | Per-phone cap on upcoming pay-at-hotel bookings or open payment holds (Q-60); `detail` asks the guest to contact the hotel |
-| `PAYMENT_METHOD_UNAVAILABLE` | 409 | Online payment is not offered: in M8 every `PAYMOB` request to P7 (**implemented M8-T7b**); from M9, Paymob not configured for the branch, or the total is zero (CP-6) |
-| `PAYMENT_UNAVAILABLE` | 503 | The Paymob checkout could not be created; the booking is `PAYMENT_FAILED` and nothing is held |
-| `WEBHOOK_SIGNATURE_INVALID` | 401 | Payment callback failed HMAC verification; body is minimal |
+| `PAYMENT_METHOD_UNAVAILABLE` | 409 | Online payment is not offered: in M8 every online request to P7 (sent as `PAYMOB`, renamed `ONLINE` in M9-T1; **implemented M8-T7b**); from M9, no payment gateway configured for the branch, or the total is zero (CP-6) |
+| `PAYMENT_UNAVAILABLE` | 503 | The the payment gateway checkout could not be created; the booking is `PAYMENT_FAILED` and nothing is held |
+| `WEBHOOK_SIGNATURE_INVALID` | 401 | Payment callback failed the adapter's signature verification; body is minimal |
 | `CANCELLATION_WINDOW_CLOSED` | 409 | After the deadline (CX-1); `context.deadline` and branch contact details |
 | `CANCELLATION_REQUEST_EXISTS` | 409 | An open request already exists for this reservation |
+| `EMAIL_NOT_CONFIGURED` | 503 | **Planned (M9-T12, ADR 031).** The email channel was requested but no email adapter is configured; nothing is sent |
 | `WHATSAPP_NOT_CONFIGURED` | 503 | Business number, access token, or the template for this purpose is missing; nothing is sent (verification requests fail this way while the number is a placeholder) |
 | `WHATSAPP_TEST_FAILED` | 502 | The Admin's test message was refused by the provider; `detail` carries the provider's error text without secrets |
-| `REFUND_FAILED` | 502 | Paymob refused or failed the refund; the request is `REFUND_FAILED` and can be retried (S45) |
+| `REFUND_FAILED` | 502 | The payment gateway refused or failed the refund; the request is `REFUND_FAILED` and can be retried (S45) |
 
 Transport-level errors produced by the HTTP layer before the use case runs:
 

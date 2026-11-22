@@ -977,7 +977,7 @@ Ready for review on 2026-09-26; accepted by the project owner on 2026-10-24 afte
 
 ## Reservation milestones
 
-Milestones M0–M3 produced the reservation design (accepted 2026-10-24). The client decisions of 2026-11-06 (immediate confirmation, Paymob payment and refunds, branch websites, rooms and apartments, optional services, coupons, VAT, WhatsApp messaging; [Q-36…Q-53](../requirements/assumptions-and-open-questions.md#decided-2026-11-06-client-decisions)) changed that design. They are recorded in ADRs 024–028 and in the current requirements, domain, database, API, security, frontend, testing, and operations documents. The M0–M3 evidence stays as it was. **This plan replaces the earlier M4–M12 plan**: M4–M14 build the product, and **M15 is the joint launch**, together with Phase 12.
+Milestones M0–M3 produced the reservation design (accepted 2026-10-24). The client decisions of 2026-11-06 (immediate confirmation, online payment and refunds, branch websites, rooms and apartments, optional services, coupons, VAT, WhatsApp messaging; [Q-36…Q-53](../requirements/assumptions-and-open-questions.md#decided-2026-11-06-client-decisions)) changed that design. They are recorded in ADRs 024–028 and in the current requirements, domain, database, API, security, frontend, testing, and operations documents. The M0–M3 evidence stays as it was. **This plan replaces the earlier M4–M12 plan**: M4–M14 build the product, and **M15 is the joint launch**, together with Phase 12.
 
 Each milestone has a detailed brief in [milestones/](./milestones/README.md) with its tasks by layer, files, database and API impact, numbered acceptance criteria, tests, evidence, risks, and the agent skills to run at each step (`/architect` → `/develop` → `/test` → `/debug` → `/check verify` → `/check review` → `/sync` → `/document`). The brief is the contract; this section is the summary.
 
@@ -1002,7 +1002,7 @@ Definition of done is [the brief's §23](../source/prompt.md), the roadmap's per
 | [M6](./milestones/m6-inventory-and-availability.md) Inventory, date prices, availability | Units, blocks, base rates and one kind of date period, availability, all under the room-type lock | FR-INV-1…3, FR-AV-1…4, FR-PR-1/2/6, NFR-1/2 | `inventory_and_rates` | P5, S20–S27, S30–S34 | M5 |
 | [M7](./milestones/m7-booking-quote.md) Booking quote: services, coupons, VAT | Server-side quote composing units, services, coupon, and VAT exactly; staff APIs for services, coupons, VAT | FR-PR-3, FR-SVC, FR-CPN, FR-TAX | `commercial_rules` | P6, S35–S39, A5 | M6 |
 | [M8](./milestones/m8-reservations.md) Reservations, immediate confirmation, verification, messages | Pay-at-hotel website bookings `CONFIRMED` in the reserving transaction; staff and external bookings; lifecycle; PMS-entry marker; WhatsApp verification; confirmations after commit; Admin WhatsApp settings, templates, and test message; transfer car count; one change engine with change history and the hotel-system update flag (2026-11-17) | FR-RES, FR-GST, FR-LKP, FR-NTF, FR-AUD, FR-OPS-7 | `reservations`, `transfer_vehicles`, `reservation_changes` | P7, P9, P10, G1, G3, G4, S1–S6, S9–S16, S28, S29, S50–S53, S55, A6–A8; P6 `services` objects | M7 |
-| [M9](./milestones/m9-payments-and-cancellations.md) Paymob payments, holds, cancellation requests, refunds | Paymob hosted checkout with 15-minute holds, verified callbacks, late-success handling; guest cancellation requests; Manager or Admin decisions; refunds through Paymob; guest booking changes and change requests (2026-11-17) | FR-PAY, FR-CXL, FR-GCHG | `payments_and_cancellations`, `change_requests` | P7 (online), P8, G2, G4, S9, S17–S19, S44, S45, G5, G6, S56–S58 | M8; Paymob sandbox keys from the client (Q-55) |
+| [M9](./milestones/m9-payments-and-cancellations.md) Online payments (provider neutral), holds, cancellation requests, refunds | hosted checkout with 15-minute holds, verified callbacks, late-success handling; guest cancellation requests; Manager or Admin decisions; refunds through the payment gateway; guest booking changes and change requests (2026-11-17) | FR-PAY, FR-CXL, FR-GCHG | `payments_and_cancellations`, `change_requests` | P7 (online), P8, G2, G4, S9, S17–S19, S44, S45, G5, G6, S56–S58 | M8; the payment gateway sandbox keys from the client (Q-55) |
 | [M10](./milestones/m10-guest-booking-journey.md) Guest booking journey | End-to-end booking UI with several units, services, coupon, payment choice, VAT review; manage page, cancellation requests, and change booking; first-party website analytics and booking funnel tracking (2026-11-17) | US-G1…G7, US-G6a, FR-SITE-5, FR-WEB-10, FR-ANL-1…4, FR-ANL-6 | `site_analytics` | P11; consumes M5–M9 | M9 |
 | [M11](./milestones/m11-front-desk.md) Front-desk operations | Desk overview, reservations, PMS-entry marking, cancellation queue, staff and external forms, grid, blocks, sync reminder, guests; change history, hotel-system update flag, change requests, airport pickups (2026-11-17) | FR-OPS-1…10, US-R*, US-M4, US-M6 | none | consumes M8–M9 | M9 |
 | [M12](./milestones/m12-manager-admin.md) Manager and admin tools | Pricing, services, coupons, VAT, reports, branches, staff assignment, audit viewer; business insights and the website funnel report (2026-11-17) | FR-PR/SVC/CPN/TAX (UI), FR-RPT, FR-ANL-5, FR-BR, FR-IAM-2, FR-AUD-2 | none | S40–S43, S46, S47, A4 | M8 (M9 for payment figures; M10 for website figures) |
@@ -1018,7 +1018,7 @@ Definition of done is [the brief's §23](../source/prompt.md), the roadmap's per
 | M6 pricing with `SEASONAL` and `OFFER` precedence | M6 one kind of date period; discounts move to M7 coupons |
 | — | M7 quote composition (services, coupons, VAT) before reservations store it |
 | M7 lifecycle with request to book, confirm and decline | M8 immediate confirmation; `PENDING` and `DECLINED` removed; PMS-entry marker |
-| No online payment | M9 Paymob, holds, cancellation requests, refunds |
+| No online payment | M9 online payment, holds, cancellation requests, refunds |
 | M8 customer journey, M9 receptionist, M10 manager and admin | M10, M11, M12 (same split, new content) |
 | — | M13 WhatsApp broadcasts and feedback |
 | M11 hardening, M12 launch | M14 hardening, M15 launch |
@@ -1043,7 +1043,7 @@ Provision production safely, migrate approved content, launch, and prove recover
 
 ### 12.1 Production infrastructure
 
-- Preflight and provision the Hostinger VPS (ADR 023): Node service, Nginx, PostgreSQL 17+, persistent media root/URL, transactional email, WhatsApp sender, Paymob callback URL, DNS/TLS, secrets, backups, and monitoring.
+- Preflight and provision the Hostinger VPS (ADR 023): Node service, Nginx, PostgreSQL 17+, persistent media root/URL, transactional email, WhatsApp sender, payment callback URL, DNS/TLS, secrets, backups, and monitoring.
 - Separate production and preview credentials/resources.
 - Configure pooled runtime and direct migration database connections.
 
@@ -1064,7 +1064,7 @@ Provision production safely, migrate approved content, launch, and prove recover
 
 - Run public/admin/contact/media smoke suite against production.
 - Verify logs/alerts/Web Vitals and no secret/sensitive logging.
-- Verify online booking works end to end for each enabled branch (pay at hotel, and a live low-value Paymob payment and refund), that every branch site and the chooser render with their own content, and that branches with booking off show the disabled Book Now.
+- Verify online booking works end to end for each enabled branch (pay at hotel, and a live low-value online payment and refund), that every branch site and the chooser render with their own content, and that branches with booking off show the disabled Book Now.
 - Observe initial traffic/errors and establish incident escalation.
 
 ### 12.5 Handover

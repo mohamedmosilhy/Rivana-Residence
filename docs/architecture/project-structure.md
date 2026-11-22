@@ -53,7 +53,7 @@ src/
     api/v1/
       _http/                              route wrappers (public, staff, webhook), problem mapping, CSRF, request ids (M4)
       branches/…, quotes, reservations/…, phone-verifications/…, guest/reservation(s)/…    (M5–M9)
-      payments/paymob/callback/           Paymob webhook (HMAC)                                (M9)
+      payments/callback/           the payment gateway webhook (adapter verified)                                (M9)
       staff/…                                                                                  (M5–M13)
   contracts/api/v1/                       Zod DTOs shared by handlers, client, OpenAPI         (M4+)
   domain/
@@ -67,7 +67,7 @@ src/
     db/prisma/unit-of-work.ts
     email/ + reservation-email-sender.ts, outbox-dispatcher.ts
     whatsapp/ whatsapp-sender.ts (provider adapter: authentication, transactional, feedback, marketing templates)
-    payments/paymob/ paymob-gateway.ts (hosted checkout, HMAC verification, refunds; server-only)
+    payments/<provider>/ one adapter per chosen provider (hosted checkout, callback verification, refunds; server-only), payments/fake/ the fake gateway (M9, launch adapters M15-T4)
     crypto/ secure-token-generator.ts
   composition/  + branches.ts, reservations.ts, payments.ts, reporting.ts, marketing.ts
   presentation/
