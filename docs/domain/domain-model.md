@@ -236,7 +236,7 @@ Invariants:
 - R-7: `EXTERNAL` requires an `externalReference` that is unique within the branch.
 - R-8: Guest contact is never returned by a public endpoint without a valid manage token or a guest session for the same verified phone.
 - R-9: A `WEBSITE` reservation has a guest profile whose phone was verified for this booking (GV-2), and the phone is not blocked at creation.
-- R-10: A reservation is `CONFIRMED` only when its inventory is held in the same database state and, for `ONLINE`, a verified success has been processed. Confirmation messages are written only in the transaction that sets `CONFIRMED`.
+- R-10: A reservation is `CONFIRMED` only when its inventory is held in the same database state and, for `ONLINE`, a verified success has been processed. Confirmation messages are released only by the transaction that sets `CONFIRMED`: for an online booking they are written at creation as `HELD` outbox rows (they carry the manage link, which exists only then) and are never dispatched unless that transaction commits (amended 2026-11-22, spec 0006, D-A).
 
 The structural and snapshot parts of R-1…R-10 are implemented as pure checks in `src/domain/reservations/reservation.ts` (M8-T2). They include Q-76 for `EXTERNAL` snapshots: nightly amounts entered for all nights or none, and no services or coupon. Facts that need the database (uniqueness, verified-phone match, blocked phone, inventory held) are supplied by the transactional use cases in later tasks; a pure check does not prove them.
 

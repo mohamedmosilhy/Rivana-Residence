@@ -1,6 +1,6 @@
 # M9: Online payments (provider neutral), cancellation requests, refunds, guest changes, email verification
 
-Status: **In progress** (1/14 tasks accepted: M9-T0 on 2026-11-22). Brief: [m9-payments-and-cancellations.md](../milestones/m9-payments-and-cancellations.md). Branch: `m9-payments-and-cancellations`. The milestone spec (`docs/specs/`) is not written yet; it is owed before the first behavior task (M9-T0b onward).
+Status: **In progress** (1/14 tasks accepted: M9-T0 on 2026-11-22). Brief: [m9-payments-and-cancellations.md](../milestones/m9-payments-and-cancellations.md). Branch: `m9-payments-and-cancellations`. Spec [0006](../../specs/0006-m9-payments-and-cancellations.md) and the task breakdown were approved by the owner on 2026-11-22 (Q-94…Q-97, D-A…D-E, all cross check fixes applied; M9-T9 merged into the tasks that send each message).
 
 ## Task log
 

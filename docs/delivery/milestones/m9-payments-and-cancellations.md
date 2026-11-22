@@ -1,6 +1,6 @@
 # M9 — Online payments (provider neutral), payment holds, cancellation requests, refunds, and email verification
 
-Status: **In progress** (1/14 tasks accepted: M9-T0 on 2026-11-22). Scope extended by the owner on 2026-11-17 with guest booking changes (M9-T10, T11; Q-83…Q-85), and on 2026-11-22 with provider neutral integrations (M9-T0b, T3; Q-92, ADR 030) and email verification as a fallback to WhatsApp (M9-T12; Q-93, ADR 031). Branch: `m9-payments-and-cancellations`. Follow the [milestone loop](./README.md#the-loop-every-milestone-follows).
+Status: **In progress** (1/14 tasks accepted: M9-T0 on 2026-11-22; spec [0006](../../specs/0006-m9-payments-and-cancellations.md) and the task breakdown approved 2026-11-22, with Q-94…Q-97 and decisions D-A…D-E; M9-T9 merged into the tasks that send each message). Scope extended by the owner on 2026-11-17 with guest booking changes (M9-T10, T11; Q-83…Q-85), and on 2026-11-22 with provider neutral integrations (M9-T0b, T3; Q-92, ADR 030) and email verification as a fallback to WhatsApp (M9-T12; Q-93, ADR 031). Branch: `m9-payments-and-cancellations`. Follow the [milestone loop](./README.md#the-loop-every-milestone-follows).
 
 ## Objective
 
@@ -51,19 +51,19 @@ Planned, reviewed, and accepted one task at a time ([agent-workflow.md](../../en
 | Task | Title | Risk | Depends on | Covers (criteria, tests) | Status |
 | --- | --- | --- | --- | --- | --- |
 | M9-T0 | Public surface for `src/application/auth`: one `index.ts` and D-8 extended to it (refactor, no behavior change; recommended in the M8-T0b review package, owner decision 2026-11-14) | Medium | M8 | Existing tests unchanged and green; D-8 test extended | Accepted (2026-11-22) |
-| M9-T0b | Adapter foundations (ADR 030): `EMAIL_PROVIDER` and a fake email adapter that records messages, the `fake` refusal in production for all three kinds, one shared contract suite each for `WhatsAppTransport` and `ReservationEmailSender`, a provider readiness reader, and `docs/architecture/provider-adapters.md` marked implemented for these two (no behavior change to M8 sends) | Medium | M8 | Existing tests unchanged and green; contract suites pass for the existing adapters; production refusal test | Not started |
-| M9-T1 | Migration `payments_and_cancellations`, including renaming the `PaymentMethod` value `PAYMOB` to `ONLINE` (no row holds it; the P7 contract and OpenAPI change in the same commit) and `Payment.provider` as an adapter name | Critical | — | drift check | Not started |
-| M9-T2 | Domain: payment transitions, `CancellationDeadline`, PY and CX rules | Critical | — | T-PAY-1…4, T-CXL-1…3 | Not started |
-| M9-T3 | `PaymentGateway` port, `PAYMENT_PROVIDER` registry, fake gateway with a simulated hosted checkout page (development and test only), payment contract suite; **no real provider adapter** | Critical | T0b | AC 9, 10; contract suite, bundle check | Not started |
-| M9-T4 | Online booking path: `AWAITING_PAYMENT`, hold, checkout creation, gateway failure | Critical | T1, T2, T3 | AC 1, 4; T-PAY-5 | Not started |
-| M9-T5 | Payment callback: `webhookRoute` at `POST /api/v1/payments/callback`, adapter verified events, idempotency, late success (API P8) | Critical | T4 | AC 1–3, 5; C-12, C-13, webhook handler tests | Not started |
-| M9-T6 | Hold expiry and payment reconciliation jobs | Critical | T5 | AC 4, 5; C-14 | Not started |
-| M9-T7 | Guest cancellation requests (G2, G4) | Critical | T1, T2 | AC 6; T-CXL-4…5 | Not started |
-| M9-T8 | Cancellation decisions and refunds: decide, refund, retry, paid staff cancellation (S9, S17–S19, S44, S45) | Critical | T5, T7 | AC 7, 8; T-PAY-8…10, T-CXL-6…8 | Not started |
-| M9-T9 | Payment, cancellation, and change messages (email and WhatsApp templates, including booking changed and change request received, approved, rejected) | Medium | T5, T8, T10, T11 | message content tests | Not started |
-| M9-T10 | Guest changes, pay-at-hotel bookings: `PreviewGuestChange`, `ApplyGuestChange` on the M8 change engine; deadline, forbidden keys, open-request and blocked-phone refusals; API G5, G6 (manage token and guest session); limits; OpenAPI (Q-83, Q-84) | Critical | M8-T9b, M8-T11, T2 | AC 11; T-GCHG-1…8, C-16 | Not started |
-| M9-T11 | Change requests for paid online bookings: same-total changes at once; other changes stored as `ChangeRequest` (migration `change_requests`), decided in the cancellation queue (S56–S58) with inventory and price re-check (Q-85) | Critical | T10, T8 | AC 12; T-GCHG-9…12, C-17 | Not started |
-| M9-T12 | Email verification fallback (ADR 031, Q-93): migration `verification_channels` (`PhoneVerification.channel` and `email`, `Guest.phoneVerified` and `emailVerifiedAt`), P9 `channel` and `email`, email code template, per email limits and cap, P7 token and email match, `phoneVerified` rules, G3 session by email, readiness gate "WhatsApp or email" in the branch switch and `BRANCH_NOT_BOOKABLE`, OpenAPI | Critical | T0b, M8-T5, M8-T7b, M8-T11 | AC 13; T-VCH-1…8 | Not started |
+| M9-T0b | Adapter foundations (ADR 030) | Medium | T0 | AC 9, 10 | Not started |
+| M9-T1 | Migration `payments_and_cancellations` (enum rename, branch switch, `Payment`, `PaymentEvent`, `CancellationRequest`, outbox `HELD`) | Critical | T0 | AC 1, 6, 14, 15; drift check | Not started |
+| M9-T2 | Domain: payment transitions, `HoldPolicy`, `CancellationDeadline`, `PaymentMethodAvailability`, PY, CX, GC, Q-96 rules | Critical | T0 | AC 4, 6, 14, 15; T-PAY-1…4, T-CXL-1…3 | Not started |
+| M9-T3 | `PaymentGateway` port, registry, fake gateway, simulated checkout page, payment contract suite | Critical | T0b | AC 9, 10; T-ADP | Not started |
+| M9-T4 | Online booking path: `AWAITING_PAYMENT`, hold, held messages, checkout creation and failure, replay, in transaction expiry, P6 `paymentMethods`, A3 switch | Critical | T1, T2, T3 | AC 1, 4, 14; T-PAY-5 | Not started |
+| M9-T5 | Payment callback P8, idempotency, late success, mid milestone security review | Critical | T4 | AC 1, 2, 3, 5; C-12, C-13 | Not started |
+| M9-T6 | Hold expiry and reconciliation jobs | Critical | T5 | AC 4, 5, 10; C-14 | Not started |
+| M9-T7 | Guest cancellation requests (G2, G4), staff alert, Q-96 closing | Critical | T1, T2 | AC 6, 15, 16; T-CXL-4…5 | Not started |
+| M9-T8 | Decisions and refunds (S9 paid, S17…S19, S44, S45) | Critical | T5, T7 | AC 7, 8, 10; T-PAY-8…10, T-CXL-6…8 | Not started |
+| M9-T9 | Merged into T4…T11 (each task sends its own messages) | — | — | — | Merged (D-C) |
+| M9-T10 | Guest changes, pay at hotel (G5, G6) | Critical | T2, M8-T9b, M8-T11 | AC 11; T-GCHG-1…8, C-16 | Not started |
+| M9-T11 | Change requests for paid bookings (S56…S58), migration `change_requests` | Critical | T10, T8 | AC 12, 15, 16; T-GCHG-9…12, C-17 | Not started |
+| M9-T12 | Email verification fallback, migration `verification_channels` | Critical | T0b, M8-T5, M8-T7b, M8-T11 | AC 13; T-VCH-1…8 | Not started |
 
 AC 10 (the full run on the fake gateway) is recorded at milestone close. The real provider sandbox run belongs to M15-T4.
 
@@ -125,19 +125,22 @@ As listed; the callback endpoint is documented in OpenAPI as a webhook.
 
 ## Acceptance criteria
 
-1. An online booking is `AWAITING_PAYMENT` with a checkout URL; no confirmation message exists until a verified success is processed (on the fake gateway); then it is `CONFIRMED` with confirmation messages queued in that transaction.
-2. A callback the adapter rejects, a different amount or currency, or an unknown payment changes nothing and is logged without payload data.
+1. An online booking is `AWAITING_PAYMENT` with a checkout URL; no confirmation message is dispatchable until a verified success is processed (on the fake gateway); then it is `CONFIRMED` and its confirmation messages are released in that transaction.
+2. A callback the adapter rejects, a different amount or currency, or an unknown payment changes no reservation or payment state, is recorded as ignored (when it passed the signature check), and is logged without payload data; a genuine retry of the same event is still applied.
 3. A duplicate verified callback changes nothing (idempotent) (C-13).
-4. A failed payment or an expired hold makes the reservation `PAYMENT_FAILED`, releases its inventory and coupon redemption, and sends no confirmation.
+4. A declined attempt keeps the hold and the booking stays `AWAITING_PAYMENT`. An expired hold (or a gateway report that the session closed unpaid) makes the reservation `PAYMENT_FAILED`, releases its inventory and coupon redemption, and sends "payment not completed", never a confirmation.
 5. A booking racing an expiring hold for the last unit never oversells (C-14); a late success after the unit was resold triggers an automatic refund and staff alert (C-12).
 6. A cancellation request before the deadline is created; after the deadline it returns `409 CANCELLATION_WINDOW_CLOSED` with the branch contact details; a second open request returns `409 CANCELLATION_REQUEST_EXISTS`.
 7. Only a Manager of the branch or an Admin can decide a request; rejection keeps the booking `CONFIRMED` and messages the reason; approval of a paid booking calls the gateway's refund with the captured amount and sets `CANCELLED` only after the gateway confirms; a refund failure is visible and retryable.
 8. Receptionists cannot cancel a paid booking.
 9. No card number, CVV, or full provider payload is stored or logged; secrets are server-only (bundle check); `fake` is refused in production for payment, WhatsApp, and email.
-10. A full run on the fake gateway and its simulated checkout page covers success, failure, abandonment, late success, a lost callback, and refund, recorded in the report. The payment, WhatsApp, and email contract suites pass for the fake adapters (and for the existing WhatsApp and SMTP adapters). A real provider sandbox run is **not** part of M9 (M15-T4).
+10. A full run on the fake gateway and its simulated checkout page covers success, a declined attempt then success, abandonment, late success, a lost callback, and refund (pending, succeeded, failed then retried). The payment, WhatsApp, and email contract suites pass for every adapter in the repository. No real provider sandbox run is part of M9.
 11. A guest change to a pay-at-hotel booking before the deadline applies at once with the previewed total, writes one change-history row, one audit event, and the guest and staff messages, and flags a booking already entered in the hotel system; after the deadline, with an open request, for a blocked phone, with a stale version, or with a forbidden key nothing changes; a change racing a booking for the last unit never oversells (C-16).
 12. A change to a paid booking that alters the total creates one `OPEN` change request and holds nothing; only a Manager of the branch or an Admin decides it; approval re-checks inventory and prices and applies the change or records the conflict (C-17); no gateway call is made.
 13. A guest can verify by email: the code arrives by the fake email adapter, expires in 10 minutes, allows 5 attempts, and is single use; a booking with an email token needs the same email and is stored with `phoneVerified = false`; a per phone coupon limit is neither applied nor revealed for it; a blocked phone gets no code and no booking; per email and per client limits return `429`; responses are identical whether or not the email has history; with WhatsApp not ready and email ready, a branch can be switched to online booking and a booking succeeds; with neither ready it cannot (ADR 031).
+14. Online payment is offered for a branch only when a gateway is ready, the branch's `onlinePaymentEnabled` switch is on, and the total is above zero. P6 returns the allowed `paymentMethods`; P7 refuses any other method with `409 PAYMENT_METHOD_UNAVAILABLE`. Only an Admin can turn the switch on, and it is refused while no gateway is ready.
+15. Staff cancellation, no-show, or check-in of a reservation with an open cancellation or change request closes that request in the same transaction (`CLOSED`, with the reason and the staff user), audited; the request can no longer be decided.
+16. A new cancellation or change request queues one staff alert email to the branch contact address in the same transaction as the request.
 
 ## Tests
 
