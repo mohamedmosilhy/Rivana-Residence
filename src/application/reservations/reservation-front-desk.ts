@@ -1,4 +1,4 @@
-import type { StaffPrincipal } from "@/application/auth/ports";
+import type { StaffPrincipal } from "@/application/auth";
 import { InventoryGuard } from "@/application/inventory";
 import { localDateAt } from "@/domain/shared/zoned-time";
 import { ReservationStateMachine } from "@/domain/reservations";

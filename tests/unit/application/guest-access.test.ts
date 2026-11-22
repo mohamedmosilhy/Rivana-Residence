@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 
 import { bearerToken } from "@/app/api/v1/_http/bearer";
-import type { StaffPrincipal } from "@/application/auth/ports";
+import type { StaffPrincipal } from "@/application/auth";
 import { ChangeGuestBlock, GetGuest, ListGuests } from "@/application/guests";
 import {
   ListGuestReservations,

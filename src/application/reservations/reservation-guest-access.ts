@@ -1,4 +1,4 @@
-import type { StaffPrincipal } from "@/application/auth/ports";
+import type { StaffPrincipal } from "@/application/auth";
 import type { QueueReservationMessages } from "@/application/notifications";
 import {
   failure,

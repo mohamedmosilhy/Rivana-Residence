@@ -2,7 +2,7 @@ import { PrismaReservationRepository } from "@/infrastructure/db/prisma/reposito
 import { range, reservationInput } from "./support/reservation-repositories";
 import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
 
-import type { StaffPrincipal } from "@/application/auth/ports";
+import type { StaffPrincipal } from "@/application/auth";
 import { SearchAvailability } from "@/application/inventory";
 import { PrismaAvailabilityCatalog } from "@/infrastructure/db/prisma/repositories/reservations/inventory/availability-catalog";
 import { PrismaReservationConsumptionReader } from "@/infrastructure/db/prisma/repositories/reservations/inventory/reservation-consumption-reader";

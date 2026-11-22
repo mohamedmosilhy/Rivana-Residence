@@ -2,7 +2,7 @@
 import { describe, expect, it, vi } from "vitest";
 
 import type { AuditLog } from "@/application/audit";
-import type { StaffPrincipal } from "@/application/auth/ports";
+import type { StaffPrincipal } from "@/application/auth";
 import {
   ACTIVE_TEMPLATE_TAKEN,
   ManageWhatsAppSettings,

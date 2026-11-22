@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
 
-import type { StaffPrincipal } from "@/application/auth/ports";
+import type { StaffPrincipal } from "@/application/auth";
 import {
   staffReservationCommands,
   staffReservationQueries,

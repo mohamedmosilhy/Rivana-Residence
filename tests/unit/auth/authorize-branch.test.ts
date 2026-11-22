@@ -2,11 +2,11 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  type StaffPrincipal,
   authorizeBranch,
   branchScope,
   inBranchScope,
-} from "@/application/auth/authorize-branch";
-import type { StaffPrincipal } from "@/application/auth/ports";
+} from "@/application/auth";
 import type { StaffRole } from "@/domain/shared/types";
 
 // AC-5: Admin everywhere; Receptionist and Manager only on assigned

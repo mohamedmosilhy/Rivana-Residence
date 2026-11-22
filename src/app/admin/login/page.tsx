@@ -1,7 +1,7 @@
 import type { Metadata, Route } from "next";
 import { redirect } from "next/navigation";
 
-import { safeReturnPath } from "@/application/auth/return-path";
+import { safeReturnPath } from "@/application/auth";
 import { getCurrentStaff } from "@/composition/auth";
 import { LoginForm } from "@/presentation/admin/auth/login-form";
 import { LoginScreen } from "@/presentation/admin/auth/login-screen";

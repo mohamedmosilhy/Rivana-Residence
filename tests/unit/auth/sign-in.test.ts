@@ -1,7 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 
-import type { LoginThrottleStore } from "@/application/auth/ports";
-import { SignIn } from "@/application/auth/sign-in";
+import { type LoginThrottleStore, SignIn } from "@/application/auth";
 
 function setup(authenticates: boolean, lockedUntil: Date | null = null) {
   const authenticator = { signIn: vi.fn().mockResolvedValue(authenticates) };

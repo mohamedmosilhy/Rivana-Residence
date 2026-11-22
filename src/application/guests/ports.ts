@@ -1,6 +1,6 @@
 import type { PhoneNumber } from "@/domain/guests";
 import type { VerificationPurpose } from "@/domain/shared/types";
-import type { BranchScope } from "@/application/auth/authorize-branch";
+import type { BranchScope } from "@/application/auth";
 import type { PagedResult, PageRequest } from "@/application/shared/pagination";
 import type { Result } from "@/application/shared/result";
 import type {

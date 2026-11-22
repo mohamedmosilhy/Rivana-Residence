@@ -2,7 +2,7 @@ import { getSessionCookie } from "better-auth/cookies";
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 
-import { loginPathFor } from "@/application/auth/return-path";
+import { loginPathFor } from "@/application/auth";
 import { AUTH_COOKIE_PREFIX } from "@/infrastructure/auth/cookie-config";
 import {
   contentSecurityPolicy,

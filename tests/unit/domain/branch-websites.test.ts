@@ -1,7 +1,7 @@
 // @vitest-environment node
 import { describe, expect, it, vi } from "vitest";
 
-import type { StaffPrincipal } from "@/application/auth/ports";
+import type { StaffPrincipal } from "@/application/auth";
 import { ListBranches, ManageBranches } from "@/application/branches";
 import { failure } from "@/application/shared/result";
 import {

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { authorize } from "@/application/auth/authorize";
+import { authorize } from "@/application/auth";
 import {
   CAPABILITIES,
   capabilitiesFor,

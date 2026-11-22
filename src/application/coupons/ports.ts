@@ -1,4 +1,4 @@
-import type { BranchScope } from "@/application/auth/authorize-branch";
+import type { BranchScope } from "@/application/auth";
 import type { Result } from "@/application/shared/result";
 import type { CouponInput, CouponRecord } from "@/domain/coupons";
 

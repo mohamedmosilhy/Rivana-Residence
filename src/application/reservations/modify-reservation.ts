@@ -1,5 +1,4 @@
-import { authorize } from "@/application/auth/authorize";
-import type { StaffPrincipal } from "@/application/auth/ports";
+import { type StaffPrincipal, authorize } from "@/application/auth";
 import {
   InventoryGuard,
   type AvailabilityCatalog,

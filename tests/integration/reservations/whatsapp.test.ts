@@ -8,7 +8,7 @@ import {
   vi,
 } from "vitest";
 
-import type { StaffPrincipal } from "@/application/auth/ports";
+import type { StaffPrincipal } from "@/application/auth";
 import {
   ManageWhatsAppTemplates,
   type WhatsAppTemplateContext,

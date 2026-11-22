@@ -3,9 +3,11 @@ import type {
   GuestHistoryReader,
   AuditLog,
 } from "@/application/audit";
-import { authorize } from "@/application/auth/authorize";
-import { branchScope } from "@/application/auth/authorize-branch";
-import type { StaffPrincipal } from "@/application/auth/ports";
+import {
+  type StaffPrincipal,
+  authorize,
+  branchScope,
+} from "@/application/auth";
 import type { ReservationUnitOfWork } from "@/application/reservations";
 import type { Clock } from "@/application/shared/providers";
 import {

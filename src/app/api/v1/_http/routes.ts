@@ -1,6 +1,6 @@
 import type { z } from "zod";
 
-import type { StaffPrincipal } from "@/application/auth/ports";
+import type { StaffPrincipal } from "@/application/auth";
 import type { RateLimitOutcome } from "@/application/shared/rate-limit";
 import type { ApplicationError, Result } from "@/application/shared/result";
 import type { ThrottleRule } from "@/domain/auth/login-throttle";

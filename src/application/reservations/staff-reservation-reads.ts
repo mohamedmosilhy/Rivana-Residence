@@ -1,10 +1,10 @@
-import { authorize } from "@/application/auth/authorize";
 import {
+  type BranchScope,
+  type StaffPrincipal,
+  authorize,
   authorizeBranch,
   branchScope,
-  type BranchScope,
-} from "@/application/auth/authorize-branch";
-import type { StaffPrincipal } from "@/application/auth/ports";
+} from "@/application/auth";
 import type { ReservationHistoryReader } from "@/application/audit";
 import type { PagedResult, PageRequest } from "@/application/shared/pagination";
 import { failure, success, type Result } from "@/application/shared/result";

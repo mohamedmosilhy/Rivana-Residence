@@ -1,13 +1,12 @@
 import { z } from "zod";
 
-import { authorize } from "@/application/auth/authorize";
+import { type StaffPrincipal, authorize } from "@/application/auth";
 import {
   chooseBranch,
   type BranchChoice,
   type BranchRecord,
   type BranchRepository,
 } from "@/application/branches";
-import type { StaffPrincipal } from "@/application/auth/ports";
 import { CACHE_TAGS, type CacheInvalidator } from "@/application/cache";
 
 import type { PageDto, PageRepository } from "./ports";

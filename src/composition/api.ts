@@ -1,6 +1,6 @@
 import "server-only";
 
-import type { StaffPrincipal } from "@/application/auth/ports";
+import type { StaffPrincipal } from "@/application/auth";
 import { ListBranches } from "@/application/branches";
 import { CheckHealth } from "@/application/health";
 import { RateLimiter } from "@/application/shared/rate-limit";

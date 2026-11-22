@@ -15,7 +15,7 @@ import {
   toHttp,
   type HttpDependencies,
 } from "@/app/api/v1/_http/routes";
-import type { StaffPrincipal } from "@/application/auth/ports";
+import type { StaffPrincipal } from "@/application/auth";
 import {
   failure,
   inventoryUnavailable,

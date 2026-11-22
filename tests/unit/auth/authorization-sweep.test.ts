@@ -1,7 +1,7 @@
 import { ManageCoupons } from "@/application/coupons";
 import { describe, expect, it } from "vitest";
 
-import type { StaffPrincipal } from "@/application/auth/ports";
+import type { StaffPrincipal } from "@/application/auth";
 import { GetAdminOverview } from "@/application/admin";
 import {
   CatalogCommands,

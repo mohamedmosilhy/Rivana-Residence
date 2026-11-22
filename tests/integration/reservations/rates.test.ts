@@ -1,6 +1,6 @@
 import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
 
-import type { StaffPrincipal } from "@/application/auth/ports";
+import type { StaffPrincipal } from "@/application/auth";
 import { Money } from "@/domain/shared/money";
 import { LocalDate } from "@/domain/shared/local-date";
 import { StayRange } from "@/domain/shared/stay-range";

@@ -1,6 +1,6 @@
 import "server-only";
 
-import type { BranchScope } from "@/application/auth/authorize-branch";
+import type { BranchScope } from "@/application/auth";
 import type {
   StaffReservationQuery,
   StaffReservationReader,

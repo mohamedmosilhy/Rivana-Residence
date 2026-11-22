@@ -1,4 +1,4 @@
-import type { StaffPrincipal } from "@/application/auth/ports";
+import type { StaffPrincipal } from "@/application/auth";
 import type { Clock } from "@/application/shared/providers";
 import {
   failure,

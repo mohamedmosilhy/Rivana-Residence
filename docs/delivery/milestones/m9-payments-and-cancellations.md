@@ -1,6 +1,6 @@
 # M9 — Online payments (provider neutral), payment holds, cancellation requests, refunds, and email verification
 
-Status: **Not started.** Scope extended by the owner on 2026-11-17 with guest booking changes (M9-T10, T11; Q-83…Q-85), and on 2026-11-22 with provider neutral integrations (M9-T0b, T3; Q-92, ADR 030) and email verification as a fallback to WhatsApp (M9-T12; Q-93, ADR 031). Branch: `m9-payments-and-cancellations`. Follow the [milestone loop](./README.md#the-loop-every-milestone-follows).
+Status: **In progress** (1/14 tasks accepted: M9-T0 on 2026-11-22). Scope extended by the owner on 2026-11-17 with guest booking changes (M9-T10, T11; Q-83…Q-85), and on 2026-11-22 with provider neutral integrations (M9-T0b, T3; Q-92, ADR 030) and email verification as a fallback to WhatsApp (M9-T12; Q-93, ADR 031). Branch: `m9-payments-and-cancellations`. Follow the [milestone loop](./README.md#the-loop-every-milestone-follows).
 
 ## Objective
 
@@ -50,7 +50,7 @@ Planned, reviewed, and accepted one task at a time ([agent-workflow.md](../../en
 
 | Task | Title | Risk | Depends on | Covers (criteria, tests) | Status |
 | --- | --- | --- | --- | --- | --- |
-| M9-T0 | Public surface for `src/application/auth`: one `index.ts` and D-8 extended to it (refactor, no behavior change; recommended in the M8-T0b review package, owner decision 2026-11-14) | Medium | M8 | Existing tests unchanged and green; D-8 test extended | Not started |
+| M9-T0 | Public surface for `src/application/auth`: one `index.ts` and D-8 extended to it (refactor, no behavior change; recommended in the M8-T0b review package, owner decision 2026-11-14) | Medium | M8 | Existing tests unchanged and green; D-8 test extended | Accepted (2026-11-22) |
 | M9-T0b | Adapter foundations (ADR 030): `EMAIL_PROVIDER` and a fake email adapter that records messages, the `fake` refusal in production for all three kinds, one shared contract suite each for `WhatsAppTransport` and `ReservationEmailSender`, a provider readiness reader, and `docs/architecture/provider-adapters.md` marked implemented for these two (no behavior change to M8 sends) | Medium | M8 | Existing tests unchanged and green; contract suites pass for the existing adapters; production refusal test | Not started |
 | M9-T1 | Migration `payments_and_cancellations`, including renaming the `PaymentMethod` value `PAYMOB` to `ONLINE` (no row holds it; the P7 contract and OpenAPI change in the same commit) and `Payment.provider` as an adapter name | Critical | — | drift check | Not started |
 | M9-T2 | Domain: payment transitions, `CancellationDeadline`, PY and CX rules | Critical | — | T-PAY-1…4, T-CXL-1…3 | Not started |
@@ -78,6 +78,7 @@ Owner decision 2026-11-14, from the M8-T0b review package. Same shape as [M8-T0b
 3. **Watch.** `return-path` may be used by client components: keep those imports type only, or confirm the exported helper is pure and pulls no server code (D-13). Check for runtime cycles, since almost every module imports `authorize`.
 4. **Acceptance.** Same as M8-T0b: moves only (import-stripped comparison), gates with unchanged counts plus the new D-8 cases, mutation checks, `openapi.json` unchanged.
 5. **Risk.** Medium.
+6. **As built (accepted 2026-11-22; review: [2026-11-22-m9-t0.md](../../reviews/2026-11-22-m9-t0.md)).** `src/application/auth/index.ts` exports exactly the symbols used outside (`authorize`, `authorizeBranch`, `branchScope`, `inBranchScope`, `safeReturnPath`, `loginPathFor`, `SignIn`, the two sign in message constants, and the types `BranchScope`, `StaffPrincipal`, `StaffAccount`, `StaffDirectory`, `CredentialAuthenticator`, `LoginThrottleStore`, `ThrottleKeyDeriver`). 91 outside files and the 3 internal files changed in import lines only (import stripped comparison with `HEAD` identical for all 94). `auth` joined the application only D-8 lists in the architecture test and ESLint. The one allowance in `ports-layout.test.ts` for the `BranchScope` type now names the auth index, protected by a new leaf guard test (auth imports only its own files, `shared`, the domain, and zod). `src/domain/auth` is not covered here; it is added to M14-T11. No client component imports auth, so rule D-13 did not come into play.
 
 
 ### 1. Database (migration `payments_and_cancellations`)

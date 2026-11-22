@@ -1,6 +1,5 @@
 import type { AuditLog } from "@/application/audit";
-import { authorize } from "@/application/auth/authorize";
-import type { StaffPrincipal } from "@/application/auth/ports";
+import { type StaffPrincipal, authorize } from "@/application/auth";
 import type { ReservationUnitOfWork } from "@/application/reservations";
 import type { Clock, IdGenerator } from "@/application/shared/providers";
 import {

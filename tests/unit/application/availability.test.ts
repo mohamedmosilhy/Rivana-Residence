@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import type { StaffPrincipal } from "@/application/auth/ports";
+import type { StaffPrincipal } from "@/application/auth";
 import {
   GetAvailabilityGrid,
   SearchAvailability,

@@ -1,6 +1,6 @@
 import "server-only";
 
-import type { StaffAccount, StaffDirectory } from "@/application/auth/ports";
+import type { StaffAccount, StaffDirectory } from "@/application/auth";
 import { getPrisma } from "@/infrastructure/db/prisma/client";
 import type { DatabaseClient } from "@/infrastructure/db/prisma/transaction";
 

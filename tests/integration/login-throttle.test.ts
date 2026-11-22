@@ -1,10 +1,10 @@
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
 
 import {
-  SignIn,
   INVALID_CREDENTIALS_MESSAGE,
   RATE_LIMITED_MESSAGE,
-} from "@/application/auth/sign-in";
+  SignIn,
+} from "@/application/auth";
 import { LOGIN_THROTTLE_RULES } from "@/domain/auth/login-throttle";
 import { BetterAuthCredentialAuthenticator } from "@/infrastructure/auth/credential-authenticator";
 import { HmacThrottleKeys } from "@/infrastructure/auth/throttle-keys";

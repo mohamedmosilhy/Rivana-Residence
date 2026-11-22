@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { ManageCoupons } from "@/application/coupons";
-import type { StaffPrincipal } from "@/application/auth/ports";
+import type { StaffPrincipal } from "@/application/auth";
 
 const manager: StaffPrincipal = {
   id: "m",

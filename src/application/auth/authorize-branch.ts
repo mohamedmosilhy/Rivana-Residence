@@ -1,5 +1,5 @@
-import { authorize } from "@/application/auth/authorize";
-import type { StaffPrincipal } from "@/application/auth/ports";
+import { authorize } from "./authorize";
+import type { StaffPrincipal } from "./ports";
 import { failure, success, type Result } from "@/application/shared/result";
 import {
   isBranchScopedRole,

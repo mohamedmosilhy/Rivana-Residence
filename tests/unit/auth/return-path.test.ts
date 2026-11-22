@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { loginPathFor, safeReturnPath } from "@/application/auth/return-path";
+import { loginPathFor, safeReturnPath } from "@/application/auth";
 
 describe("safe return paths", () => {
   it.each([

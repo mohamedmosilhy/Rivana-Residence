@@ -1,4 +1,4 @@
-import type { LoginThrottleStore } from "@/application/auth/ports";
+import type { LoginThrottleStore } from "@/application/auth";
 import type { BranchRepository } from "@/application/branches";
 import type { ContactDelivery, EnquiryRepository } from "./ports";
 import type { Clock } from "@/application/shared/providers";

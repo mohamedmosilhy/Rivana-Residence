@@ -1,4 +1,4 @@
-import type { BranchScope } from "@/application/auth/authorize-branch";
+import type { BranchScope } from "@/application/auth";
 import type { Result } from "@/application/shared/result";
 import type { DateRatePeriod } from "@/domain/pricing";
 import type { Money } from "@/domain/shared/money";

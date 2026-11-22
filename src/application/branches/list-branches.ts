@@ -1,6 +1,8 @@
-import { branchScope } from "@/application/auth/authorize-branch";
-import { authorize } from "@/application/auth/authorize";
-import type { StaffPrincipal } from "@/application/auth/ports";
+import {
+  type StaffPrincipal,
+  authorize,
+  branchScope,
+} from "@/application/auth";
 import { success, type Result } from "@/application/shared/result";
 
 import type { BranchRepository, BranchRow } from "./ports";

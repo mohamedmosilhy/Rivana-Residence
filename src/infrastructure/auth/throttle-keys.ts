@@ -2,7 +2,7 @@ import "server-only";
 
 import { createHmac } from "node:crypto";
 
-import type { ThrottleKeyDeriver } from "@/application/auth/ports";
+import type { ThrottleKeyDeriver } from "@/application/auth";
 
 // Throttle rows are keyed by a keyed hash, so the table never holds raw
 // email addresses or client IPs.

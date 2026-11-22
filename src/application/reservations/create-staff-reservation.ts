@@ -1,6 +1,8 @@
-import { authorize } from "@/application/auth/authorize";
-import { authorizeBranch } from "@/application/auth/authorize-branch";
-import type { StaffPrincipal } from "@/application/auth/ports";
+import {
+  type StaffPrincipal,
+  authorize,
+  authorizeBranch,
+} from "@/application/auth";
 import type { CouponRedemptionStore } from "@/application/coupons";
 import {
   InventoryGuard,

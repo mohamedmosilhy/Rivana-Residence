@@ -11,7 +11,7 @@ import type {
   RateRepository,
   RateReadModel,
 } from "@/application/pricing";
-import type { BranchScope } from "@/application/auth/authorize-branch";
+import type { BranchScope } from "@/application/auth";
 import { failure, success, type Result } from "@/application/shared/result";
 import { LocalDate } from "@/domain/shared/local-date";
 import { Money } from "@/domain/shared/money";

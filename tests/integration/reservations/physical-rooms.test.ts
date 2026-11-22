@@ -1,6 +1,6 @@
 import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
 
-import type { StaffPrincipal } from "@/application/auth/ports";
+import type { StaffPrincipal } from "@/application/auth";
 import type { ReservationConsumptionReader } from "@/application/inventory";
 import { success } from "@/application/shared/result";
 import { LocalDate } from "@/domain/shared/local-date";

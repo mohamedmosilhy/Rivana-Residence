@@ -1,4 +1,4 @@
-import type { StaffPrincipal } from "@/application/auth/ports";
+import type { StaffPrincipal } from "@/application/auth";
 import type { CouponRedemptionStore } from "@/application/coupons";
 import type { QueueReservationMessages } from "@/application/notifications";
 import type { Clock, IdGenerator } from "@/application/shared/providers";

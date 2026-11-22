@@ -3,7 +3,7 @@
 import type { Route } from "next";
 import { redirect } from "next/navigation";
 
-import { safeReturnPath } from "@/application/auth/return-path";
+import { safeReturnPath } from "@/application/auth";
 import { signInWithPassword } from "@/composition/auth";
 import type { FormState } from "@/presentation/admin/ui/form-state";
 

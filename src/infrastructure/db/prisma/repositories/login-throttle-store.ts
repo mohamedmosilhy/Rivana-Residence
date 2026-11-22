@@ -1,6 +1,6 @@
 import "server-only";
 
-import type { LoginThrottleStore } from "@/application/auth/ports";
+import type { LoginThrottleStore } from "@/application/auth";
 import { recordFailure, type ThrottleRule } from "@/domain/auth/login-throttle";
 import { getPrisma } from "@/infrastructure/db/prisma/client";
 import {

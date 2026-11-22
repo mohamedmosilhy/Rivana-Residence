@@ -1,9 +1,9 @@
-import { authorize } from "@/application/auth/authorize";
-import type { StaffPrincipal } from "@/application/auth/ports";
 import {
+  type StaffPrincipal,
+  authorize,
   branchScope,
   inBranchScope,
-} from "@/application/auth/authorize-branch";
+} from "@/application/auth";
 import type { BranchRecord, BranchRepository } from "@/application/branches";
 import type {
   ContactEnquiryDto,

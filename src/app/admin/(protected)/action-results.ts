@@ -4,7 +4,7 @@ import type { Route } from "next";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
-import { loginPathFor } from "@/application/auth/return-path";
+import { loginPathFor } from "@/application/auth";
 import type { Result } from "@/application/shared/result";
 import { errorState, type FormState } from "@/presentation/admin/ui/form-state";
 

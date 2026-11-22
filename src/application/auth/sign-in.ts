@@ -2,7 +2,7 @@ import type {
   CredentialAuthenticator,
   LoginThrottleStore,
   ThrottleKeyDeriver,
-} from "@/application/auth/ports";
+} from "./ports";
 import type { Clock } from "@/application/shared/providers";
 import { failure, success, type Result } from "@/application/shared/result";
 import {

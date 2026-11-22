@@ -4,7 +4,7 @@ import {
   GetAdminOverview,
   type AdminOverviewReader,
 } from "@/application/admin";
-import type { StaffPrincipal } from "@/application/auth/ports";
+import type { StaffPrincipal } from "@/application/auth";
 import {
   ListEnquiries,
   parseEnquiryListQuery,

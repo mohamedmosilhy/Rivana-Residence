@@ -6,10 +6,12 @@ import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { cache } from "react";
 
-import { authorize } from "@/application/auth/authorize";
-import type { StaffPrincipal } from "@/application/auth/ports";
-import { loginPathFor } from "@/application/auth/return-path";
-import { SignIn } from "@/application/auth/sign-in";
+import {
+  SignIn,
+  type StaffPrincipal,
+  authorize,
+  loginPathFor,
+} from "@/application/auth";
 import { failure, success, type Result } from "@/application/shared/result";
 import { roleHasCapability, type Capability } from "@/domain/auth/capabilities";
 import { passwordPolicyIssues } from "@/domain/auth/password-policy";

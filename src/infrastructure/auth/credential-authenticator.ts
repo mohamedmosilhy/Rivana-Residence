@@ -2,7 +2,7 @@ import "server-only";
 
 import { isAPIError } from "better-auth/api";
 
-import type { CredentialAuthenticator } from "@/application/auth/ports";
+import type { CredentialAuthenticator } from "@/application/auth";
 import type { Auth } from "@/infrastructure/auth/better-auth";
 
 export class BetterAuthCredentialAuthenticator

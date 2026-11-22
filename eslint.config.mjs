@@ -33,7 +33,9 @@ const PUBLIC_SURFACE_MODULES = [
   "notifications",
 ];
 // M8-T0b: the older CMS modules follow D-8 on the application side only.
+// M9-T0 added `auth`.
 const APPLICATION_SURFACE_MODULES = [
+  "auth",
   "content",
   "media",
   "settings",

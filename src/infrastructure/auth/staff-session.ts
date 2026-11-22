@@ -1,6 +1,6 @@
 import "server-only";
 
-import type { StaffDirectory, StaffPrincipal } from "@/application/auth/ports";
+import type { StaffDirectory, StaffPrincipal } from "@/application/auth";
 import { isBranchScopedRole } from "@/domain/auth/capabilities";
 import type { Auth } from "@/infrastructure/auth/better-auth";
 

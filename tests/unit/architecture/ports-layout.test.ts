@@ -63,7 +63,10 @@ describe("M8-T0: application ports layout", () => {
       /^zod$/,
       /^@\/domain\//,
       /^@\/application\/shared\//,
-      /^@\/application\/auth\/authorize-branch$/,
+      // The `BranchScope` type (written as `import type`). `auth` and `shared`
+      // are leaf folders (module-boundaries test), so this cannot form a cycle
+      // between module ports.
+      /^@\/application\/auth$/,
     ];
     const offenders = portFiles.flatMap((file) =>
       importsOf(file)

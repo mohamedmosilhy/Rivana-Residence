@@ -47,7 +47,9 @@ const PUBLIC_SURFACE_MODULES = [
 
 // M8-T0b: the older CMS modules follow D-8 on the application side only. Their
 // domain folders (`src/domain/content`, `media`, …) are not covered yet.
+// M9-T0 added `auth` (`src/domain/auth` is scheduled with M14-T11).
 const APPLICATION_SURFACE_MODULES = [
+  "auth",
   "content",
   "media",
   "settings",
@@ -133,6 +135,32 @@ describe("D-8: module public surfaces", () => {
       missingIndexes(["application"], APPLICATION_SURFACE_MODULES),
     ).toEqual([]);
   });
+});
+
+describe("M9-T0: auth and shared stay leaf modules", () => {
+  // Several module port files import the `BranchScope` type from the auth
+  // index. That cannot form a cycle between modules only while auth and the
+  // shared application files import no other application module. Each guard
+  // checks one hop, and together they cover the whole chain.
+  const leafImports = [
+    /^\.\/(?!\.\.)/,
+    /^zod$/,
+    /^@\/domain\//,
+    /^@\/application\/shared\//,
+  ];
+  it.each(["auth", "shared"])(
+    "src/application/%s imports only its own files, shared application files, the domain, and zod",
+    (folder) => {
+      const files = sourceFiles(join(root, "src/application", folder));
+      expect(files.length).toBeGreaterThan(5);
+      const offenders = files.flatMap((file) =>
+        importsOf(file)
+          .filter((target) => !leafImports.some((rule) => rule.test(target)))
+          .map((target) => `${relative(root, file)} → ${target}`),
+      );
+      expect(offenders).toEqual([]);
+    },
+  );
 });
 
 describe("D-11: Server Actions and reservations", () => {

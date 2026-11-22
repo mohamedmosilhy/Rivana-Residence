@@ -1,5 +1,4 @@
-import { authorizeBranch } from "@/application/auth/authorize-branch";
-import type { StaffPrincipal } from "@/application/auth/ports";
+import { type StaffPrincipal, authorizeBranch } from "@/application/auth";
 import {
   failure,
   invalid,

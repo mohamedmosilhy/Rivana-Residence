@@ -1,4 +1,4 @@
-import type { StaffPrincipal } from "@/application/auth/ports";
+import type { StaffPrincipal } from "./ports";
 import { failure, success, type Result } from "@/application/shared/result";
 import { roleHasCapability, type Capability } from "@/domain/auth/capabilities";
 
