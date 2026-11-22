@@ -1,0 +1,527 @@
+[
+  {
+    "id": "AC10 receptionist cannot read WhatsApp settings",
+    "ok": true,
+    "evidence": {
+      "status": 403
+    }
+  },
+  {
+    "id": "AC10 admin reads settings, token never returned",
+    "ok": true,
+    "evidence": {
+      "status": 200,
+      "body": {
+        "businessPhoneNumber": null,
+        "providerPhoneNumberId": null,
+        "accessTokenConfigured": true,
+        "configured": false,
+        "setupGaps": [
+          {
+            "purpose": "VERIFICATION_CODE",
+            "language": "en",
+            "blocking": true
+          },
+          {
+            "purpose": "BOOKING_CONFIRMED",
+            "language": "en",
+            "blocking": true
+          },
+          {
+            "purpose": "PAYMENT_NOT_COMPLETED",
+            "language": "en",
+            "blocking": false
+          },
+          {
+            "purpose": "CANCELLATION_RECEIVED",
+            "language": "en",
+            "blocking": false
+          },
+          {
+            "purpose": "CANCELLATION_APPROVED",
+            "language": "en",
+            "blocking": false
+          },
+          {
+            "purpose": "CANCELLATION_REJECTED",
+            "language": "en",
+            "blocking": false
+          },
+          {
+            "purpose": "REFUND_COMPLETED",
+            "language": "en",
+            "blocking": false
+          },
+          {
+            "purpose": "CANCELLED_BY_HOTEL",
+            "language": "en",
+            "blocking": false
+          },
+          {
+            "purpose": "MANAGE_LINK",
+            "language": "en",
+            "blocking": false
+          },
+          {
+            "purpose": "RESERVATION_MODIFIED",
+            "language": "en",
+            "blocking": false
+          },
+          {
+            "purpose": "CHANGE_REQUEST_RECEIVED",
+            "language": "en",
+            "blocking": false
+          },
+          {
+            "purpose": "CHANGE_REQUEST_APPROVED",
+            "language": "en",
+            "blocking": false
+          },
+          {
+            "purpose": "CHANGE_REQUEST_REJECTED",
+            "language": "en",
+            "blocking": false
+          },
+          {
+            "purpose": "TEST",
+            "language": "en",
+            "blocking": false
+          }
+        ],
+        "lastTest": null,
+        "updatedAt": "2026-11-22T18:28:33.426Z"
+      }
+    }
+  },
+  {
+    "id": "AC10 number empty -> 503 WHATSAPP_NOT_CONFIGURED",
+    "ok": true,
+    "evidence": {
+      "status": 503,
+      "code": "WHATSAPP_NOT_CONFIGURED"
+    }
+  },
+  {
+    "id": "AC10 nothing sent/stored on that refusal",
+    "ok": true,
+    "evidence": {
+      "verifications": 0
+    }
+  },
+  {
+    "id": "Q-71 online booking refused while WhatsApp unset",
+    "ok": true,
+    "evidence": {
+      "status": 422,
+      "fe": {
+        "onlineBookingEnabled": [
+          "Online booking can't be turned on until WhatsApp messaging is set up."
+        ]
+      }
+    }
+  },
+  {
+    "id": "A7 settings saved",
+    "ok": true,
+    "evidence": {
+      "status": 200
+    }
+  },
+  {
+    "id": "AC10 unknown template variable refused",
+    "ok": true,
+    "evidence": {
+      "status": 422
+    }
+  },
+  {
+    "id": "A7 required templates created",
+    "ok": true,
+    "evidence": {
+      "t1": 201,
+      "t2": 201
+    }
+  },
+  {
+    "id": "online booking still refused through the API until M10 (documented), WhatsApp no longer the reason",
+    "ok": true,
+    "evidence": {
+      "status": 422,
+      "fe": {
+        "onlineBookingEnabled": [
+          "Online booking can't be turned on yet. The booking journey arrives in a later release."
+        ]
+      }
+    }
+  },
+  {
+    "id": "AC10 test message reports provider result (fake)",
+    "ok": true,
+    "evidence": {
+      "status": 200,
+      "body": {
+        "ok": true,
+        "providerMessageId": "fake-1"
+      }
+    }
+  },
+  {
+    "id": "AC7 P9 issues code, hashed at rest, 10 min expiry",
+    "ok": true,
+    "evidence": {
+      "status": 201,
+      "ttlSeconds": 600,
+      "hashLen": 64
+    }
+  },
+  {
+    "id": "AC7 wrong code 422 with attemptsLeft 4, attempt persisted",
+    "ok": true,
+    "evidence": {
+      "status": 422,
+      "ctx": {
+        "attemptsLeft": 4
+      }
+    }
+  },
+  {
+    "id": "AC7 confirm returns token stored only as SHA-256",
+    "ok": true,
+    "evidence": {
+      "status": 200,
+      "attempts": 2
+    }
+  },
+  {
+    "id": "AC7 code is single use (410)",
+    "ok": true,
+    "evidence": {
+      "status": 410
+    }
+  },
+  {
+    "id": "AC7 identical response shape for unseen phone",
+    "ok": true,
+    "evidence": {
+      "keys": [
+        "verificationId",
+        "expiresAt",
+        "resendAvailableAt"
+      ]
+    }
+  },
+  {
+    "id": "AC11 quote carries car count; PER_VEHICLE = 2 x 2500",
+    "ok": true,
+    "evidence": {
+      "status": 200,
+      "total": {
+        "amountMinor": 32200,
+        "currency": "USD"
+      },
+      "services": {
+        "amountMinor": 9000,
+        "currency": "USD"
+      }
+    }
+  },
+  {
+    "id": "AC11 4 cars (max 3) refused on services.0.vehicles",
+    "ok": true,
+    "evidence": {
+      "status": 422,
+      "fe": {
+        "services.0.vehicles": [
+          "Choose from 1 to 3 cars."
+        ]
+      }
+    }
+  },
+  {
+    "id": "AC2 changed price -> 409 PRICE_CHANGED with new quote, nothing written",
+    "ok": true,
+    "evidence": {
+      "status": 409,
+      "code": "PRICE_CHANGED",
+      "hasQuote": true,
+      "c0": {
+        "res": 0,
+        "red": 0,
+        "out": 0,
+        "aud": 0
+      },
+      "c1": {
+        "res": 0,
+        "red": 0,
+        "out": 0,
+        "aud": 0
+      }
+    }
+  },
+  {
+    "id": "AC1 booking returns 201 CONFIRMED with reference",
+    "ok": "RR-D190SHEH",
+    "evidence": {
+      "status": 201,
+      "reference": "RR-D190SHEH",
+      "total": {
+        "amountMinor": 32200,
+        "currency": "USD"
+      }
+    }
+  },
+  {
+    "id": "AC1 DB row is CONFIRMED",
+    "ok": true,
+    "evidence": {
+      "id": "k5gx70gtnc3gmpwu84yqbm9d",
+      "status": "CONFIRMED",
+      "paymentMethod": "PAY_AT_HOTEL",
+      "totalMinor": 32200,
+      "couponCode": "LIVE10",
+      "vatRateBasisPoints": 1500
+    }
+  },
+  {
+    "id": "AC1 outbox: email + WhatsApp confirmation + staff alert from same txn",
+    "ok": true,
+    "evidence": [
+      {
+        "kind": "reservation.confirmed",
+        "channel": "EMAIL",
+        "status": "PENDING"
+      },
+      {
+        "kind": "reservation.confirmed",
+        "channel": "WHATSAPP",
+        "status": "PENDING"
+      },
+      {
+        "kind": "reservation.staff-alert",
+        "channel": "EMAIL",
+        "status": "PENDING"
+      }
+    ]
+  },
+  {
+    "id": "AC1 audit row written",
+    "ok": true,
+    "evidence": [
+      {
+        "action": "reservation.created",
+        "actorType": "GUEST"
+      }
+    ]
+  },
+  {
+    "id": "AC1 coupon redemption persisted",
+    "ok": true,
+    "evidence": {
+      "n": 1
+    }
+  },
+  {
+    "id": "AC11 stored car count on the service line",
+    "ok": true,
+    "evidence": [
+      {
+        "kind": "BREAKFAST",
+        "vehicles": null
+      },
+      {
+        "kind": "AIRPORT_TRANSFER",
+        "vehicles": 2
+      }
+    ]
+  },
+  {
+    "id": "idempotent replay returns same reference, no new rows",
+    "ok": true,
+    "evidence": {
+      "status": 200,
+      "ref": "RR-D190SHEH"
+    }
+  },
+  {
+    "id": "AC3 last unit sold: unitsAvailable 0, available false",
+    "ok": true,
+    "evidence": {
+      "available": false,
+      "unitsAvailable": 0
+    }
+  },
+  {
+    "id": "AC2 sold out -> 409 INVENTORY_UNAVAILABLE, nothing written",
+    "ok": true,
+    "evidence": {
+      "status": 409,
+      "code": "INVENTORY_UNAVAILABLE"
+    }
+  },
+  {
+    "id": "S1/S2 staff read the booking",
+    "ok": true,
+    "evidence": {
+      "list": 200,
+      "detail": 200,
+      "etag": "\"v1\""
+    }
+  },
+  {
+    "id": "AC5 MarkEnteredInHotelSystem sets pmsEnteredAt and the user",
+    "ok": "r8yzeo2im4dmgqc8q4pxy46s",
+    "evidence": {
+      "status": 200,
+      "pr": {
+        "pmsEnteredAt": "2026-11-22T18:28:52.881Z",
+        "pmsEnteredById": "r8yzeo2im4dmgqc8q4pxy46s"
+      }
+    }
+  },
+  {
+    "id": "AC5 second call does not move pmsEnteredAt (set once)",
+    "ok": true,
+    "evidence": {
+      "status": 409,
+      "code": "CONFLICT"
+    }
+  },
+  {
+    "id": "S28/S29 sync status reachable",
+    "ok": true,
+    "evidence": {
+      "status": 200,
+      "body": "{\"lastCompletedAt\":null,\"lastCompletedBy\":null,\"intervalMinutes\":30,\"followUpMinutes\":10,\"dueAt\":\"2026-11-22T18:28:53.412Z\",\"due\":true,\"notEnteredInHotelSystem\""
+    }
+  },
+  {
+    "id": "AC6 staff cancellation: CANCELLED",
+    "ok": true,
+    "evidence": {
+      "status": 200,
+      "db": "CANCELLED"
+    }
+  },
+  {
+    "id": "AC6 coupon redemption released",
+    "ok": true,
+    "evidence": [
+      {
+        "n": 1,
+        "released": 1
+      }
+    ]
+  },
+  {
+    "id": "AC6 inventory released: unitsAvailable back to 1",
+    "ok": true,
+    "evidence": {
+      "nights": {
+        "n": 2
+      },
+      "available": true,
+      "unitsAvailable": 1
+    }
+  },
+  {
+    "id": "AC6 cancellation audited and guest notice queued",
+    "ok": true,
+    "evidence": {
+      "audit": [
+        {
+          "action": "reservation.created"
+        },
+        {
+          "action": "reservation.pms-entered"
+        },
+        {
+          "action": "reservation.cancelled"
+        }
+      ],
+      "outbox": [
+        {
+          "kind": "reservation.confirmed",
+          "channel": "EMAIL"
+        },
+        {
+          "kind": "reservation.confirmed",
+          "channel": "WHATSAPP"
+        },
+        {
+          "kind": "reservation.staff-alert",
+          "channel": "EMAIL"
+        },
+        {
+          "kind": "reservation.cancelled",
+          "channel": "EMAIL"
+        },
+        {
+          "kind": "reservation.cancelled",
+          "channel": "WHATSAPP"
+        }
+      ]
+    }
+  },
+  {
+    "id": "AC4 dispatcher after commit, APP_URL=https://staging.rivana.example (fake WhatsApp, SMTP unset)",
+    "ok": true,
+    "evidence": {
+      "command": "npm run reservations -- outbox",
+      "result": {
+        "sent": 1,
+        "failed": 2,
+        "retried": 0,
+        "stale": 0
+      },
+      "rows": [
+        {
+          "kind": "reservation.confirmed",
+          "channel": "WHATSAPP",
+          "status": "SENT",
+          "payloadAfter": "{}"
+        },
+        {
+          "kind": "reservation.confirmed",
+          "channel": "EMAIL",
+          "status": "FAILED",
+          "lastError": "NOT_CONFIGURED (no SMTP in this run)"
+        },
+        {
+          "kind": "reservation.staff-alert",
+          "channel": "EMAIL",
+          "status": "FAILED",
+          "lastError": "NOT_CONFIGURED"
+        }
+      ],
+      "queuedPayloadKeys": "total,checkIn,checkOut,reference,branchName,manageLink,guestFirstName"
+    }
+  },
+  {
+    "id": "AC8 server log scan (two dev server logs, 124 lines, 6 booking related requests)",
+    "ok": true,
+    "evidence": {
+      "matches": {
+        "phones": 0,
+        "names": 0,
+        "emails": 0,
+        "privacy version": 0,
+        "idempotency key": 0,
+        "43 character tokens": 0
+      }
+    }
+  },
+  {
+    "id": "FINDING (fixed after verification) dispatcher rejects localhost and IP APP_URL",
+    "ok": false,
+    "evidence": {
+      "cause": "dispatch-outbox.ts validates manageLink with z.httpUrl(), which needs a dotted domain; APP_URL accepts z.url()",
+      "observed": "APP_URL=http://127.0.0.1:3200: both confirmations FAILED INVALID_MESSAGE on first attempt and payload scrubbed (no retry); with https://staging.rivana.example the same booking SENT",
+      "zodCheck": {
+        "http://127.0.0.1:3200/...": false,
+        "http://localhost:3000/...": false,
+        "https://rivanaresidence.com/...": true
+      }
+    },
+    "fixed": "z.httpUrl() replaced by z.url() limited to http and https; regression test tests/unit/application/dispatch-outbox.test.ts (fails before, passes after). Live walk-through not rerun."
+  }
+]

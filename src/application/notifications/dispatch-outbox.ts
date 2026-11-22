@@ -28,7 +28,9 @@ const variables = z.strictObject({
   checkOut: z.string().optional(),
   total: z.string().optional(),
   reason: z.string().optional(),
-  manageLink: z.httpUrl().optional(),
+  // Not `z.httpUrl()`: it needs a dotted domain, so it would refuse the
+  // `localhost` and IP `APP_URL` that development and staging use.
+  manageLink: z.url({ protocol: /^https?$/ }).optional(),
 });
 function validVariables(input: unknown): input is MessageVariables {
   return variables.safeParse(input).success;

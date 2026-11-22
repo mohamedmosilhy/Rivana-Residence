@@ -1,7 +1,7 @@
 # 0005. Reservations, immediate confirmation, phone verification, and messages (M8)
 
 **Date**: 2026-11-14
-**Status**: In Progress (owner approved the content; status moves with the milestone)
+**Status**: Accepted (owner approved the content on 2026-11-14; milestone accepted 2026-11-22)
 **Owner approval**: Spec, task breakdown, and the seven decisions below accepted as recommended, 2026-11-14
 **Mode**: FEATURE
 **Branch**: `m8-reservations`

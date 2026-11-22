@@ -47,6 +47,10 @@ npm run staff -- create --email … --name … --role ADMIN   # passwords via pr
 
 # Maintenance (hourly app-user cron; bounded buckets listed in PUBLIC_RATE_LIMITS)
 npm run throttles -- cleanup-public
+
+# Reservation jobs (schedule both; the dispatcher sends queued messages only after commit)
+npm run reservations -- outbox
+npm run reservations -- expire-tokens
 ```
 
 ## Specs

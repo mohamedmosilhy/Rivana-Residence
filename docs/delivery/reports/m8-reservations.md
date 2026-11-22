@@ -1,6 +1,6 @@
 # M8: Reservations, immediate confirmation, verification, messages
 
-Status: **In progress** (19/19 tasks accepted: M8-T0 on 2026-11-13, M8-T0b on 2026-11-14, M8-T1 and M8-T2 on 2026-11-15, M8-T3 and M8-T3b on 2026-11-17, M8-T4 backend, M8-T4b screen, M8-T5 phone verification on 2026-11-18, M8-T5b browser coverage, M8-T6 notifications, M8-T7 website reservation use case and M8-T7b public booking API on 2026-11-20, M8-T8 staff and external reservations, M8-T9 stay changes and cancellation, and M8-T9b service changes on 2026-11-21. M8-T10 staff operational transitions, M8-T11 guests and guest access, and M8-T12 sync status and checkpoints were accepted on 2026-11-22; spec [0005](../../specs/0005-m8-reservations.md) and task breakdown approved 2026-11-14). Milestone close and acceptance are pending. Brief: [m8-reservations.md](../milestones/m8-reservations.md).
+Status: **Accepted by the owner (2026-11-22): 19/19 tasks accepted; milestone close gates and runtime verification complete, `APP_URL` link check fixed at close.** Tasks were accepted on 2026-11-13 (M8-T0), 2026-11-14 (T0b), 2026-11-15 (T1, T2), 2026-11-17 (T3, T3b), 2026-11-18 (T4, T4b, T5), 2026-11-20 (T5b, T6, T7, T7b), 2026-11-21 (T8, T9, T9b), and 2026-11-22 (T10, T11, T12); spec [0005](../../specs/0005-m8-reservations.md) and the task breakdown were approved 2026-11-14. Brief: [m8-reservations.md](../milestones/m8-reservations.md). Branch: `m8-reservations`.
 
 ## Task log
 
@@ -27,6 +27,96 @@ Status: **In progress** (19/19 tasks accepted: M8-T0 on 2026-11-13, M8-T0b on 20
 | M8-T12 | Medium | Owner, 2026-11-22 | `feat(reservations): add M8-T12 branch sync checkpoints` (this task commit) | [Independent review and recheck](../../reviews/2026-11-22-m8-t12.md) | `npm run check` passed with 2,240 unit tests across 101 files and a production build. PostgreSQL integration passed 855 tests across 53 files. The dedicated run passed 20 rounds of overlapping checkpoint writes. Chromium passed 212 tests with 33 intentional skips. A live two-session check verified custom 8 and 45 minute deadlines, S20, and a backlog drop from 1 to 0 through S13. | S28 and S29 use existing checkpoint storage. S20 shows the last completion. A completion wins a timestamp tie. Checkpoint and redacted audit commit together. GPT-6.2 Astra approved after both routes gained strict query validation and the S20 contract required a UTC timestamp. |
 
 Task commits identified by subject in this log can be located with `git log --oneline --fixed-strings --grep='<subject>'`.
+
+## Outcome
+
+M8 delivers the reservation core through the REST API. A valid pay-at-hotel website booking becomes `CONFIRMED` in the transaction that takes its inventory, with its confirmation messages queued in that same transaction and sent only after commit. Staff create, record, change, cancel (unpaid), assign, check in and out, mark no-shows, and mark website bookings as entered in the hotel system. Guests are verified by phone, can be blocked, and can read their own bookings. Admins set up WhatsApp and its templates. Branches carry sync checkpoints. Online payment, guest self service changes, and every booking screen stay in M9 and M10.
+
+## Scope delivered
+
+- [x] Storage: eleven reservation tables, snapshot checks, composite ownership keys, double assignment exclusion, idempotency uniqueness (M8-T1)
+- [x] Reservation and guest domain, reference, phone, verification and consent rules (M8-T2)
+- [x] Repositories, unit of work, persisted inventory consumption (M8-T3), airport transfer car count (M8-T3b)
+- [x] WhatsApp setup API (A6 to A8), sender port with Meta and fake transports, and the Admin screen (M8-T4, T4b)
+- [x] Phone verification P9 and P10 (M8-T5), browser navigation and focus coverage (M8-T5b)
+- [x] Outbox, dispatcher, email templates, token expiry job (M8-T6)
+- [x] `CreateWebsiteReservation` and public API P7 with idempotent replay (M8-T7, T7b)
+- [x] Staff and external reservations with reads S1 to S4 and S15 (M8-T8)
+- [x] Change engine: stay changes, unpaid cancellation with coupon release, S55, service changes (M8-T9, T9b)
+- [x] Operational transitions S5 and S10 to S16 (M8-T10)
+- [x] Guests and guest access S50 to S53, G1, G3, G4 (M8-T11)
+- [x] Sync status and checkpoints S28 and S29, S20 reads (M8-T12)
+- Out of scope and not done, as the brief requires: Paymob, `AWAITING_PAYMENT`, refunds and cancellation requests (M9), every screen except the Admin WhatsApp setup (M10, M11), broadcasts and feedback (M13), `PENDING` and `DECLINED` statuses (none exist), website analytics (M10).
+
+## Files added, changed, removed
+
+21 commits on `m8-reservations` (`git log main..HEAD`): 452 files, +47,448 and -2,953 lines against `main` (212 added, 237 changed, 3 deleted; the deletions are the old shared port files retired in M8-T0). `docs/api/openapi.json` grows from 23 to 51 paths.
+
+## Migrations and configuration
+
+- Seven additive migrations: `reservations`, `transfer_vehicle_unit`, `transfer_vehicles`, `reservation_external_channel`, `reservation_changes`, `reservation_change_cancel`, `service_occupancy_effective_date`. All 15 migrations apply to an empty database and Prisma reports no drift (below). The local `rivana` development database has not had them applied; run `npm run db:migrate` first.
+- One new dependency, `libphonenumber-js` 1.13.16 (pinned). One new script, `npm run reservations -- outbox | expire-tokens`, to run on a schedule.
+- New environment variables: `PHONE_VERIFICATION_SECRET` (at least 32 random characters; verification stays off without it), `WHATSAPP_PROVIDER` (`meta` or `fake`; `fake` is refused in production), `WHATSAPP_ACCESS_TOKEN`, `WHATSAPP_GRAPH_VERSION`. The access token is read only on the server and never stored or returned.
+
+## Decisions made during the milestone
+
+Business decisions are recorded in the task log and in spec [0005](../../specs/0005-m8-reservations.md): the 366 night creation cap (Q-91), nullable `externalChannel`, Receptionists and Managers seeing only guests with a booking in their branches, full block reasons kept in audit text, and every P7 request counting against the five per hour bucket. No new business question is open.
+
+## Commands and results (exact commands, counts, durations)
+
+All run on the final tree (HEAD `8a822ff`, clean working tree) on 2026-11-22 (macOS, Node 26.13.0, PostgreSQL 17 via Postgres.app).
+
+| Gate | Command | Result |
+| --- | --- | --- |
+| Aggregate | `npm run check` | **Pass** in 25 s: format, lint, typecheck, **102 unit files / 2,246 tests**, production build (rerun after the `APP_URL` fix below; the first close run had 101 files / 2,240 tests) |
+| Integration | `TEST_DATABASE_URL=postgresql://<user>@127.0.0.1:5432/rivana_test npm run test:integration` | **Pass** in 266 s: **53 files / 855 tests** |
+| Concurrency | the 22 reservation integration files that race (`blocks`, `change-reservations`, `concurrency`, `create-website-reservation`, `guest-access`, `outbox`, `phone-verification`, `staff-operations`, `storage-concurrency` and others) on a fresh database | **Pass** in 172 s: **22 files / 446 tests**. The races loop 20 rounds inside the tests (`ROUNDS`, `iteration < 20`) with PostgreSQL lock waits observed |
+| Outbox fix recheck | `npm run test:integration -- tests/integration/reservations/outbox.test.ts tests/integration/reservations/create-website-reservation.test.ts` | **Pass**: 2 files / 47 tests (the full integration, concurrency and E2E runs above were on the tree before this one line fix) |
+| E2E | `E2E_DATABASE_URL=postgresql://<user>@127.0.0.1:5432/rivana_e2e_test npm run test:e2e` | **Pass** in 1.6 min: Chromium **212 passed, 33 intentional skips**, no retries needed |
+| Migration drift | `prisma migrate deploy` on a scratch database, then `prisma migrate diff --from-config-datasource --to-schema prisma/schema.prisma --exit-code` | all 15 migrations applied; **No difference detected** |
+| OpenAPI | freshness test inside the unit run | no drift |
+| WebKit, Firefox, Lighthouse | not run | M8 changes no public page; the one screen (`/admin/settings/whatsapp`) passed axe and layout checks on desktop and mobile Chromium in M8-T4b. Firefox does not start on this Mac |
+
+Two earlier runs are not counted: a first attempt of the live walk-through stopped on a script error of mine, and a rerun showed a flawed assertion. Both were fixed and the whole walk-through was rerun from a freshly built database.
+
+## Acceptance criteria → evidence (one row per criterion)
+
+Runtime verification (`/check verify`): the real Next.js dev server (fake WhatsApp transport, disposable `rivana_m8_close_live_test` database, since dropped), staff sessions through the real admin login (Admin and Receptionist), public calls over HTTP, state read back with SQL. 38 recorded observations: 37 passed with cited evidence, 1 was a finding, since fixed (below). Ledger: [m8-verification.json](./m8-verification.json). Online booking cannot be switched on through the API until M10 by design (the branch update returns `422` with that reason), so the walk-through set the branch flag in SQL after proving the refusal reasons.
+
+| AC | Verdict | Evidence |
+| --- | --- | --- |
+| 1. Valid booking returns `201 CONFIRMED`, row `CONFIRMED`, email and WhatsApp confirmation plus staff alert in the outbox from one transaction | Met | Live: `201`, reference `RR-D190SHEH`, row `CONFIRMED` / `PAY_AT_HOTEL` / 32,200 cents / VAT 1500; outbox `reservation.confirmed` EMAIL, `reservation.confirmed` WHATSAPP, `reservation.staff-alert` EMAIL (all `PENDING` at commit); audit `reservation.created`; one coupon redemption. Replay of the same key returned `200`, same reference, no new row |
+| 2. Each refusal returns its error and writes nothing | Met | Live: changed price `409 PRICE_CHANGED` with the new quote, sold out `409 INVENTORY_UNAVAILABLE`; row, redemption, outbox, and audit counts unchanged (0, 0, 0, 0 and 1, 1, 3, 1). Blocked phone, missing or used token, per phone cap, and invalid coupon are proven in `create-website-reservation.test.ts` (rollback keeps the token unused) and the route tests, not exercised live |
+| 3. Ten parallel bookings give one `CONFIRMED`; multi unit shortfall creates nothing; coupon and per phone limits hold | Met by tests | C-1, C-2, C-3, C-9, C-11 in `create-website-reservation.test.ts`, each over `ROUNDS`, inside the 22 file concurrency run (446 passed). Not reproduced live (a single client cannot race itself usefully) |
+| 4. Confirmation sent only after commit and says "confirmed" | Met | Live: rows were `PENDING` after the booking; `npm run reservations -- outbox` then reported `{"sent":1,...}` and the WhatsApp row became `SENT` with its payload scrubbed. The rollback test leaves no outbox row; the email text is asserted to say "confirmed" in `reservation-email.test.ts`. Email sending was not live (no SMTP). See the fixed finding below |
+| 5. `MarkEnteredInHotelSystem` sets `pmsEnteredAt` once, records the user, refuses other branches | Met | Live: `200`, `pmsEnteredAt` and `pmsEnteredById` set; a second call with a fresh `If-Match` returned `409` and the timestamp did not move. Foreign and unassigned callers get `404` in the seven route sweep in `staff-operations.test.ts` |
+| 6. Staff cancellation of an unpaid booking releases inventory and coupon redemption, notifies when chosen, is audited | Met | Live: `200`, row `CANCELLED`; redemption `releasedAt` set (1 of 1); availability for the same dates went from `unitsAvailable: 0` to `1`; audit chain `reservation.created`, `reservation.pms-entered`, `reservation.cancelled`; a cancellation EMAIL and WHATSAPP row were queued |
+| 7. Verification: 10 minute expiry, 5 attempts, limits, hashed codes, single use token, blocked numbers, identical responses | Met | Live: expiry 600 s; code stored as a 64 character HMAC; a wrong code gave `422` with `attemptsLeft: 4` and the attempt persisted; the right code gave a token stored only as its SHA-256; reuse gave `410`; a phone with no history got the same response keys (`verificationId`, `expiresAt`, `resendAvailableAt`). Per number and per client limits and blocked numbers are covered in `phone-verification.test.ts` and `guest-access.test.ts` |
+| 8. No log line contains a guest name, email, phone, code, or token | Met | Two live server logs (124 lines, covering the verification, quote, booking, staff, and cancellation calls): zero matches for four phone numbers, three names, `@example.test`, the consent version, the idempotency header, and any 43 character token. The captured log test in the T7b suite also passes |
+| 9. The authorization sweep covers every new use case for every role, an unassigned branch, and another branch | Met, with a note | Role by scope matrices exist per surface: `staff-reservations-auth.test.ts` (S1 to S4, S15; Admin, Editor, Manager, Receptionist by assigned, foreign, unassigned), the seven route sweep in `staff-operations.test.ts`, `change-reservations.test.ts`, `guest-access.test.ts`, `branch-sync.test.ts`, and the WhatsApp rows in the central sweep. The central `authorization-sweep.test.ts` does not list the reservation use cases, and nothing fails if a new use case is added without a matrix |
+| 10. Only an Admin reads or changes WhatsApp settings and templates and sends a test message; token never returned; empty number gives `503`; unknown variable refused; test message reports the result | Met | Live: Receptionist `403`; Admin `200` with `accessTokenConfigured` and no token; empty number gave `503 WHATSAPP_NOT_CONFIGURED` and zero verification rows; template with an unknown variable `422`; test message `200 {"ok":true,"providerMessageId":"fake-1"}`. Without a `TEST` template it correctly answered `503` "no active WhatsApp template" |
+| 11. Car count stored on the service line; `PER_VEHICLE` charges price × cars; out of range or on breakfast refused | Met | Live: two cars gave services 9,000 (breakfast 5,000 plus 2 × 2,500); stored `vehicles: 2` on the transfer line and `null` on breakfast; four cars against a maximum of 3 gave `422` on `services.0.vehicles` ("Choose from 1 to 3 cars") |
+| 12. A staff change appends one history row and one audit event, re-prices only what changed, and sets the hotel system update flag until S55 clears it | Met by tests | `change-reservations.test.ts` (42 tests including T-CHG-1…7) and `change-reservations-api.spec.ts` in the Chromium run; not exercised in the live walk-through |
+
+Evidence the brief asks for: concurrency output (above, 22 files / 446 tests, 20 round loops); a booking walk-through with request outcomes, DB rows, outbox rows, and audit rows ([m8-verification.json](./m8-verification.json), fictional data only); log redaction proof (AC 8); WhatsApp ran against the fake adapter only. No real Meta send was made because the client has not supplied the number, token, and approved templates (Q-10), which the brief allows.
+
+## Screenshots (UI milestones; desktop 1280 and mobile 390)
+
+Not applicable beyond M8-T4b: the only screen, `/admin/settings/whatsapp`, was proven by Playwright (axe, no horizontal scroll, desktop and mobile) in that task. No new screenshots were taken at close.
+
+## Known limitations, risks, deferred work
+
+- **Fixed at close (owner decision, 2026-11-22): the dispatcher rejected `localhost` and IP addresses as `APP_URL`.** `dispatch-outbox.ts` checked `manageLink` with `z.httpUrl()`, which needs a dotted domain, while `APP_URL` accepts any URL. On a development or staging server reached by `localhost` or an IP, every confirmation and manage link message failed `INVALID_MESSAGE` on the first attempt with no retry, and its payload was scrubbed. Observed live before the fix (`APP_URL=http://127.0.0.1:3200` failed, `https://staging.rivana.example` sent). The check is now `z.url()` limited to `http` and `https`. The regression test `tests/unit/application/dispatch-outbox.test.ts` (6 cases: https domain, `localhost` and IP accepted on both channels; `javascript:`, `ftp:` and a non URL still refused) fails on the old code and passes on the new. The live walk-through was not rerun after the fix.
+- **Email sending was not exercised live** (no SMTP in the verification run). Rendering and the "confirmed" wording are unit tested; real delivery waits for the SMTP settings at staging.
+- **No real WhatsApp send** (fake adapter only), pending the client's number, token, and templates (Q-10, Q-67).
+- **No central authorization tripwire** for the reservation use cases (AC 9 note). A short test that lists every exported use case and requires a matrix would close it; it can be scheduled in M14 hardening.
+- RK-1 stands: confirmed bookings can collide with unrecorded hotel system bookings until the PMS-entry marker reaches the screens in M11.
+- Known timing flakes under full parallel load, unrelated to M8 behavior: the persistence architecture unit test (5 second limit) and one branches E2E title test. Neither failed in the final runs.
+- Dev database: the local `rivana` database does not have the seven M8 migrations; run `npm run db:migrate` before trying the APIs locally.
+
+## Next milestone: not started
+
+M9 (Paymob payments, cancellation requests, refunds, guest booking changes) has not started. M8 was accepted on 2026-11-22.
 
 ## M8-T1 verification
 
