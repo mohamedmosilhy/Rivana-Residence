@@ -1,6 +1,6 @@
 # Reservation lifecycle
 
-Status: **Planned** for workflows and the API. The pure M8 state machine is implemented (M8-T2, `src/domain/reservations/state-machine.ts`); payment transitions arrive in M9. Design accepted 2026-10-24 and revised on 2026-11-06 by the client decisions Q-36 (immediate confirmation), Q-37 (online payment or pay at hotel), Q-38 (cancellation requests), and Q-39 (several units per booking); see ADRs [024](../adr/024-immediate-confirmation.md) and [025](../adr/025-paymob-online-payment.md). The earlier request-to-book design (`PENDING`, `DECLINED`, confirm and decline by staff, guest cancellation of pending requests) is superseded and kept only in the accepted M1–M3 history and ADRs 013 and 019.
+Status: **Planned** for workflows and the API. The pure M8 state machine is implemented (M8-T2, `src/domain/reservations/state-machine.ts`); the pure M9 payment, hold, deadline and request rules are implemented (M9-T2, `src/domain/payments`, `src/domain/reservations/cancellation-*.ts`); the workflows that use them arrive in later M9 tasks. Design accepted 2026-10-24 and revised on 2026-11-06 by the client decisions Q-36 (immediate confirmation), Q-37 (online payment or pay at hotel), Q-38 (cancellation requests), and Q-39 (several units per booking); see ADRs [024](../adr/024-immediate-confirmation.md) and [025](../adr/025-paymob-online-payment.md). The earlier request-to-book design (`PENDING`, `DECLINED`, confirm and decline by staff, guest cancellation of pending requests) is superseded and kept only in the accepted M1–M3 history and ADRs 013 and 019.
 
 ## States
 
@@ -69,14 +69,14 @@ Every transition:
 | Rule | Definition |
 | --- | --- |
 | CX-1 | A guest may request cancellation until the **deadline**: 24 hours before the branch's `checkInTime` on the arrival date, in the branch time zone. A branch without a check-in time offers no online requests. |
-| CX-2 | Only `CONFIRMED` reservations can have a request; at most one `OPEN` request per reservation. Requests come from the manage link or a guest session for the reservation's phone. |
+| CX-2 | Only `CONFIRMED` reservations can have a request; at most one active request per reservation (`OPEN`, `APPROVED`, `REFUND_PENDING` or `REFUND_FAILED`; also none while the refund is pending) *(rule implemented M9-T2)*. Requests come from the manage link or a guest session for the reservation's phone. |
 | CX-3 | While the request is open the reservation stays `CONFIRMED` and keeps its inventory. |
 | CX-4 | A Manager of the branch or an Admin (`cancellations:decide`) approves or rejects. Rejection needs a reason, which is sent to the guest. |
 | CX-5 | Approval of an unpaid booking sets `CANCELLED` and releases inventory at once. Approval of a paid booking requests a gateway refund of the captured amount; the reservation becomes `CANCELLED` when the gateway confirms. A refund failure leaves it `CONFIRMED` with the request `REFUND_FAILED` and a retry action. |
 | CX-6 | After the deadline, the guest sees the branch's contact details; staff may still cancel under the transitions above. A booking made inside the 24-hour window can never be requested online (Q-64). |
 | CX-7 | Request, decision, refund attempt, and result are each audited and messaged (email and WhatsApp). |
 
-Request states: `OPEN → APPROVED → (REFUND_PENDING → COMPLETED | REFUND_FAILED → retry)`, `OPEN → REJECTED`. For unpaid bookings `APPROVED` goes straight to `COMPLETED`.
+*(Implemented M9-T2 as pure rules.)* Request states: `OPEN → APPROVED → (REFUND_PENDING → COMPLETED | REFUND_FAILED → retry)`, `OPEN → REJECTED`. For unpaid bookings `APPROVED` goes straight to `COMPLETED`.
 
 ## Guest changes (Q-83…Q-85)
 

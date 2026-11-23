@@ -23,7 +23,13 @@ export type ReservationAction =
   | "CANCEL_UNPAID"
   | "CHECK_IN"
   | "CHECK_OUT"
-  | "MARK_NO_SHOW";
+  | "MARK_NO_SHOW"
+  // M9: the caller proves the fact (verified callback, expiry, refund
+  // confirmation, every unit free under lock); this only checks the lifecycle.
+  | "PAYMENT_SUCCEEDED"
+  | "HOLD_EXPIRED"
+  | "CONFIRM_LATE_PAYMENT"
+  | "CANCEL_APPROVED";
 export type TransitionResult =
   | Readonly<{
       allowed: true;
@@ -65,7 +71,11 @@ export class ReservationStateMachine {
     source: ReservationSource,
     paymentMethod: PaymentMethod,
   ):
-    | Readonly<{ allowed: true; status: "CONFIRMED"; consumesInventory: true }>
+    | Readonly<{
+        allowed: true;
+        status: "CONFIRMED" | "AWAITING_PAYMENT";
+        consumesInventory: true;
+      }>
     | Readonly<{ allowed: false; code: "PAYMENT_METHOD_UNAVAILABLE" }> {
     if (
       !RESERVATION_SOURCES.includes(source) ||
@@ -77,10 +87,17 @@ export class ReservationStateMachine {
           message: "Supply a supported source and payment method.",
         },
       ]);
-    return paymentMethod === "PAY_AT_HOTEL"
+    if (paymentMethod === "PAY_AT_HOTEL")
+      return Object.freeze({
+        allowed: true,
+        status: "CONFIRMED",
+        consumesInventory: true,
+      });
+    // PY-1, PY-2: only website guests prepay; the booking holds its units until paid.
+    return source === "WEBSITE"
       ? Object.freeze({
           allowed: true,
-          status: "CONFIRMED",
+          status: "AWAITING_PAYMENT",
           consumesInventory: true,
         })
       : { allowed: false, code: "PAYMENT_METHOD_UNAVAILABLE" };
@@ -135,6 +152,48 @@ export class ReservationStateMachine {
         if (state.status !== "CONFIRMED" || today.compare(stay.checkIn) < 0)
           return refuse();
         target = "NO_SHOW";
+        break;
+      case "PAYMENT_SUCCEEDED":
+        if (
+          state.status !== "AWAITING_PAYMENT" ||
+          state.paymentMethod !== "ONLINE"
+        )
+          return refuse();
+        target = "CONFIRMED";
+        break;
+      case "HOLD_EXPIRED":
+        // Q-95: only expiry or a session closed unpaid, never a declined attempt.
+        if (
+          state.status !== "AWAITING_PAYMENT" ||
+          state.paymentMethod !== "ONLINE"
+        )
+          return refuse();
+        target = "PAYMENT_FAILED";
+        break;
+      case "CONFIRM_LATE_PAYMENT":
+        // PY-5: the caller has checked under lock that every unit is free.
+        if (
+          state.status !== "PAYMENT_FAILED" ||
+          state.paymentMethod !== "ONLINE"
+        )
+          return refuse();
+        target = "CONFIRMED";
+        break;
+      case "CANCEL_APPROVED":
+        // CX-5: an unpaid pay-at-hotel booking cancels at once. A paid online
+        // booking cancels only once the gateway confirmed the refund, so the
+        // caller passes the state *after* the refund (`REFUNDED`), never `PAID`.
+        if (
+          state.status !== "CONFIRMED" ||
+          !(
+            (state.paymentMethod === "PAY_AT_HOTEL" &&
+              state.paymentStatus === "NOT_REQUIRED") ||
+            (state.paymentMethod === "ONLINE" &&
+              state.paymentStatus === "REFUNDED")
+          )
+        )
+          return refuse();
+        target = "CANCELLED";
         break;
       case "CHECK_OUT":
         if (state.status !== "CHECKED_IN" || today.compare(stay.checkIn) <= 0)

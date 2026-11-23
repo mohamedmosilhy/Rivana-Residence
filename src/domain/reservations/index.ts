@@ -8,6 +8,26 @@ export {
   type ReservationAction,
   type TransitionResult,
 } from "./state-machine";
+export {
+  CancellationDeadline,
+  type DeadlineBranch,
+} from "./cancellation-deadline";
+export {
+  REQUEST_REASON_MAX,
+  canTransitionCancellationRequest,
+  isActiveRequest,
+  canRequestCancellation,
+  canGuestChange,
+  decideChangeApplication,
+  planApproval,
+  parseRejectionReason,
+  closedReasonForStaffAction,
+  type ApprovalPlan,
+  type ChangeApplication,
+  type GuestRequestDecision,
+  type GuestRequestRefusal,
+  type StaffTerminalAction,
+} from "./cancellation-request";
 export { ReservationReference } from "./reservation-reference";
 export {
   validateReservationStructure,

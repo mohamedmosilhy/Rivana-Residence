@@ -43,6 +43,7 @@ const PUBLIC_SURFACE_MODULES = [
   "guests",
   "reporting",
   "notifications",
+  "payments",
 ];
 
 // M8-T0b: the older CMS modules follow D-8 on the application side only. Their

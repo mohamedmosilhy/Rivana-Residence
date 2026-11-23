@@ -122,7 +122,9 @@ Take the payment, then create the reservation.
 - `HoldPolicy`: hold length 15 minutes from creation; the gateway session expires 2 minutes before the hold, so a payment in progress finishes before the units are released; at most one open hold per phone (Q-60).
 - `CancellationDeadline.for(branch, checkIn)`: 24 hours before `checkInTime` on the arrival date in the branch time zone (CX-1); no check-in time means no online request. Bookings made inside the window never get one (Q-64). The deadline is computed when the guest makes the request, from the reservation's current check-in, so a booking confirmed late by PY-5 follows the same rule.
 - `PaymentMethodAvailability`: `ONLINE` allowed when the gateway is ready, `branch.onlinePaymentEnabled`, and `total > 0` (CP-6); `PAY_AT_HOTEL` always.
-- Request rules: CX-1…7, GC-1…6, one open request of either kind per reservation, and the Q-96 closing rule.
+- Request rules: CX-1…7, GC-1…6, and the Q-96 closing rule. **Active request (owner decision 2026-11-23, review of M9-T2):** a request blocks a new cancellation request or guest change while it is `OPEN`, `APPROVED`, `REFUND_PENDING`, or `REFUND_FAILED` (the booking is still `CONFIRMED` in all four), and also while the payment is `REFUND_PENDING`. Only `REJECTED`, `COMPLETED`, and `CLOSED` are finished. A blocked phone cannot start either (Q-75).
+- **Absolute 24 hours (owner approved 2026-11-23):** the deadline is `check-in instant − 24 h` (an exact 24 hours), not the same wall clock time the day before; across a daylight saving change the local time of the deadline shifts by an hour. A request is allowed strictly before the deadline.
+- **Money matches:** a verified event whose amount is not a positive whole number, or differs from the payment, or whose currency is not `USD`, is a mismatch (the callback still answers 200 and changes nothing). `CANCEL_APPROVED` needs `PAY_AT_HOTEL` with `NOT_REQUIRED`, or `ONLINE` with `REFUNDED` (the state after the refund). A paid online change applies at once only when the new total equals the paid total (GC-4).
 - Pure, no I/O, tested with the unit suite (T-PAY-1…4, T-CXL-1…3).
 
 ### Decision 4. Online booking path and held messages (M9-T4)
@@ -206,7 +208,7 @@ Keeping the hold across a declined attempt (Q-95) matches how hosted checkouts b
 **State transitions**:
 
 - Reservation: `AWAITING_PAYMENT → CONFIRMED` (verified success) · `AWAITING_PAYMENT → PAYMENT_FAILED` (expiry, session closed, checkout creation failed) · `PAYMENT_FAILED → CONFIRMED` (late success, units free) · `CONFIRMED → CANCELLED` (approved request, staff cancellation; after refund when paid).
-- Payment: `INITIATED → SUCCEEDED | EXPIRED | FAILED`; `SUCCEEDED → REFUND_PENDING → REFUNDED | REFUND_FAILED`; `REFUND_FAILED → REFUND_PENDING` (retry).
+- Payment: `INITIATED → SUCCEEDED | EXPIRED | FAILED`; `EXPIRED | FAILED → SUCCEEDED` (late success, PY-5); `SUCCEEDED → REFUND_PENDING → REFUNDED | REFUND_FAILED`; `REFUND_FAILED → REFUND_PENDING` (retry). A late success that cannot be confirmed (PY-5) is automatic refund in two steps: `SUCCEEDED`, then `REFUND_PENDING`.
 - Cancellation request: `OPEN → APPROVED → COMPLETED` (unpaid) · `OPEN → APPROVED → REFUND_PENDING → COMPLETED | REFUND_FAILED → REFUND_PENDING` · `OPEN → REJECTED` · `OPEN → CLOSED` (Q-96).
 - Change request: `OPEN → APPROVED` (applied) · `OPEN → REJECTED` · `OPEN → CLOSED`; a failed approval re-check leaves it `OPEN` with `lastConflict`.
 

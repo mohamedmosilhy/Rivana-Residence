@@ -37,7 +37,7 @@ export type RichTextDocument = Readonly<{
   content: readonly Readonly<Record<string, unknown>>[];
 }>;
 
-// M8 domain mirrors of the persisted enums; payment transitions arrive in M9.
+// Domain mirrors of the persisted enums (M8 reservations, M9 payments and requests).
 export const RESERVATION_STATUSES = [
   "AWAITING_PAYMENT",
   "CONFIRMED",
@@ -62,6 +62,34 @@ export const RESERVATION_PAYMENT_STATUSES = [
 ] as const;
 export type ReservationPaymentStatus =
   (typeof RESERVATION_PAYMENT_STATUSES)[number];
+export const PAYMENT_STATUSES = [
+  "INITIATED",
+  "SUCCEEDED",
+  "EXPIRED",
+  "FAILED",
+  "REFUND_PENDING",
+  "REFUNDED",
+  "REFUND_FAILED",
+] as const;
+export type PaymentStatus = (typeof PAYMENT_STATUSES)[number];
+export const CANCELLATION_REQUEST_STATUSES = [
+  "OPEN",
+  "APPROVED",
+  "REJECTED",
+  "REFUND_PENDING",
+  "REFUND_FAILED",
+  "COMPLETED",
+  "CLOSED",
+] as const;
+export type CancellationRequestStatus =
+  (typeof CANCELLATION_REQUEST_STATUSES)[number];
+export const CANCELLATION_CLOSED_REASONS = [
+  "STAFF_CANCELLED",
+  "NO_SHOW",
+  "CHECKED_IN",
+] as const;
+export type CancellationClosedReason =
+  (typeof CANCELLATION_CLOSED_REASONS)[number];
 export const VERIFICATION_PURPOSES = ["BOOKING", "GUEST_SESSION"] as const;
 export type VerificationPurpose = (typeof VERIFICATION_PURPOSES)[number];
 export const SYNC_CHECKPOINT_KINDS = ["STARTED", "COMPLETED"] as const;

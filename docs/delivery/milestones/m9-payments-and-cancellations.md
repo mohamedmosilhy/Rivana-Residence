@@ -1,6 +1,6 @@
 # M9 — Online payments (provider neutral), payment holds, cancellation requests, refunds, and email verification
 
-Status: **In progress** (3/14 tasks accepted. M9-T1 was accepted on 2026-11-23.) Spec [0006](../../specs/0006-m9-payments-and-cancellations.md) and the task breakdown were approved on 2026-11-22 with Q-94…Q-97 and decisions D-A…D-E. M9-T9 merged into the tasks that send each message. The owner extended scope on 2026-11-17 with guest booking changes (M9-T10, T11, Q-83…Q-85), and on 2026-11-22 with provider neutral integrations (M9-T0b, T3, Q-92, ADR 030) and email verification as a fallback to WhatsApp (M9-T12, Q-93, ADR 031). Branch `m9-payments-and-cancellations`. [Milestone loop](./README.md#the-loop-every-milestone-follows)
+Status: **In progress** (4/14 tasks accepted. M9-T2 was accepted on 2026-11-23.) Spec [0006](../../specs/0006-m9-payments-and-cancellations.md) and the task breakdown were approved on 2026-11-22 with Q-94…Q-97 and decisions D-A…D-E. M9-T9 merged into the tasks that send each message. The owner extended scope on 2026-11-17 with guest booking changes (M9-T10, T11, Q-83…Q-85), and on 2026-11-22 with provider neutral integrations (M9-T0b, T3, Q-92, ADR 030) and email verification as a fallback to WhatsApp (M9-T12, Q-93, ADR 031). Branch `m9-payments-and-cancellations`. [Milestone loop](./README.md#the-loop-every-milestone-follows)
 
 ## Objective
 
@@ -53,7 +53,7 @@ Planned, reviewed, and accepted one task at a time ([agent-workflow.md](../../en
 | M9-T0 | Public surface for `src/application/auth`: one `index.ts` and D-8 extended to it (refactor, no behavior change; recommended in the M8-T0b review package, owner decision 2026-11-14) | Medium | M8 | Existing tests unchanged and green; D-8 test extended | Accepted (2026-11-22) |
 | M9-T0b | Adapter foundations (ADR 030) | Medium | T0 | AC 9, 10 | Accepted (2026-11-23) |
 | M9-T1 | Migration `payments_and_cancellations` (enum rename, branch switch, `Payment`, `PaymentEvent`, `CancellationRequest`, outbox `HELD`) | Critical | T0 | AC 1, 6, 14, 15; drift check | Accepted (2026-11-23) |
-| M9-T2 | Domain: payment transitions, `HoldPolicy`, `CancellationDeadline`, `PaymentMethodAvailability`, PY, CX, GC, Q-96 rules | Critical | T0 | AC 4, 6, 14, 15; T-PAY-1…4, T-CXL-1…3 | Not started |
+| M9-T2 | Domain: payment transitions, `HoldPolicy`, `CancellationDeadline`, `PaymentMethodAvailability`, PY, CX, GC, Q-96 rules | Critical | T0 | AC 4, 6, 14, 15; T-PAY-1…4, T-CXL-1…3 | Accepted (2026-11-23) |
 | M9-T3 | `PaymentGateway` port, registry, fake gateway, simulated checkout page, payment contract suite | Critical | T0b | AC 9, 10; T-ADP | Not started |
 | M9-T4 | Online booking path: `AWAITING_PAYMENT`, hold, held messages, checkout creation and failure, replay, in transaction expiry, P6 `paymentMethods`, A3 switch | Critical | T1, T2, T3 | AC 1, 4, 14; T-PAY-5 | Not started |
 | M9-T5 | Payment callback P8, idempotency, late success, mid milestone security review | Critical | T4 | AC 1, 2, 3, 5; C-12, C-13 | Not started |

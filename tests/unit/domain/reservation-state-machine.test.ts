@@ -11,6 +11,7 @@ import {
 import {
   RESERVATION_STATUSES,
   RESERVATION_SOURCES,
+  RESERVATION_PAYMENT_STATUSES,
 } from "@/domain/shared/types";
 import { LocalDate } from "@/domain/shared/local-date";
 import { StayRange } from "@/domain/shared/stay-range";
@@ -32,6 +33,85 @@ const actions: ReservationAction[] = [
   "MARK_NO_SHOW",
 ];
 
+describe("T-PAY-1…4: M9 payment and approved-cancellation transitions", () => {
+  const online = (changes: Partial<ReservationState> = {}) =>
+    state({
+      paymentMethod: "ONLINE",
+      paymentStatus: "AWAITING",
+      status: "AWAITING_PAYMENT",
+      ...changes,
+    });
+  const today = day("2026-11-10");
+  const m9Actions: ReservationAction[] = [
+    "PAYMENT_SUCCEEDED",
+    "HOLD_EXPIRED",
+    "CONFIRM_LATE_PAYMENT",
+    "CANCEL_APPROVED",
+  ];
+  const allowedTarget: Record<string, string | undefined> = {
+    "AWAITING_PAYMENT:PAYMENT_SUCCEEDED": "CONFIRMED",
+    "AWAITING_PAYMENT:HOLD_EXPIRED": "PAYMENT_FAILED",
+    "PAYMENT_FAILED:CONFIRM_LATE_PAYMENT": "CONFIRMED",
+    "CONFIRMED:CANCEL_APPROVED": "CANCELLED",
+  };
+  it.each(RESERVATION_STATUSES)(
+    "admits only the documented payment transitions from %s (online booking)",
+    (status) => {
+      for (const action of m9Actions) {
+        const result = ReservationStateMachine.transition(
+          online({ status, paymentStatus: "REFUNDED" }),
+          action,
+          today,
+        );
+        const target = allowedTarget[`${status}:${action}`];
+        expect(result.allowed).toBe(Boolean(target));
+        if (result.allowed) {
+          expect(result.status).toBe(target);
+          expect(result.consumesInventory).toBe(target === "CONFIRMED");
+        }
+      }
+    },
+  );
+  it("never applies payment transitions to pay-at-hotel bookings", () => {
+    for (const status of ["AWAITING_PAYMENT", "PAYMENT_FAILED"] as const)
+      for (const action of [
+        "PAYMENT_SUCCEEDED",
+        "HOLD_EXPIRED",
+        "CONFIRM_LATE_PAYMENT",
+      ] as const)
+        expect(
+          ReservationStateMachine.transition(
+            state({ status, paymentMethod: "PAY_AT_HOTEL" }),
+            action,
+            today,
+          ).allowed,
+        ).toBe(false);
+  });
+  it("CX-5: approved cancellation pairs the payment method with the payment state", () => {
+    const attempt = (
+      paymentMethod: ReservationState["paymentMethod"],
+      paymentStatus: ReservationState["paymentStatus"],
+    ) =>
+      ReservationStateMachine.transition(
+        state({ paymentMethod, paymentStatus }),
+        "CANCEL_APPROVED",
+        today,
+      ).allowed;
+    // Unpaid pay-at-hotel cancels at once; paid online only after the refund.
+    expect(attempt("PAY_AT_HOTEL", "NOT_REQUIRED")).toBe(true);
+    expect(attempt("ONLINE", "REFUNDED")).toBe(true);
+    for (const method of ["PAY_AT_HOTEL", "ONLINE"] as const)
+      for (const status of RESERVATION_PAYMENT_STATUSES)
+        if (
+          !(
+            (method === "PAY_AT_HOTEL" && status === "NOT_REQUIRED") ||
+            (method === "ONLINE" && status === "REFUNDED")
+          )
+        )
+          expect(attempt(method, status)).toBe(false);
+  });
+});
+
 describe("T-LIFE: pure M8 lifecycle", () => {
   it.each(RESERVATION_SOURCES)(
     "creates %s pay-at-hotel reservations as confirmed, never payment holds",
@@ -41,12 +121,20 @@ describe("T-LIFE: pure M8 lifecycle", () => {
         status: "CONFIRMED",
         consumesInventory: true,
       });
+    },
+  );
+  it("PY-1, PY-2: only website guests prepay, and the booking awaits payment", () => {
+    expect(ReservationStateMachine.create("WEBSITE", "ONLINE")).toEqual({
+      allowed: true,
+      status: "AWAITING_PAYMENT",
+      consumesInventory: true,
+    });
+    for (const source of ["STAFF", "EXTERNAL"] as const)
       expect(ReservationStateMachine.create(source, "ONLINE")).toEqual({
         allowed: false,
         code: "PAYMENT_METHOD_UNAVAILABLE",
       });
-    },
-  );
+  });
   it.each(RESERVATION_STATUSES)(
     "checks every M8 action from %s without reversals",
     (status) => {
