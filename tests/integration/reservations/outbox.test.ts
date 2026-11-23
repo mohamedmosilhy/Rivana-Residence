@@ -13,6 +13,7 @@ import {
   PrismaReservationMessageStore,
 } from "@/infrastructure/db/prisma/repositories/reservations/notifications/outbox";
 import type { Prisma } from "@/generated/prisma/client";
+import { FAKE_EMAIL_REJECTED_ADDRESS } from "@/infrastructure/email/fake-reservation-email";
 import {
   createTestClient,
   resetDatabase,
@@ -385,11 +386,12 @@ it("expires consumed or expired hashes only, retains admission history and is re
   ).toMatchObject({ manageTokenHash: "live" });
 });
 
-it("runs both CLI jobs; captured stdout and stderr expose only counts for successful and refused delivery", async () => {
+it("AC-9/10: the CLI dispatches through both fakes and exposes only counts", async () => {
   const env: NodeJS.ProcessEnv = {
     ...process.env,
     NODE_ENV: "test",
     WHATSAPP_PROVIDER: "fake",
+    EMAIL_PROVIDER: "fake",
     CONTACT_DELIVERY: "none",
     DATABASE_URL: testDatabaseUrl().url,
     DIRECT_DATABASE_URL: testDatabaseUrl().url,
@@ -419,6 +421,18 @@ it("runs both CLI jobs; captured stdout and stderr expose only counts for succes
       data: { recipient, availableAt: new Date(0) },
     });
   }
+  await db.notificationOutbox.createMany({
+    data: [
+      { id: "email-ok", recipient: email },
+      { id: "email-refused", recipient: FAKE_EMAIL_REJECTED_ADDRESS },
+    ].map((message) => ({
+      ...message,
+      channel: "EMAIL" as const,
+      kind: "reservation.manage-link",
+      payload: variables,
+      availableAt: new Date(0),
+    })),
+  });
   const run = (command: string) => {
     const { stdout, stderr, status } = spawnSync(
       "npm",
@@ -429,17 +443,19 @@ it("runs both CLI jobs; captured stdout and stderr expose only counts for succes
     expect(stderr).toBe("");
     return JSON.parse(stdout);
   };
-  expect(run("outbox")).toEqual({ sent: 1, failed: 1, stale: 0, retried: 0 });
-  expect(
-    await db.notificationOutbox.findUniqueOrThrow({ where: { id: "refused" } }),
-  ).toMatchObject({
-    status: "FAILED",
-    lastError: "PROVIDER_REJECTED",
-    payload: {},
-  });
-  expect(
-    await db.notificationOutbox.findUniqueOrThrow({ where: { id: "ok" } }),
-  ).toMatchObject({ status: "SENT", payload: {} });
+  expect(run("outbox")).toEqual({ sent: 2, failed: 2, stale: 0, retried: 0 });
+  for (const id of ["refused", "email-refused"])
+    expect(
+      await db.notificationOutbox.findUniqueOrThrow({ where: { id } }),
+    ).toMatchObject({
+      status: "FAILED",
+      lastError: "PROVIDER_REJECTED",
+      payload: {},
+    });
+  for (const id of ["ok", "email-ok"])
+    expect(
+      await db.notificationOutbox.findUniqueOrThrow({ where: { id } }),
+    ).toMatchObject({ status: "SENT", payload: {} });
   await db.phoneVerification.create({
     data: {
       id: "expired",

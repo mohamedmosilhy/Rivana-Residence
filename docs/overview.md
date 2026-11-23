@@ -30,7 +30,7 @@ The hotel's own operational system (PMS) is **not connected** to Rivana. Staff k
 
 - Phases 0–11 accepted (Phases 0–10 on 2026-09-25/26, Phase 11 on 2026-10-24).
 - Reservation milestones M0–M3 (discovery, requirements, design, agent setup) accepted (2026-10-24).
-- Client decisions of 2026-11-06 (immediate confirmation, online payment and refunds, branch websites, rooms and apartments, services, coupons, VAT, WhatsApp messaging, popup removal) are recorded in ADRs 024–028 and the question register; the forward plan was replanned as M4–M15 ([milestone briefs](./delivery/milestones/README.md)). The plan was approved by the project owner on 2026-11-06; M4–M7 accepted; M8 in progress (3/15 tasks accepted, including the storage foundation M8-T1 on 2026-11-15); M9 onward not started.
+- Client decisions of 2026-11-06 (immediate confirmation, online payment and refunds, branch websites, rooms and apartments, services, coupons, VAT, WhatsApp messaging, popup removal) are recorded in ADRs 024–028 and the question register. The project owner approved the M4–M15 plan on 2026-11-06. M4–M8 are accepted and M9 is in progress. [Milestone briefs](./delivery/milestones/README.md)
 - Launch: the branch websites and reservations go live together (Phase 12 + M15, decision Q-16).
 
 The full plan is [delivery/roadmap.md](./delivery/roadmap.md); open decisions are in [requirements/assumptions-and-open-questions.md](./requirements/assumptions-and-open-questions.md).

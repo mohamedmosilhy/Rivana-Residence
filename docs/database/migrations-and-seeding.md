@@ -51,6 +51,8 @@ Never seed real guest data or real credentials. Demo staff accounts for Receptio
 
 ## Scheduled jobs (cron)
 
+Set `NODE_ENV=production` in the environment of production reservation cron jobs so the provider validation rejects fake adapters.
+
 - `npm run reservations -- outbox` every minute as the app user from the application directory. Processes up to 50 reservation emails and WhatsApp messages per invocation. Overlapping invocations skip locked rows. A crash after provider acceptance may duplicate a delivery. The JSON summary reports sent, failed, retried and stale completion counts.
 - `npm run reservations -- expire-holds` every minute (M9): moves `AWAITING_PAYMENT` past `holdExpiresAt` to `PAYMENT_FAILED`, releasing units and coupon redemptions.
 - `npm run reservations -- reconcile-payments` every 5 minutes (M9): asks the gateway (`getTransaction`) for the result of sessions that expired with no callback.

@@ -6,8 +6,6 @@ import type {
   WhatsAppTransportResult,
 } from "@/application/notifications";
 
-import { capDetail, sanitizeProviderText } from "./sanitize";
-
 export const META_TIMEOUT_MS = 10_000;
 
 /** Graph error codes Meta uses for throttling and spam limits. */
@@ -23,14 +21,12 @@ export type MetaCloudTransportConfig = Readonly<{
 
 type GraphError = Readonly<{
   code?: unknown;
-  message?: unknown;
-  error_data?: Readonly<{ details?: unknown }>;
 }>;
 
 /**
  * Meta WhatsApp Cloud API: one template message per call. The access token
- * lives only here. Errors are mapped to the port's failure codes, and their
- * text is sanitized: no token, phone, code, or parameter ever leaves.
+ * lives only here. Failure details keep the HTTP status and numeric error
+ * code. Provider text can echo message content and stays inside the adapter.
  */
 export class MetaCloudWhatsAppTransport implements WhatsAppTransport {
   constructor(private readonly config: MetaCloudTransportConfig) {}
@@ -71,13 +67,12 @@ export class MetaCloudWhatsAppTransport implements WhatsAppTransport {
             detail: "WhatsApp sent an unexpected response.",
           };
     }
-    const error = graphError(payload);
-    const detail = this.describe(response.status, error);
-    const providerCode =
-      typeof error?.code === "number" ? error.code : undefined;
+    const providerCode = graphErrorCode(payload);
+    const codeDetail = providerCode === undefined ? "" : ` ${providerCode}`;
+    const detail = `WhatsApp error${codeDetail} (HTTP ${response.status})`;
     if (
       response.status === 429 ||
-      (typeof error?.code === "number" && RATE_LIMIT_CODES.has(error.code))
+      (providerCode !== undefined && RATE_LIMIT_CODES.has(providerCode))
     ) {
       return { ok: false, code: "RATE_LIMITED", detail, providerCode };
     }
@@ -85,23 +80,6 @@ export class MetaCloudWhatsAppTransport implements WhatsAppTransport {
       return { ok: false, code: "UNAVAILABLE", detail, providerCode };
     }
     return { ok: false, code: "PROVIDER_REJECTED", detail, providerCode };
-  }
-
-  private describe(status: number, error: GraphError | null): string {
-    const code = typeof error?.code === "number" ? ` ${error.code}` : "";
-    const message = typeof error?.message === "string" ? error.message : "";
-    const details =
-      typeof error?.error_data?.details === "string"
-        ? error.error_data.details
-        : "";
-    // Only Meta's free text is sanitized; the numeric code and status are ours.
-    const text = sanitizeProviderText(
-      [message, details].filter(Boolean).join(" "),
-      [this.config.accessToken],
-    );
-    return capDetail(
-      `WhatsApp error${code} (HTTP ${status})${text ? `: ${text}` : ""}`,
-    );
   }
 }
 
@@ -143,10 +121,16 @@ function messageId(payload: unknown): string | null {
   return typeof id === "string" && id.length > 0 ? id.slice(0, 200) : null;
 }
 
-function graphError(payload: unknown): GraphError | null {
-  if (typeof payload !== "object" || payload === null) return null;
+function graphErrorCode(payload: unknown): number | undefined {
+  if (typeof payload !== "object" || payload === null) return undefined;
   const error = (payload as { error?: unknown }).error;
-  return typeof error === "object" && error !== null
-    ? (error as GraphError)
-    : null;
+  if (typeof error !== "object" || error === null) return undefined;
+  const code = (error as GraphError).code;
+  if (
+    typeof code === "number" &&
+    Number.isSafeInteger(code) &&
+    code >= 0 &&
+    code <= 999999
+  )
+    return code;
 }

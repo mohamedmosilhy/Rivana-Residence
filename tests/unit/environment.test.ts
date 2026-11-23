@@ -2,6 +2,13 @@ import { describe, expect, it } from "vitest";
 
 import { parseServerEnv } from "@/lib/env/schema";
 
+const production = {
+  NODE_ENV: "production",
+  MEDIA_STORAGE_ROOT: "/srv/rivana/media",
+  DATABASE_URL: "postgresql://rivana@example.test/rivana",
+  BETTER_AUTH_SECRET: "s".repeat(48),
+};
+
 describe("server environment", () => {
   it.each([undefined, "", "  "])(
     "treats an empty optional phone secret as unconfigured: %j",
@@ -55,14 +62,9 @@ describe("server environment", () => {
   });
 
   it("requires a strong auth secret in production", () => {
-    const production = {
-      NODE_ENV: "production",
-      MEDIA_STORAGE_ROOT: "/srv/rivana/media",
-      DATABASE_URL: "postgresql://rivana@example.test/rivana",
-    };
-    expect(() => parseServerEnv(production)).toThrowError(
-      /BETTER_AUTH_SECRET is required in production/,
-    );
+    expect(() =>
+      parseServerEnv({ ...production, BETTER_AUTH_SECRET: undefined }),
+    ).toThrowError(/BETTER_AUTH_SECRET is required in production/);
     expect(() =>
       parseServerEnv({ ...production, BETTER_AUTH_SECRET: "too-short" }),
     ).toThrowError(/at least 32 characters/);
@@ -77,32 +79,42 @@ describe("server environment", () => {
     expect(() => parseServerEnv({ AUTH_TRUST_PROXY_HEADERS: "yes" })).toThrow();
   });
 
-  // M8-T4 (spec 0005 Decision 6): the fake WhatsApp adapter never runs in
-  // production; development and tests default to it.
-  it("defaults WhatsApp to the fake outside production and Meta in it", () => {
-    expect(parseServerEnv({}).WHATSAPP_PROVIDER).toBe("fake");
-    expect(parseServerEnv({}).WHATSAPP_GRAPH_VERSION).toBe("v23.0");
-    expect(
-      parseServerEnv({
-        NODE_ENV: "production",
-        MEDIA_STORAGE_ROOT: "/srv/rivana/media",
-        DATABASE_URL: "postgresql://rivana@example.test/rivana",
-        BETTER_AUTH_SECRET: "s".repeat(48),
-      }).WHATSAPP_PROVIDER,
-    ).toBe("meta");
+  it.each([undefined, "development", "test"])(
+    "defaults all provider selections to fake outside production (%s)",
+    (NODE_ENV) => {
+      expect(parseServerEnv({ NODE_ENV })).toMatchObject({
+        PAYMENT_PROVIDER: "fake",
+        EMAIL_PROVIDER: "fake",
+        WHATSAPP_PROVIDER: "fake",
+        WHATSAPP_GRAPH_VERSION: "v23.0",
+      });
+    },
+  );
+
+  it("allows a production deployment without provider credentials", () => {
+    expect(parseServerEnv(production)).toMatchObject({
+      PAYMENT_PROVIDER: undefined,
+      EMAIL_PROVIDER: "smtp",
+      WHATSAPP_PROVIDER: "meta",
+    });
   });
 
-  it("refuses the fake WhatsApp provider in production", () => {
-    expect(() =>
-      parseServerEnv({
-        NODE_ENV: "production",
-        MEDIA_STORAGE_ROOT: "/srv/rivana/media",
-        DATABASE_URL: "postgresql://rivana@example.test/rivana",
-        BETTER_AUTH_SECRET: "s".repeat(48),
-        WHATSAPP_PROVIDER: "fake",
-      }),
-    ).toThrowError(/WHATSAPP_PROVIDER=fake is not allowed in production/);
-  });
+  // AC-9, T-ADP. Each key must be rejected on its own.
+  it.each(["PAYMENT_PROVIDER", "EMAIL_PROVIDER", "WHATSAPP_PROVIDER"])(
+    "refuses %s=fake in production",
+    (key) => {
+      expect(() => parseServerEnv({ ...production, [key]: "fake" })).toThrow(
+        `${key}=fake is not allowed in production.`,
+      );
+    },
+  );
+
+  it.each(["PAYMENT_PROVIDER", "EMAIL_PROVIDER"])(
+    "refuses an unsupported value for %s",
+    (key) => {
+      expect(() => parseServerEnv({ [key]: "unknown" })).toThrow(key);
+    },
+  );
 
   it("checks the Graph API version format", () => {
     expect(() => parseServerEnv({ WHATSAPP_GRAPH_VERSION: "latest" })).toThrow(

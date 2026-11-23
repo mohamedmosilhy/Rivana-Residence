@@ -49,6 +49,8 @@ const serverEnvSchema = z
       .transform((value) => value === "true"),
     SMTP_USER: z.string().trim().min(1).optional(),
     SMTP_PASSWORD: z.string().min(1).optional(),
+    EMAIL_PROVIDER: z.enum(["smtp", "fake"]).optional(),
+    PAYMENT_PROVIDER: z.literal("fake").optional(),
     // WhatsApp (ADR 028, spec 0005 Decision 6). "fake" records messages in
     // memory for development and tests and is refused in production; the
     // default is "meta" in production and "fake" elsewhere. The access
@@ -63,17 +65,31 @@ const serverEnvSchema = z
   })
   .transform((value) => ({
     ...value,
+    EMAIL_PROVIDER:
+      value.EMAIL_PROVIDER ??
+      (value.NODE_ENV === "production" ? "smtp" : "fake"),
+    PAYMENT_PROVIDER:
+      value.PAYMENT_PROVIDER ??
+      (value.NODE_ENV === "production" ? undefined : "fake"),
     WHATSAPP_PROVIDER:
       value.WHATSAPP_PROVIDER ??
       (value.NODE_ENV === "production" ? "meta" : "fake"),
   }))
   .superRefine((value, context) => {
-    if (value.NODE_ENV === "production" && value.WHATSAPP_PROVIDER === "fake") {
-      context.addIssue({
-        code: "custom",
-        message: "WHATSAPP_PROVIDER=fake is not allowed in production.",
-        path: ["WHATSAPP_PROVIDER"],
-      });
+    if (value.NODE_ENV === "production") {
+      for (const key of [
+        "PAYMENT_PROVIDER",
+        "WHATSAPP_PROVIDER",
+        "EMAIL_PROVIDER",
+      ] as const) {
+        if (value[key] === "fake") {
+          context.addIssue({
+            code: "custom",
+            message: `${key}=fake is not allowed in production.`,
+            path: [key],
+          });
+        }
+      }
     }
     if (value.NODE_ENV === "production" && !value.MEDIA_STORAGE_ROOT) {
       context.addIssue({

@@ -3,15 +3,10 @@ import { describe, expect, it, vi } from "vitest";
 
 import type { WhatsAppDelivery } from "@/application/notifications";
 import { PhoneNumber } from "@/domain/guests";
-import {
-  FAKE_WHATSAPP_REJECTED_NUMBER,
-  FakeWhatsAppTransport,
-} from "@/infrastructure/whatsapp/fake-transport";
 import { MetaCloudWhatsAppTransport } from "@/infrastructure/whatsapp/meta-cloud-transport";
-import { sanitizeProviderText } from "@/infrastructure/whatsapp/sanitize";
 
-// M8-T4: the Meta Cloud API transport over an injected fetch, the fake, and
-// the sanitizer that keeps tokens, phones, and codes out of stored errors.
+// Provider-specific behavior over an injected fetch. Both transports also
+// run the shared contract in tests/contract/whatsapp-transport.test.ts.
 
 const TOKEN = "EAAG-super-secret-token-value";
 const PHONE = "+12025550101";
@@ -169,49 +164,14 @@ describe("MetaCloudWhatsAppTransport", () => {
   });
 });
 
-describe("sanitizeProviderText", () => {
-  it("masks secrets and long digit runs, drops controls, and caps length", () => {
-    const text = sanitizeProviderText(
-      `bad\u0000 token SECRET for +20 100 123 4567 code 123456 id 42 ${"x".repeat(300)}`,
-      ["SECRET"],
-    );
-    expect(text).toMatch(
-      /^bad token \[secret\] for \[number\] code \[number\] id 42 x+…$/,
-    );
-    expect(text.length).toBe(200);
-  });
-});
-
-describe("sanitizeProviderText phone formats", () => {
-  it.each([
-    "(202) 555-0199",
-    "202.555.0199",
-    "+1 (202) 555-0199",
-    "202/555/0199",
-  ])("masks %s", (phone) => {
-    const text = sanitizeProviderText(`Cannot reach ${phone} now`);
-    expect(text).toBe("Cannot reach [number] now");
-  });
-
-  it("keeps short numbers such as error codes", () => {
-    expect(sanitizeProviderText("error 131026 (HTTP 400) id 42")).toContain(
-      "HTTP 400",
-    );
-  });
-});
-
-describe("FakeWhatsAppTransport", () => {
-  it("records deliveries in memory and refuses the reserved number", async () => {
-    const fake = new FakeWhatsAppTransport();
-    expect(await fake.deliver(delivery())).toEqual({
-      ok: true,
-      providerMessageId: "fake-1",
-    });
-    expect(
-      await fake.deliver(
-        delivery({ to: PhoneNumber.parse(FAKE_WHATSAPP_REJECTED_NUMBER) }),
-      ),
-    ).toMatchObject({ ok: false, code: "PROVIDER_REJECTED" });
-    expect(fake.deliveries).toHaveLength(1);
+it("omits an out-of-range number in the provider error code field", async () => {
+  const { meta } = transport(() =>
+    json(400, { error: { code: Number(PHONE) } }),
+  );
+  expect(await meta.deliver(delivery())).toEqual({
+    ok: false,
+    code: "PROVIDER_REJECTED",
+    detail: "WhatsApp error (HTTP 400)",
+    providerCode: undefined,
   });
 });

@@ -306,7 +306,7 @@ Execution order (ids kept from the brief): T0b → T1 → T2 → T3 → T4 → T
 | Task | Title | Risk | Depends on | Covers | Status |
 | --- | --- | --- | --- | --- | --- |
 | M9-T0 | Public surface for `auth` | Medium | M8 | D-8 | Accepted (2026-11-22) |
-| M9-T0b | Adapter foundations (ADR 030) | Medium | T0 | AC 9, 10 | Not started |
+| M9-T0b | Adapter foundations (ADR 030) | Medium | T0 | AC 9, 10 | [Task status in the brief](../delivery/milestones/m9-payments-and-cancellations.md#task-breakdown) |
 | M9-T1 | Migration `payments_and_cancellations` (enum rename, branch switch, `Payment`, `PaymentEvent`, `CancellationRequest`, outbox `HELD`) | Critical | T0 | AC 1, 6, 14, 15; drift check | Not started |
 | M9-T2 | Domain: payment transitions, `HoldPolicy`, `CancellationDeadline`, `PaymentMethodAvailability`, PY, CX, GC, Q-96 rules | Critical | T0 | AC 4, 6, 14, 15; T-PAY-1…4, T-CXL-1…3 | Not started |
 | M9-T3 | `PaymentGateway` port, registry, fake gateway, simulated checkout page, payment contract suite | Critical | T0b | AC 9, 10; T-ADP | Not started |

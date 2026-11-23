@@ -1,6 +1,6 @@
 # Quality gates
 
-The checks every change must pass, the exact commands, and the most recent recorded results. A change is green only when format, lint, typecheck, unit, integration, build, and the Chromium E2E suites all pass on the final tree.
+The checks for each risk tier, the commands, and the most recent recorded results. Each task runs its applicable gates. Milestone close runs the full set.
 
 ## Commands
 
@@ -9,10 +9,10 @@ The checks every change must pass, the exact commands, and the most recent recor
 | Formatting | `npm run format:check` | Prettier; `docs/`, `design/`, `.claude/`, `.agents/` are ignored |
 | Lint (incl. boundary rules) | `npm run lint` | ESLint 9 flat config |
 | Type check | `npm run typecheck` | `tsc --noEmit`, strict + `noUncheckedIndexedAccess` + `exactOptionalPropertyTypes` |
-| Unit and component tests | `npm run test` | Vitest, jsdom, `tests/unit/**` |
+| Unit, component, and adapter contract tests | `npm run test` | Vitest with jsdom or Node, `tests/unit/**` and `tests/contract/**` |
 | Integration tests | `TEST_DATABASE_URL=postgresql://<user>@127.0.0.1:5432/rivana_test npm run test:integration` | Drops, recreates, and migrates the `*_test` database |
 | Production build | `npm run build` | |
-| Aggregate | `npm run check` | format, lint, typecheck, unit, build (not integration or E2E) |
+| Aggregate | `npm run check` | Format, lint, typecheck, unit and contract tests, and build |
 | E2E (Chromium projects) | `E2E_DATABASE_URL=postgresql://<user>@127.0.0.1:5432/rivana_e2e_test npm run test:e2e` | Builds and starts on :3100 |
 | E2E cross-browser | `CROSS_BROWSER=1 npx playwright test --project=webkit-*` | Firefox cannot start on macOS 27 locally; run it in Linux CI |
 | Lighthouse | `CHROME_PATH=… npm run lighthouse` / `lighthouse:mobile` | |
@@ -39,7 +39,11 @@ Record exact commands and counts in the review package. If a gate cannot run, sa
 
 The owner selected Node **26.13.0 LTS** for the Mac, CI, and hosting. On macOS with npm **11.20.0**, clean `npm ci --no-audit` and `npm run check` passed (format, lint, typecheck, **67 unit files / 1,373 tests**, production build). The full PostgreSQL integration suite passed **29 files / 391 tests**; full Chromium E2E passed **175 tests**, with **30 intentionally skipped**. Independent review by `gpt-6-astra` approved with zero findings. The [runtime report](../delivery/reports/node-26-runtime-alignment.md) records exact commands, unchanged development audit findings, and the nonfatal upstream Tailwind loader deprecation under Node 26. Those Tailwind and media tracing warnings were subsequently resolved in M6-T10. These results do not replace the historical task acceptance evidence below or claim remote Linux CI has run.
 
-## Latest accepted task results (2026-11-22, M8-T12)
+## Latest accepted task results (2026-11-23, M9-T0b)
+
+`npm run check` passed formatting, lint, typecheck, 2,266 unit and contract tests across 105 files, and the production build. `npm run test:integration -- --reporter=dot` passed 855 PostgreSQL tests across 53 files. The outbox CLI check verified both fake adapters and payload scrubbing. Production smoke checks rejected each fake flag, and the client bundle scan found none of the provider markers checked. GPT-6.2 Astra approved with zero findings after independently running 46 tests. [Task log](../delivery/reports/m9-payments-and-cancellations.md#task-log) · [Independent review](../reviews/2026-11-23-m9-t0b.md)
+
+## Previous accepted task results (2026-11-22, M8-T12)
 
 `npm run check` passed formatting, lint, typecheck, 2,240 unit tests across 101 files, and the production build. `npm run test:integration -- --reporter=dot` passed 855 tests across 53 files. The dedicated checkpoint test passed 20 rounds of overlapping writes. `npm run test:e2e` passed 212 tests with 33 intentional skips. The live two-session check confirmed the shared deadline, the S20 completion timestamp, the S13 backlog change, and both `400 INVALID_QUERY` refusals. GPT-6.2 Astra approved the recheck with zero open findings. [Task log](../delivery/reports/m8-reservations.md#task-log) and [independent review](../reviews/2026-11-22-m8-t12.md).
 

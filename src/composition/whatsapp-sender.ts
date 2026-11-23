@@ -24,6 +24,21 @@ const unconfiguredTransport: WhatsAppTransport = {
 
 let transport: WhatsAppTransport | undefined;
 
+function whatsAppTransportConfig() {
+  const env = getServerEnv();
+  if (env.WHATSAPP_PROVIDER === "fake") return { mode: "fake" } as const;
+  if (!env.WHATSAPP_ACCESS_TOKEN) return { mode: "unconfigured" } as const;
+  return {
+    mode: "real",
+    accessToken: env.WHATSAPP_ACCESS_TOKEN,
+    graphVersion: env.WHATSAPP_GRAPH_VERSION,
+  } as const;
+}
+
+export function whatsAppTransportReadiness() {
+  return whatsAppTransportConfig().mode;
+}
+
 /**
  * The process wide transport. With `WHATSAPP_PROVIDER=fake` (development and
  * tests; refused in production) it is one in memory fake, so tests can read
@@ -31,13 +46,13 @@ let transport: WhatsAppTransport | undefined;
  */
 export function whatsAppTransport(): WhatsAppTransport {
   if (transport) return transport;
-  const env = getServerEnv();
-  if (env.WHATSAPP_PROVIDER === "fake") {
+  const config = whatsAppTransportConfig();
+  if (config.mode === "fake") {
     transport = new FakeWhatsAppTransport();
-  } else if (env.WHATSAPP_ACCESS_TOKEN) {
+  } else if (config.mode === "real") {
     transport = new MetaCloudWhatsAppTransport({
-      accessToken: env.WHATSAPP_ACCESS_TOKEN,
-      graphVersion: env.WHATSAPP_GRAPH_VERSION,
+      accessToken: config.accessToken,
+      graphVersion: config.graphVersion,
     });
   } else {
     transport = unconfiguredTransport;
@@ -47,8 +62,7 @@ export function whatsAppTransport(): WhatsAppTransport {
 
 /** Use cases see only whether the token exists, never its value. */
 function accessTokenConfigured(): boolean {
-  const env = getServerEnv();
-  return env.WHATSAPP_PROVIDER === "fake" || Boolean(env.WHATSAPP_ACCESS_TOKEN);
+  return whatsAppTransportReadiness() !== "unconfigured";
 }
 
 export function whatsAppSetupReader() {
