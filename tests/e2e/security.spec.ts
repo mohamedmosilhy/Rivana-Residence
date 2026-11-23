@@ -77,6 +77,18 @@ test("admin responses are private and never indexed", async ({ request }) => {
   );
 });
 
+test("production hides the simulated checkout page and form endpoint", async ({
+  request,
+}) => {
+  const checkout = "/dev/fake-checkout/m9-t3-production-probe";
+  expect((await request.get(checkout)).status()).toBe(404);
+  expect(
+    (
+      await request.post(`${checkout}/submit`, { form: { action: "pay" } })
+    ).status(),
+  ).toBe(404);
+});
+
 test("static files and media keep their own strict policies", async ({
   request,
 }) => {

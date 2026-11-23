@@ -116,6 +116,28 @@ describe("server environment", () => {
     },
   );
 
+  it.each([undefined, "", " "])(
+    "allows no fake payment secret (%j)",
+    (value) => {
+      expect(
+        parseServerEnv({ PAYMENT_FAKE_SECRET: value }).PAYMENT_FAKE_SECRET,
+      ).toBeUndefined();
+    },
+  );
+
+  it("preserves a configured fake payment secret and rejects a short one without exposing it", () => {
+    const value = "  a-fake-payment-secret-with-spaces  ";
+    expect(
+      parseServerEnv({ PAYMENT_FAKE_SECRET: value }).PAYMENT_FAKE_SECRET,
+    ).toBe(value);
+    expect(() =>
+      parseServerEnv({ PAYMENT_FAKE_SECRET: "short-demo-secret" }),
+    ).toThrow(/PAYMENT_FAKE_SECRET/);
+    expect(() =>
+      parseServerEnv({ PAYMENT_FAKE_SECRET: "short-demo-secret" }),
+    ).not.toThrow(/short-demo-secret/);
+  });
+
   it("checks the Graph API version format", () => {
     expect(() => parseServerEnv({ WHATSAPP_GRAPH_VERSION: "latest" })).toThrow(
       /Graph API version/,

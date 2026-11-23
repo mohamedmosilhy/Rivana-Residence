@@ -63,6 +63,13 @@ Staff with more than one branch get a branch switcher in the shell that sets `?b
 
 The **sync reminder** is part of the shell, not a page: on every dashboard page, receptionists of a branch that is due get the sound and pop-up (FR-OPS-6).
 
+## Development checkout
+
+| Route | Purpose | Status |
+| --- | --- | --- |
+| `/dev/fake-checkout/[paymentId]` | View a registered checkout and select a payment or refund scenario | Implemented (M9-T3). Returns `404` in production |
+| `POST /dev/fake-checkout/[paymentId]/submit` | Apply a simulator action and send any resulting signed callback to the configured app origin | Implemented (M9-T3). Returns `404` in production |
+
 ## Route Handlers and special files
 
 | Route | Purpose | Status |

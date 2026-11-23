@@ -51,6 +51,11 @@ const serverEnvSchema = z
     SMTP_PASSWORD: z.string().min(1).optional(),
     EMAIL_PROVIDER: z.enum(["smtp", "fake"]).optional(),
     PAYMENT_PROVIDER: z.literal("fake").optional(),
+    PAYMENT_FAKE_SECRET: z.preprocess(
+      (value) =>
+        typeof value === "string" && value.trim() === "" ? undefined : value,
+      z.string().min(32).optional(),
+    ),
     // WhatsApp (ADR 028, spec 0005 Decision 6). "fake" records messages in
     // memory for development and tests and is refused in production; the
     // default is "meta" in production and "fake" elsewhere. The access

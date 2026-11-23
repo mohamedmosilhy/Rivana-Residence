@@ -16,6 +16,7 @@ beforeEach(() => {
     "EMAIL_PROVIDER",
     "WHATSAPP_PROVIDER",
     "PAYMENT_PROVIDER",
+    "PAYMENT_FAKE_SECRET",
     "WHATSAPP_ACCESS_TOKEN",
     ...Object.keys(smtpSettings),
   ])
@@ -24,7 +25,7 @@ beforeEach(() => {
 
 afterEach(() => vi.unstubAllEnvs());
 
-it("reports usable fakes as fake and leaves payment unconfigured before registration", async () => {
+it("reports usable fakes as fake", async () => {
   const { readProviderReadiness } = await import(
     "@/composition/provider-readiness"
   );
@@ -35,7 +36,7 @@ it("reports usable fakes as fake and leaves payment unconfigured before registra
     "@/infrastructure/email/fake-reservation-email"
   );
   expect(readProviderReadiness()).toEqual({
-    payment: "unconfigured",
+    payment: "fake",
     whatsapp: "fake",
     email: "fake",
   });
@@ -60,7 +61,7 @@ it("reports real transport readiness from complete selected configuration", asyn
     "@/infrastructure/email/reservation-email"
   );
   expect(readProviderReadiness()).toEqual({
-    payment: "unconfigured",
+    payment: "fake",
     whatsapp: "real",
     email: "real",
   });
@@ -82,7 +83,7 @@ it.each(Object.keys(smtpSettings))(
       "@/composition/reservation-email"
     );
     expect(readProviderReadiness()).toEqual({
-      payment: "unconfigured",
+      payment: "fake",
       whatsapp: "unconfigured",
       email: "unconfigured",
     });
@@ -96,3 +97,19 @@ it.each(Object.keys(smtpSettings))(
     ).toEqual({ ok: false, code: "NOT_CONFIGURED" });
   },
 );
+
+it("leaves payments unconfigured in production without a registered gateway", async () => {
+  vi.stubEnv("NODE_ENV", "production");
+  vi.stubEnv("MEDIA_STORAGE_ROOT", "/srv/rivana/media");
+  vi.stubEnv("DATABASE_URL", "postgresql://rivana@example.test/rivana");
+  vi.stubEnv("BETTER_AUTH_SECRET", "s".repeat(48));
+  const { readProviderReadiness } = await import(
+    "@/composition/provider-readiness"
+  );
+  const { paymentGateway, developmentPaymentCheckout } = await import(
+    "@/composition/payment-gateway"
+  );
+  expect(readProviderReadiness().payment).toBe("unconfigured");
+  expect(paymentGateway()).toBeUndefined();
+  expect(developmentPaymentCheckout()).toBeUndefined();
+});
