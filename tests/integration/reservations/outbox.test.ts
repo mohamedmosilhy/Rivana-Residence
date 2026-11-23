@@ -433,6 +433,11 @@ it("AC-9/10: the CLI dispatches through both fakes and exposes only counts", asy
       availableAt: new Date(0),
     })),
   });
+  await pending("held");
+  await db.notificationOutbox.update({
+    where: { id: "held" },
+    data: { status: "HELD", availableAt: new Date(0) },
+  });
   const run = (command: string) => {
     const { stdout, stderr, status } = spawnSync(
       "npm",
@@ -456,6 +461,14 @@ it("AC-9/10: the CLI dispatches through both fakes and exposes only counts", asy
     expect(
       await db.notificationOutbox.findUniqueOrThrow({ where: { id } }),
     ).toMatchObject({ status: "SENT", payload: {} });
+  expect(
+    await db.notificationOutbox.findUniqueOrThrow({ where: { id: "held" } }),
+  ).toMatchObject({
+    status: "HELD",
+    attempts: 0,
+    sentAt: null,
+    payload: variables,
+  });
   await db.phoneVerification.create({
     data: {
       id: "expired",

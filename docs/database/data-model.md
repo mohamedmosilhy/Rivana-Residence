@@ -29,14 +29,15 @@ The implemented schema is `prisma/schema.prisma` (9 migrations; M4 added `…_st
 | Pricing | `RoomBaseRate`, `RatePeriod` (M6-T3) | Implemented: positive `INTEGER` cents, explicit `USD`, `RatePeriod_no_overlap` (GiST exclusion over active periods per listing) |
 | Commercial | `ServiceOffering`, `Coupon`, `CouponBranch`, `CommercialSettings` | Implemented (M7-T3): service price units and child pricing, positive USD amounts, case-insensitive coupon uniqueness and value/window/limit checks, branch joins, singleton VAT 0–10000 basis points inserted at 1500; service and VAT management APIs are implemented (T4), coupon management APIs are implemented (T5); quote composition remains T6 |
 | Reservations | `Reservation`, `ReservationRoom`, `ReservationNight`, `ReservationService`, `CouponRedemption`, `ReservationChange`, `BranchSyncCheckpoint` | Storage, domain rules, and consumption reader implemented in M8-T1 to T3. Website creation implemented in M8-T7b. Staff and external creation plus scoped reads implemented in M8-T8, which adds nullable `Reservation.externalChannel`. M8-T9 migration `reservation_changes` adds `Reservation.changeSeq`, `Reservation.pmsUpdatePendingSince` (CHECK: only after hotel-system entry) and the append-only `ReservationChange` table (unique `(reservationId, seq)`, composite FK on branch, override amounts and reason all-or-none); S6, S9 and S55 use this state. Migration `reservation_change_cancel` adds the `CANCEL` kind (a cancellation of a booking already in the hotel system is a numbered change) and a check on `actorType`. Migration `service_occupancy_effective_date` adds a nullable date on per-person, per-night service rows to preserve consumed charges after an occupancy change. |
-| Payments | `Payment`, `PaymentEvent`, `CancellationRequest`, `ChangeRequest` | Planned (M9; `ChangeRequest` M9-T11, Q-85) |
+| Payments and cancellations | `Payment`, `PaymentEvent`, `CancellationRequest` | Storage implemented in M9-T1. Checkout starts in M9-T4 and guest cancellation requests in M9-T7 |
+| Guest change requests | `ChangeRequest` | Planned (M9-T11, Q-85) |
 | Reservation changes | `ReservationChange`; columns `Reservation.changeSeq`, `Reservation.pmsUpdatePendingSince` (the clearing user and time are in the S55 audit event) | Implemented (M8-T9, Q-83, Q-84) |
 | Transfer cars | `ServicePriceUnit.PER_VEHICLE`, `ServiceOffering.maxVehicles`, `ReservationService.vehicles` | Implemented (M8-T3b, Q-82): migrations `20261117120000_transfer_vehicle_unit` (enum value, on its own so the next migration can use it) and `20261117120100_transfer_vehicles` (columns, backfill of 3 cars per transfer offering and 1 car per stored transfer line, checks `ServiceOffering_vehicles_check`, `ServiceOffering_vehicle_unit_check`, `ReservationService_vehicles_check`, `ReservationService_vehicle_unit_check`) |
 | Website analytics | `SiteEvent`, `SiteDailyTotal`, `AnalyticsSalt` | Planned (M10-T0a, T0b; ADR 029, Q-86, Q-87) |
 | Guests | `Guest` (verified phone profiles, blocking, marketing consent), `PhoneVerification` | Storage implemented (M8-T1); verification and guest-access workflows remain planned |
 | Messaging settings | `WhatsAppSettings`, `WhatsAppTemplate` (Admin-managed, Q-67) | Storage implemented (M8-T1), empty settings singleton; setup API and UI remain planned (T4) |
 | Marketing | `Broadcast` | Planned (M13) |
-| Cross-cutting | `AuditEvent` (implemented, M4), `NotificationOutbox` (M8) | `AuditEvent` implemented; outbox storage implemented (M8-T1), dispatcher remains planned (T6) |
+| Cross-cutting | `AuditEvent`, `NotificationOutbox` | Audit implemented in M4, outbox storage in M8-T1, and dispatcher in M8-T6. M9-T1 adds `HELD`, which the dispatcher skips |
 
 ## Content and identity tables
 
@@ -199,6 +200,7 @@ Better Auth owns `User`, `Session`, `Account`, and `Verification` schema for its
 | `Facility` | `+ branchId NOT NULL` → `Branch.id`; `@@index([branchId, status, sortOrder])` | Branch-owned facilities (ADR 026) |
 | `Page` | `+ branchId NOT NULL` → `Branch.id`; unique `key` becomes unique `(branchId, key)`; unique `canonicalPath` becomes `(branchId, canonicalPath)` | Branch-owned pages (ADR 026) |
 | `ContactEnquiry` | `+ branchId` nullable → `Branch.id` | Enquiries per branch contact page |
+| `Branch` | `+ onlinePaymentEnabled BOOLEAN NOT NULL DEFAULT false` in M9-T1 | Stores the switch for online payments separately from online booking. Admin behavior is planned for M9-T4 (Q-94) |
 | `SiteSettings` | contact, address, coordinates, and `mapEmbedUrl` move to `Branch` (columns kept, unused, until a later contract migration) | Brand vs branch split (Q-42) |
 | `User` | role enum gains `RECEPTIONIST`, `MANAGER` (`ALTER TYPE "AdminRole" ADD VALUE`) | ADR 018 |
 | `LoginThrottle` | no schema change; reused with namespaced HMAC keys (`rsv-create:`, `rsv-lookup:`) for public rate limits | Reuse of an atomic counter store |
@@ -207,24 +209,29 @@ No existing column is renamed or dropped in these milestones.
 
 ### New tables (implemented and planned sketch)
 
-M4 branch, assignment, and audit tables, M6 inventory and rate tables, and M7-T3 `ServiceOffering`, `Coupon`, `CouponBranch`, and `CommercialSettings` are implemented in `prisma/schema.prisma`. M8-T1 implements the eleven reservation, redemption, guest, verification, messaging, and sync storage tables; their application workflows remain planned. Payment and marketing tables remain planned for M9 and M13. The commercial migration adds all foreign keys with `ON UPDATE RESTRICT`; deleting a coupon cascades to its branch joins, while branch and staff references restrict deletion. Coupon branch-list consistency (`allBranches` versus joins) is enforced by the domain and management use case (M7-T5), with coupon and join changes committed alongside audit in one transaction; the database has no trigger for it. Coupon edits lock the parent before reading or replacing branch joins. Scoped list results hydrate coupon and branch data in one statement snapshot.
+M4 branch, assignment, and audit tables, M6 inventory and rate tables, and M7-T3 `ServiceOffering`, `Coupon`, `CouponBranch`, and `CommercialSettings` are implemented in `prisma/schema.prisma`. M8-T1 implements the eleven reservation, redemption, guest, verification, messaging, and sync storage tables; their application workflows remain planned. M9-T1 adds payment, payment event, and cancellation request storage. Change requests and marketing storage are planned for M9-T11 and M13. The commercial migration adds all foreign keys with `ON UPDATE RESTRICT`; deleting a coupon cascades to its branch joins, while branch and staff references restrict deletion. Coupon branch-list consistency (`allBranches` versus joins) is enforced by the domain and management use case (M7-T5), with coupon and join changes committed alongside audit in one transaction; the database has no trigger for it. Coupon edits lock the parent before reading or replacing branch joins. Scoped list results hydrate coupon and branch data in one statement snapshot.
 
 ```prisma
 enum BranchStatus       { ACTIVE INACTIVE }
 enum AccommodationType  { ROOM APARTMENT }
 enum ReservationStatus  { AWAITING_PAYMENT CONFIRMED PAYMENT_FAILED CANCELLED CHECKED_IN CHECKED_OUT NO_SHOW }   // PENDING and DECLINED removed (ADR 024)
 enum ReservationSource  { WEBSITE STAFF EXTERNAL }
-enum PaymentMethod      { PAY_AT_HOTEL ONLINE }   // the M8 migration stores PAYMOB; M9-T1 renames it ONLINE (ADR 030)
-enum ReservationPaymentStatus { NOT_REQUIRED AWAITING PAID REFUND_PENDING REFUNDED }
+enum PaymentMethod      { PAY_AT_HOTEL ONLINE }   // M9-T1 renamed PAYMOB in place (ADR 030)
+enum ReservationPaymentStatus { NOT_REQUIRED AWAITING PAID REFUND_PENDING REFUNDED FAILED }
 enum NightRateSource    { BASE PERIOD MANUAL }
 enum ServiceKind        { BREAKFAST AIRPORT_TRANSFER }
 enum ServicePriceUnit   { PER_BOOKING PER_NIGHT PER_PERSON PER_PERSON_PER_NIGHT }   // owner decision 2026-11-11 (Q-49); PER_VEHICLE appended by M8-T3b (Q-82)
 enum CouponKind         { PERCENT FIXED }
-enum PaymentStatus      { INITIATED SUCCEEDED FAILED REFUND_PENDING REFUNDED REFUND_FAILED }
-enum CancellationRequestStatus { OPEN APPROVED REJECTED REFUND_PENDING REFUND_FAILED COMPLETED }
+enum PaymentStatus      { INITIATED SUCCEEDED EXPIRED FAILED REFUND_PENDING REFUNDED REFUND_FAILED }
+enum PaymentEventKind { TRANSACTION REFUND }
+enum PaymentEventOutcome { SUCCEEDED DECLINED SESSION_CLOSED REFUND_SUCCEEDED REFUND_FAILED }
+enum PaymentEventResult { APPLIED IGNORED_MISMATCH IGNORED_UNKNOWN IGNORED_STATE }
+enum CancellationRequestStatus { OPEN APPROVED REJECTED REFUND_PENDING REFUND_FAILED COMPLETED CLOSED }
+enum CancellationRequestedBy { GUEST STAFF }
+enum CancellationClosedReason { STAFF_CANCELLED NO_SHOW CHECKED_IN }
 enum BroadcastStatus    { DRAFT SENDING SENT FAILED }
 enum BlockReason        { MAINTENANCE OWNER_USE OTHER }
-enum OutboxStatus       { PENDING SENT FAILED }
+enum OutboxStatus       { PENDING SENT FAILED HELD }
 enum OutboxChannel      { EMAIL WHATSAPP }
 enum VerificationPurpose { BOOKING GUEST_SESSION }
 enum SyncCheckpointKind { STARTED COMPLETED }
@@ -236,6 +243,7 @@ model Branch {
   summary              String?      @db.VarChar(300)
   status               BranchStatus @default(ACTIVE)
   onlineBookingEnabled Boolean      @default(false)
+  onlinePaymentEnabled Boolean      @default(false)
   timeZone             String       @default("Africa/Cairo") @db.VarChar(100)
   currency             String       @default("USD") @db.Char(3)
   phone / email / addressLine1 / addressLine2 / city / country / latitude / longitude   (as SiteSettings)
@@ -535,12 +543,14 @@ model Payment {
   reservationId         String        @db.VarChar(32)
   provider              String        @db.VarChar(32)       // adapter name: fake until launch, then the chosen provider (ADR 030)
   providerOrderId       String?       @db.VarChar(80)
-  providerIntentionId   String?       @db.VarChar(120)
   providerTransactionId String?       @unique @db.VarChar(80)
+  checkoutUrl           String?       @db.VarChar(2048)
   amountMinor           Int
   currency              String        @db.Char(3)
   status                PaymentStatus @default(INITIATED)
   expiresAt             DateTime      @db.Timestamptz(3)
+  refundAttempt         Int           @default(0)
+  refundRequestedAt     DateTime?     @db.Timestamptz(3)
   refundProviderId      String?       @db.VarChar(80)
   refundedAt            DateTime?     @db.Timestamptz(3)
   lastError             String?       @db.VarChar(200)
@@ -551,27 +561,31 @@ model Payment {
 
 model PaymentEvent {
   id              String   @id @db.VarChar(32)
-  paymentId       String?  @db.VarChar(32)
+  paymentId       String?  @db.VarChar(32)            // null for unknown payments
   providerEventId String   @unique @db.VarChar(120)  // dedupe (PY-4)
-  kind            String   @db.VarChar(40)           // transaction, refund
-  success         Boolean
+  kind            PaymentEventKind
+  outcome         PaymentEventOutcome
+  result          PaymentEventResult
   amountMinor     Int?
   currency        String?  @db.Char(3)
   receivedAt      DateTime @default(now()) @db.Timestamptz(3)
-  // no card data, no full payload
+  @@index([paymentId])
 }
 
 model CancellationRequest {
   id             String                    @id @db.VarChar(32)
   reservationId  String                    @db.VarChar(32)
+  requestedBy    CancellationRequestedBy
   status         CancellationRequestStatus @default(OPEN)
   guestReason    String?                   @db.VarChar(500)
   decidedById    String?                   @db.VarChar(32)
   decidedAt      DateTime?                 @db.Timestamptz(3)
   decisionReason String?                   @db.VarChar(500)
+  closedReason   CancellationClosedReason?
   createdAt / updatedAt
   // partial unique index: one OPEN request per reservation
   @@index([status, createdAt])
+  @@index([reservationId])
 }
 
 model ReservationChange {              // planned M8-T9 (Q-83, Q-84): one row per applied change
@@ -688,7 +702,7 @@ Notes:
 
 ### SQL-only constraints (migration)
 
-M8-T1 implements the reservation date, occupancy, USD, version, complete snapshot, external/website requirements, hold, nightly amount, service value, verification/outbox attempt, singleton, and active-template checks in `20261115120000_reservations`, plus the assignment exclusion and partial idempotency index. Composite ownership FKs are also modelled in Prisma. M8-T2 validates cross-row reservation and snapshot rules in the domain; M8-T3 inserts all room lines with the header stay and derives their consumption flag from status. Later use cases must call the domain checks and enforce transactional workflows. The SQL below mixes implemented constraints with the planned M9 cancellation constraint; the migration and `schema.prisma` are authoritative.
+M8-T1 implements the reservation date, occupancy, USD, version, complete snapshot, external/website requirements, hold, nightly amount, service value, verification/outbox attempt, singleton, and active-template checks in `20261115120000_reservations`, plus the assignment exclusion and partial idempotency index. Composite ownership FKs are also modelled in Prisma. M8-T2 validates cross-row reservation and snapshot rules in the domain; M8-T3 inserts all room lines with the header stay and derives their consumption flag from status. Later use cases must call the domain checks and enforce transactional workflows. M9-T1 adds payment and cancellation constraints to this list. The migrations and `schema.prisma` are authoritative.
 
 ```sql
 CREATE EXTENSION IF NOT EXISTS btree_gist;
@@ -721,6 +735,9 @@ ALTER TABLE "Reservation"
       AND "totalMinor"::bigint = "taxableMinor"::bigint + "vatMinor"::bigint)
   );
 CREATE UNIQUE INDEX "CancellationRequest_one_open" ON "CancellationRequest" ("reservationId") WHERE "status" = 'OPEN';
+CREATE UNIQUE INDEX "Payment_one_initiated" ON "Payment" ("reservationId") WHERE "status" = 'INITIATED';
+ALTER TABLE "Payment" ADD CHECK ("amountMinor" > 0 AND "currency" = 'USD');
+ALTER TABLE "CancellationRequest" ADD CHECK ("closedReason" IS NULL OR "status" = 'CLOSED');
 -- Implemented as "Branch_slug_check" (M4, extended in M5): format, the reserved list, and no *.html.
 ALTER TABLE "Branch"          ADD CHECK ("slug" NOT IN ('admin','api','media','reservations','book','sitemap.xml','robots.txt','about','contact','rooms','facilities') AND "slug" NOT LIKE '%.html');
 ALTER TABLE "RoomBaseRate"    ADD CHECK ("amountMinor" > 0 AND "currency" = 'USD');  -- implemented (M6-T3)
@@ -789,7 +806,7 @@ erDiagram
   Coupon ||--o{ CouponRedemption : "used by"
   Reservation ||--o| CouponRedemption : uses
   Reservation ||--o{ Payment : "paid by"
-  Payment ||--o{ PaymentEvent : "callbacks"
+  Payment |o--o{ PaymentEvent : "callbacks"
   Reservation ||--o{ CancellationRequest : "guest requests"
 
   Room {
@@ -855,5 +872,5 @@ erDiagram
 | DB-12 | A website reservation always has a guest profile | CHECK `source <> 'WEBSITE' OR "guestId" IS NOT NULL` |
 | DB-13 | Stored totals are internally consistent (`total = taxable + vat`, `taxable = subtotal − discount ≥ 0`) | CHECK |
 | DB-14 | Coupon codes are unique case-insensitively; values match their kind | Unique index on `upper(code)`; CHECK |
-| DB-15 | A provider transaction is processed once; at most one open cancellation request per reservation | Unique `providerEventId`, `providerTransactionId`; partial unique index |
-| DB-16 | `AWAITING_PAYMENT` always has a the payment gateway method and a hold expiry | CHECK |
+| DB-15 | Provider event and transaction IDs are unique. Each reservation has at most one `INITIATED` payment and one `OPEN` cancellation request | Unique indexes on `providerEventId` and `providerTransactionId` and partial unique indexes per reservation (M9-T1) |
+| DB-16 | `AWAITING_PAYMENT` requires `ONLINE` and a hold expiry | `Reservation_hold_check`, retained in M9-T1 |

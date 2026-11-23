@@ -176,18 +176,28 @@ describe("M8 T-DB-6…8 reservation storage", () => {
       }),
     );
   });
-  it("requires a PAYMOB hold for AWAITING_PAYMENT but retains future enum values", async () => {
+  it("DB-16 requires an online payment method and hold expiry for AWAITING_PAYMENT", async () => {
     await rejected(reserve({ status: "AWAITING_PAYMENT" }));
     await rejected(
-      reserve({ status: "AWAITING_PAYMENT", paymentMethod: "PAYMOB" }),
+      reserve({ status: "AWAITING_PAYMENT", paymentMethod: "ONLINE" }),
+    );
+    await rejected(
+      reserve({
+        status: "AWAITING_PAYMENT",
+        holdExpiresAt: "2026-11-15T01:00:00Z",
+      }),
     );
     await reserve({
       status: "AWAITING_PAYMENT",
-      paymentMethod: "PAYMOB",
+      paymentMethod: "ONLINE",
       paymentStatus: "AWAITING",
       holdExpiresAt: "2026-11-15T01:00:00Z",
     });
-    await reserve({ status: "PAYMENT_FAILED", paymentMethod: "PAYMOB" });
+    await reserve({
+      status: "PAYMENT_FAILED",
+      paymentMethod: "ONLINE",
+      paymentStatus: "FAILED",
+    });
   });
   it("requires a guest and email for website records", async () => {
     await prisma.guest.create({

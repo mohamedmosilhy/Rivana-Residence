@@ -94,7 +94,7 @@ export class ReservationStateMachine {
     consumesInventory(state.status);
     if (
       !RESERVATION_PAYMENT_STATUSES.includes(state.paymentStatus) ||
-      !["PAY_AT_HOTEL", "PAYMOB"].includes(state.paymentMethod) ||
+      !PAYMENT_METHODS.includes(state.paymentMethod) ||
       typeof state.allUnitsAssigned !== "boolean" ||
       !(state.stay instanceof StayRange) ||
       !(today instanceof LocalDate)

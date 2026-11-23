@@ -57,7 +57,7 @@ The application layer already returns `Result<T>` with `ApplicationErrorCode` (`
 | `COUPON_INVALID` | 422 | `context.reason`: `NOT_FOUND`, `INACTIVE`, `NOT_YET_VALID`, `EXPIRED`, `WRONG_BRANCH`, `LIMIT_REACHED`, `PHONE_LIMIT_REACHED`; `fieldErrors.couponCode`. The message never confirms whether a code exists at another branch beyond `WRONG_BRANCH` **Implemented (M7-T6)**: the same message for every reason, a malformed or over long code is `NOT_FOUND`. |
 | `SERVICE_UNAVAILABLE` | 409 | `context.kind`; the service is off at this branch. **Implemented (M7-T6).** |
 | `BOOKING_LIMIT_REACHED` | 429 | Per-phone cap on upcoming pay-at-hotel bookings or open payment holds (Q-60); `detail` asks the guest to contact the hotel |
-| `PAYMENT_METHOD_UNAVAILABLE` | 409 | Online payment is not offered: in M8 every online request to P7 (sent as `PAYMOB`, renamed `ONLINE` in M9-T1; **implemented M8-T7b**); from M9, no payment gateway configured for the branch, or the total is zero (CP-6) |
+| `PAYMENT_METHOD_UNAVAILABLE` | 409 | **Implemented (M9-T1).** P7 returns this for a valid `ONLINE` request until online checkout lands in M9-T4. The retired `PAYMOB` value returns `422 VALIDATION`. **Planned (M9-T4, CP-6).** P7 refuses online payment when the gateway is unavailable, the branch switch is off, or the total is zero. |
 | `PAYMENT_UNAVAILABLE` | 503 | The the payment gateway checkout could not be created; the booking is `PAYMENT_FAILED` and nothing is held |
 | `WEBHOOK_SIGNATURE_INVALID` | 401 | Payment callback failed the adapter's signature verification; body is minimal |
 | `CANCELLATION_WINDOW_CLOSED` | 409 | After the deadline (CX-1); `context.deadline` and branch contact details |

@@ -39,7 +39,11 @@ Record exact commands and counts in the review package. If a gate cannot run, sa
 
 The owner selected Node **26.13.0 LTS** for the Mac, CI, and hosting. On macOS with npm **11.20.0**, clean `npm ci --no-audit` and `npm run check` passed (format, lint, typecheck, **67 unit files / 1,373 tests**, production build). The full PostgreSQL integration suite passed **29 files / 391 tests**; full Chromium E2E passed **175 tests**, with **30 intentionally skipped**. Independent review by `gpt-6-astra` approved with zero findings. The [runtime report](../delivery/reports/node-26-runtime-alignment.md) records exact commands, unchanged development audit findings, and the nonfatal upstream Tailwind loader deprecation under Node 26. Those Tailwind and media tracing warnings were subsequently resolved in M6-T10. These results do not replace the historical task acceptance evidence below or claim remote Linux CI has run.
 
-## Latest accepted task results (2026-11-23, M9-T0b)
+## Latest accepted task results (2026-11-23, M9-T1)
+
+`npm run check` passed formatting, lint, typecheck, 2,266 unit and contract tests across 105 files, and the production build. `npm run test:integration -- --reporter=dot --silent` passed 864 PostgreSQL tests across 55 files. Both new partial unique indexes passed 20 rounds of competing inserts with observed lock waits. Prisma reported no drift on a fresh database or a populated M8 upgrade. `npm run test:e2e` passed 212 tests with 33 intentional skips. The running app returned 201 for pay at hotel, 409 for `ONLINE`, and 422 for `PAYMOB`. GPT-6.2 Astra approved after two minor fixes, with zero open findings. [Task log](../delivery/reports/m9-payments-and-cancellations.md#task-log) · [Independent review](../reviews/2026-11-23-m9-t1.md)
+
+## Previous accepted task results (2026-11-23, M9-T0b)
 
 `npm run check` passed formatting, lint, typecheck, 2,266 unit and contract tests across 105 files, and the production build. `npm run test:integration -- --reporter=dot` passed 855 PostgreSQL tests across 53 files. The outbox CLI check verified both fake adapters and payload scrubbing. Production smoke checks rejected each fake flag, and the client bundle scan found none of the provider markers checked. GPT-6.2 Astra approved with zero findings after independently running 46 tests. [Task log](../delivery/reports/m9-payments-and-cancellations.md#task-log) · [Independent review](../reviews/2026-11-23-m9-t0b.md)
 

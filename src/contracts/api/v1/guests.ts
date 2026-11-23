@@ -106,7 +106,7 @@ export const GuestReservationList = z.strictObject({
 export const GuestReservation = z.strictObject({
   reference: z.string(),
   status: z.string(),
-  paymentMethod: z.enum(["PAY_AT_HOTEL", "PAYMOB"]),
+  paymentMethod: z.enum(["PAY_AT_HOTEL", "ONLINE"]),
   paymentStatus: z.string(),
   branch: z.strictObject({
     name: z.string(),

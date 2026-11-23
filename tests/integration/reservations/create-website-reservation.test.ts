@@ -198,7 +198,7 @@ describe("CreateWebsiteReservation", () => {
     ["a client price", { totalMinor: 1 }, "VALIDATION"],
     [
       "a card payment",
-      { paymentMethod: "PAYMOB" },
+      { paymentMethod: "ONLINE" },
       "PAYMENT_METHOD_UNAVAILABLE",
     ],
     [

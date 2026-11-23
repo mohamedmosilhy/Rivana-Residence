@@ -141,3 +141,5 @@ Raw SQL is parameterized through Prisma's tagged `$queryRaw` and lives only in `
 | C-17 change-request approval versus booking *(planned M9-T11, Q-85)* | Paid booking with an open change request needing the last unit | Approval races a new booking | Never oversold; a losing approval keeps the request `OPEN` with the conflict recorded |
 
 Each test repeats (for example 20 iterations) and asserts the final database state.
+
+M9-T1 verifies storage uniqueness independently of the payment and cancellation workflows. Each partial unique index is tested in 20 rounds. The test observes the second insert waiting on PostgreSQL and confirms that exactly one `INITIATED` payment or one `OPEN` cancellation request commits per reservation. [Storage tests](../../tests/integration/reservations/payment-storage.test.ts)

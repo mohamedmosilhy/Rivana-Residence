@@ -31,9 +31,8 @@ const bodySchema = z.strictObject({
     .string()
     .min(16, "Send the verification token.")
     .max(128, "Send the verification token."),
-  // PAYMOB is a documented value that M8 refuses with 409 (Q-74), after the
-  // body is otherwise valid.
-  paymentMethod: z.enum(["PAY_AT_HOTEL", "PAYMOB"], "Choose pay at hotel."),
+  // Validate the full body before refusing ONLINE until checkout is available.
+  paymentMethod: z.enum(["PAY_AT_HOTEL", "ONLINE"], "Choose pay at hotel."),
   /** Honeypot (Q-74): a filled value is refused generically, nothing written. */
   website: z.string().max(32_768).optional(),
   expectedTotal: z.strictObject({
@@ -122,7 +121,7 @@ export function parseWebsiteBooking(
 
   if (issues.length > 0 || !guest || !consent || !quote.ok)
     return invalid("Check the booking details.", issues);
-  if (data.paymentMethod === "PAYMOB")
+  if (data.paymentMethod === "ONLINE")
     return failure(
       "PAYMENT_METHOD_UNAVAILABLE",
       "Online payment is not available. Choose pay at hotel.",

@@ -17,6 +17,7 @@ const M5_START = "20261107";
 const M6_START = "20261108";
 const M7_START = "20261111";
 const M8_START = "20261115";
+const M9_START = "20261123";
 const migrations = readdirSync(migrationsDir, { withFileTypes: true })
   .filter((entry) => entry.isDirectory())
   .map((entry) => entry.name)
@@ -26,7 +27,7 @@ const m4 = migrations.filter((name) => name >= M4_START && name < M5_START);
 const m5 = migrations.filter((name) => name >= M5_START && name < M6_START);
 const m6 = migrations.filter((name) => name >= M6_START && name < M7_START);
 const m7 = migrations.filter((name) => name >= M7_START && name < M8_START);
-const m8 = migrations.filter((name) => name >= M8_START);
+const m8 = migrations.filter((name) => name >= M8_START && name < M9_START);
 // M8-T3b (2026-11-17) adds the transfer car migrations after `reservations`;
 // their populated upgrade is covered by transfer-vehicles-migration.test.ts.
 const M8_T3B_START = "20261117";
@@ -356,7 +357,7 @@ describe("branches_and_staff_roles migration on M3 data", () => {
         (await db.query(`SELECT count(*)::int AS n FROM "${table}"`)).rows,
       ).toEqual([{ n: 0 }]);
     }
-    // Apply the later M8 migrations so the drift check sees the whole schema.
+    // Rehearse the later M8 migrations before applying M9 and later.
     await apply(m8Followups);
     expect(
       (
@@ -367,7 +368,8 @@ describe("branches_and_staff_roles migration on M3 data", () => {
     ).toEqual([{ maxVehicles: null }]);
   });
 
-  it("leaves no drift between the migrated database and the Prisma schema", () => {
+  it("leaves no drift between the migrated database and the Prisma schema", async () => {
+    await apply(migrations.filter((name) => name >= M9_START));
     const output = execFileSync(
       "npx",
       [

@@ -448,7 +448,7 @@ export async function seedDemo(
   return { created: true, status: "ACTIVE" };
 }
 
-// M8 fixtures are create only and confined to the fictional branch. Fixed
+// Reservation fixtures are create only and confined to the fictional branch. Fixed
 // identities make a rerun preserve edited reservations, guests and templates.
 const RESERVATION_FIXTURES = [
   {
@@ -499,6 +499,23 @@ const RESERVATION_FIXTURES = [
     day: "2027-03-11",
     entered: false,
   },
+  {
+    id: "qvmrseeddemobookingaaaaag",
+    reference: "RR-DEM00007",
+    status: "PAYMENT_FAILED",
+    source: "WEBSITE",
+    day: "2027-03-13",
+    entered: false,
+  },
+  {
+    id: "qvmrseeddemobookingaaaaah",
+    reference: "RR-DEM00008",
+    status: "CONFIRMED",
+    source: "WEBSITE",
+    day: "2027-03-15",
+    entered: false,
+    openCancellation: true,
+  },
 ] as const;
 
 export async function seedDemoReservations(
@@ -547,6 +564,8 @@ export async function seedDemoReservations(
         blockReason: "Fictional demo block",
       },
     });
+    const paymentCreatedAt = new Date("2026-10-31T23:47:00Z");
+    const paymentExpiredAt = new Date("2026-11-01T00:00:00Z");
     let created = 0;
     for (const [index, fixture] of RESERVATION_FIXTURES.entries()) {
       if (await tx.reservation.findUnique({ where: { id: fixture.id } }))
@@ -579,6 +598,7 @@ export async function seedDemoReservations(
       const vatMinor = Math.floor(
         (taxable * vat.vatRateBasisPoints + 5000) / 10000,
       );
+      const totalMinor = taxable + vatMinor;
       const demoSummary = {
         status: fixture.status,
         assignedUnits: 0,
@@ -598,7 +618,7 @@ export async function seedDemoReservations(
         servicesMinor,
         discountMinor: discount,
         vatMinor: unpriced ? null : vatMinor,
-        totalMinor: unpriced ? null : taxable + vatMinor,
+        totalMinor: unpriced ? null : totalMinor,
       };
       await tx.reservation.create({
         data: {
@@ -624,7 +644,48 @@ export async function seedDemoReservations(
           taxableMinor: unpriced ? null : taxable,
           vatRateBasisPoints: unpriced ? null : vat.vatRateBasisPoints,
           vatMinor: unpriced ? null : vatMinor,
-          totalMinor: unpriced ? null : taxable + vatMinor,
+          totalMinor: unpriced ? null : totalMinor,
+          ...(fixture.status === "PAYMENT_FAILED"
+            ? {
+                createdAt: paymentCreatedAt,
+                paymentMethod: "ONLINE",
+                paymentStatus: "FAILED",
+                payments: {
+                  create: {
+                    id: "qvmrseeddemopaymentaaaaa",
+                    provider: "fake",
+                    amountMinor: totalMinor,
+                    currency: "USD",
+                    status: "EXPIRED",
+                    createdAt: paymentCreatedAt,
+                    expiresAt: paymentExpiredAt,
+                    events: {
+                      create: {
+                        id: "qvmrseeddemopayeventaaa",
+                        providerEventId: "fictional_demo_session_closed",
+                        kind: "TRANSACTION",
+                        outcome: "SESSION_CLOSED",
+                        result: "APPLIED",
+                        amountMinor: totalMinor,
+                        currency: "USD",
+                        receivedAt: paymentExpiredAt,
+                      },
+                    },
+                  },
+                },
+              }
+            : {}),
+          ...("openCancellation" in fixture
+            ? {
+                cancellationRequests: {
+                  create: {
+                    id: "qvmrseeddemocancelreqaaa",
+                    requestedBy: "GUEST",
+                    guestReason: "Fictional change of plans",
+                  },
+                },
+              }
+            : {}),
           couponId: index === 0 ? coupon.id : null,
           couponCode: index === 0 ? "DEMO_PERCENT" : null,
           couponKind: index === 0 ? "PERCENT" : null,

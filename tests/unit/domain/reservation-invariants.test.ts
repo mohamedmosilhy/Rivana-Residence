@@ -461,7 +461,7 @@ describe("R-1…R-10 pure reservation invariants (trusted transaction facts supp
         inventoryReserved: false,
       }),
     ).toThrow(DomainValidationError);
-    expect(() => validate({ ...fixture(), paymentMethod: "PAYMOB" })).toThrow(
+    expect(() => validate({ ...fixture(), paymentMethod: "ONLINE" })).toThrow(
       DomainValidationError,
     );
     expect(() => validate({ ...fixture(), paymentStatus: "PAID" })).toThrow(

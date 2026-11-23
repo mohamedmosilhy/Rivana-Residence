@@ -41,7 +41,7 @@ describe("T-LIFE: pure M8 lifecycle", () => {
         status: "CONFIRMED",
         consumesInventory: true,
       });
-      expect(ReservationStateMachine.create(source, "PAYMOB")).toEqual({
+      expect(ReservationStateMachine.create(source, "ONLINE")).toEqual({
         allowed: false,
         code: "PAYMENT_METHOD_UNAVAILABLE",
       });
@@ -107,7 +107,7 @@ describe("T-LIFE: pure M8 lifecycle", () => {
       ).toBe(false);
     expect(
       ReservationStateMachine.transition(
-        state({ paymentMethod: "PAYMOB" }),
+        state({ paymentMethod: "ONLINE" }),
         "CANCEL_UNPAID",
         day("2026-11-15"),
       ).allowed,

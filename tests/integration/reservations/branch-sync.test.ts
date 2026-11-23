@@ -272,11 +272,11 @@ describe("M8-T12 branch sync API", () => {
       { id: "cancelled", status: "CANCELLED" },
       { id: "checked-out", status: "CHECKED_OUT" },
       { id: "no-show", status: "NO_SHOW" },
-      { id: "failed", status: "PAYMENT_FAILED", paymentMethod: "PAYMOB" },
+      { id: "failed", status: "PAYMENT_FAILED", paymentMethod: "ONLINE" },
       {
         id: "holding",
         status: "AWAITING_PAYMENT",
-        paymentMethod: "PAYMOB",
+        paymentMethod: "ONLINE",
         holdExpiresAt: minute(10),
       },
       {

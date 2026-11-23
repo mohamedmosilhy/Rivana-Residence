@@ -50,7 +50,7 @@ export const RESERVATION_STATUSES = [
 export type ReservationStatus = (typeof RESERVATION_STATUSES)[number];
 export const RESERVATION_SOURCES = ["WEBSITE", "STAFF", "EXTERNAL"] as const;
 export type ReservationSource = (typeof RESERVATION_SOURCES)[number];
-export const PAYMENT_METHODS = ["PAY_AT_HOTEL", "PAYMOB"] as const;
+export const PAYMENT_METHODS = ["PAY_AT_HOTEL", "ONLINE"] as const;
 export type PaymentMethod = (typeof PAYMENT_METHODS)[number];
 export const RESERVATION_PAYMENT_STATUSES = [
   "NOT_REQUIRED",
@@ -58,6 +58,7 @@ export const RESERVATION_PAYMENT_STATUSES = [
   "PAID",
   "REFUND_PENDING",
   "REFUNDED",
+  "FAILED",
 ] as const;
 export type ReservationPaymentStatus =
   (typeof RESERVATION_PAYMENT_STATUSES)[number];

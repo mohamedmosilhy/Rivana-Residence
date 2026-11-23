@@ -75,13 +75,13 @@ describe("Q-60/78/81 global booking caps", () => {
       checkPhoneBookingLimit(phone, bookings, "PAY_AT_HOTEL", now),
     ).toEqual({ allowed: true });
   });
-  it("defines future PAYMOB holds separately, excluding expired holds at the exact expiry instant", () => {
+  it("defines future ONLINE holds separately, excluding expired holds at the exact expiry instant", () => {
     const hold = row("hold", {
       status: "AWAITING_PAYMENT",
-      paymentMethod: "PAYMOB",
+      paymentMethod: "ONLINE",
       holdExpiresAt: new Date(now.getTime() + 1),
     });
-    expect(checkPhoneBookingLimit(phone, [hold], "PAYMOB", now)).toEqual({
+    expect(checkPhoneBookingLimit(phone, [hold], "ONLINE", now)).toEqual({
       allowed: false,
       code: "BOOKING_LIMIT_REACHED",
     });
@@ -92,7 +92,7 @@ describe("Q-60/78/81 global booking caps", () => {
       checkPhoneBookingLimit(
         phone,
         [{ ...hold, holdExpiresAt: now }],
-        "PAYMOB",
+        "ONLINE",
         now,
       ),
     ).toEqual({ allowed: true });
@@ -105,8 +105,8 @@ describe("Q-60/78/81 global booking caps", () => {
     expect(() =>
       checkPhoneBookingLimit(
         phone,
-        [row("b", { status: "AWAITING_PAYMENT", paymentMethod: "PAYMOB" })],
-        "PAYMOB",
+        [row("b", { status: "AWAITING_PAYMENT", paymentMethod: "ONLINE" })],
+        "ONLINE",
         now,
       ),
     ).toThrow(DomainValidationError);

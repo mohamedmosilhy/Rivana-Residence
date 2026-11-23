@@ -4837,9 +4837,9 @@
             "type": "string",
             "enum": [
               "PAY_AT_HOTEL",
-              "PAYMOB"
+              "ONLINE"
             ],
-            "description": "PAYMOB returns 409 PAYMENT_METHOD_UNAVAILABLE in M8."
+            "description": "ONLINE returns 409 PAYMENT_METHOD_UNAVAILABLE until checkout is available."
           },
           "expectedTotal": {
             "description": "The total from the last quote.",
@@ -5558,7 +5558,7 @@
             "type": "string",
             "enum": [
               "PAY_AT_HOTEL",
-              "PAYMOB"
+              "ONLINE"
             ]
           },
           "paymentStatus": {
@@ -5568,7 +5568,8 @@
               "AWAITING",
               "PAID",
               "REFUND_PENDING",
-              "REFUNDED"
+              "REFUNDED",
+              "FAILED"
             ]
           },
           "guest": {
@@ -8593,7 +8594,7 @@
             "type": "string",
             "enum": [
               "PAY_AT_HOTEL",
-              "PAYMOB"
+              "ONLINE"
             ]
           },
           "paymentStatus": {

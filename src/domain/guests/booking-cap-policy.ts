@@ -63,7 +63,7 @@ export function checkPhoneBookingLimit(
     )
       upcoming++;
     if (
-      booking.paymentMethod === "PAYMOB" &&
+      booking.paymentMethod === "ONLINE" &&
       booking.status === "AWAITING_PAYMENT"
     ) {
       if (booking.holdExpiresAt === null) policyInputError("holdExpiresAt");

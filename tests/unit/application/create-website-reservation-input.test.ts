@@ -71,14 +71,14 @@ describe("parseWebsiteBooking", () => {
   });
 
   it("refuses online payment with the documented code (Q-74)", () => {
-    const result = parse(body({ paymentMethod: "PAYMOB" }));
+    const result = parse(body({ paymentMethod: "ONLINE" }));
     expect(result.ok).toBe(false);
     if (!result.ok)
       expect(result.error.code).toBe("PAYMENT_METHOD_UNAVAILABLE");
   });
 
-  it("refuses an invalid PAYMOB body as validation, not as payment", () => {
-    const result = parse(body({ paymentMethod: "PAYMOB", lines: [] }));
+  it("refuses an invalid ONLINE body as validation, not as payment", () => {
+    const result = parse(body({ paymentMethod: "ONLINE", lines: [] }));
     expect(result.ok).toBe(false);
     if (!result.ok) expect(result.error.code).toBe("VALIDATION");
   });

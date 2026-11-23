@@ -35,6 +35,8 @@ const snapshot = async () => ({
       rooms: { include: { nights: true } },
       redemption: true,
       services: true,
+      payments: { include: { events: true } },
+      cancellationRequests: true,
     },
   }),
   guests: await client.guest.findMany({ orderBy: { id: "asc" } }),
@@ -42,7 +44,7 @@ const snapshot = async () => ({
   templates: await client.whatsAppTemplate.findMany({ orderBy: { id: "asc" } }),
   settings: await client.whatsAppSettings.findMany(),
 });
-describe("M8 create only seed", () => {
+describe("create only reservation seed", () => {
   it("restores missing settings without overwriting configured values or adding templates", async () => {
     await client.whatsAppSettings.deleteMany();
     await seedWhatsAppSettings(client);
@@ -64,7 +66,7 @@ describe("M8 create only seed", () => {
   });
   it("adds all M8 states, PMS markers, redemption, blocked guest and sync only in the demo branch", async () => {
     expect(await seedDemoReservations(client, "actor-admin")).toEqual({
-      created: 6,
+      created: 8,
     });
     const state = await snapshot();
     expect(new Set(state.reservations.map((row) => row.status))).toEqual(
@@ -74,6 +76,7 @@ describe("M8 create only seed", () => {
         "CHECKED_OUT",
         "CANCELLED",
         "NO_SHOW",
+        "PAYMENT_FAILED",
       ]),
     );
     expect(state.reservations.every((row) => row.branchId === "demo")).toBe(
@@ -113,7 +116,11 @@ describe("M8 create only seed", () => {
     const websites = state.reservations.filter(
       (row) => row.source === "WEBSITE",
     );
-    expect(websites.filter((row) => row.pmsEnteredAt === null)).toHaveLength(1);
+    expect(
+      websites
+        .filter((row) => row.pmsEnteredAt === null)
+        .map((row) => row.reference),
+    ).toEqual(["RR-DEM00001", "RR-DEM00007", "RR-DEM00008"]);
     expect(websites.filter((row) => row.pmsEnteredAt !== null)).toHaveLength(1);
     expect(websites.find((row) => row.pmsEnteredAt !== null)).toMatchObject({
       servicesMinor: 3000,
@@ -145,7 +152,7 @@ describe("M8 create only seed", () => {
     expect(await checkpoints.readStatus("demo")).toMatchObject({
       lastCompletedAt: completedAt,
       lastCompletedBy: "actor-admin",
-      notEnteredInHotelSystem: 1,
+      notEnteredInHotelSystem: 2,
     });
     expect(await checkpoints.read(TEST_BRANCH_ID)).toBeNull();
     expect(await checkpoints.readStatus(TEST_BRANCH_ID)).toMatchObject({
@@ -183,6 +190,52 @@ describe("M8 create only seed", () => {
     });
     expect(await snapshot()).toEqual(state);
   });
+  it("M9-T1 adds payment, event and cancellation examples only to the demo branch", async () => {
+    await seedDemoReservations(client, "actor-admin");
+    const state = await snapshot();
+    const failed = state.reservations.find(
+      (row) => row.reference === "RR-DEM00007",
+    );
+    const createdAt = new Date("2026-10-31T23:47:00Z");
+    const expiredAt = new Date("2026-11-01T00:00:00Z");
+    expect(failed).toMatchObject({
+      branchId: "demo",
+      status: "PAYMENT_FAILED",
+      paymentMethod: "ONLINE",
+      paymentStatus: "FAILED",
+      createdAt,
+      statusChangedAt: expiredAt,
+      rooms: [{ consumesInventory: false }],
+      payments: [
+        {
+          provider: "fake",
+          amountMinor: failed?.totalMinor,
+          currency: "USD",
+          status: "EXPIRED",
+          createdAt,
+          expiresAt: expiredAt,
+          events: [
+            {
+              outcome: "SESSION_CLOSED",
+              result: "APPLIED",
+              receivedAt: expiredAt,
+            },
+          ],
+        },
+      ],
+    });
+    expect(
+      state.reservations.find((row) => row.reference === "RR-DEM00008"),
+    ).toMatchObject({
+      branchId: "demo",
+      status: "CONFIRMED",
+      cancellationRequests: [{ status: "OPEN", requestedBy: "GUEST" }],
+    });
+    expect(await client.notificationOutbox.count()).toBe(0);
+    expect(
+      await client.branch.count({ where: { onlinePaymentEnabled: true } }),
+    ).toBe(0);
+  });
   it("preserves edits to reservations, guests, templates, sync and configuration on rerun", async () => {
     await seedDemoReservations(client, "actor-admin");
     await client.reservation.updateMany({
@@ -197,6 +250,9 @@ describe("M8 create only seed", () => {
     });
     await client.branchSyncCheckpoint.updateMany({
       data: { note: "Edited by staff" },
+    });
+    await client.cancellationRequest.updateMany({
+      data: { status: "CLOSED", closedReason: "STAFF_CANCELLED" },
     });
     const before = await snapshot();
     await seedDemoReservations(client, "actor-admin");

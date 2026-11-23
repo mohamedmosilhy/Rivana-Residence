@@ -164,7 +164,7 @@ describe("POST /api/v1/reservations", () => {
     });
   });
 
-  it("is strict, refuses online payment, and drops a filled honeypot", async () => {
+  it("is strict and drops a filled honeypot", async () => {
     const token = await ready();
     for (const extra of [
       { totalMinor: 1 },
@@ -175,14 +175,34 @@ describe("POST /api/v1/reservations", () => {
       expect(response.status).toBe(422);
       expect((await problemOf(response)).code).toBe("VALIDATION");
     }
-    const paymob = await send(body(token, { paymentMethod: "PAYMOB" }));
-    expect(paymob.status).toBe(409);
-    expect((await problemOf(paymob)).code).toBe("PAYMENT_METHOD_UNAVAILABLE");
     const spam = await send(body(token, { website: "http://spam.test" }));
     expect(spam.status).toBe(422);
     expect(await rowCounts(client)).toMatchObject({
       reservations: 0,
       consumed: 0,
+    });
+  });
+
+  it("M9-T1 accepts pay at hotel, refuses ONLINE for now and rejects PAYMOB as invalid", async () => {
+    const token = await ready();
+    const online = await send(body(token, { paymentMethod: "ONLINE" }));
+    expect(online.status).toBe(409);
+    expect((await problemOf(online)).code).toBe("PAYMENT_METHOD_UNAVAILABLE");
+    const retired = await send(body(token, { paymentMethod: "PAYMOB" }));
+    expect(retired.status).toBe(422);
+    expect((await problemOf(retired)).code).toBe("VALIDATION");
+    expect(await rowCounts(client)).toMatchObject({
+      reservations: 0,
+      consumed: 0,
+    });
+    expect(await client.payment.count()).toBe(0);
+    expect(await client.notificationOutbox.count()).toBe(0);
+
+    expect((await send(body(token))).status).toBe(201);
+    expect(await client.reservation.findFirst()).toMatchObject({
+      status: "CONFIRMED",
+      paymentMethod: "PAY_AT_HOTEL",
+      paymentStatus: "NOT_REQUIRED",
     });
   });
 

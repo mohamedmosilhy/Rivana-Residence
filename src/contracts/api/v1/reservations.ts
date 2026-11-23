@@ -50,8 +50,10 @@ export const WebsiteReservationRequest = z
       .max(128)
       .describe("From API-P10 (purpose BOOKING). Single use."),
     paymentMethod: z
-      .enum(["PAY_AT_HOTEL", "PAYMOB"])
-      .describe("PAYMOB returns 409 PAYMENT_METHOD_UNAVAILABLE in M8."),
+      .enum(["PAY_AT_HOTEL", "ONLINE"])
+      .describe(
+        "ONLINE returns 409 PAYMENT_METHOD_UNAVAILABLE until checkout is available.",
+      ),
     expectedTotal: Money.describe("The total from the last quote."),
     consent: z.object({ privacyNoticeVersion: z.string().max(40) }).strict(),
     marketingOptIn: z
@@ -271,13 +273,14 @@ export const StaffReservationDetail = ListItem.omit({
   totalMinor: true,
 }).extend({
   externalChannel: z.string().nullable(),
-  paymentMethod: z.enum(["PAY_AT_HOTEL", "PAYMOB"]),
+  paymentMethod: z.enum(["PAY_AT_HOTEL", "ONLINE"]),
   paymentStatus: z.enum([
     "NOT_REQUIRED",
     "AWAITING",
     "PAID",
     "REFUND_PENDING",
     "REFUNDED",
+    "FAILED",
   ]),
   guest: z
     .strictObject({
