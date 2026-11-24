@@ -148,9 +148,70 @@ export interface PaymentCallbackStore {
   ): Promise<void>;
   /** `SUCCEEDED` becomes `REFUND_PENDING` and the attempt number advances. Returns the new attempt. */
   startRefund(id: string, at: Date): Promise<number>;
+  /**
+   * Stamps the refund call. When `expectedAttempt` is given, only that attempt
+   * is stamped, so a late result for an older attempt cannot mark a newer one.
+   */
   markRefundRequested(
     id: string,
     at: Date,
     providerRefundId: string | undefined,
+    expectedAttempt?: number,
   ): Promise<void>;
+  /** Fills a missing gateway transaction id on a `REFUND_PENDING` payment (reconciliation). */
+  setProviderTransactionId(
+    id: string,
+    providerTransactionId: string,
+    at: Date,
+  ): Promise<void>;
+}
+
+/** A payment row as the scheduled sweeps see it. */
+export type SweepPayment = Readonly<{
+  id: string;
+  branchId: string;
+  reservationId: string;
+  providerOrderId: string | null;
+  providerTransactionId: string | null;
+  amountMinor: number;
+  currency: string;
+  refundAttempt: number;
+  expiresAt: Date;
+  /** When the reservation last changed status (the hold end for `PAYMENT_FAILED`). */
+  statusChangedAt: Date;
+}>;
+
+/**
+ * Cross branch reads for the scheduled jobs (pool reads, no locks). Every row
+ * is a candidate only: the job re-checks the state under the reservation lock
+ * before writing. Results are bounded and ordered oldest first.
+ */
+export interface PaymentSweepStore {
+  /** `id` is the reservation id. */
+  findOverdueHolds(
+    at: Date,
+    limit: number,
+    exclude: readonly string[],
+  ): Promise<readonly Readonly<{ id: string; branchId: string }>[]>;
+  /** `INITIATED` payments of `provider` whose gateway session ended by `at`. */
+  findStaleInitiated(
+    provider: string,
+    at: Date,
+    limit: number,
+    exclude: readonly string[],
+  ): Promise<readonly SweepPayment[]>;
+  /** `REFUND_PENDING` with no refund call stamped and untouched since `olderThan`. */
+  findUnsentRefunds(
+    provider: string,
+    olderThan: Date,
+    limit: number,
+    exclude: readonly string[],
+  ): Promise<readonly SweepPayment[]>;
+  /** Payments `EXPIRED` or `FAILED` past `expiresAt` whose reservation is `PAYMENT_FAILED` and still has held messages. */
+  findHeldCleanup(
+    provider: string,
+    at: Date,
+    limit: number,
+    exclude: readonly string[],
+  ): Promise<readonly SweepPayment[]>;
 }

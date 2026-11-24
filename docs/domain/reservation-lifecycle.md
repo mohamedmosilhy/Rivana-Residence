@@ -1,6 +1,6 @@
 # Reservation lifecycle
 
-Status: **Partly implemented.** M8 implemented pay at hotel and staff reservation workflows. M9-T2 implemented pure payment, hold, deadline and request rules. M9-T4 implemented the online hold, hosted checkout and expiry during booking creation. M9-T5 implemented callback processing, confirmation release and late success. Scheduled expiry and reconciliation are planned for M9-T6. Design accepted 2026-10-24 and revised on 2026-11-06 by the client decisions Q-36 (immediate confirmation), Q-37 (online payment or pay at hotel), Q-38 (cancellation requests), and Q-39 (several units per booking); see ADRs [024](../adr/024-immediate-confirmation.md) and [025](../adr/025-paymob-online-payment.md). The earlier request-to-book design (`PENDING`, `DECLINED`, confirm and decline by staff, guest cancellation of pending requests) is superseded and kept only in the accepted M1–M3 history and ADRs 013 and 019.
+Status: **Partly implemented.** M8 implemented pay at hotel and staff reservation workflows. M9-T2 implemented pure payment, hold, deadline and request rules. M9-T4 implemented the online hold, hosted checkout and expiry during booking creation. M9-T5 implemented callback processing, confirmation release and late success. M9-T6 implemented the scheduled hold expiry and payment reconciliation jobs. Design accepted 2026-10-24 and revised on 2026-11-06 by the client decisions Q-36 (immediate confirmation), Q-37 (online payment or pay at hotel), Q-38 (cancellation requests), and Q-39 (several units per booking); see ADRs [024](../adr/024-immediate-confirmation.md) and [025](../adr/025-paymob-online-payment.md). The earlier request-to-book design (`PENDING`, `DECLINED`, confirm and decline by staff, guest cancellation of pending requests) is superseded and kept only in the accepted M1–M3 history and ADRs 013 and 019.
 
 ## States
 
@@ -102,7 +102,7 @@ Change request states: `OPEN → APPROVED` (applied) or `OPEN → REJECTED`; an 
 | PY-3 | Only a callback verified by the gateway adapter with the expected amount and currency changes payment state. Browser returns are display only. Implemented in M9-T5 (`ProcessPaymentCallback`). |
 | PY-4 | Each provider transaction is processed once (unique event id); repeats are acknowledged and ignored. Implemented in M9-T5: a duplicate of an applied event changes nothing. |
 | PY-5 | A success after the hold expired is confirmed if every unit is still free under the room-type lock; otherwise it is refunded automatically, and the guest and staff are told (Q-63). Implemented in M9-T5. A late confirmation re-acquires the coupon use without a limit check, because the guest paid the stored price. |
-| PY-6 | Website, staff, and external booking creation expire overdue holds under the listing locks (implemented M9-T4). A job will also expire holds every minute (planned M9-T6). |
+| PY-6 | Website, staff, and external booking creation expire overdue holds under the listing locks (implemented M9-T4). A job also expires holds every minute under the reservation lock only (implemented M9-T6). |
 | PY-7 | Refunds are full refunds of the captured amount through the gateway's API; Rivana does not calculate fees. Partial refunds are not offered (Q-66). |
 | PY-8 | No card data is received or stored; secrets are server-only. |
 

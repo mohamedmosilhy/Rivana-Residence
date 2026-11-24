@@ -126,7 +126,7 @@ Each section states its status: **Implemented** (built and accepted in Phases 1�
 
 ## FR-PAY Online payment
 
-**Partly implemented.** M9-T4 delivered eligible choices, hosted checkout, and expiry during booking creation. M9-T5 delivered verified confirmation, late success handling and the automatic refund request, M9-T6 adds scheduled expiry and reconciliation, and M9-T8 covers refunds. Booking and staff screens are planned for M10–M11.
+**Partly implemented.** M9-T4 delivered eligible choices, hosted checkout, and expiry during booking creation. M9-T5 delivered verified confirmation, late success handling and the automatic refund request, M9-T6 delivered scheduled expiry and reconciliation jobs, and M9-T8 covers refunds. Booking and staff screens are planned for M10–M11.
 
 - **FR-PAY-1** Guests choose eligible methods for website bookings: online payment in full or pay at the hotel. Staff bookings are pay at hotel (Q-37).
 - **FR-PAY-2** Online payment uses the configured gateway's hosted checkout (ADR 030). No card data is entered on, sent to, or stored by Rivana.

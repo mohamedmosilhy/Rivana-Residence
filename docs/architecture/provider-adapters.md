@@ -31,7 +31,7 @@ A payment provider needs hosted checkout, verifiable server to server results, a
 
 The fake gateway returns `/dev/fake-checkout/[paymentId]` for a checkout it has registered. Its form posts to `/dev/fake-checkout/[paymentId]/submit`. The form sends a scenario choice and the gateway takes the amount and currency from its checkout record. It sends a signed callback to P8 over HTTP at the configured app origin. Both routes require the fake gateway in development or test and return `404` in production.
 
-Checkout, transaction, and refund records live in one server process and reset on restart. The M9-T3 browser proof used a test receiver at the P8 path. M9-T5 added the reservation webhook, and M9-T6 covers reconciliation from a separate job.
+Checkout, transaction, and refund records live in one server process and reset on restart. The M9-T3 browser proof used a test receiver at the P8 path. M9-T5 added the reservation webhook. The M9-T6 reconciliation job runs in a separate CLI process, so with the fake gateway its `getTransaction` cannot see a checkout made by the web server and answers `NOT_FOUND`. The job is proven with an injected gateway in integration tests. A real adapter answers from the provider, which is what reconciliation needs.
 
 ## Contract tests
 

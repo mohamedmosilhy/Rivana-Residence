@@ -48,9 +48,11 @@ npm run staff -- create --email … --name … --role ADMIN   # passwords via pr
 # Maintenance (hourly app-user cron; bounded buckets listed in PUBLIC_RATE_LIMITS)
 npm run throttles -- cleanup-public
 
-# Reservation jobs (schedule both; the dispatcher sends queued messages only after commit)
+# Reservation jobs (schedule all four; the dispatcher sends queued messages only after commit)
 npm run reservations -- outbox
 npm run reservations -- expire-tokens
+npm run reservations -- expire-holds          # every minute: ends overdue payment holds
+npm run reservations -- reconcile-payments    # every 5 minutes: recovers lost callbacks and unsent refunds
 ```
 
 ## Specs
@@ -91,7 +93,7 @@ npm run reservations -- expire-tokens
 2. **Plan first** and wait for the owner's approval (task card: objective, scope, behavior, architecture, files, dependencies, acceptance criteria, tests, risk tier). Contract, schema, port, or architecture decisions need approval too.
 3. Implement only the approved task. Unexpected requirement, missing decision, or architectural problem: stop, explain, recommend, wait. Preserve unrelated user changes.
 4. Test and run the gates for the risk tier ([quality-gates.md](./docs/testing/quality-gates.md#gates-per-task)), then an independent review on a different model (`/check review uncommitted`).
-5. Present the Engineering Review Package (critical code paths to review deeply, with `file:line`) and **wait for acceptance** before the next task. Then sync the docs and the task status, and commit.
+5. Present the Engineering Review Package in the required plain, detailed format (what was made step by step, tests, findings with resolutions, code to review deeply with `file:line`, decisions with recommendations; see the workflow doc) and **wait for acceptance** before the next task. Then sync the docs and the task status, and commit.
 
 The owner makes engineering decisions and accepts every task; a reviewer's approval never replaces that. Never claim a check passed without running it, and never hide unresolved issues.
 

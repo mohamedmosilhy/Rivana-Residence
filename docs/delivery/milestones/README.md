@@ -55,7 +55,7 @@ Follow [../../engineering/agent-workflow.md](../../engineering/agent-workflow.md
 | 5.3 | Implement the approved task only | `/develop`, `/debug` | — |
 | 5.4 | Tests and the gates for the risk tier ([quality-gates.md](../../testing/quality-gates.md#gates-per-task)); runtime proof | `/test`, `/check verify` | gates pass |
 | 5.5 | Independent review of the task diff (`docs/reviews/<date>-m<N>-t<K>.md`) | `/check review uncommitted` | findings resolved |
-| 5.6 | Engineering Review Package | — | **owner accepts the task** |
+| 5.6 | Engineering Review Package (plain, detailed, fixed structure: [format](../../engineering/agent-workflow.md#engineering-review-package)) | — | **owner accepts the task** |
 | 5.7 | Docs, task status, task log row, commit on the milestone branch | — | — |
 
 Details of every stage: [agent-workflow.md](../../engineering/agent-workflow.md#task-lifecycle-every-task-in-order).
@@ -96,19 +96,29 @@ docs/engineering/agent-workflow.md:
 2. Read AGENTS.md, the brief, and every document in its "Read first" list.
 3. Run /architect to write the build spec in docs/specs/ (cite the ADRs, invent no business rules).
 4. Confirm or refine the brief's task breakdown (ids, order, dependencies, risk).
-5. Stop and show me the spec summary and the task table. Write no application code.
+5. Stop and show me the spec summary and the task table in plain simple language (what will be
+   built, in which order, and why). Write no application code.
 ```
 
 Start a task (after the milestone is open, or after the previous task is accepted):
 
 ```text
 Start task M<N>-T<K>. Plan it first (task card and approach) and wait for my approval.
+Explain the plan in plain simple language, and list the decisions I need to make.
 ```
 
 Approve a plan:
 
 ```text
-Plan for M<N>-T<K> approved. Implement it, verify, run /check review, and give me the review package.
+Plan for M<N>-T<K> approved. Implement it, verify, run /check review, and fix the findings
+you agree with (list any you do not fix and why).
+
+Write the review package exactly as docs/engineering/agent-workflow.md#engineering-review-package
+requires: plain simple language, every new file in a table, every new job, endpoint or screen
+explained step by step (including what happens on failure), the rules now in force, tests and
+exact gate results, every reviewer finding with how it was resolved, the code I should review
+deeply with file:line links and an edge case table, risks and deferred work, and my decisions
+numbered with your recommendation. Do not say "see the diff" instead of explaining.
 ```
 
 Accept a task:
@@ -121,8 +131,18 @@ m<N>-<branch-name>. Don't start the next task yet.
 Ask for changes to a task:
 
 ```text
-M<N>-T<K> needs changes: <list>. Fix only these, rerun the gates and the review, and give me
-an updated review package. Don't commit yet.
+M<N>-T<K> needs changes: <list>. Fix only these, rerun the gates and the review, and don't
+commit yet.
+
+Give me an updated review package that starts with a short table of what changed since the last
+one, then repeats every part in full with current facts.
+
+Write the review package exactly as docs/engineering/agent-workflow.md#engineering-review-package
+requires: plain simple language, every new file in a table, every new job, endpoint or screen
+explained step by step (including what happens on failure), the rules now in force, tests and
+exact gate results, every reviewer finding with how it was resolved, the code I should review
+deeply with file:line links and an edge case table, risks and deferred work, and my decisions
+numbered with your recommendation. Do not say "see the diff" instead of explaining.
 ```
 
 Close a milestone (after its last task is accepted):
@@ -130,6 +150,10 @@ Close a milestone (after its last task is accepted):
 ```text
 All M<N> tasks are accepted. Close the milestone: full gates, /check verify against every
 acceptance criterion, docs, and the evidence report. Then stop for my acceptance.
+
+In the closing report, use plain simple language: what the milestone delivered, each acceptance
+criterion with the evidence that proves it, exact gate commands and counts, known limits and
+deferred work, and my decisions numbered with your recommendation.
 ```
 
 ### 2. Extra lines per milestone
@@ -173,6 +197,27 @@ Merge a branch into `main` by itself (the accept prompt above already does this 
 ```text
 Merge <branch> into main and push main.
 ```
+
+### The review package every task ends with
+
+Every agent writes the same package at Stage 5.6, so you always know where to look. The full
+rules are in [agent-workflow.md](../../engineering/agent-workflow.md#engineering-review-package).
+The parts, in order:
+
+1. Verdict and status
+2. What the task was for
+3. What was made (new files table, step by step walkthrough of each new behavior, changed files table)
+4. Rules now in force
+5. Architecture, database, and API impact
+6. How it was tested (test groups, exact gate results, runtime proof)
+7. Reviewer findings and how each was resolved
+8. Code to review deeply, with an edge case table
+9. Risks, limits, and deferred work
+10. Decisions for you, each with a recommendation
+11. What happens after you accept
+
+If a package skips a part or says "see the diff", ask for it again with: "Give me the full review
+package in the format in docs/engineering/agent-workflow.md."
 
 ### Tips
 

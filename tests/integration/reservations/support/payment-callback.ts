@@ -7,11 +7,18 @@ import type {
   PaymentGatewayEvent,
   RefundInput,
   RefundResult,
+  TransactionLookup,
 } from "@/application/payments";
 import {
+  ExpirePaymentHolds,
   ProcessPaymentCallback,
+  ReconcilePayments,
+  type ExpirePaymentHoldsContext,
   type ProcessPaymentCallbackContext,
+  type ReconcilePaymentsContext,
 } from "@/application/reservations";
+import type { DatabaseClient } from "@/infrastructure/db/prisma/transaction";
+import { PrismaPaymentSweepStore } from "@/infrastructure/db/prisma/repositories/reservations/payment-sweep-store";
 import type { PrismaClient } from "@/generated/prisma/client";
 import { NodeBookingCrypto } from "@/infrastructure/crypto/booking-crypto";
 import { PrismaAuditLog } from "@/infrastructure/db/prisma/repositories/audit/audit-log";
@@ -127,3 +134,83 @@ export function callbackEvent(
 
 export const signed = (event: PaymentGatewayEvent) =>
   signedCallback(CALLBACK_SECRET, CALLBACK_URL, event);
+
+type JobOptions = Readonly<{
+  now?: () => Date;
+  audit?: (inner: AuditLog) => AuditLog;
+  getTransaction?: (
+    input: TransactionLookup,
+  ) => Promise<PaymentGatewayEvent | "NOT_FOUND">;
+  refund?: (input: RefundInput) => Promise<RefundResult>;
+  /** Models a deployment with no gateway. */
+  noGateway?: boolean;
+}>;
+
+/** The scheduled jobs (src/composition/reservations.ts) on an independent client. */
+export function paymentJobs(client: PrismaClient, options: JobOptions = {}) {
+  const clock = { now: options.now ?? (() => NOW) };
+  const ids = new Cuid2IdGenerator();
+  const getTransaction = vi.fn(
+    options.getTransaction ?? (async () => "NOT_FOUND" as const),
+  );
+  const { useCase, refund } = paymentCallback(client, {
+    now: clock.now,
+    ...(options.refund ? { refund: options.refund } : {}),
+  });
+  const storage = (transaction: DatabaseClient) =>
+    storageOf(transaction, options.audit);
+  const messages = (transaction: DatabaseClient) =>
+    new QueueReservationMessages(
+      new PrismaReservationMessageStore(transaction),
+      ids,
+      clock,
+      "https://hotel.example",
+    );
+  const sweep = new PrismaPaymentSweepStore(client);
+  const expire = new ExpirePaymentHolds({
+    unitOfWork: new PrismaReservationUnitOfWork<ExpirePaymentHoldsContext>(
+      client,
+      (transaction) => ({
+        ...storage(transaction),
+        payments: new PrismaBookingPaymentStore(transaction),
+        redemptions: new PrismaCouponRedemptionStore(transaction),
+        messages: messages(transaction),
+      }),
+    ),
+    sweep,
+    clock,
+  });
+  const reconcile = new ReconcilePayments({
+    unitOfWork: new PrismaReservationUnitOfWork<ReconcilePaymentsContext>(
+      client,
+      (transaction) => ({
+        ...storage(transaction),
+        payments: new PrismaBookingPaymentStore(transaction),
+        messages: messages(transaction),
+      }),
+    ),
+    sweep,
+    callback: useCase,
+    ...(options.noGateway
+      ? {}
+      : { gateway: { getTransaction, refund }, provider: PROVIDER }),
+    clock,
+  });
+  return { expire, reconcile, getTransaction, refund };
+}
+
+function storageOf(
+  transaction: DatabaseClient,
+  audit?: (inner: AuditLog) => AuditLog,
+) {
+  const consumption = new PrismaReservationConsumptionReader(transaction);
+  const log = new PrismaAuditLog(transaction);
+  return {
+    reservations: new PrismaReservationRepository(transaction),
+    guests: new PrismaGuestRepository(transaction),
+    consumption,
+    inventoryLock: new PrismaInventoryLock(transaction),
+    inventoryReader: new PrismaInventoryReader(transaction, consumption),
+    audit: audit ? audit(log) : log,
+  };
+}

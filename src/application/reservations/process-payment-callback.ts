@@ -71,6 +71,8 @@ type RefundRequest = Readonly<{
 type Applied = Readonly<{
   result: PaymentEventResult;
   refund?: RefundRequest;
+  /** The refund attempt `refund` belongs to, so the stamp cannot land on a newer attempt. */
+  refundAttempt?: number;
   audit?: Parameters<typeof auditEvent>[0];
 }>;
 type Outcome = Readonly<{ redo: true }> | (Readonly<{ redo: false }> & Applied);
@@ -110,11 +112,16 @@ export class ProcessPaymentCallback {
       return REJECTED();
     }
     if ("rejected" in event) return REJECTED();
-    const handled = await this.handle(event);
+    const handled = await this.applyVerifiedEvent(event);
     return handled.ok ? success({ recorded: true }) : handled;
   }
 
-  private async handle(event: PaymentGatewayEvent): Promise<Result<void>> {
+  /**
+   * Applies an event the gateway already authenticated: a verified callback,
+   * or the answer to `getTransaction` (reconciliation). Both take the same
+   * locks, checks and idempotency by `providerEventId`.
+   */
+  async applyVerifiedEvent(event: PaymentGatewayEvent): Promise<Result<void>> {
     const { reads, provider } = this.deps;
     // A verified event that cannot fit the event table is an adapter fault.
     // Refuse it like an unverifiable one rather than fail and be retried forever.
@@ -147,7 +154,8 @@ export class ProcessPaymentCallback {
       outcome = await this.applyUnderListingLocks(event, payment, reservation);
     if (!outcome.ok) return outcome;
     const applied = outcome.value as Extract<Outcome, { redo: false }>;
-    if (applied.refund) await this.requestRefund(applied.refund);
+    if (applied.refund && applied.refundAttempt !== undefined)
+      await this.requestRefund(applied.refund, applied.refundAttempt);
     return success(undefined);
   }
 
@@ -353,6 +361,7 @@ export class ProcessPaymentCallback {
                 currency: payment.currency,
                 idempotencyKey: refundAttemptKey(payment.id, attempt),
               },
+              refundAttempt: attempt,
             }
           : {}),
         audit: {
@@ -494,7 +503,7 @@ export class ProcessPaymentCallback {
   }
 
   /** After commit. A thrown or ambiguous call leaves `refundRequestedAt` null for the sweep. */
-  private async requestRefund(request: RefundRequest) {
+  private async requestRefund(request: RefundRequest, attempt: number) {
     const { gateway, unitOfWork, clock } = this.deps;
     if (!gateway) return;
     let sent: Awaited<ReturnType<PaymentGateway["refund"]>>;
@@ -508,6 +517,7 @@ export class ProcessPaymentCallback {
         request.paymentId,
         clock.now(),
         sent.providerRefundId,
+        attempt,
       );
       return success(undefined);
     });

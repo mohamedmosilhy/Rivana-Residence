@@ -11,7 +11,7 @@ import { HoldPolicy } from "@/domain/payments";
 
 import type { ReservationRepository, StoredReservation } from "./ports";
 
-type HoldContext = Readonly<{
+export type HoldContext = Readonly<{
   reservations: Pick<
     ReservationRepository,
     "lockById" | "findOverdueHoldIds" | "markPaymentFailed"
@@ -35,23 +35,38 @@ export async function expireListingPaymentHolds(
     at,
   );
   for (const id of ids) {
-    const locked = await context.reservations.lockById(branchId, id);
-    if (!locked.ok) return locked;
-    const reservation = locked.value;
-    if (
-      !reservation ||
-      reservation.status !== "AWAITING_PAYMENT" ||
-      !reservation.holdExpiresAt ||
-      !HoldPolicy.isExpired(reservation.holdExpiresAt, at)
-    )
-      continue;
-
-    const payment = await context.payments.findInitiated(id);
-    if (!payment)
-      throw new Error("An awaiting reservation has no initiated payment.");
-    await endBookingPaymentHold(context, reservation, payment, "EXPIRED", at);
+    const expired = await expireHoldIfOverdue(context, branchId, id, at);
+    if (!expired.ok) return expired;
   }
   return success(undefined);
+}
+
+/**
+ * Locks the reservation row, re-checks that it is still an overdue hold, and
+ * ends it as `EXPIRED`. Returns whether it expired. Only the reservation lock
+ * is taken: a release never takes a listing lock (spec 0006 Decision 5).
+ */
+export async function expireHoldIfOverdue(
+  context: HoldContext,
+  branchId: string,
+  id: string,
+  at: Date,
+): Promise<Result<boolean>> {
+  const locked = await context.reservations.lockById(branchId, id);
+  if (!locked.ok) return locked;
+  const reservation = locked.value;
+  if (
+    !reservation ||
+    reservation.status !== "AWAITING_PAYMENT" ||
+    !reservation.holdExpiresAt ||
+    !HoldPolicy.isExpired(reservation.holdExpiresAt, at)
+  )
+    return success(false);
+  const payment = await context.payments.findInitiated(id);
+  if (!payment)
+    throw new Error("An awaiting reservation has no initiated payment.");
+  await endBookingPaymentHold(context, reservation, payment, "EXPIRED", at);
+  return success(true);
 }
 
 /** Caller holds the reservation lock and has checked the reservation and payment states. */

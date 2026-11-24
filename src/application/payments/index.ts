@@ -17,4 +17,6 @@ export type {
   PaymentCallbackStore,
   PaymentEventRecord,
   PaymentEventResult,
+  PaymentSweepStore,
+  SweepPayment,
 } from "./ports";

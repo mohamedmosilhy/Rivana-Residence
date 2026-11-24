@@ -33,7 +33,7 @@ The threats to Rivana and the controls against them. Implemented controls for au
 | Replayed payment result | Same signed callback sent again | Unique provider event id; transitions only from `AWAITING_PAYMENT` (PY-4) |
 | Refund abuse | Receptionist or attacker triggers refunds | Refunds only through `cancellations:decide` or `reservations:cancel-paid` (Manager, Admin), branch-scoped, audited; second sign-in step recommended (Q-33) |
 | Coupon abuse | Guessing codes; exceeding limits by racing; using a branch-limited code elsewhere | Rate limits on quote attempts; case-insensitive lookup with uniform refusal reasons; coupon row lock in the booking transaction (CP-3); branch and per-phone checks on the server |
-| Inventory squatting with holds | Bots open many payment holds | **Implemented (M9-T4).** Verified phone required before submit. One open hold per phone across branches (Q-60), a 15 minute deadline, expiry during booking creation, and per client rate limits. Scheduled expiry is planned for M9-T6. |
+| Inventory squatting with holds | Bots open many payment holds | **Implemented (M9-T4, M9-T6).** Verified phone required before submit. One open hold per phone across branches (Q-60), a 15 minute deadline, expiry during booking creation, a per minute expiry job, and per client rate limits. |
 | Tampering branch | Client posts `branchId` of another branch, or a room of another branch | Slugs resolved server-side; composite FKs; `authorizeBranch` |
 | Mass assignment | Extra JSON fields like `status: "CONFIRMED"` | `.strict()` Zod DTOs; commands built field by field |
 | CSRF on staff REST | A malicious site posts with the staff cookie | `Origin` and `Sec-Fetch-Site` check, JSON-only content type, no CORS, SameSite=Lax |

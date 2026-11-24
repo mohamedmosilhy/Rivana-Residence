@@ -166,7 +166,18 @@ Take the payment, then create the reservation.
   - `INITIATED` payments past `expiresAt` with no success: ask `getTransaction` and process the answer through the callback code.
   - `REFUND_PENDING` with `refundRequestedAt` null and older than 2 minutes (the server stopped between the decision commit and the refund call): send the refund now with the same idempotency key.
   - `REFUND_PENDING` with the call sent more than 10 minutes ago: ask the gateway for the refund result and pass its outcome and attempt key to `CompleteRefund`.
-  - Held rows are deleted only when the reservation is `PAYMENT_FAILED`, its payment is `EXPIRED` or `FAILED`, and a `getTransaction` asked after the payment's `expiresAt` reports no success; or, as a fallback, 24 hours after the hold ended.
+  - Held rows are deleted only when the reservation is `PAYMENT_FAILED`, its payment is `EXPIRED` or `FAILED`, and a `getTransaction` asked at least 30 minutes after the payment's `expiresAt` (the grace period, owner decision 2026-11-24, M9-T6 review) reports no success; or, as a fallback, 24 hours after the hold ended. Before the grace period ends a no success answer keeps the rows and the job asks again, because a payment can still be settling just after its session ends and a success found later is confirmed or refunded only while the held rows exist.
+- **Implementation notes (M9-T6, owner-approved plan 2026-11-24, review fixes accepted 2026-11-24).**
+  - Both jobs read their backlog in pages (100 holds, 50 items per reconcile step, at most 5 pages per run). Every item seen in a run is excluded from the next page, so an item that keeps failing cannot hold the head of the queue. Each item is isolated. The summaries carry counts only and the jobs log nothing.
+  - `ProcessPaymentCallback.applyVerifiedEvent` is the one place an authenticated event is applied; P8 and reconciliation both call it. Only `TRANSACTION` answers for the payment that was asked about are applied; a `REFUND` answer or an answer for another payment id is left alone (refund answers belong to T8). The summary field `answered` counts answers processed through that code, whatever the callback decided.
+  - A reported success on an `EXPIRED` payment is applied by the held row cleanup step (late success), so a callback lost before the expiry job ran is still recovered while the held rows exist. `NOT_FOUND` counts as no success for that cleanup only, and only after the grace period above.
+  - Unsent refunds use `refundAttemptKey(paymentId, refundAttempt)` and stamp `refundRequestedAt` only after the call returns, and only for the attempt that was sent (`markRefundRequested` takes the expected attempt, also used by the T5 callback refund). A missing transaction id is looked up and stored first, and only a successful answer with the same payment, amount and currency is used. A definite `FAILED` refund result is still stamped as sent here; T8 owns refund results.
+  - Every gateway call in reconciliation has a 15 second timeout (a timeout counts as a failure and is retried next run). Each job runs under a PostgreSQL advisory lock held by a guard transaction, so a slow run is never overlapped by the next cron start; a skipped run prints `{"skipped":"ALREADY_RUNNING"}`.
+  - The held message cleanup starts from the few held outbox rows (read window of 500, oldest first) instead of scanning every expired payment.
+  - Dispatch lives in `src/composition/payment-jobs.ts`, not `reservation-jobs.ts`, because the payment factories import `reservation-jobs.ts` (message writer) and a second import back would be a cycle. `scripts/reservations.mts` calls it directly.
+  - `scripts/reservations.mts` drops one third party notice, Prisma's pg adapter (7.10 with pg 8.23) triggering pg's "client.query() while already executing a query" deprecation inside interactive transactions. It carries no data and needs a dependency upgrade to remove (revisit in M14). Every other warning prints as usual.
+  - **Deferred to M9-T8 (owner decision):** the `REFUND_PENDING` sent more than 10 minutes ago lookup that passes its result to `CompleteRefund`.
+  - With the fake gateway the CLI cannot see the web server's checkouts (separate process), so the jobs are proven with an injected gateway.
 
 ### Decision 7. Cancellation requests, decisions, refunds (M9-T7, T8)
 
@@ -324,7 +335,7 @@ Execution order (ids kept from the brief): T0b → T1 → T2 → T3 → T4 → T
 | M9-T3 | `PaymentGateway` port, registry, fake gateway, simulated checkout page, payment contract suite | Critical | T0b | AC 9, 10; T-ADP | Not started |
 | M9-T4 | Online booking path: `AWAITING_PAYMENT`, hold, held messages, checkout creation and failure, replay, in transaction expiry, P6 `paymentMethods`, A3 switch | Critical | T1, T2, T3 | AC 1, 4, 14; T-PAY-5 | [Task status in the brief](../delivery/milestones/m9-payments-and-cancellations.md#task-breakdown) |
 | M9-T5 | Payment callback P8, idempotency, late success, mid milestone security review | Critical | T4 | AC 1, 2, 3, 5; C-12, C-13 | [Task status in the brief](../delivery/milestones/m9-payments-and-cancellations.md#task-breakdown) |
-| M9-T6 | Hold expiry and reconciliation jobs | Critical | T5 | AC 4, 5, 10; C-14 | Not started |
+| M9-T6 | Hold expiry and reconciliation jobs | Critical | T5 | AC 4, 5, 10; C-14 | Accepted (2026-11-24) |
 | M9-T7 | Guest cancellation requests (G2, G4), staff alert, Q-96 closing | Critical | T1, T2 | AC 6, 15, 16; T-CXL-4…5 | Not started |
 | M9-T8 | Decisions and refunds (S9 paid, S17…S19, S44, S45) | Critical | T5, T7 | AC 7, 8, 10; T-PAY-8…10, T-CXL-6…8 | Not started |
 | M9-T9 | Merged into T4…T11 (each task sends its own messages) | — | — | — | Merged (D-C) |

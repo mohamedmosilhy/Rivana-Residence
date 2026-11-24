@@ -51,7 +51,7 @@ Before the first task (steps 0–4 of the [milestone loop](../delivery/milestone
 | 3. Implement | Build only the approved task, following the architecture and standards. No unrelated refactors, no new dependencies, no silent scope growth. Unexpected requirement or architectural problem → stop and explain (see [Scope changes](#scope-changes-and-surprises)) | `/develop` (logic or UI track), `/debug` for unclear failures | — |
 | 4. Verify | Add or update tests for the new behavior. Run the gates for the task's risk tier ([quality-gates.md](../testing/quality-gates.md#gates-per-task)). Prove the behavior in the running app when the task has observable behavior | `/test`, `/check verify` | Every applicable gate passes, or the failure is reported |
 | 5. Independent review | A reviewer on a different model reads the task's uncommitted diff against the requirements, the approved task card, the architecture, security rules, and the acceptance criteria. The author fixes each finding or answers it with evidence | `/check review uncommitted` | Findings resolved or explicitly left for the owner |
-| 6. Review package | Present the [Engineering Review Package](#engineering-review-package) | — | **Wait for the owner's acceptance** |
+| 6. Review package | Present the [Engineering Review Package](#engineering-review-package) in the required plain, detailed format | — | **Wait for the owner's acceptance** |
 | 7. Sync and commit | After acceptance: update the docs whose behavior changed, the task's status in the brief, and the task log row in the milestone evidence report; then commit on the milestone branch | — (`/sync` when a new area convention appeared) | — |
 
 **Seed rule (from 2026-11-08):** there is one seed, `prisma/seed.mts` (`npm run db:seed`), with one step per area in `prisma/seed/`. A task that adds tables or user-visible features also adds or extends its seed step, with a test, so a freshly seeded database always gives a fully working site. Fictional or demo data goes only in `prisma/seed/demo.ts`, behind `npm run db:seed -- --demo`, which is refused in production (`NODE_ENV=production`, or an `APP_URL` that is not localhost).
@@ -84,17 +84,40 @@ Security and integrity checklist for critical work: `authorize` and `authorizeBr
 
 ## Engineering Review Package
 
-Presented in the chat at Stage 6. Concise: help the owner understand the change, do not narrate it.
+Presented in the chat at Stage 6, and again (updated) after every round of requested changes. It is written **for the owner**, who must be able to understand everything that was made without opening the diff. Detailed and complete beats short here. Every agent and every task uses the same structure, in this order, with these headings, so the owner always knows where to look.
 
-1. **What and why**: what was implemented and the reason, in a few sentences.
-2. **Decisions**: important engineering decisions and alternatives rejected.
-3. **Files by responsibility**: grouped (domain, application, infrastructure, API, UI, tests, docs), not a flat list.
-4. **Code paths to inspect**: the important paths with `file:line` links. For critical risk, mark the code to **review deeply** and include the edge-case table.
-5. **Architectural impact**: new modules, ports, dependencies, or none.
-6. **Database and API changes**: migrations, constraints, endpoints, contract changes, or none.
-7. **Tests and results**: exact commands and counts; anything not run, with the reason; the reviewer's findings file and how each finding was resolved.
-8. **Risks and unresolved issues**: nothing hidden.
-9. **Decisions for the owner**: questions that need an answer before acceptance, or none.
+**Writing rules (mandatory)**
+
+- Plain, simple language. Short sentences. Explain a technical term in one line the first time it appears (for example: "advisory lock: a database lock that only stops other runs of the same job").
+- Say what the code does in real terms: what happens, in order, and what happens when something goes wrong. Never write "see the diff" or "as in the plan" in place of an explanation.
+- Do not write bare ids (`AC-4`, `C-14`, `PY-5`). Write what they mean, with the id in brackets after it.
+- Every file is a link (`[name](path)`), every code path has a line link (`[file.ts:42](path#L42)`).
+- Use tables for lists of things (files, tests, findings, decisions) and numbered steps for flows.
+- State results as facts with the exact command and count. Say plainly what was not run and why.
+- Nothing hidden: open findings, deferred work, flaky tests, and warnings all appear in the package.
+
+**Required parts**
+
+1. **Verdict and status.** One short block: the reviewer's verdict (model name), counts of blockers, major and minor findings, whether every gate passed, and whether the owner has anything to decide now.
+2. **What the task was for.** The problem in plain words, in two to four sentences: what was wrong or missing before, and what is true now.
+3. **What was made.**
+   - A table of **new files**: file link, what it is, in one line each.
+   - For every new use case, job, endpoint, or screen, a numbered **step by step walkthrough**: what triggers it, what it does in order, what it writes, and what it does when each step fails.
+   - A table of **changed existing files**: where, what changed, and why.
+4. **Rules now in force.** The behaviors and limits the owner can check against the requirements (timings, sizes, states, who may do what).
+5. **Architecture, database, and API impact.** New modules, ports, dependencies, migrations, constraints, endpoints, contract changes. Write "none" for each one that did not change.
+6. **How it was tested.**
+   - A table: test group, what it proves, line link.
+   - Gate results: the exact commands and counts (format, lint, typecheck, unit, integration, E2E, build, bundle scan when relevant).
+   - Runtime proof: what was run in the real app or command line and what was observed.
+   - Anything not run, with the reason.
+7. **Reviewer findings.** A table: severity, where, the problem in plain words, and how it was resolved (fixed with the change, answered with evidence, or left open for the owner). Then what the reviewer found good. The findings file is linked.
+8. **Code to review deeply** (critical risk only, recommended for medium). A list of `file:line` links, each with one line saying why it deserves the owner's time, and an **edge case table**: situation (boundary, concurrent, unauthorized, cross branch, failure), what happens, and the test that proves it.
+9. **Risks, limits, and deferred work.** Everything that is known to be imperfect, with the task or milestone that will handle it.
+10. **Decisions for the owner.** Numbered questions, each with the recommended answer and its cost, or "none".
+11. **What happens after acceptance.** The commit message, the status rows and docs that will be updated, and a statement that the next task will not start.
+
+When the owner asks for changes, the updated package starts with **What changed since the last package** (a short table), then repeats the parts above in full with current facts.
 
 ## Scope changes and surprises
 
@@ -124,6 +147,7 @@ Presented in the chat at Stage 6. Concise: help the owner understand the change,
 10. Never generate documentation that only adds review overhead.
 11. Always explain important engineering decisions.
 12. Always identify the critical code paths that need the owner's deep review.
+13. Always write the review package in the required plain, detailed format ([Engineering Review Package](#engineering-review-package)): every new file and behavior explained step by step, every finding with its resolution, every decision with a recommendation.
 
 ## Agent skills (JavaScript Mastery)
 

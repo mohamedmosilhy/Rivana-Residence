@@ -66,6 +66,16 @@ export {
   type ProcessPaymentCallbackContext,
 } from "./process-payment-callback";
 export {
+  ExpirePaymentHolds,
+  type ExpirePaymentHoldsContext,
+  type ExpirePaymentHoldsSummary,
+} from "./expire-payment-holds";
+export {
+  ReconcilePayments,
+  type ReconcilePaymentsContext,
+  type ReconcilePaymentsSummary,
+} from "./reconcile-payments";
+export {
   AssignPhysicalRoom,
   RecordFrontDeskTransition,
 } from "./reservation-front-desk";

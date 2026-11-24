@@ -142,13 +142,32 @@ export class PrismaBookingPaymentStore
     return row.refundAttempt;
   }
 
+  async setProviderTransactionId(
+    id: string,
+    providerTransactionId: string,
+    at: Date,
+  ) {
+    await this.client.payment.updateMany({
+      where: { id, status: "REFUND_PENDING", providerTransactionId: null },
+      data: { providerTransactionId, updatedAt: at },
+    });
+  }
+
   async markRefundRequested(
     id: string,
     at: Date,
     providerRefundId: string | undefined,
+    expectedAttempt?: number,
   ) {
     await this.client.payment.updateMany({
-      where: { id, status: "REFUND_PENDING", refundRequestedAt: null },
+      where: {
+        id,
+        status: "REFUND_PENDING",
+        refundRequestedAt: null,
+        ...(expectedAttempt === undefined
+          ? {}
+          : { refundAttempt: expectedAttempt }),
+      },
       data: {
         refundRequestedAt: at,
         updatedAt: at,

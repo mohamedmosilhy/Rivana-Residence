@@ -4,6 +4,10 @@ import {
   CreateWebsiteReservation,
   ProcessPaymentCallback,
   type ProcessPaymentCallbackContext,
+  ExpirePaymentHolds,
+  type ExpirePaymentHoldsContext,
+  ReconcilePayments,
+  type ReconcilePaymentsContext,
   CreateStaffReservation,
   RecordExternalReservation,
   ModifyReservation,
@@ -41,6 +45,7 @@ import { PrismaBranchRepository } from "@/infrastructure/db/prisma/repositories/
 import { PrismaPublicListingReader } from "@/infrastructure/db/prisma/repositories/public-listing-reader";
 import { PrismaReservationRepository } from "@/infrastructure/db/prisma/repositories/reservations/reservation-repository";
 import { PrismaBookingPaymentStore } from "@/infrastructure/db/prisma/repositories/reservations/booking-payment-store";
+import { PrismaPaymentSweepStore } from "@/infrastructure/db/prisma/repositories/reservations/payment-sweep-store";
 import { PrismaGuestRepository } from "@/infrastructure/db/prisma/repositories/reservations/guests/guest-repository";
 import { PrismaPhoneVerificationRepository } from "@/infrastructure/db/prisma/repositories/reservations/guests/phone-verification-repository";
 import { PrismaReservationConsumptionReader } from "@/infrastructure/db/prisma/repositories/reservations/inventory/reservation-consumption-reader";
@@ -198,6 +203,65 @@ export function processPaymentCallback(
     ...(provider ? { provider } : {}),
     clock,
     ids: new Cuid2IdGenerator(),
+  });
+}
+
+/** Scheduled hold expiry (`npm run reservations -- expire-holds`). */
+export function expirePaymentHolds(
+  options: Readonly<{
+    client?: ReturnType<typeof getPrisma>;
+    clock?: Clock;
+  }> = {},
+) {
+  const client = options.client ?? getPrisma();
+  return new ExpirePaymentHolds({
+    unitOfWork: new PrismaReservationUnitOfWork<ExpirePaymentHoldsContext>(
+      client,
+      (transaction) => ({
+        ...storageContext(transaction),
+        payments: new PrismaBookingPaymentStore(transaction),
+        redemptions: new PrismaCouponRedemptionStore(transaction),
+        messages: reservationMessageWriter(transaction),
+      }),
+    ),
+    sweep: new PrismaPaymentSweepStore(client),
+    clock: options.clock ?? { now: () => new Date() },
+  });
+}
+
+/** Scheduled reconciliation (`npm run reservations -- reconcile-payments`). */
+export function reconcilePayments(
+  options: Readonly<{
+    client?: ReturnType<typeof getPrisma>;
+    clock?: Clock;
+    gateway?: ReturnType<typeof paymentGateway>;
+    provider?: string;
+  }> = {},
+) {
+  const client = options.client ?? getPrisma();
+  const clock = options.clock ?? { now: () => new Date() };
+  const checkout = websiteCheckoutConnection();
+  const gateway = options.gateway ?? checkout?.gateway;
+  const provider = options.provider ?? checkout?.provider;
+  return new ReconcilePayments({
+    unitOfWork: new PrismaReservationUnitOfWork<ReconcilePaymentsContext>(
+      client,
+      (transaction) => ({
+        ...storageContext(transaction),
+        payments: new PrismaBookingPaymentStore(transaction),
+        messages: reservationMessageWriter(transaction),
+      }),
+    ),
+    sweep: new PrismaPaymentSweepStore(client),
+    callback: processPaymentCallback({
+      client,
+      clock,
+      ...(gateway ? { gateway } : {}),
+      ...(provider ? { provider } : {}),
+    }),
+    ...(gateway ? { gateway } : {}),
+    ...(provider ? { provider } : {}),
+    clock,
   });
 }
 
