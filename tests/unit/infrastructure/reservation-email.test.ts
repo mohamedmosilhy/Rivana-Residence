@@ -64,3 +64,12 @@ it.each([
     await smtp.send("msg", "guest@example.test", "reservation.confirmed", vars),
   ).toEqual({ ok: false, code, providerCode: responseCode });
 });
+it("explains an automatic refund to the guest and to the hotel", () => {
+  const refund = { ...vars, refundAmount: "USD 345.00" };
+  const guest = renderReservationEmail("payment.auto-refunded", refund);
+  expect(guest.subject).toContain("being refunded");
+  expect(guest.text).toContain("USD 345.00");
+  const staff = renderReservationEmail("payment.staff-alert", refund);
+  expect(staff.text).toContain("already sold");
+  expect(staff.text + staff.html).not.toContain("secret");
+});

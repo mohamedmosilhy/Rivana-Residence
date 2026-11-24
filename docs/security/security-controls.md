@@ -39,7 +39,7 @@ The public limiter namespaces (`availability`, `quote`, `quote-coupon`) are isol
 - Better Auth owns CSRF/session protections for its endpoints.
 - State-changing Route Handlers require authenticated sessions, expected methods, content types, origin checks, and request-size enforcement.
 - Never mutate state on GET.
-- Future provider webhooks require signature/timestamp verification and replay protection based on the provider contract.
+- Future provider webhooks require signature/timestamp verification and replay protection based on the provider contract. **Implemented for payments (M9-T5):** the adapter verifies the raw bytes, amount and currency must match, each provider event id is processed once, and callback logs carry no payload. Replay protection beyond event ids stays with the real adapter (M15-T4).
 
 ## Validation and output safety
 

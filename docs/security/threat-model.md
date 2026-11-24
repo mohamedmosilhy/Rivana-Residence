@@ -93,7 +93,7 @@ The threats to Rivana and the controls against them. Implemented controls for au
 - Enumeration tests: identical code-request responses for phones with and without reservations.
 - Log redaction test: create a reservation and assert that the captured logs contain no email, phone, or token.
 - Stored-XSS payloads in guest fields rendered in admin screens (E2E).
-- Payment callback tests: missing or wrong signature, wrong amount or currency, unknown payment, duplicate, late success (C-12, C-13).
+- Payment callback tests: missing or wrong signature, wrong amount or currency, unknown payment, duplicate, late success (C-12, C-13). **Implemented (M9-T5)** in `tests/integration/reservations/payment-callback*.test.ts`.
 - Refund authorization: receptionist refused; other-branch manager refused; audit appended.
 - Coupon tests: refusal reasons, limit race (C-11), rate limit on attempts.
 - Broadcast audience tests: every exclusion rule (T-MKT).

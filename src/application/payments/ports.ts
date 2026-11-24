@@ -1,3 +1,5 @@
+import type { PaymentStatus } from "@/domain/shared/types";
+
 export type CheckoutInput = Readonly<{
   paymentId: string;
   amountMinor: number;
@@ -99,4 +101,56 @@ export interface BookingPaymentStore {
     checkout: Extract<CheckoutResult, { ok: true }>,
   ): Promise<void>;
   end(id: string, status: "FAILED" | "EXPIRED", at: Date): Promise<void>;
+}
+
+export type PaymentEventResult =
+  | "APPLIED"
+  | "IGNORED_MISMATCH"
+  | "IGNORED_UNKNOWN"
+  | "IGNORED_STATE";
+
+/** A payment with the reservation facts a callback needs. */
+export type CallbackPayment = BookingPayment &
+  Readonly<{
+    branchId: string;
+    status: PaymentStatus;
+    providerTransactionId: string | null;
+    refundAttempt: number;
+  }>;
+
+export type PaymentEventRecord = Readonly<{
+  id: string;
+  providerEventId: string;
+  /** Null when no payment has the merchant reference (the row has no payment to point at). */
+  paymentId: string | null;
+  kind: PaymentGatewayEvent["kind"];
+  outcome: PaymentGatewayEvent["outcome"];
+  result: PaymentEventResult;
+  amountMinor: number | null;
+  currency: string | null;
+  at: Date;
+}>;
+
+/**
+ * Callback persistence. Events are recorded in the callback's own transaction.
+ * The caller holds the reservation lock before reading or writing a payment.
+ */
+export interface PaymentCallbackStore {
+  findPayment(id: string): Promise<CallbackPayment | null>;
+  findEventResult(providerEventId: string): Promise<PaymentEventResult | null>;
+  /** Inserts the event, or updates an earlier ignored row. An applied row is never changed. */
+  recordEvent(event: PaymentEventRecord): Promise<void>;
+  /** `INITIATED`, `EXPIRED`, or `FAILED` becomes `SUCCEEDED` (PY-4, PY-5). */
+  markSucceeded(
+    id: string,
+    providerTransactionId: string | undefined,
+    at: Date,
+  ): Promise<void>;
+  /** `SUCCEEDED` becomes `REFUND_PENDING` and the attempt number advances. Returns the new attempt. */
+  startRefund(id: string, at: Date): Promise<number>;
+  markRefundRequested(
+    id: string,
+    at: Date,
+    providerRefundId: string | undefined,
+  ): Promise<void>;
 }

@@ -135,8 +135,8 @@ Raw SQL is parameterized through Prisma's tagged `$queryRaw` and lives only in `
 | C-9 idempotent retry | — | Same key ×5 in parallel | One reservation; all responses carry its reference |
 | C-10 modification type switch | Type X full, type Y free | Move X→Y while another books Y's last unit | No oversell in Y |
 | C-11 coupon limit | Coupon with 1 redemption left | 10 parallel bookings using it | Exactly 1 redemption; others `COUPON_INVALID` (`LIMIT_REACHED`) and nothing created |
-| C-12 late payment success | Hold expired; unit resold | Success callback arrives | No oversell; reservation not confirmed; automatic refund requested; staff alert |
-| C-13 duplicate callbacks | `AWAITING_PAYMENT` | Same verified callback ×5 in parallel | One `CONFIRMED` transition, one set of messages |
+| C-12 late payment success | Hold expired; unit resold | Success callback arrives | No oversell; reservation not confirmed; automatic refund requested; staff alert **Implemented (M9-T5)**: 20 observed lock-wait rounds in each order, with the refund request sent after commit. |
+| C-13 duplicate callbacks | `AWAITING_PAYMENT` | Same verified callback ×5 in parallel | One `CONFIRMED` transition, one set of messages **Implemented (M9-T5)**: five parallel copies serialize on the reservation lock. |
 | C-14 hold versus booking | Last unit held, hold just expired | Expiry job, a new booking, and a success callback race | Never more than one inventory-consuming reservation for the unit |
 | C-15 multi-unit booking | Listing with 2 free units | Booking for 2 units racing a booking for 1 | Never more than 2 units sold; the losing request creates nothing |
 | C-16 guest change versus booking *(planned M9-T10, Q-84)* | Last free night of a listing | A guest change extending a stay onto it races a new booking for it | Exactly one succeeds; the losing change leaves the reservation unchanged (no history row, no outbox row) |

@@ -20,6 +20,8 @@ const purposes = {
   "reservation.modified": "RESERVATION_MODIFIED",
   "reservation.manage-link": "MANAGE_LINK",
   "reservation.payment-not-completed": "PAYMENT_NOT_COMPLETED",
+  // Q-63: the late success wording of the refund message shares its template.
+  "payment.auto-refunded": "REFUND_COMPLETED",
 } as const;
 const variables = z.strictObject({
   reference: z.string(),
@@ -30,6 +32,7 @@ const variables = z.strictObject({
   total: z.string().optional(),
   reason: z.string().optional(),
   holdExpiresAt: z.iso.datetime().optional(),
+  refundAmount: z.string().optional(),
   // Not `z.httpUrl()`: it needs a dotted domain, so it would refuse the
   // `localhost` and IP `APP_URL` that development and staging use.
   manageLink: z.url({ protocol: /^https?$/ }).optional(),
@@ -44,6 +47,8 @@ const kinds = z.enum([
   "reservation.manage-link",
   "reservation.payment-not-completed",
   "reservation.staff-alert",
+  "payment.auto-refunded",
+  "payment.staff-alert",
 ]);
 export class DispatchOutbox {
   constructor(
@@ -83,7 +88,11 @@ export class DispatchOutbox {
       if (!z.email().safeParse(message.recipient).success) return invalid;
       return this.email.send(message.id, message.recipient, kind.data, payload);
     }
-    if (kind.data === "reservation.staff-alert") return invalid;
+    if (
+      kind.data === "reservation.staff-alert" ||
+      kind.data === "payment.staff-alert"
+    )
+      return invalid;
     let phone: PhoneNumber;
     try {
       phone = PhoneNumber.parse(message.recipient);

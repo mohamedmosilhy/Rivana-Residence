@@ -28,6 +28,7 @@ import {
   WebsiteReservationReplayed,
   WebsiteReservationRequest,
 } from "./reservations";
+import { PaymentCallbackAck } from "./payments";
 import { z } from "zod";
 
 import {
@@ -127,6 +128,7 @@ const COMPONENTS: Readonly<Record<string, z.ZodType>> = {
   StaffReservationHistory,
   WebsiteReservationCreated,
   WebsiteReservationReplayed,
+  PaymentCallbackAck,
   Image,
   BranchSummary,
   BranchDetail,

@@ -149,6 +149,14 @@ Take the payment, then create the reservation.
   - `SUCCEEDED` on `PAYMENT_FAILED`, whether the payment is `EXPIRED` or `FAILED` (late success, PY-5): under the lock rule (listings, then reservation); if every unit is free, confirm as above and release the held messages. If the held rows are already gone (deleted after 24 hours, or a definite refusal that turned out wrong), issue a new manage token (the old hash is replaced) and queue a fresh confirmation with the new link. If a unit is gone, mark the payment `REFUND_PENDING`, request a full refund after commit, alert staff, and message the guest (`payment.auto-refunded`, Q-63).
   - `REFUND_SUCCEEDED` / `REFUND_FAILED` (`kind REFUND`): match by `paymentId`, check the amount and currency, and pass the checked outcome and `refundAttemptKey` to `CompleteRefund` (Decision 7). Record a result for an older attempt as `IGNORED_STATE` and acknowledge the callback.
 - Every verified event that was recorded returns `200`, so the gateway stops retrying.
+- **Implementation notes (M9-T5, owner-approved plan 2026-11-24).**
+  - `REFUND` events are recorded as `IGNORED_STATE` and acknowledged. `CompleteRefund` is M9-T8, which reprocesses them.
+  - The automatic refund request is sent by T5 after commit with the key `refundAttemptKey(paymentId, attempt)` (`<paymentId>:refund:<attempt>`). `refundRequestedAt` is stamped only after the call returns. A thrown call leaves it null for the T6 sweep. T8 reuses the same key function.
+  - Held confirmations are released only when the stored recipients equal the reservation's current email and phone and the stored link's token still hashes to `manageTokenHash`. Otherwise the held rows are dropped, the token is rotated, and a fresh confirmation goes to the current contact (the M9-T4 handoff).
+  - A late confirmation re-acquires the released coupon use with no limit check, after locking the coupon (listings, coupon, reservation).
+  - New outbox kinds: `payment.auto-refunded` (guest, WhatsApp purpose `REFUND_COMPLETED`) and `payment.staff-alert` (branch email only). The `request.staff-alert` kind stays with M9-T7.
+  - If a verified success reaches a reservation that is neither awaiting nor failed (for example cancelled), it takes the automatic refund path. The guest notice and staff alert are queued for `PAYMENT_FAILED` and `CANCELLED` reservations.
+  - **Follow ups the owner approved with the T5 review (2026-11-24).** M9-T6 `reconcile-payments` looks up a missing provider transaction id with `getTransaction` before it sends an automatic refund, because T5 leaves such a refund `REFUND_PENDING` and unsent (the staff alert covers it until then). M9-T8 raises a staff alert when a second success arrives for a payment that already succeeded with a different transaction id (a possible double charge), instead of ignoring it silently.
 - A mid milestone security review (callback verification, idempotency, amount checks, logs) runs with this task, as M8 did after T7b.
 
 ### Decision 6. Jobs (M9-T6)
@@ -315,7 +323,7 @@ Execution order (ids kept from the brief): T0b → T1 → T2 → T3 → T4 → T
 | M9-T2 | Domain: payment transitions, `HoldPolicy`, `CancellationDeadline`, `PaymentMethodAvailability`, PY, CX, GC, Q-96 rules | Critical | T0 | AC 4, 6, 14, 15; T-PAY-1…4, T-CXL-1…3 | Not started |
 | M9-T3 | `PaymentGateway` port, registry, fake gateway, simulated checkout page, payment contract suite | Critical | T0b | AC 9, 10; T-ADP | Not started |
 | M9-T4 | Online booking path: `AWAITING_PAYMENT`, hold, held messages, checkout creation and failure, replay, in transaction expiry, P6 `paymentMethods`, A3 switch | Critical | T1, T2, T3 | AC 1, 4, 14; T-PAY-5 | [Task status in the brief](../delivery/milestones/m9-payments-and-cancellations.md#task-breakdown) |
-| M9-T5 | Payment callback P8, idempotency, late success, mid milestone security review | Critical | T4 | AC 1, 2, 3, 5; C-12, C-13 | Not started |
+| M9-T5 | Payment callback P8, idempotency, late success, mid milestone security review | Critical | T4 | AC 1, 2, 3, 5; C-12, C-13 | [Task status in the brief](../delivery/milestones/m9-payments-and-cancellations.md#task-breakdown) |
 | M9-T6 | Hold expiry and reconciliation jobs | Critical | T5 | AC 4, 5, 10; C-14 | Not started |
 | M9-T7 | Guest cancellation requests (G2, G4), staff alert, Q-96 closing | Critical | T1, T2 | AC 6, 15, 16; T-CXL-4…5 | Not started |
 | M9-T8 | Decisions and refunds (S9 paid, S17…S19, S44, S45) | Critical | T5, T7 | AC 7, 8, 10; T-PAY-8…10, T-CXL-6…8 | Not started |

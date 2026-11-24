@@ -76,6 +76,38 @@
         }
       }
     },
+    "/api/v1/payments/callback": {
+      "post": {
+        "operationId": "receivePaymentCallback",
+        "summary": "API-P8. Payment gateway callback. The body is the gateway's own payload (64 KB cap). The configured adapter verifies the raw bytes. A verified event is recorded once and answers `200`, also for duplicates and for events that change nothing. A failed verification answers `401` with no detail. No session and no CSRF.",
+        "tags": [
+          "Payments"
+        ],
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "A verified event was recorded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaymentCallbackAck"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Problem details. Codes: INTERNAL, WEBHOOK_SIGNATURE_INVALID, PAYLOAD_TOO_LARGE, TRY_AGAIN.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/staff/reservations": {
       "get": {
         "operationId": "listStaffReservations",
@@ -6288,6 +6320,19 @@
           "reference",
           "status",
           "manageUrl"
+        ],
+        "additionalProperties": false
+      },
+      "PaymentCallbackAck": {
+        "type": "object",
+        "properties": {
+          "received": {
+            "type": "boolean",
+            "const": true
+          }
+        },
+        "required": [
+          "received"
         ],
         "additionalProperties": false
       },

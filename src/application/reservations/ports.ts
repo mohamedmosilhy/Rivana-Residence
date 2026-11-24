@@ -229,6 +229,19 @@ export interface ReservationRepository {
   /** Transaction only, after locking and checking the awaiting reservation. */
   markPaymentFailed(branchId: string, id: string, at: Date): Promise<void>;
   /**
+   * Transaction only, after `lockById`. Sets `CONFIRMED` and `paymentStatus
+   * PAID`, clears the hold, and makes every unit consume inventory again (a
+   * late success has re-checked capacity under the listing locks).
+   */
+  confirmPaid(branchId: string, id: string, at: Date): Promise<void>;
+  /** Transaction only, after `lockById`. Mirrors the payment onto the reservation row. */
+  setPaymentStatus(
+    branchId: string,
+    id: string,
+    status: ReservationPaymentStatus,
+    at: Date,
+  ): Promise<void>;
+  /**
    * Transaction only, after `lockById`. Writes the price snapshot, bumps
    * `version` and `changeSeq`, and sets the hotel system flag when asked.
    * A null lines value keeps rooms and nights as stored. Otherwise continuing

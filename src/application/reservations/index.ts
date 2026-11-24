@@ -61,6 +61,11 @@ export {
 } from "./mark-change-entered";
 export { UpdateReservationGuest } from "./update-reservation-guest";
 export {
+  ProcessPaymentCallback,
+  refundAttemptKey,
+  type ProcessPaymentCallbackContext,
+} from "./process-payment-callback";
+export {
   AssignPhysicalRoom,
   RecordFrontDeskTransition,
 } from "./reservation-front-desk";

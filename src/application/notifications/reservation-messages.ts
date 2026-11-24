@@ -18,6 +18,13 @@ export class QueueReservationMessages {
   discardHeld(reservationId: string) {
     return this.store.discardHeld(reservationId);
   }
+  heldMessages(reservationId: string) {
+    return this.store.listHeld(reservationId);
+  }
+  /** Held rows become dispatchable only when the transaction confirms the booking. */
+  releaseHeld(reservationId: string) {
+    return this.store.releaseHeld(reservationId, this.clock.now());
+  }
 
   async enqueue(
     branchId: string,
@@ -38,6 +45,15 @@ export class QueueReservationMessages {
     if (
       event.kind === "reservation.payment-not-completed" &&
       booking.status !== "PAYMENT_FAILED"
+    )
+      return;
+    // A payment that reaches a failed or cancelled booking is refunded, and both
+    // the guest and the hotel are told.
+    if (
+      (event.kind === "payment.auto-refunded" ||
+        event.kind === "payment.staff-alert") &&
+      booking.status !== "PAYMENT_FAILED" &&
+      booking.status !== "CANCELLED"
     )
       return;
     if (
@@ -69,6 +85,11 @@ export class QueueReservationMessages {
     };
     if (event.kind === "reservation.payment-not-completed") {
       payload.holdExpiresAt = event.holdExpiresAt.toISOString();
+    } else if (
+      event.kind === "payment.auto-refunded" ||
+      event.kind === "payment.staff-alert"
+    ) {
+      payload.refundAmount = `USD ${(event.refundMinor / 100).toFixed(2)}`;
     } else if (event.kind !== "reservation.manage-link") {
       payload.checkIn = booking.checkIn;
       payload.checkOut = booking.checkOut;
@@ -104,6 +125,11 @@ export class QueueReservationMessages {
         ...(held ? { status: "HELD" } : {}),
       });
     };
+    if (event.kind === "payment.staff-alert") {
+      add("EMAIL", event.kind, booking.branchEmail ?? "", payload);
+      await this.store.append(messages);
+      return;
+    }
     if (booking.guestEmail)
       add("EMAIL", event.kind, booking.guestEmail, payload);
     if (booking.guestPhone)

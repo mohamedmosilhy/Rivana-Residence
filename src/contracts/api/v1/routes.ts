@@ -21,6 +21,7 @@ import {
 } from "./branches";
 import { AvailabilityQuery, AvailabilityResponse } from "./availability";
 import { SyncCheckpointRequest, SyncQuery, SyncStatus } from "./branch-sync";
+import { PaymentCallbackAck } from "./payments";
 import { QuoteRequest, QuoteResponse } from "./quotes";
 import {
   CancelReservationRequest,
@@ -246,6 +247,22 @@ export const API_ROUTES: readonly ApiRoute[] = [
       "RATE_LIMITED",
       "TRY_AGAIN",
     ],
+  },
+  {
+    method: "post",
+    path: "/api/v1/payments/callback",
+    operationId: "receivePaymentCallback",
+    summary:
+      "API-P8. Payment gateway callback. The body is the gateway's own payload (64 KB cap). The configured adapter verifies the raw bytes. A verified event is recorded once and answers `200`, also for duplicates and for events that change nothing. A failed verification answers `401` with no detail. No session and no CSRF.",
+    tag: "Payments",
+    security: "webhook",
+    responses: {
+      200: {
+        description: "A verified event was recorded.",
+        schema: PaymentCallbackAck,
+      },
+    },
+    errors: ["WEBHOOK_SIGNATURE_INVALID", "PAYLOAD_TOO_LARGE", "TRY_AGAIN"],
   },
   {
     method: "get",

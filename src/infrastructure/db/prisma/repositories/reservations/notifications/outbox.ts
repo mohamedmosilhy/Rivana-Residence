@@ -40,6 +40,22 @@ export class PrismaReservationMessageStore implements ReservationMessageStore {
   async append(messages: OutgoingMessage[]) {
     await this.tx.notificationOutbox.createMany({ data: messages });
   }
+  async listHeld(reservationId: string) {
+    const rows = await this.tx.notificationOutbox.findMany({
+      where: { reservationId, status: "HELD" },
+      orderBy: [{ createdAt: "asc" }, { id: "asc" }],
+      select: { kind: true, channel: true, recipient: true, payload: true },
+    });
+    return rows as unknown as Awaited<
+      ReturnType<ReservationMessageStore["listHeld"]>
+    >;
+  }
+  async releaseHeld(reservationId: string, at: Date) {
+    await this.tx.notificationOutbox.updateMany({
+      where: { reservationId, status: "HELD" },
+      data: { status: "PENDING", availableAt: at },
+    });
+  }
   async discardHeld(reservationId: string) {
     await this.tx.notificationOutbox.deleteMany({
       where: { reservationId, status: "HELD" },

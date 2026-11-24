@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import {
   DispatchOutbox,
@@ -60,4 +60,74 @@ describe("DispatchOutbox manage link", () => {
       ]);
     },
   );
+});
+
+describe("DispatchOutbox payment refund messages (M9-T5)", () => {
+  async function dispatch(
+    kind: string,
+    channel: "EMAIL" | "WHATSAPP",
+    recipient: string,
+  ) {
+    const queue: (ClaimedMessage | null)[] = [
+      {
+        id: "m1",
+        channel,
+        recipient,
+        kind,
+        payload: {
+          reference: "RR-00000001",
+          branchName: "Hotel",
+          refundAmount: "USD 345.00",
+        },
+        attempts: 1,
+      },
+      null,
+    ];
+    const outcomes: Completion[] = [];
+    const whatsapp = { send: vi.fn(async () => ({ ok: true }) as const) };
+    await new DispatchOutbox(
+      {
+        claim: async () => queue.shift() ?? null,
+        complete: async (_m: ClaimedMessage, outcome: Completion) => {
+          outcomes.push(outcome);
+          return true;
+        },
+      },
+      { send: async () => ({ ok: true }) as const },
+      whatsapp as never,
+      { now: () => new Date("2031-01-01T00:00:00Z") },
+    ).run();
+    return { outcomes, whatsapp };
+  }
+
+  it("sends the auto refund notice by WhatsApp with the refund purpose", async () => {
+    const { outcomes, whatsapp } = await dispatch(
+      "payment.auto-refunded",
+      "WHATSAPP",
+      "+12025550101",
+    );
+    expect(outcomes).toMatchObject([{ status: "SENT" }]);
+    expect(whatsapp.send).toHaveBeenCalledWith(
+      expect.objectContaining({
+        purpose: "REFUND_COMPLETED",
+        variables: expect.objectContaining({ refundAmount: "USD 345.00" }),
+      }),
+    );
+  });
+
+  it("keeps the staff alert email only", async () => {
+    expect(
+      (await dispatch("payment.staff-alert", "EMAIL", "hotel@example.test"))
+        .outcomes,
+    ).toMatchObject([{ status: "SENT" }]);
+    const whatsapp = await dispatch(
+      "payment.staff-alert",
+      "WHATSAPP",
+      "+12025550101",
+    );
+    expect(whatsapp.outcomes).toEqual([
+      { status: "FAILED", lastError: "INVALID_MESSAGE" },
+    ]);
+    expect(whatsapp.whatsapp.send).not.toHaveBeenCalled();
+  });
 });

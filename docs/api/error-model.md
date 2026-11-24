@@ -59,7 +59,7 @@ The application layer already returns `Result<T>` with `ApplicationErrorCode` (`
 | `BOOKING_LIMIT_REACHED` | 429 | Per-phone cap on upcoming pay-at-hotel bookings or open payment holds (Q-60); `detail` asks the guest to contact the hotel |
 | `PAYMENT_METHOD_UNAVAILABLE` | 409 | **Implemented (M9-T4, CP-6).** P7 refuses online payment when the gateway is unavailable, the branch switch is off, or the total is zero. The retired `PAYMOB` value returns `422 VALIDATION`. |
 | `PAYMENT_UNAVAILABLE` | 503 | **Implemented (M9-T4).** Checkout could not be opened. A definite refusal sets the reservation to `PAYMENT_FAILED` and releases inventory and coupon use. An ambiguous outcome keeps the hold for retry with the same key and request body. |
-| `WEBHOOK_SIGNATURE_INVALID` | 401 | Payment callback failed the adapter's signature verification; body is minimal |
+| `WEBHOOK_SIGNATURE_INVALID` | 401 | Payment callback failed the adapter's signature verification; body is minimal **Implemented (M9-T5).** Also returned when no gateway is configured. |
 | `CANCELLATION_WINDOW_CLOSED` | 409 | After the deadline (CX-1); `context.deadline` and branch contact details |
 | `CANCELLATION_REQUEST_EXISTS` | 409 | An open request already exists for this reservation |
 | `EMAIL_NOT_CONFIGURED` | 503 | **Planned (M9-T12, ADR 031).** The email channel was requested but no email adapter is configured; nothing is sent |

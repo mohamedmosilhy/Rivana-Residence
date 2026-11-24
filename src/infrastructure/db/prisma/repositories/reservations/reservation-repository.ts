@@ -285,6 +285,40 @@ export class PrismaReservationRepository implements ReservationRepository {
     });
   }
 
+  async confirmPaid(branchId: string, id: string, at: Date) {
+    await this.client.reservationRoom.updateMany({
+      where: { reservationId: id, branchId },
+      data: { consumesInventory: consumesInventory("CONFIRMED") },
+    });
+    await this.client.reservation.update({
+      where: { id, branchId },
+      data: {
+        status: "CONFIRMED",
+        paymentStatus: "PAID",
+        holdExpiresAt: null,
+        statusChangedAt: at,
+        updatedAt: at,
+        version: { increment: 1 },
+      },
+    });
+  }
+
+  async setPaymentStatus(
+    branchId: string,
+    id: string,
+    status: Parameters<ReservationRepository["setPaymentStatus"]>[2],
+    at: Date,
+  ) {
+    await this.client.reservation.update({
+      where: { id, branchId },
+      data: {
+        paymentStatus: status,
+        updatedAt: at,
+        version: { increment: 1 },
+      },
+    });
+  }
+
   async replaceStay(input: StayReplacement) {
     const snapshot = input.snapshot;
     const coupon = snapshot.couponValue;

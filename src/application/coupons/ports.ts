@@ -68,6 +68,11 @@ export interface CouponRedemptionReader {
 export interface CouponRedemptionStore {
   /** Transaction only. Locks the coupon row by normalized code; null when it does not exist. */
   lockByCode(code: string): Promise<Result<string | null>>;
+  /**
+   * A late success confirmed a booking whose redemption was released. The
+   * guest paid the stored price, so the use counts again without a limit check.
+   */
+  reacquire(reservationId: string): Promise<void>;
   /** One redemption per reservation; the phone is the verified booking phone. */
   record(
     input: Readonly<{

@@ -83,6 +83,10 @@ export const PROBLEMS: Readonly<Record<ProblemCode, ProblemDefinition>> = {
     status: 503,
     title: "Online checkout is temporarily unavailable",
   },
+  WEBHOOK_SIGNATURE_INVALID: {
+    status: 401,
+    title: "The callback could not be verified",
+  },
   MISSING_IDEMPOTENCY_KEY: {
     status: 400,
     title: "Send an Idempotency-Key header",

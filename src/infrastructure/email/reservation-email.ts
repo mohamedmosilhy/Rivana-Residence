@@ -27,10 +27,21 @@ export function renderReservationEmail(
     "reservation.manage-link": "Your reservation manage link",
     "reservation.payment-not-completed": "Your payment was not completed",
     "reservation.staff-alert": "New confirmed website reservation",
+    "payment.auto-refunded": "Your payment is being refunded",
+    "payment.staff-alert": "A late payment was refunded automatically",
   }[kind];
   const lines = [heading, `${vars.branchName} · ${vars.reference}`];
   if (kind === "reservation.staff-alert")
     lines.push("Please enter this booking in the hotel system.");
+  else if (kind === "payment.auto-refunded")
+    lines.push(
+      "Your payment arrived after the room was released and the room was no longer available.",
+      `We are refunding ${vars.refundAmount ?? "the full amount"} to your original payment method.`,
+    );
+  else if (kind === "payment.staff-alert")
+    lines.push(
+      `A guest payment arrived after the hold ended and the room was already sold. The full ${vars.refundAmount ?? "amount"} is being refunded. Contact the guest if needed.`,
+    );
   else if (kind === "reservation.payment-not-completed")
     lines.push("Your booking is no longer held.");
   else {
@@ -40,7 +51,11 @@ export function renderReservationEmail(
     if (vars.reason) lines.push(`Reason: ${vars.reason}`);
   }
   const html = lines.map((line) => `<p>${escapeHtml(line)}</p>`);
-  if (kind !== "reservation.staff-alert" && vars.manageLink) {
+  if (
+    kind !== "reservation.staff-alert" &&
+    kind !== "payment.staff-alert" &&
+    vars.manageLink
+  ) {
     lines.push(`Manage your reservation: ${vars.manageLink}`);
     html.push(
       `<p><a href="${escapeHtml(vars.manageLink)}">Manage your reservation</a></p>`,

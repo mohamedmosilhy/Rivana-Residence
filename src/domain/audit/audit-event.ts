@@ -161,6 +161,18 @@ export type AuditChanges = {
     to: "EXPIRED" | "FAILED";
   }>;
   "payment.failed": AuditChanges["payment.expired"];
+  "payment.succeeded": Readonly<{
+    reservationId: string;
+    from: "INITIATED" | "EXPIRED" | "FAILED";
+    to: "SUCCEEDED";
+    late: boolean;
+  }>;
+  "payment.auto-refund-pending": Readonly<{
+    reservationId: string;
+    from: "INITIATED" | "EXPIRED" | "FAILED";
+    refundMinor: number;
+    refundAttempt: number;
+  }>;
   "reservation.staff-created": Readonly<{
     reference: string;
     source: "STAFF" | "EXTERNAL";

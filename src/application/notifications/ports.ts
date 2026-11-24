@@ -171,8 +171,12 @@ type GuestMessageKind =
   | "reservation.cancelled"
   | "reservation.modified"
   | "reservation.manage-link"
-  | "reservation.payment-not-completed";
-export type MessageKind = GuestMessageKind | "reservation.staff-alert";
+  | "reservation.payment-not-completed"
+  | "payment.auto-refunded";
+export type MessageKind =
+  | GuestMessageKind
+  | "reservation.staff-alert"
+  | "payment.staff-alert";
 export type MessageChannel = "EMAIL" | "WHATSAPP";
 export type MessageVariables = {
   reference: string;
@@ -184,6 +188,7 @@ export type MessageVariables = {
   reason?: string;
   manageLink?: string;
   holdExpiresAt?: string;
+  refundAmount?: string;
 };
 
 export type MessageSnapshot = {
@@ -215,7 +220,17 @@ export interface ReservationMessageStore {
   snapshot(branchId: string, reservationId: string): Promise<MessageSnapshot>;
   append(messages: OutgoingMessage[]): Promise<void>;
   discardHeld(reservationId: string): Promise<void>;
+  /** Held rows of one reservation, oldest first. */
+  listHeld(reservationId: string): Promise<HeldMessage[]>;
+  /** Makes every held row of the reservation dispatchable now. */
+  releaseHeld(reservationId: string, at: Date): Promise<void>;
 }
+export type HeldMessage = {
+  kind: MessageKind;
+  channel: MessageChannel;
+  recipient: string;
+  payload: MessageVariables;
+};
 export type ReservationMessageEvent =
   | {
       kind: "reservation.confirmed";
@@ -226,7 +241,9 @@ export type ReservationMessageEvent =
   | { kind: "reservation.cancelled"; notifyGuest: boolean; reason: string }
   | { kind: "reservation.modified"; notifyGuest: boolean }
   | { kind: "reservation.manage-link"; manageToken: string }
-  | { kind: "reservation.payment-not-completed"; holdExpiresAt: Date };
+  | { kind: "reservation.payment-not-completed"; holdExpiresAt: Date }
+  | { kind: "payment.auto-refunded"; refundMinor: number }
+  | { kind: "payment.staff-alert"; refundMinor: number };
 
 export type ClaimedMessage = {
   id: string;

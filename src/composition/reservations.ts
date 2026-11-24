@@ -2,6 +2,8 @@ import "server-only";
 
 import {
   CreateWebsiteReservation,
+  ProcessPaymentCallback,
+  type ProcessPaymentCallbackContext,
   CreateStaffReservation,
   RecordExternalReservation,
   ModifyReservation,
@@ -26,7 +28,10 @@ import {
 import { QuoteBooking } from "@/application/quotes";
 import { whatsAppSetupReader } from "@/composition/whatsapp-sender";
 import { reservationMessageWriter } from "@/composition/reservation-jobs";
-import { websiteCheckoutConnection } from "@/composition/payment-gateway";
+import {
+  paymentGateway,
+  websiteCheckoutConnection,
+} from "@/composition/payment-gateway";
 import { isPaymentGatewayReady } from "@/composition/provider-readiness";
 import { NodeBookingCrypto } from "@/infrastructure/crypto/booking-crypto";
 import type { Clock } from "@/application/shared/providers";
@@ -155,6 +160,42 @@ export function createWebsiteReservation(
     tokens: new PrismaPhoneVerificationRepository(client),
     setup: whatsAppSetupReader(),
     crypto: new NodeBookingCrypto(),
+    clock,
+    ids: new Cuid2IdGenerator(),
+  });
+}
+
+/** P8. The gateway is whichever adapter the deployment selected; none refuses every callback. */
+export function processPaymentCallback(
+  options: Readonly<{
+    client?: ReturnType<typeof getPrisma>;
+    clock?: Clock;
+    gateway?: ReturnType<typeof paymentGateway>;
+    provider?: string;
+  }> = {},
+) {
+  const client = options.client ?? getPrisma();
+  const clock = options.clock ?? { now: () => new Date() };
+  const checkout = websiteCheckoutConnection();
+  const gateway = options.gateway ?? checkout?.gateway;
+  const provider = options.provider ?? checkout?.provider;
+  return new ProcessPaymentCallback({
+    unitOfWork: new PrismaReservationUnitOfWork<ProcessPaymentCallbackContext>(
+      client,
+      (transaction) => ({
+        ...storageContext(transaction),
+        payments: new PrismaBookingPaymentStore(transaction),
+        redemptions: new PrismaCouponRedemptionStore(transaction),
+        messages: reservationMessageWriter(transaction),
+        crypto: new NodeBookingCrypto(),
+      }),
+    ),
+    reads: {
+      payments: new PrismaBookingPaymentStore(client),
+      reservations: new PrismaReservationRepository(client),
+    },
+    ...(gateway ? { gateway } : {}),
+    ...(provider ? { provider } : {}),
     clock,
     ids: new Cuid2IdGenerator(),
   });

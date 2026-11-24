@@ -1,6 +1,6 @@
 # Provider adapters: payment, WhatsApp, email
 
-**Partly implemented.** All three ports have fake adapters and shared contract suites. M9-T3 added the payment gateway port, fake gateway, simulated checkout, and payment readiness. M9-T4 added hosted checkout creation and recovery to online booking. The payment webhook is planned for M9-T5. Launch adapters follow the client’s provider choices in M15-T4. [ADR 030](../adr/030-provider-neutral-integrations.md)
+**Partly implemented.** All three ports have fake adapters and shared contract suites. M9-T3 added the payment gateway port, fake gateway, simulated checkout, and payment readiness. M9-T4 added hosted checkout creation and recovery to online booking. M9-T5 added the payment webhook (`POST /api/v1/payments/callback`) with verification, idempotent events, late success and the automatic refund request. Launch adapters follow the client’s provider choices in M15-T4. [ADR 030](../adr/030-provider-neutral-integrations.md)
 
 The rule: **Rivana owns the logic; an adapter only translates.** If a change to a provider would touch a use case, a Route Handler, or a table, the port is wrong, not the adapter.
 
@@ -31,7 +31,7 @@ A payment provider needs hosted checkout, verifiable server to server results, a
 
 The fake gateway returns `/dev/fake-checkout/[paymentId]` for a checkout it has registered. Its form posts to `/dev/fake-checkout/[paymentId]/submit`. The form sends a scenario choice and the gateway takes the amount and currency from its checkout record. It sends a signed callback to P8 over HTTP at the configured app origin. Both routes require the fake gateway in development or test and return `404` in production.
 
-Checkout, transaction, and refund records live in one server process and reset on restart. The M9-T3 browser proof used a test receiver at the P8 path. M9-T5 adds the reservation webhook, and M9-T6 covers reconciliation from a separate job.
+Checkout, transaction, and refund records live in one server process and reset on restart. The M9-T3 browser proof used a test receiver at the P8 path. M9-T5 added the reservation webhook, and M9-T6 covers reconciliation from a separate job.
 
 ## Contract tests
 

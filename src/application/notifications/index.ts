@@ -25,6 +25,7 @@ export {
   type WhatsAppSetupView,
 } from "./whatsapp-setup";
 export type {
+  HeldMessage,
   MessageKind,
   MessageVariables,
   ReservationMessageEvent,

@@ -10,4 +10,11 @@ export type {
   RefundResult,
   TransactionLookup,
 } from "./ports";
-export type { BookingPayment, BookingPaymentStore } from "./ports";
+export type {
+  BookingPayment,
+  BookingPaymentStore,
+  CallbackPayment,
+  PaymentCallbackStore,
+  PaymentEventRecord,
+  PaymentEventResult,
+} from "./ports";
