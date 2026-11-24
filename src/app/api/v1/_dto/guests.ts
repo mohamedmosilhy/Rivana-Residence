@@ -2,10 +2,12 @@ import type { z } from "zod";
 
 import type { GuestListItem, GuestView } from "@/application/guests";
 import type {
+  GuestCancellationRequest,
   GuestReservationSummary as GuestReservationSummaryRow,
   GuestReservationView,
 } from "@/application/reservations";
 import type {
+  CancellationRequest,
   GuestDetail,
   GuestReservation,
   GuestReservationSummary,
@@ -61,6 +63,17 @@ const money = (value: { amountMinor: number } | null) =>
     ? null
     : { amountMinor: value.amountMinor, currency: "USD" as const };
 
+export function cancellationRequest(
+  row: GuestCancellationRequest,
+): z.infer<typeof CancellationRequest> {
+  return {
+    id: row.id,
+    status: row.status,
+    createdAt: row.createdAt.toISOString(),
+    decisionReason: row.decisionReason,
+  };
+}
+
 export function guestReservation(
   view: GuestReservationView,
 ): z.infer<typeof GuestReservation> {
@@ -102,7 +115,9 @@ export function guestReservation(
       })),
     },
     cancellationDeadline: iso(view.cancellationDeadline),
-    cancellationRequest: view.openCancellationRequest,
+    cancellationRequest:
+      view.currentCancellationRequest &&
+      cancellationRequest(view.currentCancellationRequest),
     allowedActions: [...view.allowedActions],
     createdAt: view.createdAt.toISOString(),
   };

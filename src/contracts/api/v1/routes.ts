@@ -44,6 +44,8 @@ import {
 import { HealthResponse } from "./health";
 import {
   BlockGuestRequest,
+  CancellationRequest,
+  CreateCancellationRequest,
   GuestDetail,
   GuestList,
   GuestQuery,
@@ -130,6 +132,19 @@ export type ApiRoute = Readonly<{
   /** Problem codes this endpoint can return. */
   errors: readonly string[];
 }>;
+
+const cancellationRequestErrors = [
+  "PHONE_BLOCKED",
+  "CANCELLATION_WINDOW_CLOSED",
+  "CANCELLATION_REQUEST_EXISTS",
+  "INVALID_TRANSITION",
+  "VALIDATION",
+  "MALFORMED_JSON",
+  "PAYLOAD_TOO_LARGE",
+  "UNSUPPORTED_MEDIA_TYPE",
+  "RATE_LIMITED",
+  "TRY_AGAIN",
+] as const;
 
 const staffReservationPath = "/api/v1/staff/reservations";
 const staffReservationKey = [
@@ -1311,13 +1326,32 @@ export const API_ROUTES: readonly ApiRoute[] = [
     path: "/api/v1/guest/reservation",
     operationId: "getGuestReservation",
     summary:
-      "API-G1. One reservation for the holder of a manage link token (`Authorization: Bearer`). Sixty requests per client per minute. View only in M8.",
+      "API-G1. One reservation for the holder of a manage link token (`Authorization: Bearer`), including cancellation eligibility. Sixty requests per client per minute.",
     tag: "Guests",
     security: "guest",
     responses: {
       200: { description: "The reservation.", schema: GuestReservation },
     },
     errors: ["UNAUTHENTICATED", "RATE_LIMITED"],
+  },
+  {
+    method: "post",
+    path: "/api/v1/guest/reservation/cancellation-requests",
+    operationId: "requestCancellationWithManageToken",
+    summary:
+      "API-G2. Request cancellation before the deadline with the manage link token. G2 and G4 share ten attempts per client per hour. CANCELLATION_WINDOW_CLOSED includes context.deadline (UTC or null) and context.branch (name, slug, phone, email).",
+    tag: "Guests",
+    security: "guest",
+    request: CreateCancellationRequest,
+    requestOptional: true,
+    responses: {
+      201: {
+        description:
+          "The open cancellation request. The booking is still confirmed.",
+        schema: CancellationRequest,
+      },
+    },
+    errors: ["UNAUTHENTICATED", ...cancellationRequestErrors],
   },
   {
     method: "get",
@@ -1352,5 +1386,24 @@ export const API_ROUTES: readonly ApiRoute[] = [
       "NOT_FOUND",
       "RATE_LIMITED",
     ],
+  },
+  {
+    method: "post",
+    path: "/api/v1/guest/reservations/{reference}/cancellation-requests",
+    operationId: "requestCancellationWithGuestSession",
+    summary:
+      "API-G4. Request cancellation for a reservation of the verified phone. An unknown or foreign reference returns 404. G2 and G4 share ten attempts per client per hour. CANCELLATION_WINDOW_CLOSED includes context.deadline (UTC or null) and context.branch (name, slug, phone, email).",
+    tag: "Guests",
+    security: "guest",
+    request: CreateCancellationRequest,
+    requestOptional: true,
+    responses: {
+      201: {
+        description:
+          "The open cancellation request. The booking is still confirmed.",
+        schema: CancellationRequest,
+      },
+    },
+    errors: ["PHONE_NOT_VERIFIED", "NOT_FOUND", ...cancellationRequestErrors],
   },
 ];

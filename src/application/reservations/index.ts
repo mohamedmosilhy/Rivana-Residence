@@ -1,6 +1,8 @@
 // Public surface of the reservations application module (dependency rule D-8).
 export type {
   ReservationUnitOfWork,
+  CancellationRequestStore,
+  GuestCancellationRequest,
   ReservationRepository,
   ReservationInsert,
   StoredReservation,
@@ -56,6 +58,10 @@ export {
   type CancellationReason,
 } from "./cancel-reservation";
 export {
+  RequestCancellation,
+  type RequestCancellationContext,
+} from "./request-cancellation";
+export {
   MarkChangeEnteredInHotelSystem,
   type MarkChangeEnteredInput,
 } from "./mark-change-entered";
@@ -78,11 +84,13 @@ export {
 export {
   AssignPhysicalRoom,
   RecordFrontDeskTransition,
+  type FrontDeskTransitionContext,
 } from "./reservation-front-desk";
 export {
   ViewGuestReservation,
   ListGuestReservations,
   ViewGuestSessionReservation,
+  unlinkedReservationPhone,
   type GuestReservationReader,
   type GuestReservationRecord,
   type GuestReservationSummary,

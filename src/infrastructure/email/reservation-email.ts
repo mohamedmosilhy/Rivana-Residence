@@ -27,12 +27,18 @@ export function renderReservationEmail(
     "reservation.manage-link": "Your reservation manage link",
     "reservation.payment-not-completed": "Your payment was not completed",
     "reservation.staff-alert": "New confirmed website reservation",
+    "cancellation-request.received": "We received your cancellation request",
+    "request.staff-alert": "New reservation cancellation request",
     "payment.auto-refunded": "Your payment is being refunded",
     "payment.staff-alert": "A late payment was refunded automatically",
   }[kind];
   const lines = [heading, `${vars.branchName} · ${vars.reference}`];
   if (kind === "reservation.staff-alert")
     lines.push("Please enter this booking in the hotel system.");
+  else if (kind === "cancellation-request.received")
+    lines.push("Submitting a request does not cancel your reservation.");
+  else if (kind === "request.staff-alert")
+    lines.push("Please review the cancellation request for this reservation.");
   else if (kind === "payment.auto-refunded")
     lines.push(
       "Your payment arrived after the room was released and the room was no longer available.",
@@ -53,6 +59,7 @@ export function renderReservationEmail(
   const html = lines.map((line) => `<p>${escapeHtml(line)}</p>`);
   if (
     kind !== "reservation.staff-alert" &&
+    kind !== "request.staff-alert" &&
     kind !== "payment.staff-alert" &&
     vars.manageLink
   ) {

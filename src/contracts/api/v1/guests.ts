@@ -3,8 +3,7 @@ import { z } from "zod";
 import { isoDate, Money, Occupancy, Stay } from "./primitives";
 
 // Zod only (D-7). S50 to S53 are staff endpoints; G1, G3 and G4 are guest
-// reads with a bearer token. View only in M8: cancellation and change fields
-// exist now so M9 fills them in without changing the contract.
+// endpoints use bearer tokens.
 
 const Id = z.string().min(1).max(32);
 const Page = z
@@ -103,6 +102,30 @@ export const GuestReservationList = z.strictObject({
   items: z.array(GuestReservationSummary),
 });
 
+export const CreateCancellationRequest = z.strictObject({
+  reason: z
+    .string()
+    .trim()
+    .max(500)
+    .refine((value) => !/[\p{Cc}\p{Cf}]/u.test(value), "Use plain text.")
+    .optional(),
+});
+
+export const CancellationRequest = z.strictObject({
+  id: Id,
+  status: z.enum([
+    "OPEN",
+    "APPROVED",
+    "REJECTED",
+    "REFUND_PENDING",
+    "REFUND_FAILED",
+    "COMPLETED",
+    "CLOSED",
+  ]),
+  createdAt: z.iso.datetime(),
+  decisionReason: z.string().nullable(),
+});
+
 export const GuestReservation = z.strictObject({
   reference: z.string(),
   status: z.string(),
@@ -153,7 +176,7 @@ export const GuestReservation = z.strictObject({
     })
     .nullable(),
   cancellationDeadline: z.iso.datetime().nullable(),
-  cancellationRequest: z.null(),
+  cancellationRequest: CancellationRequest.nullable(),
   allowedActions: z.array(z.string()),
   createdAt: z.iso.datetime(),
 });

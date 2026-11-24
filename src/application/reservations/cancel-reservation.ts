@@ -17,6 +17,10 @@ import {
 } from "@/domain/reservations";
 import { localDateAt } from "@/domain/shared/zoned-time";
 
+import {
+  closeCancellationRequest,
+  type CloseCancellationRequestContext,
+} from "./close-cancellation-request";
 import type { ReservationUnitOfWork } from "./ports";
 import {
   findStaffReservation,
@@ -27,6 +31,7 @@ import {
 import type { ReservationStorageContext } from "./storage-context";
 
 export type CancelReservationContext = ReservationStorageContext &
+  CloseCancellationRequestContext &
   Readonly<{
     redemptions: Pick<CouponRedemptionStore, "release">;
     messages: Pick<QueueReservationMessages, "enqueue">;
@@ -91,15 +96,15 @@ export class CancelReservation {
       return invalid("Check the note.", [
         { path: "note", message: "Use plain text of at most 500 characters." },
       ]);
-    const now = this.deps.clock.now();
     const result = await this.deps.unitOfWork.run(async (context) => {
       const locked = await context.reservations.lockById(row.branchId, id);
       if (!locked.ok) return locked;
       const current = locked.value;
       if (!current)
         return failure("NOT_FOUND", "This reservation was not found.");
+      const now = this.deps.clock.now();
       if (current.status === "CANCELLED")
-        return success({ stored: current, replayed: true });
+        return success({ stored: current, replayed: true, at: now });
       if (current.version !== expectedVersion)
         return staleVersion(current.version);
       const transition = ReservationStateMachine.transition(
@@ -127,6 +132,13 @@ export class CancelReservation {
         id,
         now,
         flagPmsUpdate,
+      );
+      await closeCancellationRequest(
+        context,
+        stored,
+        "CANCEL",
+        principal.id,
+        now,
       );
       if (flagPmsUpdate)
         await context.reservations.appendChange({
@@ -170,11 +182,15 @@ export class CancelReservation {
         notifyGuest: input.notifyGuest,
         reason: REASON_TEXT[input.reason],
       });
-      return success({ stored, replayed: false });
+      return success({ stored, replayed: false, at: now });
     });
     if (!result.ok) return result;
     return success({
-      reservation: staffReservationView(result.value.stored, principal, now),
+      reservation: staffReservationView(
+        result.value.stored,
+        principal,
+        result.value.at,
+      ),
       replayed: result.value.replayed,
     });
   }

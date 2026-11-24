@@ -68,15 +68,17 @@ Every transition:
 
 | Rule | Definition |
 | --- | --- |
-| CX-1 | A guest may request cancellation until the **deadline**: 24 hours before the branch's `checkInTime` on the arrival date, in the branch time zone. A branch without a check-in time offers no online requests. |
-| CX-2 | Only `CONFIRMED` reservations can have a request; at most one active request per reservation (`OPEN`, `APPROVED`, `REFUND_PENDING` or `REFUND_FAILED`; also none while the refund is pending) *(rule implemented M9-T2)*. Requests come from the manage link or a guest session for the reservation's phone. |
+| CX-1 | A guest may request cancellation strictly before the **deadline**, which is 24 hours before the branch's `checkInTime` on the arrival date in the branch time zone. A branch without a check-in time offers no online requests. |
+| CX-2 | Only `CONFIRMED` reservations can have a request; at most one active request per reservation (`OPEN`, `APPROVED`, `REFUND_PENDING` or `REFUND_FAILED`; also none while the refund is pending) **Implemented (M9-T2, M9-T7).** Requests come from the manage link or a guest session for the reservation's phone. A blocked phone keeps manage link read access only (Q-75). |
 | CX-3 | While the request is open the reservation stays `CONFIRMED` and keeps its inventory. |
 | CX-4 | A Manager of the branch or an Admin (`cancellations:decide`) approves or rejects. Rejection needs a reason, which is sent to the guest. |
 | CX-5 | Approval of an unpaid booking sets `CANCELLED` and releases inventory at once. Approval of a paid booking requests a gateway refund of the captured amount; the reservation becomes `CANCELLED` when the gateway confirms. A refund failure leaves it `CONFIRMED` with the request `REFUND_FAILED` and a retry action. |
-| CX-6 | After the deadline, the guest sees the branch's contact details; staff may still cancel under the transitions above. A booking made inside the 24-hour window can never be requested online (Q-64). |
+| CX-6 | At or after the deadline, the guest sees the branch's contact details. Staff may still cancel under the transitions above. A booking made inside the 24-hour window can never be requested online (Q-64). |
 | CX-7 | Request, decision, refund attempt, and result are each audited and messaged (email and WhatsApp). |
 
-*(Implemented M9-T2 as pure rules.)* Request states: `OPEN → APPROVED → (REFUND_PENDING → COMPLETED | REFUND_FAILED → retry)`, `OPEN → REJECTED`. For unpaid bookings `APPROVED` goes straight to `COMPLETED`.
+**Implemented (M9-T7).** A request writes the audit, guest receipt, and branch email alert together. Unpaid staff cancellation, no-show, or check-in closes an open request and records the staff member, reason, time, and audit in the same transaction (Q-96 and Q-97). Staff decisions and refunds are planned for M9-T8.
+
+*(Transition rules implemented M9-T2.)* Request states: `OPEN → APPROVED → (REFUND_PENDING → COMPLETED | REFUND_FAILED → retry)`, `OPEN → REJECTED` or `OPEN → CLOSED`. For unpaid bookings `APPROVED` goes straight to `COMPLETED`.
 
 ## Guest changes (Q-83…Q-85)
 

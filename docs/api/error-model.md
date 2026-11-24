@@ -60,8 +60,8 @@ The application layer already returns `Result<T>` with `ApplicationErrorCode` (`
 | `PAYMENT_METHOD_UNAVAILABLE` | 409 | **Implemented (M9-T4, CP-6).** P7 refuses online payment when the gateway is unavailable, the branch switch is off, or the total is zero. The retired `PAYMOB` value returns `422 VALIDATION`. |
 | `PAYMENT_UNAVAILABLE` | 503 | **Implemented (M9-T4).** Checkout could not be opened. A definite refusal sets the reservation to `PAYMENT_FAILED` and releases inventory and coupon use. An ambiguous outcome keeps the hold for retry with the same key and request body. |
 | `WEBHOOK_SIGNATURE_INVALID` | 401 | Payment callback failed the adapter's signature verification; body is minimal **Implemented (M9-T5).** Also returned when no gateway is configured. |
-| `CANCELLATION_WINDOW_CLOSED` | 409 | After the deadline (CX-1); `context.deadline` and branch contact details |
-| `CANCELLATION_REQUEST_EXISTS` | 409 | An open request already exists for this reservation |
+| `CANCELLATION_WINDOW_CLOSED` | 409 | **Implemented (M9-T7).** At or after the deadline, or when the branch lacks a check-in time. `context.deadline` is a UTC instant or null. `context.branch` contains `name`, `slug`, `phone`, and `email`. |
+| `CANCELLATION_REQUEST_EXISTS` | 409 | **Implemented (M9-T7).** An active request already exists for the reservation. |
 | `EMAIL_NOT_CONFIGURED` | 503 | **Planned (M9-T12, ADR 031).** The email channel was requested but no email adapter is configured; nothing is sent |
 | `WHATSAPP_NOT_CONFIGURED` | 503 | Business number, access token, or the template for this purpose is missing; nothing is sent (verification requests fail this way while the number is a placeholder) |
 | `WHATSAPP_TEST_FAILED` | 502 | The Admin's test message was refused by the provider; `detail` carries the provider's error text without secrets |

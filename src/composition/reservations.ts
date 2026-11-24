@@ -15,6 +15,7 @@ import {
   MarkChangeEnteredInHotelSystem,
   AssignPhysicalRoom,
   RecordFrontDeskTransition,
+  type FrontDeskTransitionContext,
   UpdateReservationGuest,
   MarkEnteredInHotelSystem,
   ResendManageLink,
@@ -45,6 +46,7 @@ import { PrismaBranchRepository } from "@/infrastructure/db/prisma/repositories/
 import { PrismaPublicListingReader } from "@/infrastructure/db/prisma/repositories/public-listing-reader";
 import { PrismaReservationRepository } from "@/infrastructure/db/prisma/repositories/reservations/reservation-repository";
 import { PrismaBookingPaymentStore } from "@/infrastructure/db/prisma/repositories/reservations/booking-payment-store";
+import { PrismaCancellationRequestStore } from "@/infrastructure/db/prisma/repositories/reservations/cancellation-request-store";
 import { PrismaPaymentSweepStore } from "@/infrastructure/db/prisma/repositories/reservations/payment-sweep-store";
 import { PrismaGuestRepository } from "@/infrastructure/db/prisma/repositories/reservations/guests/guest-repository";
 import { PrismaPhoneVerificationRepository } from "@/infrastructure/db/prisma/repositories/reservations/guests/phone-verification-repository";
@@ -100,9 +102,18 @@ export function cancelReservationContext(
   transaction: DatabaseClient,
 ): CancelReservationContext {
   return {
-    ...storageContext(transaction),
+    ...frontDeskTransitionContext(transaction),
     redemptions: new PrismaCouponRedemptionStore(transaction),
     messages: reservationMessageWriter(transaction),
+  };
+}
+
+export function frontDeskTransitionContext(
+  transaction: DatabaseClient,
+): FrontDeskTransitionContext {
+  return {
+    ...storageContext(transaction),
+    cancellationRequests: new PrismaCancellationRequestStore(transaction),
   };
 }
 
@@ -335,6 +346,13 @@ export function staffReservationCommands(
     reads,
     clock,
   };
+  const frontDesk = {
+    ...operations,
+    unitOfWork: new PrismaReservationUnitOfWork(
+      client,
+      frontDeskTransitionContext,
+    ),
+  };
   return {
     create: new CreateStaffReservation(deps),
     recordExternal: new RecordExternalReservation(deps),
@@ -359,9 +377,9 @@ export function staffReservationCommands(
     markChangeEntered: new MarkChangeEnteredInHotelSystem(operations),
     updateGuest: new UpdateReservationGuest({ ...operations, ids: deps.ids }),
     assignRoom: new AssignPhysicalRoom(operations),
-    checkIn: new RecordFrontDeskTransition(operations, "CHECK_IN"),
-    checkOut: new RecordFrontDeskTransition(operations, "CHECK_OUT"),
-    markNoShow: new RecordFrontDeskTransition(operations, "MARK_NO_SHOW"),
+    checkIn: new RecordFrontDeskTransition(frontDesk, "CHECK_IN"),
+    checkOut: new RecordFrontDeskTransition(frontDesk, "CHECK_OUT"),
+    markNoShow: new RecordFrontDeskTransition(frontDesk, "MARK_NO_SHOW"),
     markEntered: new MarkEnteredInHotelSystem(operations),
     resendManageLink: new ResendManageLink({
       reads,

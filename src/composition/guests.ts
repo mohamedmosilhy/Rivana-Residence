@@ -12,6 +12,8 @@ import {
   ViewGuestReservation,
   ListGuestReservations,
   ViewGuestSessionReservation,
+  RequestCancellation,
+  type RequestCancellationContext,
 } from "@/application/reservations";
 import type { Clock } from "@/application/shared/providers";
 import { NodeBookingCrypto } from "@/infrastructure/crypto/booking-crypto";
@@ -21,6 +23,10 @@ import {
 } from "@/infrastructure/db/prisma/repositories/audit/audit-log";
 import { PrismaGuestDirectoryReader } from "@/infrastructure/db/prisma/repositories/reservations/guests/guest-directory-reader";
 import { PrismaGuestReservationReader } from "@/infrastructure/db/prisma/repositories/reservations/guests/guest-reservation-reader";
+import { PrismaReservationRepository } from "@/infrastructure/db/prisma/repositories/reservations/reservation-repository";
+import { PrismaCancellationRequestStore } from "@/infrastructure/db/prisma/repositories/reservations/cancellation-request-store";
+import { PrismaBranchRepository } from "@/infrastructure/db/prisma/repositories/branches/branch-repository";
+import { reservationMessageWriter } from "@/composition/reservation-jobs";
 import { throttleKeys } from "@/composition/auth";
 import { clientAddressFrom } from "@/composition/http";
 import {
@@ -32,6 +38,7 @@ import { getPrisma } from "@/infrastructure/db/prisma/client";
 import { PrismaGuestRepository } from "@/infrastructure/db/prisma/repositories/reservations/guests/guest-repository";
 import { PrismaPhoneVerificationRepository } from "@/infrastructure/db/prisma/repositories/reservations/guests/phone-verification-repository";
 import { PrismaReservationUnitOfWork } from "@/infrastructure/db/prisma/unit-of-work";
+import type { DatabaseClient } from "@/infrastructure/db/prisma/transaction";
 import { Cuid2IdGenerator } from "@/infrastructure/ids/cuid2-id-generator";
 import { getServerEnv } from "@/lib/env/server";
 
@@ -105,20 +112,57 @@ export function guestReservationReads(
     clock?: Clock;
   }> = {},
 ) {
-  const client = options.client ?? getPrisma();
-  const deps = {
-    reader: new PrismaGuestReservationReader(client),
-    crypto: new NodeBookingCrypto(),
-    clock: options.clock ?? { now: () => new Date() },
-  };
-  const session = {
-    ...deps,
-    verifications: new PrismaPhoneVerificationRepository(client),
-    guests: new PrismaGuestRepository(client),
-  };
+  const session = guestReservationAccess(
+    options.client ?? getPrisma(),
+    options.clock,
+  );
   return {
-    view: new ViewGuestReservation(deps),
+    view: new ViewGuestReservation(session),
     list: new ListGuestReservations(session),
     viewBySession: new ViewGuestSessionReservation(session),
   };
+}
+
+function guestReservationAccess(
+  client: ReturnType<typeof getPrisma>,
+  clock: Clock = { now: () => new Date() },
+) {
+  return {
+    reader: new PrismaGuestReservationReader(client),
+    crypto: new NodeBookingCrypto(),
+    clock,
+    verifications: new PrismaPhoneVerificationRepository(client),
+    guests: new PrismaGuestRepository(client),
+  };
+}
+
+export function requestCancellationContext(
+  transaction: DatabaseClient,
+): RequestCancellationContext {
+  return {
+    reservations: new PrismaReservationRepository(transaction),
+    guests: new PrismaGuestRepository(transaction),
+    verifications: new PrismaPhoneVerificationRepository(transaction),
+    branches: new PrismaBranchRepository(transaction),
+    cancellationRequests: new PrismaCancellationRequestStore(transaction),
+    audit: new PrismaAuditLog(transaction),
+    messages: reservationMessageWriter(transaction),
+  };
+}
+
+export function requestCancellation(
+  options: Readonly<{
+    client?: ReturnType<typeof getPrisma>;
+    clock?: Clock;
+  }> = {},
+) {
+  const client = options.client ?? getPrisma();
+  return new RequestCancellation({
+    ...guestReservationAccess(client, options.clock),
+    ids: new Cuid2IdGenerator(),
+    unitOfWork: new PrismaReservationUnitOfWork(
+      client,
+      requestCancellationContext,
+    ),
+  });
 }

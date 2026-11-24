@@ -22,6 +22,7 @@ export {
   planApproval,
   parseRejectionReason,
   closedReasonForStaffAction,
+  ACTIVE_CANCELLATION_REQUEST_STATUSES,
   type ApprovalPlan,
   type ChangeApplication,
   type GuestRequestDecision,

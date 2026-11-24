@@ -65,12 +65,12 @@ const STAY = [
   "total",
   "manageLink",
 ] as const satisfies readonly WhatsAppVariableKey[];
-const CASE = [
+const REQUEST_SUMMARY = [
   "guestFirstName",
   "reference",
   "branchName",
-  "manageLink",
 ] as const satisfies readonly WhatsAppVariableKey[];
+const CASE = [...REQUEST_SUMMARY, "manageLink"] as const;
 
 /** The keys each purpose may use, in a suggested order. */
 export const WHATSAPP_PURPOSE_VARIABLES: Readonly<
@@ -86,7 +86,7 @@ export const WHATSAPP_PURPOSE_VARIABLES: Readonly<
     "holdExpiresAt",
     "manageLink",
   ],
-  CANCELLATION_RECEIVED: CASE,
+  CANCELLATION_RECEIVED: REQUEST_SUMMARY,
   CANCELLATION_APPROVED: [...CASE, "refundAmount"],
   CANCELLATION_REJECTED: [...CASE, "reason"],
   REFUND_COMPLETED: [

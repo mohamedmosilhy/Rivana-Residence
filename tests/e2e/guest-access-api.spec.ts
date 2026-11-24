@@ -16,16 +16,18 @@ function request(
     body?: unknown;
     key?: string;
     bearer?: string;
+    ifMatch?: string;
   } = {},
 ) {
   return page.evaluate(
-    async ({ path, method, body, key, bearer }) => {
+    async ({ path, method, body, key, bearer, ifMatch }) => {
       const response = await fetch(path, {
         method: method ?? "GET",
         headers: {
           ...(body === undefined ? {} : { "Content-Type": "application/json" }),
           ...(key ? { "Idempotency-Key": key } : {}),
           ...(bearer ? { Authorization: `Bearer ${bearer}` } : {}),
+          ...(ifMatch ? { "If-Match": ifMatch } : {}),
         },
         ...(body === undefined ? {} : { body: JSON.stringify(body) }),
       });
@@ -39,7 +41,7 @@ function request(
 const token = (label: string) =>
   `${label.replace(/[^A-Za-z0-9_-]/g, "-")}${"x".repeat(43)}`.slice(0, 43);
 
-test("a guest reads their reservation by link and phone session, and a staff block ends the session", async ({
+test("a guest reads and requests cancellation, and staff can block writes and close the request", async ({
   page,
 }, testInfo) => {
   const key = `t11-${testInfo.project.name}-${testInfo.retry}`;
@@ -127,7 +129,7 @@ test("a guest reads their reservation by link and phone session, and a staff blo
         reference,
         status: "CONFIRMED",
         contact: { fullName: "Fictional Access Guest", phone },
-        allowedActions: [],
+        allowedActions: ["REQUEST_CANCELLATION"],
       },
     });
     const mine = await request(page, "/api/v1/guest/reservations", {
@@ -149,6 +151,39 @@ test("a guest reads their reservation by link and phone session, and a staff blo
       (await request(page, "/api/v1/guest/reservation", { bearer: live }))
         .status,
     ).toBe(401);
+
+    const submitted = await request(
+      page,
+      `/api/v1/guest/reservations/${reference}/cancellation-requests`,
+      {
+        method: "POST",
+        bearer: live,
+        body: { reason: "Fictional change of plans" },
+      },
+    );
+    expect(submitted).toMatchObject({
+      status: 201,
+      body: { status: "OPEN", decisionReason: null },
+    });
+    expect(
+      await request(page, "/api/v1/guest/reservation/cancellation-requests", {
+        method: "POST",
+        bearer: manage,
+      }),
+    ).toMatchObject({
+      status: 409,
+      body: { code: "CANCELLATION_REQUEST_EXISTS" },
+    });
+    expect(
+      await request(page, "/api/v1/guest/reservation", { bearer: manage }),
+    ).toMatchObject({
+      status: 200,
+      body: {
+        status: "CONFIRMED",
+        cancellationRequest: { id: submitted.body.id, status: "OPEN" },
+        allowedActions: [],
+      },
+    });
 
     // Staff find the guest, block them, and the session stops working.
     const found = await request(
@@ -177,13 +212,54 @@ test("a guest reads their reservation by link and phone session, and a staff blo
         .status,
     ).toBe(200);
     expect(
+      await request(page, "/api/v1/guest/reservation/cancellation-requests", {
+        method: "POST",
+        bearer: manage,
+      }),
+    ).toMatchObject({ status: 403, body: { code: "PHONE_BLOCKED" } });
+    expect(
       await request(page, `/api/v1/staff/guests/${guestId}/block`, {
         method: "DELETE",
         body: { reason: "Fictional resolution" },
       }),
     ).toMatchObject({ status: 200, body: { blocked: false } });
+
+    const {
+      rows: [current],
+    } = await sql('SELECT version FROM "Reservation" WHERE id = $1', [
+      reservationId,
+    ]);
+    expect(
+      await request(
+        page,
+        `/api/v1/staff/reservations/${reservationId}/cancellation`,
+        {
+          method: "POST",
+          ifMatch: `"v${current.version}"`,
+          body: { reason: "GUEST_REQUEST", notifyGuest: false },
+        },
+      ),
+    ).toMatchObject({ status: 200 });
+    expect(
+      await request(page, "/api/v1/guest/reservation", { bearer: manage }),
+    ).toMatchObject({
+      status: 200,
+      body: {
+        status: "CANCELLED",
+        cancellationRequest: { id: submitted.body.id, status: "CLOSED" },
+        allowedActions: [],
+      },
+    });
   } finally {
     if (reservationId) {
+      await sql(
+        'DELETE FROM "AuditEvent" WHERE "entityType" = \'CancellationRequest\' AND "entityId" IN (SELECT id FROM "CancellationRequest" WHERE "reservationId" = $1)',
+        [reservationId],
+      );
+      await sql(
+        'DELETE FROM "CancellationRequest" WHERE "reservationId" = $1',
+        [reservationId],
+      );
       await sql('DELETE FROM "NotificationOutbox" WHERE "reservationId" = $1', [
         reservationId,
       ]);

@@ -125,6 +125,12 @@ export class QueueReservationMessages {
         ...(held ? { status: "HELD" } : {}),
       });
     };
+    if (event.kind === "request.staff-alert") {
+      // An absent inbox is visible as a failed outbox row, as for new bookings.
+      add("EMAIL", event.kind, booking.branchEmail ?? "", summary);
+      await this.store.append(messages);
+      return;
+    }
     if (event.kind === "payment.staff-alert") {
       add("EMAIL", event.kind, booking.branchEmail ?? "", payload);
       await this.store.append(messages);

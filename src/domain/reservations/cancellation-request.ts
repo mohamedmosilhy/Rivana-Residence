@@ -66,14 +66,17 @@ export type GuestRequestDecision =
  * `APPROVED`, `REFUND_PENDING` and `REFUND_FAILED` count as well as `OPEN`.
  * Only `REJECTED`, `COMPLETED` and `CLOSED` are finished.
  */
+export const ACTIVE_CANCELLATION_REQUEST_STATUSES: readonly CancellationRequestStatus[] =
+  Object.freeze([
+    "OPEN",
+    "APPROVED",
+    "REFUND_PENDING",
+    "REFUND_FAILED",
+  ] as const);
+
 export function isActiveRequest(status: CancellationRequestStatus): boolean {
   assertRequestStatus(status, "status");
-  return (
-    status === "OPEN" ||
-    status === "APPROVED" ||
-    status === "REFUND_PENDING" ||
-    status === "REFUND_FAILED"
-  );
+  return ACTIVE_CANCELLATION_REQUEST_STATUSES.includes(status);
 }
 
 type RequestFacts = {

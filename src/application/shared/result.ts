@@ -37,6 +37,8 @@ export type ApplicationErrorCode =
   | "IDEMPOTENCY_KEY_REUSED"
   | "PRICE_CHANGED"
   | "INVALID_TRANSITION"
+  | "CANCELLATION_WINDOW_CLOSED"
+  | "CANCELLATION_REQUEST_EXISTS"
   | "STALE_VERSION"
   | "PRECONDITION_REQUIRED"
   | "PMS_UPDATE_STALE"
@@ -51,6 +53,7 @@ type StandardApplicationErrorCode = Exclude<
   | "PRICE_CHANGED"
   | "BRANCH_NOT_BOOKABLE"
   | "INVALID_TRANSITION"
+  | "CANCELLATION_WINDOW_CLOSED"
   | "STALE_VERSION"
   | "PMS_UPDATE_STALE"
 >;
@@ -123,6 +126,21 @@ export type InvalidTransitionError = Readonly<{
   context: Readonly<{ status: string }>;
   fieldErrors?: never;
 }>;
+
+type CancellationWindowClosedError = Readonly<{
+  code: "CANCELLATION_WINDOW_CLOSED";
+  message: string;
+  context: Readonly<{
+    deadline: string | null;
+    branch: Readonly<{
+      name: string;
+      slug: string;
+      phone: string | null;
+      email: string | null;
+    }>;
+  }>;
+  fieldErrors?: never;
+}>;
 /** An `If-Match` version that no longer matches (412). */
 export type StaleVersionError = Readonly<{
   code: "STALE_VERSION";
@@ -141,6 +159,7 @@ export type PmsUpdateStaleError = Readonly<{
 export type ApplicationError =
   | StandardApplicationError
   | InvalidTransitionError
+  | CancellationWindowClosedError
   | StaleVersionError
   | PmsUpdateStaleError
   | BranchNotBookableError

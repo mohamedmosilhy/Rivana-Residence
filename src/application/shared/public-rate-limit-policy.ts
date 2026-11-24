@@ -53,9 +53,16 @@ export const GUEST_READ_RATE_LIMIT = {
   rule: { maxFailures: 60, windowMs: 60_000, lockMs: 60_000 },
 } as const;
 
+/** G2 and G4 share ten cancellation request attempts per client per hour. */
+export const GUEST_REQUEST_RATE_LIMIT = {
+  name: "guest-request",
+  rule: { maxFailures: 10, windowMs: 3_600_000, lockMs: 3_600_000 },
+} as const;
+
 /** Every limiter namespace on the shared store; cleanup prunes each one. */
 export const PUBLIC_RATE_LIMITS = [
   GUEST_READ_RATE_LIMIT,
+  GUEST_REQUEST_RATE_LIMIT,
   BOOKING_CREATE_RATE_LIMIT,
   AVAILABILITY_RATE_LIMIT,
   QUOTE_RATE_LIMIT,

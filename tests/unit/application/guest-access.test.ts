@@ -9,6 +9,7 @@ import {
   ViewGuestSessionReservation,
 } from "@/application/reservations";
 import { guestReservationView } from "@/application/reservations/guest-reservation-reads";
+import { LocalDate } from "@/domain/shared/local-date";
 import { PhoneNumber } from "@/domain/guests";
 
 // covers: M8-T11 AC-9 (authorization sweep, zero port calls on refusal),
@@ -243,7 +244,7 @@ describe("guestReservationView contact rule (R-8)", () => {
     status: "CONFIRMED",
     paymentMethod: "PAY_AT_HOTEL",
     paymentStatus: "NOT_REQUIRED",
-    stay: {},
+    stay: { checkIn: LocalDate.parse("2031-04-10") },
     lines: [],
     contact: {
       fullName: "Guest",
@@ -261,7 +262,11 @@ describe("guestReservationView contact rule (R-8)", () => {
       branch: { name: "B", slug: "b", phone: null, email: null },
       roomNames: {},
       ownerPhone,
+      phoneBlocked: false,
+      cancellationTiming: { timeZone: "Africa/Cairo", checkInTime: null },
+      currentCancellationRequest: null,
     }) as never;
+  const now = new Date("2031-03-01T10:00:00Z");
   const session = (phone: string) => ({
     kind: "GUEST_SESSION" as const,
     phone: PhoneNumber.parse(phone),
@@ -269,31 +274,39 @@ describe("guestReservationView contact rule (R-8)", () => {
 
   it("shows contact only when the session phone owns the reservation", () => {
     expect(
-      guestReservationView(record("+12025550101"), session("+12025550101"))
+      guestReservationView(record("+12025550101"), session("+12025550101"), now)
         .contact,
     ).toMatchObject({ fullName: "Guest" });
     // A reader that ever returned another phone's reservation still shows no contact.
     expect(
-      guestReservationView(record("+12025550102"), session("+12025550101"))
+      guestReservationView(record("+12025550102"), session("+12025550101"), now)
         .contact,
     ).toBeNull();
     expect(
-      guestReservationView(record(null), session("+12025550101")).contact,
+      guestReservationView(record(null), session("+12025550101"), now).contact,
     ).toBeNull();
   });
 
   it("shows contact to the holder of that reservation's manage link only", () => {
     expect(
-      guestReservationView(record(null), {
-        kind: "MANAGE_TOKEN",
-        reservationId: "r1",
-      }).contact,
+      guestReservationView(
+        record(null),
+        {
+          kind: "MANAGE_TOKEN",
+          reservationId: "r1",
+        },
+        now,
+      ).contact,
     ).not.toBeNull();
     expect(
-      guestReservationView(record(null), {
-        kind: "MANAGE_TOKEN",
-        reservationId: "other",
-      }).contact,
+      guestReservationView(
+        record(null),
+        {
+          kind: "MANAGE_TOKEN",
+          reservationId: "other",
+        },
+        now,
+      ).contact,
     ).toBeNull();
   });
 });

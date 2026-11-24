@@ -26,6 +26,7 @@ import { PrismaPhoneVerificationRepository } from "@/infrastructure/db/prisma/re
 import { PrismaReservationUnitOfWork } from "@/infrastructure/db/prisma/unit-of-work";
 import { staffReservationCommands } from "@/composition/reservations";
 import {
+  CancellationRequest,
   GuestDetail,
   GuestList,
   GuestReservation,
@@ -78,6 +79,12 @@ const { GET: g1 } = await import("@/app/api/v1/guest/reservation/route");
 const { GET: g3 } = await import("@/app/api/v1/guest/reservations/route");
 const { GET: g4 } = await import(
   "@/app/api/v1/guest/reservations/[reference]/route"
+);
+const { POST: g2 } = await import(
+  "@/app/api/v1/guest/reservation/cancellation-requests/route"
+);
+const { POST: g4Request } = await import(
+  "@/app/api/v1/guest/reservations/[reference]/cancellation-requests/route"
 );
 
 const client = createTestClient();
@@ -148,14 +155,27 @@ function staffCall(
 function guestCall(
   handler: typeof g1,
   token: string | null,
-  options: { reference?: string; scheme?: string } = {},
+  options: {
+    reference?: string;
+    scheme?: string;
+    method?: "POST";
+    body?: unknown;
+  } = {},
 ) {
   return handler(
     new Request("http://localhost/api/v1/guest/reservation", {
-      headers:
-        token === null
+      ...(options.method ? { method: options.method } : {}),
+      headers: {
+        ...(token === null
           ? {}
-          : { authorization: `${options.scheme ?? "Bearer"} ${token}` },
+          : { authorization: `${options.scheme ?? "Bearer"} ${token}` }),
+        ...(options.body === undefined
+          ? {}
+          : { "content-type": "application/json" }),
+      },
+      ...(options.body === undefined
+        ? {}
+        : { body: JSON.stringify(options.body) }),
     }),
     { params: Promise.resolve({ reference: options.reference }) },
   );
@@ -225,6 +245,153 @@ afterEach(() => {
 });
 afterAll(() => client.$disconnect());
 
+describe("G2 and G4 cancellation requests (T-CXL-4 and T-CXL-5)", () => {
+  it("creates through either entry point and returns only the guest request fields", async () => {
+    const mine = await book(phoneOf(1));
+    const second = await book(phoneOf(1));
+    const live = await session(mine.phone);
+    const log = vi.spyOn(console, "info").mockImplementation(() => undefined);
+    const response = await guestCall(g2, mine.manageToken, {
+      method: "POST",
+      body: { reason: "  private change of plans  " },
+    });
+    expect(response.status).toBe(201);
+    expect(response.headers.get("cache-control")).toBe("no-store");
+    const created = CancellationRequest.parse(await response.json());
+    expect(created).toEqual({
+      id: expect.any(String),
+      status: "OPEN",
+      createdAt: NOW.toISOString(),
+      decisionReason: null,
+    });
+    expect(
+      await client.cancellationRequest.findUnique({
+        where: { id: created.id },
+      }),
+    ).toMatchObject({
+      guestReason: "private change of plans",
+      requestedBy: "GUEST",
+    });
+    const reread = await guestCall(g4, live, { reference: mine.reference });
+    expect(await reread.json()).toMatchObject({
+      status: "CONFIRMED",
+      cancellationRequest: created,
+      allowedActions: [],
+    });
+    const duplicate = await guestCall(g4Request, live, {
+      method: "POST",
+      reference: mine.reference,
+    });
+    expect(await problemOf(duplicate)).toMatchObject({
+      status: 409,
+      code: "CANCELLATION_REQUEST_EXISTS",
+    });
+    const otherRequest = await guestCall(g4Request, live, {
+      method: "POST",
+      reference: second.reference,
+    });
+    expect(otherRequest.status).toBe(201);
+    expect(CancellationRequest.parse(await otherRequest.json()).id).not.toBe(
+      created.id,
+    );
+    const logged = JSON.stringify(log.mock.calls);
+    for (const value of [
+      mine.manageToken,
+      live,
+      mine.phone,
+      mine.reference,
+      "private change of plans",
+    ])
+      expect(logged).not.toContain(value);
+  });
+
+  it("keeps bad credentials uniform and rejects foreign references and forbidden body fields", async () => {
+    const mine = await book(phoneOf(1));
+    const foreign = await book(phoneOf(2));
+    const live = await session(mine.phone);
+    const oldSession = await session(mine.phone, { expired: true });
+    const bookingToken = await session(mine.phone, { purpose: "BOOKING" });
+    const missingLink = await problemOf(
+      await guestCall(g2, null, { method: "POST" }),
+    );
+    expect(missingLink).toMatchObject({ status: 401, code: "UNAUTHENTICATED" });
+    for (const token of ["short", live])
+      expect(
+        await problemOf(await guestCall(g2, token, { method: "POST" })),
+      ).toEqual(missingLink);
+    const missingSession = await problemOf(
+      await guestCall(g4Request, null, {
+        method: "POST",
+        reference: mine.reference,
+      }),
+    );
+    expect(missingSession).toMatchObject({
+      status: 401,
+      code: "PHONE_NOT_VERIFIED",
+    });
+    for (const token of [oldSession, bookingToken, mine.manageToken])
+      expect(
+        await problemOf(
+          await guestCall(g4Request, token, {
+            method: "POST",
+            reference: mine.reference,
+          }),
+        ),
+      ).toEqual(missingSession);
+    const foreignResult = await problemOf(
+      await guestCall(g4Request, live, {
+        method: "POST",
+        reference: foreign.reference,
+      }),
+    );
+    expect(foreignResult).toMatchObject({ status: 404, code: "NOT_FOUND" });
+    expect(
+      await problemOf(
+        await guestCall(g4Request, live, {
+          method: "POST",
+          reference: "wrong-format",
+        }),
+      ),
+    ).toEqual(foreignResult);
+    expect(
+      await problemOf(
+        await guestCall(g2, mine.manageToken, {
+          method: "POST",
+          body: { branchId: TEST_BRANCH_ID, reason: "x".repeat(501) },
+        }),
+      ),
+    ).toMatchObject({
+      status: 422,
+      code: "VALIDATION",
+      fieldErrors: { reason: expect.any(Array) },
+    });
+    expect(await client.cancellationRequest.count()).toBe(0);
+  });
+
+  it("uses one write limit for both routes and leaves the read limit independent", async () => {
+    const mine = await book(phoneOf(1));
+    for (let count = 0; count < 10; count++) {
+      const handler = count % 2 ? g2 : g4Request;
+      expect(
+        (
+          await guestCall(handler, null, {
+            method: "POST",
+            reference: mine.reference,
+          })
+        ).status,
+      ).toBe(401);
+    }
+    const limited = await guestCall(g2, mine.manageToken, { method: "POST" });
+    expect(limited.headers.get("retry-after")).toBe("3600");
+    expect(await problemOf(limited)).toMatchObject({
+      status: 429,
+      code: "RATE_LIMITED",
+    });
+    expect((await guestCall(g1, mine.manageToken)).status).toBe(200);
+    expect(await client.cancellationRequest.count()).toBe(0);
+  });
+});
+
 describe("G1 manage link (T-LKP-1…3)", () => {
   it("shows the reservation to the link holder and nothing to anyone else", async () => {
     const mine = await book(phoneOf(1));
@@ -238,9 +405,9 @@ describe("G1 manage link (T-LKP-1…3)", () => {
       branch: { slug: "new-cairo" },
       contact: { fullName: GUEST_NAME, phone: mine.phone },
       price: { totalMinor: TOTAL_MINOR },
-      cancellationDeadline: null,
+      cancellationDeadline: expect.any(String),
       cancellationRequest: null,
-      allowedActions: [],
+      allowedActions: ["REQUEST_CANCELLATION"],
     });
     expect(JSON.stringify(view)).not.toContain("physicalRoomId");
 

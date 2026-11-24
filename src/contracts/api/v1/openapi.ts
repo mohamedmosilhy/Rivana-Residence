@@ -7,6 +7,8 @@ import {
 import { Coupon, CouponInput, CouponPatch, CouponList } from "./coupons";
 import {
   BlockGuestRequest,
+  CancellationRequest,
+  CreateCancellationRequest,
   GuestDetail,
   GuestList,
   GuestReservation,
@@ -174,6 +176,8 @@ const COMPONENTS: Readonly<Record<string, z.ZodType>> = {
   GuestDetail,
   GuestReservationList,
   GuestReservation,
+  CreateCancellationRequest,
+  CancellationRequest,
 };
 
 function componentSchemas() {

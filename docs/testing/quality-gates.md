@@ -39,7 +39,11 @@ Record exact commands and counts in the review package. If a gate cannot run, sa
 
 The owner selected Node **26.13.0 LTS** for the Mac, CI, and hosting. On macOS with npm **11.20.0**, clean `npm ci --no-audit` and `npm run check` passed (format, lint, typecheck, **67 unit files / 1,373 tests**, production build). The full PostgreSQL integration suite passed **29 files / 391 tests**; full Chromium E2E passed **175 tests**, with **30 intentionally skipped**. Independent review by `gpt-6-astra` approved with zero findings. The [runtime report](../delivery/reports/node-26-runtime-alignment.md) records exact commands, unchanged development audit findings, and the nonfatal upstream Tailwind loader deprecation under Node 26. Those Tailwind and media tracing warnings were subsequently resolved in M6-T10. These results do not replace the historical task acceptance evidence below or claim remote Linux CI has run.
 
-## Latest accepted task results (2026-11-24, M9-T5)
+## Latest accepted task results (2026-11-24, M9-T7)
+
+`npm run check` passed format, lint, typecheck, 2,422 unit and contract tests in 112 files, and the production build. Full PostgreSQL integration passed 970 tests in 61 files. The focused PostgreSQL run passed 48 tests in 3 files, and the isolated concurrency suite passed eight cases at 20 rounds each with observed lock waits. Chromium passed 214 tests with 33 intentional skips. The client scan found none of six server markers in 33 chunks. Both guest POSTs worked in the running app and the outbox sent six messages using the fake adapters. GPT-6.2 Astra approved the final recheck after the independent reviews. [Task log](../delivery/reports/m9-payments-and-cancellations.md#task-log) · [Independent review](../reviews/2026-11-24-m9-t7.md)
+
+## Previous accepted task results (2026-11-24, M9-T5)
 
 `npm run check` passed formatting, lint, typecheck, 2,409 unit and contract tests across 111 files, and the production build. `npm run test:integration -- --reporter=dot --silent` passed 904 PostgreSQL tests across 59 files, including the callback suite with five parallel duplicates and two 20 round C-12 races. `npm run test:e2e -- --reporter=dot` passed 214 Chromium tests with 33 intentional skips. The scan of the client chunks found none of the four checked server markers. Claude Opus 5.5 reviewed the change, found no blockers, and its one major finding was resolved. [Task log](../delivery/reports/m9-payments-and-cancellations.md#task-log) · [Independent review](../reviews/2026-11-24-m9-t5.md)
 

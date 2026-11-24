@@ -137,15 +137,17 @@ Each section states its status: **Implemented** (built and accepted in Phases 1�
 - **FR-PAY-7** Staff see each reservation's payment and refund status, and can retry a failed refund.
 - **FR-PAY-8** Payments are charged in USD (Q-54). The client chooses the launch provider and its credentials remain on the server (Q-92, ADR 030).
 
-## FR-CXL Cancellation requests — Planned (M9, UI M10–M11)
+## FR-CXL Cancellation requests
 
-- **FR-CXL-1** A guest may request cancellation from the manage link or "My reservations" until 24 hours before the branch's check-in time on the arrival date, for paid and pay-at-hotel bookings (Q-38).
-- **FR-CXL-2** After the deadline the guest sees the branch's contact details instead.
-- **FR-CXL-3** The reservation stays `CONFIRMED` and keeps its inventory while the request is open; one open request per reservation.
+Guest request APIs, receipts, branch alerts, and staff closure are implemented (M9-T7). Staff decisions and refunds are planned for M9-T8. Guest and staff screens are planned for M10 and M11.
+
+- **FR-CXL-1** A guest may request cancellation from the manage link or "My reservations" strictly before the deadline, which is 24 hours before the branch's check-in time on the arrival date. This applies to paid and pay-at-hotel bookings (Q-38).
+- **FR-CXL-2** At or after the deadline, or when there is no branch check-in time, the guest sees the branch's contact details.
+- **FR-CXL-3** The reservation stays `CONFIRMED` and keeps its inventory while the request is open. A second request is refused while a request is active or a payment refund is pending.
 - **FR-CXL-4** A Manager of the branch or an Admin approves or rejects with a reason (`cancellations:decide`).
-- **FR-CXL-5** Approval cancels an unpaid booking at once; for a paid booking it requests the Paymob refund and cancels when Paymob confirms. Rejection keeps the booking `CONFIRMED`.
+- **FR-CXL-5** Approval cancels an unpaid booking at once; for a paid booking it requests a gateway refund and cancels when the gateway confirms. Rejection keeps the booking `CONFIRMED`.
 - **FR-CXL-6** The guest receives email and WhatsApp messages when the request is received and decided, and when the refund completes.
-- **FR-CXL-7** Every request, decision, and refund is audited.
+- **FR-CXL-7** Every request, decision, closure, and refund is audited. Staff unpaid cancellation, no-show, and check-in close an open request in the same transaction (Q-96).
 
 ## FR-GCHG Guest booking changes — Planned (engine M8-T9, guest API M9-T10 and T11, UI M10-T8b and M11)
 

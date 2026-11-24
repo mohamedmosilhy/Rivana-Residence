@@ -40,6 +40,7 @@ The threats to Rivana and the controls against them. Implemented controls for au
 | **Repudiation** | "I didn't cancel that" | Append-only `AuditEvent` with actor, reason, and time; runtime role cannot update or delete audit |
 | **Information disclosure** | IDOR on `/staff/reservations/{id}` across branches | Branch check after load → `404`; authorization sweep includes cross-branch cases |
 | Enumeration | Iterating references, or probing which phones have bookings | Random references; code requests answer the same whether or not a phone has reservations; guest sessions see only their own phone's reservations; rate limits |
+| Guest cancellation misuse | A guest tries a foreign booking, a stale token, or repeated submissions | **Implemented (M9-T7).** Both POSTs share 10 attempts per client per hour. Foreign references return the same 404 as missing ones. The write checks token and ownership under the guest and reservation locks. A phone block ends guest sessions and leaves the manage link view only. On G4 GET the session is checked again before detail is returned. |
 | PII in logs | Bodies or tokens logged | Logger allowlist (route, status, ids); no bodies, tokens, or `Authorization`; audit redaction |
 | Token leakage | Token in URL query reaches logs or Referer | Fragment-only manage URL; `Referrer-Policy: strict-origin-when-cross-origin`; tokens hashed at rest; expiry |
 | Availability scraping | Bots map occupancy | Public results are booleans; rate limits |

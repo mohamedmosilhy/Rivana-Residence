@@ -1,4 +1,8 @@
-import type { PaymentMethod, SyncCheckpointKind } from "@/domain/shared/types";
+import type {
+  CancellationClosedReason,
+  PaymentMethod,
+  SyncCheckpointKind,
+} from "@/domain/shared/types";
 
 // Append-only history of sensitive changes (FR-AUD-1). `changes` carries only
 // the keys listed for its action below: never free-form dumps, personal data,
@@ -216,6 +220,16 @@ export type AuditChanges = {
     changeSeq: number;
     pendingSince: string;
   }>;
+  "cancellation-request.created": Readonly<{
+    reservationId: string;
+    access: "MANAGE_TOKEN" | "GUEST_SESSION";
+    actorIdentity: "RESERVATION_LINK" | "GUEST_PROFILE";
+    reasonProvided: boolean;
+  }>;
+  "cancellation-request.closed": Readonly<{
+    reservationId: string;
+    closedReason: CancellationClosedReason;
+  }>;
   "reservation.contact-edited": Readonly<Record<string, true>>;
   "reservation.room-assigned": Readonly<{
     lineId: string;
@@ -293,7 +307,7 @@ export type AuditAction = keyof AuditChanges;
 export type AuditEvent<A extends AuditAction = AuditAction> = Readonly<{
   occurredAt: Date;
   actorType: AuditActorType;
-  /** Staff user id or guest id; null for SYSTEM (the CLI, scheduled jobs). */
+  /** Staff or guest id. A manage link without a guest profile uses the reservation id. Null for SYSTEM. */
   actorId: string | null;
   action: A;
   entityType:
@@ -309,6 +323,7 @@ export type AuditEvent<A extends AuditAction = AuditAction> = Readonly<{
     | "WhatsAppSettings"
     | "WhatsAppTemplate"
     | "Reservation"
+    | "CancellationRequest"
     | "Payment"
     | "SyncCheckpoint"
     | "Guest";

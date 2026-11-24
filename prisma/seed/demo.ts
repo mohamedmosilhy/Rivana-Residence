@@ -781,6 +781,7 @@ export async function seedDemoReservations(
           "PAYMENT_NOT_COMPLETED",
           ["guestFirstName", "reference", "holdExpiresAt"],
         ],
+        ["CANCELLATION_RECEIVED", ["guestFirstName", "reference"]],
       ] as const
     ).entries()) {
       await tx.whatsAppTemplate.upsert({

@@ -55,6 +55,10 @@ await rm("/tmp/rivana-e2e-outbox", { recursive: true, force: true });
   });
   try {
     await seedDatabase(client);
+    await client.branch.update({
+      where: { slug: "new-cairo" },
+      data: { checkInTime: "14:00" },
+    });
     for (const project of E2E_PROJECTS) {
       const accounts = accountsFor(project);
       await createStaff(client, {

@@ -3435,7 +3435,7 @@
     "/api/v1/guest/reservation": {
       "get": {
         "operationId": "getGuestReservation",
-        "summary": "API-G1. One reservation for the holder of a manage link token (`Authorization: Bearer`). Sixty requests per client per minute. View only in M8.",
+        "summary": "API-G1. One reservation for the holder of a manage link token (`Authorization: Bearer`), including cancellation eligibility. Sixty requests per client per minute.",
         "tags": [
           "Guests"
         ],
@@ -3457,6 +3457,52 @@
           },
           "default": {
             "description": "Problem details. Codes: INTERNAL, UNAUTHENTICATED, RATE_LIMITED.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/guest/reservation/cancellation-requests": {
+      "post": {
+        "operationId": "requestCancellationWithManageToken",
+        "summary": "API-G2. Request cancellation before the deadline with the manage link token. G2 and G4 share ten attempts per client per hour. CANCELLATION_WINDOW_CLOSED includes context.deadline (UTC or null) and context.branch (name, slug, phone, email).",
+        "tags": [
+          "Guests"
+        ],
+        "security": [
+          {
+            "guestToken": []
+          }
+        ],
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateCancellationRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "The open cancellation request. The booking is still confirmed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CancellationRequest"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Problem details. Codes: INTERNAL, UNAUTHENTICATED, PHONE_BLOCKED, CANCELLATION_WINDOW_CLOSED, CANCELLATION_REQUEST_EXISTS, INVALID_TRANSITION, VALIDATION, MALFORMED_JSON, PAYLOAD_TOO_LARGE, UNSUPPORTED_MEDIA_TYPE, RATE_LIMITED, TRY_AGAIN.",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -3539,6 +3585,62 @@
           },
           "default": {
             "description": "Problem details. Codes: INTERNAL, PHONE_NOT_VERIFIED, PHONE_BLOCKED, NOT_FOUND, RATE_LIMITED.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/guest/reservations/{reference}/cancellation-requests": {
+      "post": {
+        "operationId": "requestCancellationWithGuestSession",
+        "summary": "API-G4. Request cancellation for a reservation of the verified phone. An unknown or foreign reference returns 404. G2 and G4 share ten attempts per client per hour. CANCELLATION_WINDOW_CLOSED includes context.deadline (UTC or null) and context.branch (name, slug, phone, email).",
+        "tags": [
+          "Guests"
+        ],
+        "security": [
+          {
+            "guestToken": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "reference",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateCancellationRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "The open cancellation request. The booking is still confirmed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CancellationRequest"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Problem details. Codes: INTERNAL, PHONE_NOT_VERIFIED, NOT_FOUND, PHONE_BLOCKED, CANCELLATION_WINDOW_CLOSED, CANCELLATION_REQUEST_EXISTS, INVALID_TRANSITION, VALIDATION, MALFORMED_JSON, PAYLOAD_TOO_LARGE, UNSUPPORTED_MEDIA_TYPE, RATE_LIMITED, TRY_AGAIN.",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -8994,7 +9096,14 @@
             ]
           },
           "cancellationRequest": {
-            "type": "null"
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CancellationRequest"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "allowedActions": {
             "type": "array",
@@ -9022,6 +9131,56 @@
           "cancellationRequest",
           "allowedActions",
           "createdAt"
+        ],
+        "additionalProperties": false
+      },
+      "CreateCancellationRequest": {
+        "type": "object",
+        "properties": {
+          "reason": {
+            "type": "string",
+            "maxLength": 500
+          }
+        },
+        "additionalProperties": false
+      },
+      "CancellationRequest": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 32
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "OPEN",
+              "APPROVED",
+              "REJECTED",
+              "REFUND_PENDING",
+              "REFUND_FAILED",
+              "COMPLETED",
+              "CLOSED"
+            ]
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+          },
+          "decisionReason": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "status",
+          "createdAt",
+          "decisionReason"
         ],
         "additionalProperties": false
       }

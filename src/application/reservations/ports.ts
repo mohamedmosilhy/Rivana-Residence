@@ -12,12 +12,45 @@ import type { Occupancy } from "@/domain/shared/occupancy";
 import type { Money } from "@/domain/shared/money";
 import type { StayRange } from "@/domain/shared/stay-range";
 import type {
+  CancellationClosedReason,
+  CancellationRequestStatus,
   ReservationSource,
   ReservationStatus,
   PaymentMethod,
   ReservationPaymentStatus,
   SyncCheckpointKind,
 } from "@/domain/shared/types";
+
+/** The guest can see the request status and the reason for a decision. */
+export type GuestCancellationRequest = Readonly<{
+  id: string;
+  status: CancellationRequestStatus;
+  createdAt: Date;
+  /** Guest facing text. Keep staff notes and closure codes out of this field. */
+  decisionReason: string | null;
+}>;
+
+export interface CancellationRequestStore {
+  /** Prefer an active request, otherwise return the latest finished request. */
+  findCurrent(reservationId: string): Promise<GuestCancellationRequest | null>;
+  /** Writers hold the reservation row lock. */
+  create(
+    input: Readonly<{
+      id: string;
+      reservationId: string;
+      guestReason: string | null;
+      at: Date;
+    }>,
+  ): Promise<GuestCancellationRequest>;
+  closeOpen(
+    input: Readonly<{
+      reservationId: string;
+      staffId: string;
+      closedReason: CancellationClosedReason;
+      at: Date;
+    }>,
+  ): Promise<string | null>;
+}
 
 /**
  * Transaction boundary shared by reservation era workflows. The context is

@@ -1,5 +1,6 @@
 import {
   whatsAppReadiness,
+  WHATSAPP_PURPOSE_VARIABLES,
   type WhatsAppReadiness,
 } from "@/domain/notifications";
 
@@ -37,7 +38,14 @@ export class WhatsAppSetupReader {
       businessPhoneNumber: settings.businessPhoneNumber,
       providerPhoneNumberId: settings.providerPhoneNumberId,
       accessTokenConfigured: this.deps.accessTokenConfigured,
-      activeTemplates: templates.filter((template) => template.active),
+      activeTemplates: templates.filter(
+        (template) =>
+          template.active &&
+          (template.purpose !== "CANCELLATION_RECEIVED" ||
+            template.variables.every((key) =>
+              WHATSAPP_PURPOSE_VARIABLES.CANCELLATION_RECEIVED.includes(key),
+            )),
+      ),
     });
     return {
       ...settings,

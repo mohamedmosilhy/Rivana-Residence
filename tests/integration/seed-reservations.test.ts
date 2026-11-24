@@ -160,7 +160,14 @@ describe("create only reservation seed", () => {
       notEnteredInHotelSystem: 0,
       oldestNotEnteredAt: null,
     });
-    expect(state.templates).toHaveLength(3);
+    expect(state.templates).toHaveLength(4);
+    expect(state.templates).toContainEqual(
+      expect.objectContaining({
+        purpose: "CANCELLATION_RECEIVED",
+        active: false,
+        variables: ["guestFirstName", "reference"],
+      }),
+    );
     expect(state.templates).toContainEqual(
       expect.objectContaining({
         purpose: "PAYMENT_NOT_COMPLETED",

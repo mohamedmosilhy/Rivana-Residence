@@ -172,10 +172,12 @@ type GuestMessageKind =
   | "reservation.modified"
   | "reservation.manage-link"
   | "reservation.payment-not-completed"
+  | "cancellation-request.received"
   | "payment.auto-refunded";
 export type MessageKind =
   | GuestMessageKind
   | "reservation.staff-alert"
+  | "request.staff-alert"
   | "payment.staff-alert";
 export type MessageChannel = "EMAIL" | "WHATSAPP";
 export type MessageVariables = {
@@ -242,6 +244,8 @@ export type ReservationMessageEvent =
   | { kind: "reservation.modified"; notifyGuest: boolean }
   | { kind: "reservation.manage-link"; manageToken: string }
   | { kind: "reservation.payment-not-completed"; holdExpiresAt: Date }
+  | { kind: "cancellation-request.received" }
+  | { kind: "request.staff-alert" }
   | { kind: "payment.auto-refunded"; refundMinor: number }
   | { kind: "payment.staff-alert"; refundMinor: number };
 

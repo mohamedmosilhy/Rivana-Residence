@@ -1,13 +1,16 @@
 import "server-only";
 
-import type {
-  GuestReservationReader,
-  GuestReservationRecord,
+import {
+  unlinkedReservationPhone,
+  type GuestReservationReader,
+  type GuestReservationRecord,
 } from "@/application/reservations";
 import type { PhoneNumber } from "@/domain/guests";
 import type { ReservationReference } from "@/domain/reservations";
-import type { Prisma, PrismaClient } from "@/generated/prisma/client";
+import { Prisma, type PrismaClient } from "@/generated/prisma/client";
+import { PrismaCancellationRequestStore } from "../cancellation-request-store";
 import { PrismaReservationRepository } from "../reservation-repository";
+import { PrismaGuestRepository } from "./guest-repository";
 
 /** "My reservations" is the most recent N of a phone. */
 const SUMMARY_LIMIT = 100;
@@ -60,39 +63,65 @@ export class PrismaGuestReservationReader implements GuestReservationReader {
     }));
   }
 
-  private async load(
+  private load(
     where: Prisma.ReservationWhereInput,
   ): Promise<GuestReservationRecord | null> {
-    const key = await this.client.reservation.findFirst({
-      where,
-      select: {
-        id: true,
-        branchId: true,
-        guest: { select: { phone: true } },
+    // A staff transition can change the booking and close its request together.
+    // Use one snapshot for access, the booking, and its cancellation state.
+    return this.client.$transaction(
+      async (transaction) => {
+        const key = await transaction.reservation.findFirst({
+          where,
+          select: {
+            id: true,
+            branchId: true,
+            guest: { select: { phone: true, blockedAt: true } },
+            branch: {
+              select: {
+                name: true,
+                slug: true,
+                phone: true,
+                email: true,
+                timeZone: true,
+                checkInTime: true,
+              },
+            },
+          },
+        });
+        if (!key) return null;
+        const reservation = await new PrismaReservationRepository(
+          transaction,
+        ).findById(key.branchId, key.id);
+        if (!reservation) return null;
+        const phone = unlinkedReservationPhone(reservation);
+        const guest = phone
+          ? await new PrismaGuestRepository(transaction).findByPhone(phone)
+          : key.guest;
+        const cancellationRequest = await new PrismaCancellationRequestStore(
+          transaction,
+        ).findCurrent(reservation.id);
+        const rooms = await transaction.room.findMany({
+          where: {
+            id: {
+              in: [...new Set(reservation.lines.map((l) => l.roomTypeId))],
+            },
+          },
+          select: { id: true, name: true },
+        });
+        const { timeZone, checkInTime, ...contact } = key.branch;
+        return {
+          stored: reservation,
+          ownerPhone: key.guest?.phone ?? null,
+          branch: contact,
+          cancellationTiming: { timeZone, checkInTime },
+          currentCancellationRequest: cancellationRequest,
+          phoneBlocked: Boolean(guest?.blockedAt),
+          roomNames: Object.fromEntries(
+            rooms.map((room) => [room.id, room.name]),
+          ),
+        };
       },
-    });
-    if (!key) return null;
-    const reservation = await new PrismaReservationRepository(
-      this.client,
-    ).findById(key.branchId, key.id);
-    if (!reservation) return null;
-    const [branch, rooms] = await Promise.all([
-      this.client.branch.findUniqueOrThrow({
-        where: { id: key.branchId },
-        select: { name: true, slug: true, phone: true, email: true },
-      }),
-      this.client.room.findMany({
-        where: {
-          id: { in: [...new Set(reservation.lines.map((l) => l.roomTypeId))] },
-        },
-        select: { id: true, name: true },
-      }),
-    ]);
-    return {
-      stored: reservation,
-      ownerPhone: key.guest?.phone ?? null,
-      branch,
-      roomNames: Object.fromEntries(rooms.map((room) => [room.id, room.name])),
-    };
+      { isolationLevel: Prisma.TransactionIsolationLevel.RepeatableRead },
+    );
   }
 }

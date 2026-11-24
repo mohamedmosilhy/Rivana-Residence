@@ -104,6 +104,14 @@ export const PROBLEMS: Readonly<Record<ProblemCode, ProblemDefinition>> = {
     status: 409,
     title: "This reservation cannot change that way",
   },
+  CANCELLATION_WINDOW_CLOSED: {
+    status: 409,
+    title: "The cancellation request window has closed",
+  },
+  CANCELLATION_REQUEST_EXISTS: {
+    status: 409,
+    title: "A cancellation request already exists",
+  },
   STALE_VERSION: { status: 412, title: "This reservation has changed" },
   PRECONDITION_REQUIRED: { status: 428, title: "Send an If-Match header" },
   PMS_UPDATE_STALE: {

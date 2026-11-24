@@ -20,6 +20,7 @@ const purposes = {
   "reservation.modified": "RESERVATION_MODIFIED",
   "reservation.manage-link": "MANAGE_LINK",
   "reservation.payment-not-completed": "PAYMENT_NOT_COMPLETED",
+  "cancellation-request.received": "CANCELLATION_RECEIVED",
   // Q-63: the late success wording of the refund message shares its template.
   "payment.auto-refunded": "REFUND_COMPLETED",
 } as const;
@@ -47,6 +48,8 @@ const kinds = z.enum([
   "reservation.manage-link",
   "reservation.payment-not-completed",
   "reservation.staff-alert",
+  "cancellation-request.received",
+  "request.staff-alert",
   "payment.auto-refunded",
   "payment.staff-alert",
 ]);
@@ -90,6 +93,7 @@ export class DispatchOutbox {
     }
     if (
       kind.data === "reservation.staff-alert" ||
+      kind.data === "request.staff-alert" ||
       kind.data === "payment.staff-alert"
     )
       return invalid;

@@ -4,6 +4,12 @@ import { localDateAt } from "@/domain/shared/zoned-time";
 import { ReservationStateMachine } from "@/domain/reservations";
 import { manageTokenExpiry } from "./manage-token";
 import {
+  closeCancellationRequest,
+  type CloseCancellationRequestContext,
+} from "./close-cancellation-request";
+import type { ReservationUnitOfWork } from "./ports";
+import type { ReservationStorageContext } from "./storage-context";
+import {
   failure,
   invalidTransition,
   staleVersion,
@@ -114,9 +120,14 @@ const actions = {
   MARK_NO_SHOW: "reservation.no-show",
 } as const;
 
+export type FrontDeskTransitionContext = ReservationStorageContext &
+  CloseCancellationRequestContext;
+
 export class RecordFrontDeskTransition {
   constructor(
-    private readonly deps: OperationDependencies,
+    private readonly deps: Omit<OperationDependencies, "unitOfWork"> & {
+      unitOfWork: ReservationUnitOfWork<FrontDeskTransitionContext>;
+    },
     private readonly action: keyof typeof actions,
   ) {}
 
@@ -170,6 +181,14 @@ export class RecordFrontDeskTransition {
         },
         at,
       );
+      if (this.action !== "CHECK_OUT")
+        await closeCancellationRequest(
+          context,
+          stored,
+          this.action,
+          principal.id,
+          at,
+        );
       await auditOperation(
         context,
         stored,
