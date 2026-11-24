@@ -40,6 +40,11 @@ export class PrismaReservationMessageStore implements ReservationMessageStore {
   async append(messages: OutgoingMessage[]) {
     await this.tx.notificationOutbox.createMany({ data: messages });
   }
+  async discardHeld(reservationId: string) {
+    await this.tx.notificationOutbox.deleteMany({
+      where: { reservationId, status: "HELD" },
+    });
+  }
 }
 
 export class PrismaOutboxWorkerStore implements OutboxWorkerStore {

@@ -147,6 +147,7 @@ export const Quote = z.object({
 });
 
 export const QuoteResponse = z.object({
+  paymentMethods: z.array(z.enum(["PAY_AT_HOTEL", "ONLINE"])),
   available: z.boolean(),
   unavailableLines: z
     .array(z.number().int().min(0))

@@ -120,6 +120,34 @@ describe.each(adapters)("PaymentGateway contract ($name)", ({ create }) => {
     },
   );
 
+  it("keeps a definite rejection final for concurrent and repeated calls for one payment ID", async () => {
+    const fixture = create();
+    fixture.checkoutFailure("PROVIDER_REJECTED");
+    const refused = { ok: false, code: "PROVIDER_REJECTED" };
+    expect(
+      await Promise.all([
+        fixture.gateway.createCheckout(checkout),
+        fixture.gateway.createCheckout(checkout),
+      ]),
+    ).toEqual([refused, refused]);
+    expect(await fixture.gateway.createCheckout(checkout)).toEqual(refused);
+    expect(
+      await fixture.gateway.getTransaction({ paymentId: checkout.paymentId }),
+    ).toBe("NOT_FOUND");
+  });
+
+  it("can retry an unavailable checkout with the same payment ID", async () => {
+    const fixture = create();
+    fixture.checkoutFailure("UNAVAILABLE");
+    expect(await fixture.gateway.createCheckout(checkout)).toEqual({
+      ok: false,
+      code: "UNAVAILABLE",
+    });
+    const result = await fixture.gateway.createCheckout(checkout);
+    expect(result).toMatchObject({ ok: true });
+    expect(await fixture.gateway.createCheckout(checkout)).toEqual(result);
+  });
+
   it("preserves minor units and currency and reports stable event identities", async () => {
     const fixture = create();
     const { gateway } = fixture;

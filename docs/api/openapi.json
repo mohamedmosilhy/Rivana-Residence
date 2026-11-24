@@ -14,7 +14,7 @@
     "/api/v1/reservations": {
       "post": {
         "operationId": "createWebsiteReservation",
-        "summary": "API-P7. Create a pay at hotel website booking. Requires an `Idempotency-Key` header (8 to 128 printable characters) and a booking token from API-P10. Consumes the token, locks inventory, and returns CONFIRMED. Five requests per client per hour, on top of the per phone cap.",
+        "summary": "API-P7. Create a website booking. Requires an `Idempotency-Key` header (8 to 128 printable characters) and a booking token from API-P10. Consumes the token and locks inventory. Pay at hotel confirms immediately. Online booking holds inventory and opens hosted checkout. Five requests per client per hour, on top of the per phone cap.",
         "tags": [
           "Reservations"
         ],
@@ -54,7 +54,7 @@
             }
           },
           "201": {
-            "description": "Booking confirmed. `manageUrl` is returned once and never repeated.",
+            "description": "Booking confirmed for pay at hotel or awaiting online payment with a checkout URL. `manageUrl` is returned once.",
             "content": {
               "application/json": {
                 "schema": {
@@ -64,7 +64,7 @@
             }
           },
           "default": {
-            "description": "Problem details. Codes: INTERNAL, MISSING_IDEMPOTENCY_KEY, MALFORMED_JSON, PAYLOAD_TOO_LARGE, UNSUPPORTED_MEDIA_TYPE, VALIDATION, IDEMPOTENCY_KEY_REUSED, PHONE_NOT_VERIFIED, PHONE_BLOCKED, NOT_FOUND, BRANCH_NOT_BOOKABLE, PAYMENT_METHOD_UNAVAILABLE, INVENTORY_UNAVAILABLE, PRICE_CHANGED, COUPON_INVALID, SERVICE_UNAVAILABLE, BOOKING_LIMIT_REACHED, RATE_LIMITED, TRY_AGAIN.",
+            "description": "Problem details. Codes: INTERNAL, MISSING_IDEMPOTENCY_KEY, MALFORMED_JSON, PAYLOAD_TOO_LARGE, UNSUPPORTED_MEDIA_TYPE, VALIDATION, IDEMPOTENCY_KEY_REUSED, PHONE_NOT_VERIFIED, PHONE_BLOCKED, NOT_FOUND, BRANCH_NOT_BOOKABLE, PAYMENT_METHOD_UNAVAILABLE, PAYMENT_UNAVAILABLE, INVENTORY_UNAVAILABLE, PRICE_CHANGED, COUPON_INVALID, SERVICE_UNAVAILABLE, BOOKING_LIMIT_REACHED, RATE_LIMITED, TRY_AGAIN.",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -1676,7 +1676,7 @@
     "/api/v1/staff/branches/{id}": {
       "patch": {
         "operationId": "updateBranch",
-        "summary": "API-A3. Change a branch (Admin, branches:manage). Online booking stays off until its prerequisites exist. Audited.",
+        "summary": "API-A3. Change a branch (Admin, branches:manage). Enabling online payment requires a ready gateway. Audited.",
         "tags": [
           "Branches"
         ],
@@ -1711,7 +1711,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/StaffBranch"
+                  "$ref": "#/components/schemas/UpdatedStaffBranch"
                 }
               }
             }
@@ -4677,6 +4677,16 @@
       "QuoteResponse": {
         "type": "object",
         "properties": {
+          "paymentMethods": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "PAY_AT_HOTEL",
+                "ONLINE"
+              ]
+            }
+          },
           "available": {
             "type": "boolean"
           },
@@ -4706,6 +4716,7 @@
           }
         },
         "required": [
+          "paymentMethods",
           "available",
           "unavailableLines",
           "bookable",
@@ -4839,7 +4850,7 @@
               "PAY_AT_HOTEL",
               "ONLINE"
             ],
-            "description": "ONLINE returns 409 PAYMENT_METHOD_UNAVAILABLE until checkout is available."
+            "description": "ONLINE requires a ready gateway, an enabled branch, and a positive total."
           },
           "expectedTotal": {
             "description": "The total from the last quote.",
@@ -6181,32 +6192,69 @@
         "additionalProperties": false
       },
       "WebsiteReservationCreated": {
-        "type": "object",
-        "properties": {
-          "reference": {
-            "type": "string"
+        "oneOf": [
+          {
+            "type": "object",
+            "properties": {
+              "reference": {
+                "type": "string"
+              },
+              "status": {
+                "type": "string",
+                "enum": [
+                  "CONFIRMED"
+                ]
+              },
+              "total": {
+                "$ref": "#/components/schemas/Money"
+              },
+              "manageUrl": {
+                "type": "string",
+                "description": "Shown once. Contains the manage token in the fragment."
+              }
+            },
+            "required": [
+              "reference",
+              "status",
+              "total",
+              "manageUrl"
+            ],
+            "additionalProperties": false
           },
-          "status": {
-            "type": "string",
-            "enum": [
-              "CONFIRMED"
-            ]
-          },
-          "total": {
-            "$ref": "#/components/schemas/Money"
-          },
-          "manageUrl": {
-            "type": "string",
-            "description": "Shown once. Contains the manage token in the fragment."
+          {
+            "type": "object",
+            "properties": {
+              "reference": {
+                "type": "string"
+              },
+              "status": {
+                "type": "string",
+                "const": "AWAITING_PAYMENT"
+              },
+              "holdExpiresAt": {
+                "type": "string",
+                "format": "date-time",
+                "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+              },
+              "checkoutUrl": {
+                "type": "string",
+                "format": "uri"
+              },
+              "manageUrl": {
+                "type": "string",
+                "description": "Shown once. Contains the manage token in the fragment."
+              }
+            },
+            "required": [
+              "reference",
+              "status",
+              "holdExpiresAt",
+              "checkoutUrl",
+              "manageUrl"
+            ],
+            "additionalProperties": false
           }
-        },
-        "required": [
-          "reference",
-          "status",
-          "total",
-          "manageUrl"
-        ],
-        "additionalProperties": false
+        ]
       },
       "WebsiteReservationReplayed": {
         "type": "object",
@@ -6229,6 +6277,11 @@
           },
           "manageUrl": {
             "type": "null"
+          },
+          "checkoutUrl": {
+            "description": "Present while the checkout session can be used.",
+            "type": "string",
+            "format": "uri"
           }
         },
         "required": [
@@ -6712,6 +6765,48 @@
         ],
         "additionalProperties": false
       },
+      "UpdatedStaffBranch": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "slug": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "ACTIVE",
+              "INACTIVE"
+            ]
+          },
+          "sortOrder": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "onlineBookingEnabled": {
+            "type": "boolean"
+          },
+          "onlinePaymentEnabled": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id",
+          "slug",
+          "name",
+          "status",
+          "sortOrder",
+          "onlineBookingEnabled",
+          "onlinePaymentEnabled"
+        ],
+        "additionalProperties": false
+      },
       "BranchInput": {
         "type": "object",
         "properties": {
@@ -6939,6 +7034,9 @@
             "type": "integer",
             "minimum": -9007199254740991,
             "maximum": 9007199254740991
+          },
+          "onlinePaymentEnabled": {
+            "type": "boolean"
           }
         },
         "additionalProperties": false

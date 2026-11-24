@@ -82,6 +82,7 @@ export function quoteResponse(result: QuoteResult): Response {
     available: result.available,
     unavailableLines: [...result.unavailableLines],
     bookable: result.bookable,
+    paymentMethods: [...result.paymentMethods],
     quote: result.quote ? quote(result.quote) : null,
   };
 }

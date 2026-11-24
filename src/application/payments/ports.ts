@@ -8,6 +8,7 @@ export type CheckoutInput = Readonly<{
   returnUrl: string;
 }>;
 
+/** PROVIDER_REJECTED is final for the payment ID. Ambiguous outcomes are UNAVAILABLE. */
 export type CheckoutFailure = "PROVIDER_REJECTED" | "UNAVAILABLE";
 
 export type CheckoutResult =
@@ -64,7 +65,12 @@ export type RefundResult = Readonly<{
 }>;
 
 export interface PaymentGateway {
-  /** A repeated call for one payment id returns the original checkout. */
+  /**
+   * Concurrent and retried calls for one payment ID share the same outcome.
+   * Once a checkout exists, return it. Return PROVIDER_REJECTED only if no
+   * call for that ID can create a checkout, including after a retry or restart.
+   * Any uncertainty about the outcome for the ID returns UNAVAILABLE.
+   */
   createCheckout(input: CheckoutInput): Promise<CheckoutResult>;
   verifyCallback(input: PaymentCallbackInput): Promise<PaymentCallbackResult>;
   getTransaction(
@@ -72,4 +78,25 @@ export interface PaymentGateway {
   ): Promise<PaymentGatewayEvent | "NOT_FOUND">;
   /** The same key addresses the same refund attempt. */
   refund(input: RefundInput): Promise<RefundResult>;
+}
+
+export type BookingPayment = Readonly<{
+  id: string;
+  reservationId: string;
+  provider: string;
+  amountMinor: number;
+  currency: string;
+  expiresAt: Date;
+  checkoutUrl: string | null;
+}>;
+
+/** The caller holds the reservation lock for writes to an existing payment. */
+export interface BookingPaymentStore {
+  findInitiated(reservationId: string): Promise<BookingPayment | null>;
+  insert(payment: Omit<BookingPayment, "checkoutUrl">, at: Date): Promise<void>;
+  saveCheckout(
+    id: string,
+    checkout: Extract<CheckoutResult, { ok: true }>,
+  ): Promise<void>;
+  end(id: string, status: "FAILED" | "EXPIRED", at: Date): Promise<void>;
 }

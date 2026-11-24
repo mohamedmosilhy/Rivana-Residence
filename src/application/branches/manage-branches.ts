@@ -71,6 +71,7 @@ export class ManageBranches {
       cache: CacheInvalidator;
       media: BranchMediaCheck;
       whatsApp: WhatsAppReadinessCheck;
+      paymentReady?: () => boolean;
       clock: Clock;
     }>,
   ) {}
@@ -205,6 +206,14 @@ export class ManageBranches {
         return invalid("Some branch details need attention.", booking);
       }
     }
+    if (patch.onlinePaymentEnabled === true && !this.deps.paymentReady?.())
+      return invalid("Some branch details need attention.", [
+        {
+          path: "onlinePaymentEnabled",
+          message:
+            "Configure a payment gateway before enabling online payment.",
+        },
+      ]);
     if (patch.heroMediaId !== undefined) {
       const hero = await this.checkHero(patch.heroMediaId);
       if (!hero.ok) return hero;

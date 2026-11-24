@@ -26,6 +26,8 @@ import {
 import { QuoteBooking } from "@/application/quotes";
 import { whatsAppSetupReader } from "@/composition/whatsapp-sender";
 import { reservationMessageWriter } from "@/composition/reservation-jobs";
+import { websiteCheckoutConnection } from "@/composition/payment-gateway";
+import { isPaymentGatewayReady } from "@/composition/provider-readiness";
 import { NodeBookingCrypto } from "@/infrastructure/crypto/booking-crypto";
 import type { Clock } from "@/application/shared/providers";
 import { getPrisma } from "@/infrastructure/db/prisma/client";
@@ -33,6 +35,7 @@ import { PrismaReservationUnitOfWork } from "@/infrastructure/db/prisma/unit-of-
 import { PrismaBranchRepository } from "@/infrastructure/db/prisma/repositories/branches/branch-repository";
 import { PrismaPublicListingReader } from "@/infrastructure/db/prisma/repositories/public-listing-reader";
 import { PrismaReservationRepository } from "@/infrastructure/db/prisma/repositories/reservations/reservation-repository";
+import { PrismaBookingPaymentStore } from "@/infrastructure/db/prisma/repositories/reservations/booking-payment-store";
 import { PrismaGuestRepository } from "@/infrastructure/db/prisma/repositories/reservations/guests/guest-repository";
 import { PrismaPhoneVerificationRepository } from "@/infrastructure/db/prisma/repositories/reservations/guests/phone-verification-repository";
 import { PrismaReservationConsumptionReader } from "@/infrastructure/db/prisma/repositories/reservations/inventory/reservation-consumption-reader";
@@ -110,6 +113,8 @@ export function createWebsiteReservation(
 ) {
   const client = options.client ?? getPrisma();
   const clock = options.clock ?? { now: () => new Date() };
+  const checkout = websiteCheckoutConnection();
+  const paymentReady = isPaymentGatewayReady();
   return new CreateWebsiteReservation({
     unitOfWork:
       new PrismaReservationUnitOfWork<CreateWebsiteReservationContext>(
@@ -131,14 +136,22 @@ export function createWebsiteReservation(
             audit: new PrismaAuditLog(transaction),
             verifications: new PrismaPhoneVerificationRepository(transaction),
             redemptions: new PrismaCouponRedemptionStore(transaction),
-            quote: transactionalQuote(transaction, inventoryReader, clock),
+            quote: transactionalQuote(
+              transaction,
+              inventoryReader,
+              clock,
+              paymentReady,
+            ),
             messages: reservationMessageWriter(transaction),
+            payments: new PrismaBookingPaymentStore(transaction),
           };
         },
       ),
     branches: new PrismaBranchRepository(client),
     listings: new PrismaPublicListingReader(client),
     replays: new PrismaReservationRepository(client),
+    payments: new PrismaBookingPaymentStore(client),
+    ...(checkout ? { checkout } : {}),
     tokens: new PrismaPhoneVerificationRepository(client),
     setup: whatsAppSetupReader(),
     crypto: new NodeBookingCrypto(),
@@ -151,6 +164,7 @@ function transactionalQuote(
   transaction: DatabaseClient,
   inventory: PrismaInventoryReader,
   clock: Clock,
+  paymentReady = false,
 ) {
   return new QuoteBooking({
     branches: new PrismaBranchRepository(transaction),
@@ -164,6 +178,7 @@ function transactionalQuote(
     }),
     settings: new PrismaCommercialSettingsRepository(transaction),
     clock,
+    paymentReady,
   });
 }
 
@@ -199,6 +214,7 @@ export function staffReservationCommands(
           redemptions: new PrismaCouponRedemptionStore(transaction),
           quote: transactionalQuote(transaction, inventoryReader, clock),
           messages: reservationMessageWriter(transaction),
+          payments: new PrismaBookingPaymentStore(transaction),
         };
       },
     ),

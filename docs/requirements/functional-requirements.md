@@ -124,16 +124,18 @@ Each section states its status: **Implemented** (built and accepted in Phases 1�
 - **FR-RES-10** References are unique, random, and human-friendly.
 - **FR-RES-11** A failed, conflicting, expired, or unpaid booking is never described as confirmed anywhere (NFR-13).
 
-## FR-PAY Online payment — Planned (M9, UI M10–M11)
+## FR-PAY Online payment
 
-- **FR-PAY-1** Guests choose Paymob (full prepayment) or pay at the hotel for website bookings. Staff bookings are pay at hotel (Q-37).
-- **FR-PAY-2** Online payment uses Paymob's hosted checkout. No card data is entered on, sent to, or stored by Rivana.
-- **FR-PAY-3** While the guest pays, the units are held for about 15 minutes (`AWAITING_PAYMENT`). Expiry or failure releases them and the coupon redemption, and the booking becomes `PAYMENT_FAILED`.
+**Partly implemented.** M9-T4 delivered eligible choices, hosted checkout, and expiry during booking creation. M9-T5 covers verified confirmation, M9-T6 adds scheduled expiry and reconciliation, and M9-T8 covers refunds. Booking and staff screens are planned for M10–M11.
+
+- **FR-PAY-1** Guests choose eligible methods for website bookings: online payment in full or pay at the hotel. Staff bookings are pay at hotel (Q-37).
+- **FR-PAY-2** Online payment uses the configured gateway's hosted checkout (ADR 030). No card data is entered on, sent to, or stored by Rivana.
+- **FR-PAY-3** While the guest pays, a 15 minute hold reserves the units (`AWAITING_PAYMENT`). Expiry or a definite checkout refusal releases the units and coupon redemption and sets the booking to `PAYMENT_FAILED`. An uncertain checkout result preserves the hold for retry.
 - **FR-PAY-4** Only a verified (HMAC-checked) server-to-server result with the expected amount and currency confirms a booking. The browser return never does.
 - **FR-PAY-5** A success that arrives after the hold expired confirms the booking if the units are still free, otherwise it is refunded automatically and staff are alerted (Q-63).
-- **FR-PAY-6** Refunds are requested through Paymob's refund API for the captured amount; fees follow Paymob's policy and are not calculated by Rivana (Q-38).
+- **FR-PAY-6** Refunds use the gateway's refund API for the captured amount. The gateway's policy determines fees (Q-38).
 - **FR-PAY-7** Staff see each reservation's payment and refund status, and can retry a failed refund.
-- **FR-PAY-8** Payments are charged in USD (supported by the client's Paymob account, Q-54). The Paymob keys are server secrets supplied by the client when M9 starts (Q-55).
+- **FR-PAY-8** Payments are charged in USD (Q-54). The client chooses the launch provider and its credentials remain on the server (Q-92, ADR 030).
 
 ## FR-CXL Cancellation requests — Planned (M9, UI M10–M11)
 

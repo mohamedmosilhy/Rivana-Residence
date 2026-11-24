@@ -358,12 +358,21 @@ export function validateReservationCreation(
   }>,
 ): void {
   validateReservationStructure(record);
-  if (
-    record.status !== "CONFIRMED" ||
-    record.paymentMethod !== "PAY_AT_HOTEL" ||
-    record.paymentStatus !== "NOT_REQUIRED"
-  )
-    invalid("status", "M8 creates confirmed pay-at-hotel reservations only.");
+  const payAtHotel =
+    record.status === "CONFIRMED" &&
+    record.paymentMethod === "PAY_AT_HOTEL" &&
+    record.paymentStatus === "NOT_REQUIRED";
+  const onlineHold =
+    record.source === "WEBSITE" &&
+    record.status === "AWAITING_PAYMENT" &&
+    record.paymentMethod === "ONLINE" &&
+    record.paymentStatus === "AWAITING" &&
+    (record.snapshot?.totalMinor ?? 0) > 0;
+  if (!payAtHotel && !onlineHold)
+    invalid(
+      "status",
+      "Creation requires a confirmed pay-at-hotel booking or an online payment hold with a positive total.",
+    );
   if (context.inventoryReserved !== true)
     invalid(
       "inventory",

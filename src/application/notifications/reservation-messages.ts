@@ -15,6 +15,10 @@ export class QueueReservationMessages {
     private readonly clock: Clock,
     private readonly appUrl: string,
   ) {}
+  discardHeld(reservationId: string) {
+    return this.store.discardHeld(reservationId);
+  }
+
   async enqueue(
     branchId: string,
     reservationId: string,
@@ -23,9 +27,17 @@ export class QueueReservationMessages {
     const booking = await this.store.snapshot(branchId, reservationId);
     const websiteConfirmation =
       event.kind === "reservation.confirmed" && booking.source === "WEBSITE";
+    const held = event.kind === "reservation.confirmed" && event.held === true;
     if (
       event.kind === "reservation.confirmed" &&
-      booking.status !== "CONFIRMED"
+      (held
+        ? !websiteConfirmation || booking.status !== "AWAITING_PAYMENT"
+        : booking.status !== "CONFIRMED")
+    )
+      return;
+    if (
+      event.kind === "reservation.payment-not-completed" &&
+      booking.status !== "PAYMENT_FAILED"
     )
       return;
     if (
@@ -55,7 +67,9 @@ export class QueueReservationMessages {
       ...summary,
       guestFirstName: booking.guestName.trim().split(/\s+/u)[0] ?? "",
     };
-    if (event.kind !== "reservation.manage-link") {
+    if (event.kind === "reservation.payment-not-completed") {
+      payload.holdExpiresAt = event.holdExpiresAt.toISOString();
+    } else if (event.kind !== "reservation.manage-link") {
       payload.checkIn = booking.checkIn;
       payload.checkOut = booking.checkOut;
     }
@@ -87,6 +101,7 @@ export class QueueReservationMessages {
         recipient,
         payload: variables,
         availableAt,
+        ...(held ? { status: "HELD" } : {}),
       });
     };
     if (booking.guestEmail)

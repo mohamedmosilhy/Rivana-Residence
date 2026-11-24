@@ -101,6 +101,7 @@ export type ReservationInsert = Readonly<{
   couponCode: string | null;
   paymentMethod: PaymentMethod;
   paymentStatus: ReservationPaymentStatus;
+  holdExpiresAt?: Date | null;
   privacyNoticeVersion: string | null;
   manageTokenHash: string | null;
   manageTokenExpiresAt: Date | null;
@@ -220,6 +221,13 @@ export interface ReservationRepository {
     branchId: string,
     id: string,
   ): Promise<Result<StoredReservation | null>>;
+  findOverdueHoldIds(
+    branchId: string,
+    roomTypeIds: readonly string[],
+    at: Date,
+  ): Promise<readonly string[]>;
+  /** Transaction only, after locking and checking the awaiting reservation. */
+  markPaymentFailed(branchId: string, id: string, at: Date): Promise<void>;
   /**
    * Transaction only, after `lockById`. Writes the price snapshot, bumps
    * `version` and `changeSeq`, and sets the hotel system flag when asked.

@@ -30,12 +30,28 @@ export function reservationResponse(
         reference: result.reference,
         status: result.status,
         manageUrl: null,
+        ...(result.checkoutUrl ? { checkoutUrl: result.checkoutUrl } : {}),
       },
     };
-  // A fresh pay at hotel booking is always CONFIRMED with a priced snapshot.
-  // Anything else is a programming error, not a $0 booking to report.
+  if (
+    result.status === "AWAITING_PAYMENT" &&
+    result.holdExpiresAt &&
+    result.checkoutUrl
+  )
+    return {
+      status: 201,
+      body: {
+        reference: result.reference,
+        status: result.status,
+        holdExpiresAt: result.holdExpiresAt.toISOString(),
+        checkoutUrl: result.checkoutUrl,
+        manageUrl: manageUrl(result.manageToken),
+      },
+    };
   if (result.status !== "CONFIRMED" || result.totalMinor === null)
-    throw new Error("A new website booking must be confirmed and priced.");
+    throw new Error(
+      "A new website booking must have a confirmed total or an open checkout.",
+    );
   return {
     status: 201,
     body: {

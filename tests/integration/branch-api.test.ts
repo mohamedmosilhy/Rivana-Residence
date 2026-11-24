@@ -18,6 +18,11 @@ import {
 
 const expired = vi.hoisted(() => [] as string[]);
 const session = vi.hoisted(() => ({ staff: null as StaffPrincipal | null }));
+const providers = vi.hoisted(() => ({ payment: "unconfigured" }));
+
+vi.mock("@/composition/provider-readiness", () => ({
+  isPaymentGatewayReady: () => providers.payment !== "unconfigured",
+}));
 
 vi.mock("next/cache", () => ({
   unstable_cache:
@@ -85,6 +90,7 @@ beforeEach(async () => {
   await resetDatabase(client);
   await createActor(client);
   session.staff = admin;
+  providers.payment = "unconfigured";
   expired.length = 0;
   await createBranch(client, {
     id: GIZA,
@@ -206,6 +212,58 @@ describe("public branch endpoints", () => {
 });
 
 describe("staff branch endpoints", () => {
+  it("A3 gates and audits the Admin online payment switch (AC-14)", async () => {
+    const update = (onlinePaymentEnabled: boolean) =>
+      updateBranchRoute(
+        send("PATCH", `/api/v1/staff/branches/${GIZA}`, {
+          onlinePaymentEnabled,
+        }),
+        params({ id: GIZA }),
+      );
+    const rejected = await update(true);
+    expect(rejected.status).toBe(422);
+    expect(await rejected.json()).toMatchObject({
+      code: "VALIDATION",
+      fieldErrors: { onlinePaymentEnabled: [expect.any(String)] },
+    });
+    providers.payment = "fake";
+    for (const role of ["EDITOR", "MANAGER", "RECEPTIONIST"] as const) {
+      for (const branchIds of [[GIZA], [TEST_BRANCH_ID], []]) {
+        session.staff = { ...admin, role, branchIds };
+        expect((await update(true)).status).toBe(403);
+      }
+    }
+    session.staff = null;
+    expect((await update(true)).status).toBe(401);
+    expect(await client.auditEvent.count()).toBe(0);
+    session.staff = admin;
+    const enabled = await update(true);
+    expect(enabled.status).toBe(200);
+    expect(await enabled.json()).toMatchObject({
+      id: GIZA,
+      onlinePaymentEnabled: true,
+      onlineBookingEnabled: false,
+    });
+    expect(
+      await client.branch.findUniqueOrThrow({ where: { id: TEST_BRANCH_ID } }),
+    ).toMatchObject({ onlinePaymentEnabled: false });
+    providers.payment = "unconfigured";
+    const disabled = await update(false);
+    expect(disabled.status).toBe(200);
+    expect(await disabled.json()).toMatchObject({
+      onlinePaymentEnabled: false,
+    });
+    const audit = await client.auditEvent.findMany({
+      where: { entityId: GIZA, action: "branch.updated" },
+    });
+    expect(audit).toHaveLength(2);
+    expect(audit.map(({ changes }) => changes)).toEqual(
+      expect.arrayContaining([
+        { onlinePaymentEnabled: { from: false, to: true } },
+        { onlinePaymentEnabled: { from: true, to: false } },
+      ]),
+    );
+  });
   it("API-A1 refuses signed-out callers and editors", async () => {
     session.staff = null;
     expect((await staffList(get("/api/v1/staff/branches"))).status).toBe(401);

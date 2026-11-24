@@ -25,11 +25,14 @@ export function renderReservationEmail(
     "reservation.cancelled": "The hotel has cancelled your reservation",
     "reservation.modified": "Your reservation was changed",
     "reservation.manage-link": "Your reservation manage link",
+    "reservation.payment-not-completed": "Your payment was not completed",
     "reservation.staff-alert": "New confirmed website reservation",
   }[kind];
   const lines = [heading, `${vars.branchName} · ${vars.reference}`];
   if (kind === "reservation.staff-alert")
     lines.push("Please enter this booking in the hotel system.");
+  else if (kind === "reservation.payment-not-completed")
+    lines.push("Your booking is no longer held.");
   else {
     if (vars.checkIn && vars.checkOut)
       lines.push(`Stay: ${vars.checkIn} to ${vars.checkOut}`);

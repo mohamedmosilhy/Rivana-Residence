@@ -9,6 +9,7 @@ import {
   type AvailabilityCatalog,
 } from "@/application/inventory";
 import type { QueueReservationMessages } from "@/application/notifications";
+import type { BookingPaymentStore } from "@/application/payments";
 import type { RateBatchReader } from "@/application/pricing";
 import type { QuoteBooking } from "@/application/quotes";
 import type { Clock, IdGenerator } from "@/application/shared/providers";
@@ -30,6 +31,7 @@ import { DomainValidationError } from "@/domain/shared/domain-error";
 import { Money } from "@/domain/shared/money";
 import { localDateAt } from "@/domain/shared/zoned-time";
 
+import { expireListingPaymentHolds } from "./booking-payment-holds";
 import { canonicalBookingBody } from "./create-website-reservation-input";
 import { manageTokenExpiry } from "./manage-token";
 import type {
@@ -58,7 +60,8 @@ export type StaffBookingContext = ReservationStorageContext &
     rates: RateBatchReader;
     quote: Pick<QuoteBooking, "priceResolved">;
     redemptions: CouponRedemptionStore;
-    messages: Pick<QueueReservationMessages, "enqueue">;
+    messages: Pick<QueueReservationMessages, "enqueue" | "discardHeld">;
+    payments: BookingPaymentStore;
     externalReferences: ExternalReferenceReader;
   }>;
 
@@ -210,7 +213,7 @@ async function createBooking(
       });
     },
     load: (context, prepared: Prepared) =>
-      load(context, booking, prepared, deps.ids, deps.clock.now()),
+      load(context, booking, prepared, deps.ids, deps.clock),
     validate: success,
     mutate: async (context, state): Promise<Result<Created>> => {
       const { snapshot, lines, couponId, couponCode, prepared } = state;
@@ -315,8 +318,9 @@ async function load(
   booking: StaffBooking,
   prepared: Prepared,
   ids: IdGenerator,
-  now: Date,
+  clock: Clock,
 ) {
+  const now = clock.now();
   const { branchId, source, stay, externalReference } = booking;
   const branch = await context.catalog.findBranch(branchId);
   if (!branch?.active)
@@ -357,6 +361,20 @@ async function load(
     quantities.set(line.roomTypeId, (quantities.get(line.roomTypeId) ?? 0) + 1);
   }
   const roomTypeIds = [...quantities.keys()];
+  let couponId: string | null = null;
+  const normalized = normalizeCouponCode(booking.couponCode);
+  if (booking.couponCode !== undefined && normalized.ok) {
+    const locked = await context.redemptions.lockByCode(normalized.code);
+    if (!locked.ok) return locked;
+    couponId = locked.value;
+  }
+  const expired = await expireListingPaymentHolds(
+    context,
+    branchId,
+    roomTypeIds,
+    clock.now(),
+  );
+  if (!expired.ok) return expired;
   const nights = [...stay.nights()];
   const inventory = await context.inventoryReader.readNights({
     branchId,
@@ -388,14 +406,6 @@ async function load(
   }
   const amounts = await resolveAmounts(context, booking, roomTypeIds);
   if (!amounts.ok) return amounts;
-
-  let couponId: string | null = null;
-  const normalized = normalizeCouponCode(booking.couponCode);
-  if (booking.couponCode !== undefined && normalized.ok) {
-    const locked = await context.redemptions.lockByCode(normalized.code);
-    if (!locked.ok) return locked;
-    couponId = locked.value;
-  }
 
   const priced =
     amounts.value === null

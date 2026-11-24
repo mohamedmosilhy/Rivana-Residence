@@ -35,7 +35,12 @@ import {
   validatePublicStay,
   type StayPolicy,
 } from "@/domain/shared/stay-policy";
-import type { AccommodationType } from "@/domain/shared/types";
+import { paymentMethodAvailability } from "@/domain/payments";
+import {
+  PAYMENT_METHODS,
+  type AccommodationType,
+  type PaymentMethod,
+} from "@/domain/shared/types";
 import { localDateAt } from "@/domain/shared/zoned-time";
 
 import type { QuoteBookingReaders } from "./quote-readers";
@@ -80,6 +85,7 @@ export type QuoteResult = Readonly<{
   unavailableLines: readonly number[];
   /** The branch accepts online bookings and the quote is available. */
   bookable: boolean;
+  paymentMethods: readonly PaymentMethod[];
   /** Null only when a line is unavailable. */
   quote: QuoteView | null;
 }>;
@@ -106,7 +112,11 @@ const BRANCH_NOT_FOUND = "This branch was not found.";
 export class QuoteBooking {
   constructor(
     private readonly deps: QuoteBookingReaders &
-      Readonly<{ clock: Clock; stayPolicy?: StayPolicy }>,
+      Readonly<{
+        clock: Clock;
+        stayPolicy?: StayPolicy;
+        paymentReady?: boolean;
+      }>,
   ) {}
 
   async execute(input: unknown): Promise<Result<QuoteResult>> {
@@ -232,6 +242,7 @@ export class QuoteBooking {
         available: false,
         unavailableLines: [...unavailable].sort((a, b) => a - b),
         bookable: false,
+        paymentMethods: [],
         quote: null,
       });
     }
@@ -256,6 +267,17 @@ export class QuoteBooking {
       available: true,
       unavailableLines: [],
       bookable: branch.onlineBookingEnabled,
+      paymentMethods: branch.onlineBookingEnabled
+        ? PAYMENT_METHODS.filter(
+            (method) =>
+              paymentMethodAvailability({
+                method,
+                gatewayReady: this.deps.paymentReady ?? false,
+                branchOnlinePaymentEnabled: branch.onlinePaymentEnabled,
+                totalMinor: quote.totalMinor,
+              }).available,
+          )
+        : [],
       quote: {
         stay: request.stay,
         lines: lines.map((line, index) => ({

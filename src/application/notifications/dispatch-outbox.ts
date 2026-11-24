@@ -19,6 +19,7 @@ const purposes = {
   "reservation.cancelled": "CANCELLED_BY_HOTEL",
   "reservation.modified": "RESERVATION_MODIFIED",
   "reservation.manage-link": "MANAGE_LINK",
+  "reservation.payment-not-completed": "PAYMENT_NOT_COMPLETED",
 } as const;
 const variables = z.strictObject({
   reference: z.string(),
@@ -28,6 +29,7 @@ const variables = z.strictObject({
   checkOut: z.string().optional(),
   total: z.string().optional(),
   reason: z.string().optional(),
+  holdExpiresAt: z.iso.datetime().optional(),
   // Not `z.httpUrl()`: it needs a dotted domain, so it would refuse the
   // `localhost` and IP `APP_URL` that development and staging use.
   manageLink: z.url({ protocol: /^https?$/ }).optional(),
@@ -40,6 +42,7 @@ const kinds = z.enum([
   "reservation.cancelled",
   "reservation.modified",
   "reservation.manage-link",
+  "reservation.payment-not-completed",
   "reservation.staff-alert",
 ]);
 export class DispatchOutbox {

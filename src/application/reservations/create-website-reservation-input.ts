@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { failure, invalid, type Result } from "@/application/shared/result";
+import { invalid, type Result } from "@/application/shared/result";
 import { normalizeCouponCode } from "@/domain/coupons";
 import {
   parseGuestContact,
@@ -14,6 +14,7 @@ import {
   issuesFromZod,
   type DomainIssue,
 } from "@/domain/shared/domain-error";
+import type { PaymentMethod } from "@/domain/shared/types";
 
 const IDEMPOTENCY_KEY = /^[\x21-\x7E]{8,128}$/;
 
@@ -31,8 +32,7 @@ const bodySchema = z.strictObject({
     .string()
     .min(16, "Send the verification token.")
     .max(128, "Send the verification token."),
-  // Validate the full body before refusing ONLINE until checkout is available.
-  paymentMethod: z.enum(["PAY_AT_HOTEL", "ONLINE"], "Choose pay at hotel."),
+  paymentMethod: z.enum(["PAY_AT_HOTEL", "ONLINE"], "Choose a payment method."),
   /** Honeypot (Q-74): a filled value is refused generically, nothing written. */
   website: z.string().max(32_768).optional(),
   expectedTotal: z.strictObject({
@@ -49,6 +49,7 @@ export type WebsiteBookingInput = Readonly<{
   quoteBody: Readonly<Record<string, unknown>>;
   contact: GuestContact;
   token: string;
+  paymentMethod: PaymentMethod;
   expectedTotalMinor: number;
   consent: GuestConsent;
   idempotencyKey: string;
@@ -121,11 +122,6 @@ export function parseWebsiteBooking(
 
   if (issues.length > 0 || !guest || !consent || !quote.ok)
     return invalid("Check the booking details.", issues);
-  if (data.paymentMethod === "ONLINE")
-    return failure(
-      "PAYMENT_METHOD_UNAVAILABLE",
-      "Online payment is not available. Choose pay at hotel.",
-    );
   return {
     ok: true,
     value: {
@@ -133,6 +129,7 @@ export function parseWebsiteBooking(
       quoteBody,
       contact: guest,
       token: data.phoneVerificationToken,
+      paymentMethod: data.paymentMethod,
       expectedTotalMinor: data.expectedTotal.amountMinor,
       consent,
       idempotencyKey: idempotencyKey as string,
@@ -196,7 +193,7 @@ export function bookingFingerprintSource(
     guest: { ...contact, phone: contact.phone?.value ?? null },
     consent,
     expectedTotalMinor: input.expectedTotalMinor,
-    paymentMethod: "PAY_AT_HOTEL",
+    paymentMethod: input.paymentMethod,
     tokenHash,
   });
 }

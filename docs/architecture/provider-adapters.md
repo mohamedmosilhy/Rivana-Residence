@@ -1,6 +1,6 @@
 # Provider adapters: payment, WhatsApp, email
 
-**Partly implemented.** All three ports have fake adapters and shared contract suites. M9-T3 added the payment gateway port, fake gateway, simulated checkout, and payment readiness. M9-T4 starts the online booking flow and M9-T5 adds the payment webhook. Launch adapters follow the client’s provider choices in M15-T4. [ADR 030](../adr/030-provider-neutral-integrations.md)
+**Partly implemented.** All three ports have fake adapters and shared contract suites. M9-T3 added the payment gateway port, fake gateway, simulated checkout, and payment readiness. M9-T4 added hosted checkout creation and recovery to online booking. The payment webhook is planned for M9-T5. Launch adapters follow the client’s provider choices in M15-T4. [ADR 030](../adr/030-provider-neutral-integrations.md)
 
 The rule: **Rivana owns the logic; an adapter only translates.** If a change to a provider would touch a use case, a Route Handler, or a table, the port is wrong, not the adapter.
 
@@ -21,6 +21,7 @@ Reservation and payment state, holds and expiry, amount and currency checks, ide
 ## What an adapter does
 
 - **Payment.** Create a hosted checkout for the exact amount and currency using Rivana's payment ID as the merchant reference. Verify incoming webhooks and return a normalized event or a rejection. Transaction outcomes are `SUCCEEDED`, `DECLINED`, and `SESSION_CLOSED`. Refund outcomes are `REFUND_SUCCEEDED` and `REFUND_FAILED`. Every normalized refund callback or lookup result includes the original request's idempotency key as `refundAttemptKey`. Look up a transaction and request a full refund through the same port. [Spec 0006](../specs/0006-m9-payments-and-cancellations.md#decision-1-ports-adapters-and-readiness-m9-t0b-t3-adr-030)
+- **Checkout retries.** Concurrent and repeated calls for one payment ID reuse the existing checkout. Return `PROVIDER_REJECTED` only for a final refusal for the whole ID, including concurrent calls and retries. Return `UNAVAILABLE` when the outcome is uncertain so Rivana can preserve the hold and retry safely. [Payment gateway contract](../../tests/contract/payment-gateway.test.ts)
 - **WhatsApp.** Send a template message (name, language, ordered variables) to an E.164 number and return the provider message id or a mapped failure code (`RATE_LIMITED`, `UNAVAILABLE`, `TEMPLATE_MISSING`, rejected, and so on).
 - **Email.** Send a rendered message to an address and return success or a mapped failure code. Rendering stays in Rivana.
 

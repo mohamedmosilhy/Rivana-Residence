@@ -40,6 +40,15 @@ it("passes a stable message id and exactly one recipient to SMTP", async () => {
     }),
   );
 });
+it("tells the guest that an incomplete payment released the booking", () => {
+  const message = renderReservationEmail("reservation.payment-not-completed", {
+    reference: vars.reference,
+    branchName: vars.branchName,
+  });
+  expect(message.subject).toContain("payment was not completed");
+  expect(message.text).toContain("Your booking is no longer held.");
+  expect(message.text + message.html).not.toContain("confirmed");
+});
 it.each([
   [451, "UNAVAILABLE"],
   [550, "PROVIDER_REJECTED"],

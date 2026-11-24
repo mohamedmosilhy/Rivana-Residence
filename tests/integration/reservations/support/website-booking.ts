@@ -27,6 +27,7 @@ import { PrismaReservationConsumptionReader } from "@/infrastructure/db/prisma/r
 import { PrismaReservationMessageStore } from "@/infrastructure/db/prisma/repositories/reservations/notifications/outbox";
 import { PrismaRateRepository } from "@/infrastructure/db/prisma/repositories/reservations/pricing/rate-repository";
 import { PrismaReservationRepository } from "@/infrastructure/db/prisma/repositories/reservations/reservation-repository";
+import { PrismaBookingPaymentStore } from "@/infrastructure/db/prisma/repositories/reservations/booking-payment-store";
 import { PrismaReservationUnitOfWork } from "@/infrastructure/db/prisma/unit-of-work";
 import { Cuid2IdGenerator } from "@/infrastructure/ids/cuid2-id-generator";
 
@@ -48,12 +49,18 @@ type Options = Readonly<{
   /** Wraps the transaction's quote, e.g. to report a branch closed after the locks. */
   quote?: (inner: QuoteBooking) => Pick<QuoteBooking, "execute">;
   setupConfigured?: boolean;
+  checkout?: NonNullable<
+    ConstructorParameters<typeof CreateWebsiteReservation>[0]["checkout"]
+  >;
+  now?: () => Date;
+  beforeTokenLookup?: () => Promise<void>;
 }>;
 
 /** Production wiring (src/composition/reservations.ts) on an independent client. */
 export function websiteBooking(client: PrismaClient, options: Options = {}) {
-  const clock = { now: () => NOW };
+  const clock = { now: options.now ?? (() => NOW) };
   const ids = new Cuid2IdGenerator();
+  const tokens = new PrismaPhoneVerificationRepository(client);
   return new CreateWebsiteReservation({
     unitOfWork:
       new PrismaReservationUnitOfWork<CreateWebsiteReservationContext>(
@@ -79,6 +86,7 @@ export function websiteBooking(client: PrismaClient, options: Options = {}) {
             }),
             settings: new PrismaCommercialSettingsRepository(transaction),
             clock,
+            paymentReady: Boolean(options.checkout),
           });
           return {
             reservations: new PrismaReservationRepository(transaction),
@@ -87,6 +95,7 @@ export function websiteBooking(client: PrismaClient, options: Options = {}) {
             inventoryLock: new PrismaInventoryLock(transaction),
             inventoryReader,
             audit: options.audit ? options.audit(audit) : audit,
+            payments: new PrismaBookingPaymentStore(transaction),
             verifications: new PrismaPhoneVerificationRepository(transaction),
             redemptions: new PrismaCouponRedemptionStore(transaction),
             quote: options.quote ? options.quote(quote) : quote,
@@ -102,7 +111,14 @@ export function websiteBooking(client: PrismaClient, options: Options = {}) {
     branches: new PrismaBranchRepository(client),
     listings: new PrismaPublicListingReader(client),
     replays: new PrismaReservationRepository(client),
-    tokens: new PrismaPhoneVerificationRepository(client),
+    payments: new PrismaBookingPaymentStore(client),
+    ...(options.checkout ? { checkout: options.checkout } : {}),
+    tokens: {
+      async findByTokenHash(hash) {
+        await options.beforeTokenLookup?.();
+        return tokens.findByTokenHash(hash);
+      },
+    },
     setup: { isConfigured: async () => options.setupConfigured ?? true },
     crypto: new NodeBookingCrypto(),
     clock,

@@ -33,7 +33,7 @@ The threats to Rivana and the controls against them. Implemented controls for au
 | Replayed payment result | Same signed callback sent again | Unique provider event id; transitions only from `AWAITING_PAYMENT` (PY-4) |
 | Refund abuse | Receptionist or attacker triggers refunds | Refunds only through `cancellations:decide` or `reservations:cancel-paid` (Manager, Admin), branch-scoped, audited; second sign-in step recommended (Q-33) |
 | Coupon abuse | Guessing codes; exceeding limits by racing; using a branch-limited code elsewhere | Rate limits on quote attempts; case-insensitive lookup with uniform refusal reasons; coupon row lock in the booking transaction (CP-3); branch and per-phone checks on the server |
-| Inventory squatting with holds | Bots open many payment holds | Verified phone required before submit; one open hold per phone (Q-60); 15-minute expiry; per-client rate limits |
+| Inventory squatting with holds | Bots open many payment holds | **Implemented (M9-T4).** Verified phone required before submit. One open hold per phone across branches (Q-60), a 15 minute deadline, expiry during booking creation, and per client rate limits. Scheduled expiry is planned for M9-T6. |
 | Tampering branch | Client posts `branchId` of another branch, or a room of another branch | Slugs resolved server-side; composite FKs; `authorizeBranch` |
 | Mass assignment | Extra JSON fields like `status: "CONFIRMED"` | `.strict()` Zod DTOs; commands built field by field |
 | CSRF on staff REST | A malicious site posts with the staff cookie | `Origin` and `Sec-Fetch-Site` check, JSON-only content type, no CORS, SameSite=Lax |
@@ -83,7 +83,7 @@ The threats to Rivana and the controls against them. Implemented controls for au
 - A privacy notice update is required before launch. It must cover what is collected for bookings, why, retention, and contact for requests. Consent is recorded as `privacyNoticeVersion` on the reservation.
 - There is no export of guest lists or statistics (Q-14).
 - Guest data is kept indefinitely by the owner's decision (Q-13). The privacy notice must say so (Q-30). Egypt's Personal Data Protection Law (Law 151 of 2020) and the laws of guests' home countries may limit indefinite retention or give guests deletion rights; the client should confirm this with an adviser (risk RK-14). This document is not legal advice.
-- Email addresses are sent to the email provider (and, for the email channel, verification codes); the provider must be named in the privacy notice (Q-30). Phone numbers are sent to the WhatsApp provider to deliver codes, confirmations, feedback requests, and consented offers; the provider must be named in the privacy notice. Guest name, email, phone, and amount are sent to the payment gateway for online payments; the payment gateway must be named too (Q-30).
+- Email addresses are sent to the email provider (and, for the email channel, verification codes); the provider must be named in the privacy notice (Q-30). Phone numbers are sent to the WhatsApp provider to deliver codes, confirmations, feedback requests, and consented offers; the provider must be named in the privacy notice. The online checkout port sends the guest name, email, exact amount and currency to the gateway along with the payment ID, reference, deadline and return URL. The privacy notice must name the launch payment gateway (Q-30).
 
 ## Security tests (added to the existing sweep)
 

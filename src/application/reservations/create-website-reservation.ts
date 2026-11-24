@@ -13,6 +13,7 @@ import type {
   QueueReservationMessages,
   WhatsAppSetupReader,
 } from "@/application/notifications";
+import type { BookingPaymentStore } from "@/application/payments";
 import type { QuoteBooking, QuoteView } from "@/application/quotes";
 import type { Clock, IdGenerator } from "@/application/shared/providers";
 import {
@@ -33,6 +34,7 @@ import {
   type PhoneBooking,
 } from "@/domain/guests";
 import { AvailabilityCalculator } from "@/domain/inventory";
+import { HoldPolicy, PAYMENT_CURRENCY } from "@/domain/payments";
 import type { QuoteCouponValue } from "@/domain/pricing";
 import {
   ReservationReference,
@@ -57,6 +59,11 @@ import type {
 } from "./ports";
 import { manageTokenExpiry } from "./manage-token";
 import type { ReservationStorageContext } from "./storage-context";
+import { expireListingPaymentHolds } from "./booking-payment-holds";
+import {
+  openWebsiteCheckout,
+  type WebsiteCheckoutConnection,
+} from "./website-checkout";
 
 /** Ports bound to the booking transaction by composition. */
 export type CreateWebsiteReservationContext = ReservationStorageContext &
@@ -65,7 +72,8 @@ export type CreateWebsiteReservationContext = ReservationStorageContext &
     redemptions: CouponRedemptionStore;
     /** `QuoteBooking` built on this transaction's readers, so it reads after the locks. */
     quote: Pick<QuoteBooking, "execute">;
-    messages: Pick<QueueReservationMessages, "enqueue">;
+    messages: Pick<QueueReservationMessages, "enqueue" | "discardHeld">;
+    payments: BookingPaymentStore;
   }>;
 
 export type WebsiteReservationResult = Readonly<{
@@ -77,6 +85,8 @@ export type WebsiteReservationResult = Readonly<{
   /** The plain manage token, once. Null on a replay: it is never stored or repeated. */
   manageToken: string | null;
   replayed: boolean;
+  holdExpiresAt?: Date;
+  checkoutUrl?: string;
 }>;
 
 type Dependencies = Readonly<{
@@ -84,7 +94,9 @@ type Dependencies = Readonly<{
   branches: Pick<BranchRepository, "findActiveRowBySlug">;
   listings: PublicListingReader;
   /** Read only lookups on the pool, before any write transaction opens. */
-  replays: Pick<ReservationRepository, "findByIdempotencyKey">;
+  replays: Pick<ReservationRepository, "findByIdempotencyKey" | "findById">;
+  payments: Pick<BookingPaymentStore, "findInitiated">;
+  checkout?: WebsiteCheckoutConnection;
   tokens: Pick<PhoneVerificationRepository, "findByTokenHash">;
   setup: Pick<WhatsAppSetupReader, "isConfigured">;
   crypto: BookingCrypto;
@@ -107,15 +119,18 @@ type State = Readonly<{
 const REFERENCE_ATTEMPTS = 3;
 const NOT_VERIFIED = () =>
   failure("PHONE_NOT_VERIFIED", "Verify your phone number to continue.");
+const PAYMENT_METHOD_UNAVAILABLE = () =>
+  failure(
+    "PAYMENT_METHOD_UNAVAILABLE",
+    "Online payment is not available. Choose pay at hotel.",
+  );
 
 /**
- * M8-T7. A pay at hotel website booking: `CONFIRMED` in the transaction that
- * takes its inventory (spec 0005 Decision 1). Public: authorization is the
- * verified phone token, and the branch comes from the slug, never the client.
+ * Website booking takes inventory in the same transaction that creates it.
+ * Authorization uses the verified phone token. The server resolves the branch slug.
  *
  * Lock order: guest row, listings by id, coupon row, then the new reservation.
- * Network calls never happen here; messages are outbox rows written in the
- * same transaction and sent only after commit.
+ * The checkout call runs after commit. Messaging is through the outbox.
  */
 export class CreateWebsiteReservation {
   private readonly guard: InventoryGuard<CreateWebsiteReservationContext>;
@@ -143,15 +158,10 @@ export class CreateWebsiteReservation {
     // A lost response must still get its reference, even if the branch or a
     // listing changed since (Decision 1 step 1). The same lookup runs again
     // under the guest lock for a parallel retry.
-    const earlier = await this.deps.replays.findByIdempotencyKey(
-      "WEBSITE",
-      null,
-      keyHash,
-    );
-    if (earlier) {
-      const replayed = this.replay(earlier, fingerprint);
-      return replayed.ok ? success(replayed.value.value) : replayed;
-    }
+    const earlier = await this.replayByKey(booking, keyHash, fingerprint);
+    if (earlier) return earlier;
+    if (booking.paymentMethod === "ONLINE" && !this.deps.checkout)
+      return PAYMENT_METHOD_UNAVAILABLE();
     // Cheap read only check, so a made up token never writes or locks a guest
     // row. The full check runs again under the locks.
     const known = await this.deps.tokens.findByTokenHash(tokenHash);
@@ -164,8 +174,14 @@ export class CreateWebsiteReservation {
       known.verifiedAt === null ||
       known.tokenExpiresAt === null ||
       known.tokenExpiresAt.getTime() <= now.getTime()
-    )
-      return NOT_VERIFIED();
+    ) {
+      // A matching request may commit between the first replay lookup and
+      // the token check. The committed row takes precedence over token reuse.
+      return (
+        (await this.replayByKey(booking, keyHash, fingerprint)) ??
+        NOT_VERIFIED()
+      );
+    }
 
     const branch = await this.deps.branches.findActiveRowBySlug(
       booking.quote.branchSlug,
@@ -176,6 +192,8 @@ export class CreateWebsiteReservation {
     if (!branch.checkInTime) return branchNotBookable("CHECK_IN_TIME_MISSING");
     if (!(await this.deps.setup.isConfigured()))
       return branchNotBookable("WHATSAPP_NOT_CONFIGURED");
+    if (booking.paymentMethod === "ONLINE" && !branch.onlinePaymentEnabled)
+      return PAYMENT_METHOD_UNAVAILABLE();
 
     const listings = await this.deps.listings.listPublished(branch.id);
     const published = new Map(listings.map((room) => [room.slug, room]));
@@ -228,8 +246,11 @@ export class CreateWebsiteReservation {
             changes: {
               reference: value.reference,
               source: "WEBSITE",
-              status: "CONFIRMED",
-              paymentMethod: "PAY_AT_HOTEL",
+              status:
+                booking.paymentMethod === "ONLINE"
+                  ? "AWAITING_PAYMENT"
+                  : "CONFIRMED",
+              paymentMethod: booking.paymentMethod,
               checkIn: booking.quote.stay.checkIn.value,
               checkOut: booking.quote.stay.checkOut.value,
               units: booking.quote.lines.length,
@@ -241,7 +262,36 @@ export class CreateWebsiteReservation {
         );
       },
     };
-    return this.guard.execute(operation);
+    const created = await this.guard.execute(operation);
+    return created.ok ? this.checkout(booking, created.value) : created;
+  }
+
+  private checkout(
+    booking: WebsiteBookingInput,
+    result: WebsiteReservationResult,
+  ) {
+    return openWebsiteCheckout(
+      { ...this.deps, reservations: this.deps.replays },
+      booking,
+      result,
+    );
+  }
+
+  private async replayByKey(
+    booking: WebsiteBookingInput,
+    keyHash: string,
+    fingerprint: string,
+  ): Promise<Result<WebsiteReservationResult> | null> {
+    const found = await this.deps.replays.findByIdempotencyKey(
+      "WEBSITE",
+      null,
+      keyHash,
+    );
+    if (!found) return null;
+    const replayed = this.replay(found, fingerprint);
+    return replayed.ok
+      ? this.checkout(booking, replayed.value.value)
+      : replayed;
   }
 
   private replay(
@@ -264,6 +314,7 @@ export class CreateWebsiteReservation {
         totalMinor: found.snapshot?.totalMinor ?? null,
         manageToken: null,
         replayed: true,
+        ...(found.holdExpiresAt ? { holdExpiresAt: found.holdExpiresAt } : {}),
       },
     });
   }
@@ -278,8 +329,6 @@ export class CreateWebsiteReservation {
     fingerprint: string,
   ) {
     const { clock, ids } = this.deps;
-    const now = clock.now();
-
     const early = await context.reservations.findByIdempotencyKey(
       "WEBSITE",
       null,
@@ -292,7 +341,7 @@ export class CreateWebsiteReservation {
       phone,
       name: booking.contact.fullName,
       email: booking.contact.email,
-      at: now,
+      at: clock.now(),
     });
     const locked = await context.guests.lockByPhone(phone);
     if (!locked.ok) return locked;
@@ -306,6 +355,7 @@ export class CreateWebsiteReservation {
     );
     if (late) return this.replay(late, fingerprint);
 
+    const now = clock.now();
     // The guest row is held, so this follows the T5 order: guest, then verification.
     const unlocked = await context.verifications.findByTokenHash(tokenHash);
     let record: VerificationRecord | null = null;
@@ -347,7 +397,12 @@ export class CreateWebsiteReservation {
         holdExpiresAt: row.holdExpiresAt,
       }),
     );
-    const cap = checkPhoneBookingLimit(phone, bookings, "PAY_AT_HOTEL", now);
+    const cap = checkPhoneBookingLimit(
+      phone,
+      bookings,
+      booking.paymentMethod,
+      now,
+    );
     if (!cap.allowed)
       return failure(
         "BOOKING_LIMIT_REACHED",
@@ -377,6 +432,13 @@ export class CreateWebsiteReservation {
         couponId = locked.value;
       }
     }
+    const expired = await expireListingPaymentHolds(
+      context,
+      branchId,
+      roomIds,
+      this.deps.clock.now(),
+    );
+    if (!expired.ok) return expired;
     const quoted = await context.quote.execute(booking.quoteBody);
     if (!quoted.ok) return quoted;
     const result = quoted.value;
@@ -398,6 +460,8 @@ export class CreateWebsiteReservation {
         roomIds,
         result.unavailableLines,
       );
+    if (!result.paymentMethods.includes(booking.paymentMethod))
+      return PAYMENT_METHOD_UNAVAILABLE();
     // The ids locked before the quote came from a read outside this
     // transaction. If a slug moved to another listing in between, the quote
     // priced a listing whose lock is not held, so refuse rather than store it.
@@ -451,6 +515,11 @@ export class CreateWebsiteReservation {
     const { quote, prepared } = state;
     const stay = booking.quote.stay;
     const phone = prepared.phone;
+    const { paymentMethod } = booking;
+    const online = paymentMethod === "ONLINE";
+    const status = online ? "AWAITING_PAYMENT" : "CONFIRMED";
+    const paymentStatus = online ? "AWAITING" : "NOT_REQUIRED";
+    const holdExpiresAt = online ? HoldPolicy.holdExpiresAt(now) : null;
 
     const manageToken = crypto.generateToken();
     const manageTokenExpiresAt = manageTokenExpiry(stay.checkOut);
@@ -514,10 +583,10 @@ export class CreateWebsiteReservation {
       {
         branchId,
         source: "WEBSITE",
-        status: "CONFIRMED",
+        status,
         stay,
-        paymentMethod: "PAY_AT_HOTEL",
-        paymentStatus: "NOT_REQUIRED",
+        paymentMethod,
+        paymentStatus,
         guestId: prepared.guestId,
         contact: booking.contact,
         externalReference: null,
@@ -559,7 +628,7 @@ export class CreateWebsiteReservation {
         reference: ReservationReference.fromRandomBytes(crypto.randomBytes(8)),
         branchId,
         source: "WEBSITE",
-        status: "CONFIRMED",
+        status,
         stay,
         guestId: prepared.guestId,
         contact: booking.contact,
@@ -568,8 +637,9 @@ export class CreateWebsiteReservation {
         snapshot,
         couponId: state.couponId,
         couponCode: quote.appliedCoupon?.code ?? null,
-        paymentMethod: "PAY_AT_HOTEL",
-        paymentStatus: "NOT_REQUIRED",
+        paymentMethod,
+        paymentStatus,
+        holdExpiresAt,
         privacyNoticeVersion: booking.consent.privacyNoticeVersion,
         manageTokenHash: crypto.sha256(manageToken),
         manageTokenExpiresAt,
@@ -595,6 +665,19 @@ export class CreateWebsiteReservation {
     if (!stored)
       return failure("TRY_AGAIN", "Could not allocate a reference. Try again.");
 
+    if (holdExpiresAt) {
+      await context.payments.insert(
+        {
+          id: ids.next(),
+          reservationId,
+          provider: this.deps.checkout!.provider,
+          amountMinor: quote.totalMinor,
+          currency: PAYMENT_CURRENCY,
+          expiresAt: HoldPolicy.sessionExpiresAt(holdExpiresAt),
+        },
+        now,
+      );
+    }
     if (quote.appliedCoupon) {
       if (!state.couponId)
         throw new Error("An applied coupon must have been locked.");
@@ -616,6 +699,7 @@ export class CreateWebsiteReservation {
       kind: "reservation.confirmed",
       notifyGuest: true,
       manageToken,
+      held: online,
     });
 
     return success({
@@ -626,6 +710,7 @@ export class CreateWebsiteReservation {
       totalMinor: quote.totalMinor,
       manageToken,
       replayed: false,
+      ...(holdExpiresAt ? { holdExpiresAt } : {}),
     });
   }
 }

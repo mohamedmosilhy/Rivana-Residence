@@ -54,6 +54,12 @@ export function paymentGateway(): PaymentGateway | undefined {
   return selectedPaymentGateway()?.connect();
 }
 
+export function websiteCheckoutConnection() {
+  const { PAYMENT_PROVIDER: provider, APP_URL: appUrl } = getServerEnv();
+  const gateway = paymentGateway();
+  if (provider && gateway) return { provider, gateway, appUrl };
+}
+
 export function developmentPaymentCheckout() {
   // Reject the route even when production has invalid fake configuration.
   if (process.env.NODE_ENV === "production") return undefined;

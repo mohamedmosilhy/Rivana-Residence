@@ -17,6 +17,7 @@ import {
   RoomTypeList,
   StaffBranch,
   StaffBranchList,
+  UpdatedStaffBranch,
 } from "./branches";
 import { AvailabilityQuery, AvailabilityResponse } from "./availability";
 import { SyncCheckpointRequest, SyncQuery, SyncStatus } from "./branch-sync";
@@ -199,7 +200,7 @@ export const API_ROUTES: readonly ApiRoute[] = [
     path: "/api/v1/reservations",
     operationId: "createWebsiteReservation",
     summary:
-      "API-P7. Create a pay at hotel website booking. Requires an `Idempotency-Key` header (8 to 128 printable characters) and a booking token from API-P10. Consumes the token, locks inventory, and returns CONFIRMED. Five requests per client per hour, on top of the per phone cap.",
+      "API-P7. Create a website booking. Requires an `Idempotency-Key` header (8 to 128 printable characters) and a booking token from API-P10. Consumes the token and locks inventory. Pay at hotel confirms immediately. Online booking holds inventory and opens hosted checkout. Five requests per client per hour, on top of the per phone cap.",
     tag: "Reservations",
     security: "public",
     headers: [
@@ -215,7 +216,7 @@ export const API_ROUTES: readonly ApiRoute[] = [
     responses: {
       201: {
         description:
-          "Booking confirmed. `manageUrl` is returned once and never repeated.",
+          "Booking confirmed for pay at hotel or awaiting online payment with a checkout URL. `manageUrl` is returned once.",
         schema: WebsiteReservationCreated,
       },
       200: {
@@ -236,6 +237,7 @@ export const API_ROUTES: readonly ApiRoute[] = [
       "NOT_FOUND",
       "BRANCH_NOT_BOOKABLE",
       "PAYMENT_METHOD_UNAVAILABLE",
+      "PAYMENT_UNAVAILABLE",
       "INVENTORY_UNAVAILABLE",
       "PRICE_CHANGED",
       "COUPON_INVALID",
@@ -661,12 +663,12 @@ export const API_ROUTES: readonly ApiRoute[] = [
     path: "/api/v1/staff/branches/{id}",
     operationId: "updateBranch",
     summary:
-      "API-A3. Change a branch (Admin, branches:manage). Online booking stays off until its prerequisites exist. Audited.",
+      "API-A3. Change a branch (Admin, branches:manage). Enabling online payment requires a ready gateway. Audited.",
     tag: "Branches",
     security: "staff",
     request: BranchPatch,
     responses: {
-      200: { description: "The updated branch.", schema: StaffBranch },
+      200: { description: "The updated branch.", schema: UpdatedStaffBranch },
     },
     errors: [
       "UNAUTHENTICATED",

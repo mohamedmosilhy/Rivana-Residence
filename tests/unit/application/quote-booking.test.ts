@@ -93,6 +93,7 @@ function build(
               slug: "giza",
               timeZone: "Africa/Cairo",
               onlineBookingEnabled: options.online ?? true,
+              onlinePaymentEnabled: false,
             } as never)
           : null,
       ),

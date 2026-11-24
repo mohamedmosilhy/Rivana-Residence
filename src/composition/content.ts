@@ -1,4 +1,5 @@
 import "server-only";
+import { isPaymentGatewayReady } from "@/composition/provider-readiness";
 
 import { ManageBranches } from "@/application/branches";
 import {
@@ -84,6 +85,7 @@ export function manageBranches(
       },
     },
     whatsApp: whatsAppSetupReader(),
+    paymentReady: isPaymentGatewayReady,
     clock,
   });
 }

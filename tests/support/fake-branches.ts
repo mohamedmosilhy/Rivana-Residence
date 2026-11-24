@@ -17,6 +17,7 @@ export function branchRow(overrides: Partial<BranchRow> = {}): BranchRow {
     sortOrder: 0,
     summary: null,
     onlineBookingEnabled: false,
+    onlinePaymentEnabled: false,
     timeZone: "Africa/Cairo",
     phone: null,
     email: null,

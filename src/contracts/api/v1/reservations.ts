@@ -52,7 +52,7 @@ export const WebsiteReservationRequest = z
     paymentMethod: z
       .enum(["PAY_AT_HOTEL", "ONLINE"])
       .describe(
-        "ONLINE returns 409 PAYMENT_METHOD_UNAVAILABLE until checkout is available.",
+        "ONLINE requires a ready gateway, an enabled branch, and a positive total.",
       ),
     expectedTotal: Money.describe("The total from the last quote."),
     consent: z.object({ privacyNoticeVersion: z.string().max(40) }).strict(),
@@ -68,7 +68,7 @@ export const WebsiteReservationRequest = z
   })
   .strict();
 
-export const WebsiteReservationCreated = z.object({
+const PayAtHotelReservationCreated = z.object({
   reference: z.string(),
   status: z.enum(["CONFIRMED"]),
   total: Money,
@@ -76,6 +76,21 @@ export const WebsiteReservationCreated = z.object({
     .string()
     .describe("Shown once. Contains the manage token in the fragment."),
 });
+
+const OnlineReservationCreated = z.object({
+  reference: z.string(),
+  status: z.literal("AWAITING_PAYMENT"),
+  holdExpiresAt: z.iso.datetime(),
+  checkoutUrl: z.url(),
+  manageUrl: z
+    .string()
+    .describe("Shown once. Contains the manage token in the fragment."),
+});
+
+export const WebsiteReservationCreated = z.discriminatedUnion("status", [
+  PayAtHotelReservationCreated,
+  OnlineReservationCreated,
+]);
 
 export const WebsiteReservationReplayed = z.object({
   reference: z.string(),
@@ -91,6 +106,10 @@ export const WebsiteReservationReplayed = z.object({
     ])
     .describe("The booking's current status, which may have moved on."),
   manageUrl: z.null(),
+  checkoutUrl: z
+    .url()
+    .optional()
+    .describe("Present while the checkout session can be used."),
 });
 
 const Id = z

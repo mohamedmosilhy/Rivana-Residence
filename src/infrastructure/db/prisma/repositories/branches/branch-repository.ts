@@ -38,6 +38,7 @@ const row = {
   ...record,
   summary: true,
   onlineBookingEnabled: true,
+  onlinePaymentEnabled: true,
   timeZone: true,
   phone: true,
   email: true,

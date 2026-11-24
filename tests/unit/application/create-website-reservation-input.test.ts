@@ -70,11 +70,12 @@ describe("parseWebsiteBooking", () => {
     expect(Object.keys(issues(result)).join(" ")).toContain(path);
   });
 
-  it("refuses online payment with the documented code (Q-74)", () => {
+  it("passes the online method through to the booking use case (AC-14)", () => {
     const result = parse(body({ paymentMethod: "ONLINE" }));
-    expect(result.ok).toBe(false);
-    if (!result.ok)
-      expect(result.error.code).toBe("PAYMENT_METHOD_UNAVAILABLE");
+    expect(result).toMatchObject({
+      ok: true,
+      value: { paymentMethod: "ONLINE" },
+    });
   });
 
   it("refuses an invalid ONLINE body as validation, not as payment", () => {

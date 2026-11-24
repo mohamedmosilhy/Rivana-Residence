@@ -89,7 +89,8 @@ export class FakePaymentGateway implements PaymentGateway {
 
     const failure = this.checkoutFailures.get(input.paymentId);
     if (failure) {
-      this.checkoutFailures.delete(input.paymentId);
+      if (failure === "UNAVAILABLE")
+        this.checkoutFailures.delete(input.paymentId);
       return { ok: false, code: failure };
     }
     const expiresAt = input.expiresAt.getTime();

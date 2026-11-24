@@ -1,4 +1,4 @@
-import type { SyncCheckpointKind } from "@/domain/shared/types";
+import type { PaymentMethod, SyncCheckpointKind } from "@/domain/shared/types";
 
 // Append-only history of sensitive changes (FR-AUD-1). `changes` carries only
 // the keys listed for its action below: never free-form dumps, personal data,
@@ -146,8 +146,8 @@ export type AuditChanges = {
   "reservation.created": Readonly<{
     reference: string;
     source: "WEBSITE";
-    status: "CONFIRMED";
-    paymentMethod: "PAY_AT_HOTEL";
+    status: "CONFIRMED" | "AWAITING_PAYMENT";
+    paymentMethod: PaymentMethod;
     checkIn: string;
     checkOut: string;
     units: number;
@@ -155,6 +155,12 @@ export type AuditChanges = {
     couponCode: string | null;
     marketingOptIn: boolean;
   }>;
+  "payment.expired": Readonly<{
+    reservationId: string;
+    from: "INITIATED";
+    to: "EXPIRED" | "FAILED";
+  }>;
+  "payment.failed": AuditChanges["payment.expired"];
   "reservation.staff-created": Readonly<{
     reference: string;
     source: "STAFF" | "EXTERNAL";
@@ -291,6 +297,7 @@ export type AuditEvent<A extends AuditAction = AuditAction> = Readonly<{
     | "WhatsAppSettings"
     | "WhatsAppTemplate"
     | "Reservation"
+    | "Payment"
     | "SyncCheckpoint"
     | "Guest";
   entityId: string;

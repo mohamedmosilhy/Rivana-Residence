@@ -160,7 +160,14 @@ describe("create only reservation seed", () => {
       notEnteredInHotelSystem: 0,
       oldestNotEnteredAt: null,
     });
-    expect(state.templates).toHaveLength(2);
+    expect(state.templates).toHaveLength(3);
+    expect(state.templates).toContainEqual(
+      expect.objectContaining({
+        purpose: "PAYMENT_NOT_COMPLETED",
+        active: false,
+        variables: ["guestFirstName", "reference", "holdExpiresAt"],
+      }),
+    );
     expect(
       state.templates.every(
         (row) => !row.active && row.providerName.startsWith("fictional_demo_"),

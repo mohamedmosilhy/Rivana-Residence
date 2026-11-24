@@ -6,6 +6,7 @@ import {
 } from "@/application/commercial";
 import { ManageServices, type ServiceContext } from "@/application/services";
 import { QuoteBooking } from "@/application/quotes";
+import { isPaymentGatewayReady } from "@/composition/provider-readiness";
 import { getPrisma } from "@/infrastructure/db/prisma/client";
 import { PrismaAuditLog } from "@/infrastructure/db/prisma/repositories/audit/audit-log";
 import { PrismaBranchRepository } from "@/infrastructure/db/prisma/repositories/branches/branch-repository";
@@ -90,6 +91,7 @@ export function quoteBooking() {
       phoneAware: false,
     }),
     settings: new PrismaCommercialSettingsRepository(client),
+    paymentReady: isPaymentGatewayReady(),
     clock,
   });
 }

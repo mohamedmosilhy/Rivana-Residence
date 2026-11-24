@@ -11,7 +11,11 @@ export const PATCH = staffRoute(
     const id = String(params.id);
     setBranch(id);
     return toHttp(await updateBranch(staff, id, body), {
-      ok: (branch) => json(200, staffBranch(branch)),
+      ok: (branch) =>
+        json(200, {
+          ...staffBranch(branch),
+          onlinePaymentEnabled: branch.onlinePaymentEnabled,
+        }),
     });
   },
 );

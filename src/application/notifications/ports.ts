@@ -170,7 +170,8 @@ type GuestMessageKind =
   | "reservation.confirmed"
   | "reservation.cancelled"
   | "reservation.modified"
-  | "reservation.manage-link";
+  | "reservation.manage-link"
+  | "reservation.payment-not-completed";
 export type MessageKind = GuestMessageKind | "reservation.staff-alert";
 export type MessageChannel = "EMAIL" | "WHATSAPP";
 export type MessageVariables = {
@@ -182,6 +183,7 @@ export type MessageVariables = {
   total?: string;
   reason?: string;
   manageLink?: string;
+  holdExpiresAt?: string;
 };
 
 export type MessageSnapshot = {
@@ -206,21 +208,25 @@ export type OutgoingMessage = {
   channel: MessageChannel;
   payload: MessageVariables;
   availableAt: Date;
+  status?: "HELD";
 };
 /** Both operations are bound to the caller's authorized reservation transaction. */
 export interface ReservationMessageStore {
   snapshot(branchId: string, reservationId: string): Promise<MessageSnapshot>;
   append(messages: OutgoingMessage[]): Promise<void>;
+  discardHeld(reservationId: string): Promise<void>;
 }
 export type ReservationMessageEvent =
   | {
       kind: "reservation.confirmed";
       notifyGuest: boolean;
       manageToken?: string;
+      held?: boolean;
     }
   | { kind: "reservation.cancelled"; notifyGuest: boolean; reason: string }
   | { kind: "reservation.modified"; notifyGuest: boolean }
-  | { kind: "reservation.manage-link"; manageToken: string };
+  | { kind: "reservation.manage-link"; manageToken: string }
+  | { kind: "reservation.payment-not-completed"; holdExpiresAt: Date };
 
 export type ClaimedMessage = {
   id: string;

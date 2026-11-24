@@ -42,6 +42,7 @@ import {
   RoomTypeSummary,
   StaffBranch,
   StaffBranchList,
+  UpdatedStaffBranch,
 } from "./branches";
 import { AvailabilityResult, AvailabilityResponse } from "./availability";
 import { SyncCheckpointRequest, SyncStatus } from "./branch-sync";
@@ -135,6 +136,7 @@ const COMPONENTS: Readonly<Record<string, z.ZodType>> = {
   RoomTypeList,
   StaffBranch,
   StaffBranchList,
+  UpdatedStaffBranch,
   BranchInput,
   BranchPatch,
   PhysicalRoom,

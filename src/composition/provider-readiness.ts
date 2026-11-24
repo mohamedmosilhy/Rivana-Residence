@@ -11,3 +11,8 @@ export function readProviderReadiness() {
     email: reservationEmailReadiness(),
   } as const;
 }
+
+export function isPaymentGatewayReady() {
+  const { payment } = readProviderReadiness();
+  return payment !== "unconfigured";
+}

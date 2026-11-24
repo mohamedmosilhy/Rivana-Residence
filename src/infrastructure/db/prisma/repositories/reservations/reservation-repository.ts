@@ -249,6 +249,42 @@ export class PrismaReservationRepository implements ReservationRepository {
     }
   }
 
+  async findOverdueHoldIds(
+    branchId: string,
+    roomTypeIds: readonly string[],
+    at: Date,
+  ) {
+    const rows = await this.client.reservation.findMany({
+      where: {
+        branchId,
+        status: "AWAITING_PAYMENT",
+        holdExpiresAt: { lte: at },
+        rooms: { some: { roomTypeId: { in: [...roomTypeIds] } } },
+      },
+      orderBy: { id: "asc" },
+      select: { id: true },
+    });
+    return rows.map(({ id }) => id);
+  }
+
+  async markPaymentFailed(branchId: string, id: string, at: Date) {
+    await this.client.reservationRoom.updateMany({
+      where: { reservationId: id, branchId },
+      data: { consumesInventory: consumesInventory("PAYMENT_FAILED") },
+    });
+    await this.client.reservation.update({
+      where: { id, branchId },
+      data: {
+        status: "PAYMENT_FAILED",
+        paymentStatus: "FAILED",
+        holdExpiresAt: null,
+        statusChangedAt: at,
+        updatedAt: at,
+        version: { increment: 1 },
+      },
+    });
+  }
+
   async replaceStay(input: StayReplacement) {
     const snapshot = input.snapshot;
     const coupon = snapshot.couponValue;
@@ -682,6 +718,7 @@ export class PrismaReservationRepository implements ReservationRepository {
             : null,
           paymentMethod: input.paymentMethod,
           paymentStatus: input.paymentStatus,
+          holdExpiresAt: input.holdExpiresAt ?? null,
           privacyNoticeVersion: input.privacyNoticeVersion,
           manageTokenHash: input.manageTokenHash,
           manageTokenExpiresAt: input.manageTokenExpiresAt,

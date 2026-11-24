@@ -1,6 +1,6 @@
 # Reservation lifecycle
 
-Status: **Planned** for workflows and the API. The pure M8 state machine is implemented (M8-T2, `src/domain/reservations/state-machine.ts`); the pure M9 payment, hold, deadline and request rules are implemented (M9-T2, `src/domain/payments`, `src/domain/reservations/cancellation-*.ts`); the workflows that use them arrive in later M9 tasks. Design accepted 2026-10-24 and revised on 2026-11-06 by the client decisions Q-36 (immediate confirmation), Q-37 (online payment or pay at hotel), Q-38 (cancellation requests), and Q-39 (several units per booking); see ADRs [024](../adr/024-immediate-confirmation.md) and [025](../adr/025-paymob-online-payment.md). The earlier request-to-book design (`PENDING`, `DECLINED`, confirm and decline by staff, guest cancellation of pending requests) is superseded and kept only in the accepted M1–M3 history and ADRs 013 and 019.
+Status: **Partly implemented.** M8 implemented pay at hotel and staff reservation workflows. M9-T2 implemented pure payment, hold, deadline and request rules. M9-T4 implemented the online hold, hosted checkout and expiry during booking creation. Callback processing and confirmation release are planned for M9-T5. Scheduled expiry and reconciliation are planned for M9-T6. Design accepted 2026-10-24 and revised on 2026-11-06 by the client decisions Q-36 (immediate confirmation), Q-37 (online payment or pay at hotel), Q-38 (cancellation requests), and Q-39 (several units per booking); see ADRs [024](../adr/024-immediate-confirmation.md) and [025](../adr/025-paymob-online-payment.md). The earlier request-to-book design (`PENDING`, `DECLINED`, confirm and decline by staff, guest cancellation of pending requests) is superseded and kept only in the accepted M1–M3 history and ADRs 013 and 019.
 
 ## States
 
@@ -98,11 +98,11 @@ Change request states: `OPEN → APPROVED` (applied) or `OPEN → REJECTED`; an 
 | Rule | Definition |
 | --- | --- |
 | PY-1 | Website guests choose `ONLINE` (full prepayment) or `PAY_AT_HOTEL`. Staff and external reservations are `PAY_AT_HOTEL` or unpriced. |
-| PY-2 | An online booking is created `AWAITING_PAYMENT` with a hold of about 15 minutes; the gateway session expires no later than the hold. |
+| PY-2 | An online booking is created `AWAITING_PAYMENT` with a 15 minute inventory hold. The gateway session expires after 13 minutes. |
 | PY-3 | Only a callback verified by the gateway adapter with the expected amount and currency changes payment state. Browser returns are display only. |
 | PY-4 | Each provider transaction is processed once (unique event id); repeats are acknowledged and ignored. |
 | PY-5 | A success after the hold expired is confirmed if every unit is still free under the room-type lock; otherwise it is refunded automatically, and the guest and staff are told (Q-63). |
-| PY-6 | Holds past `holdExpiresAt` are expired by a job every minute, and by any booking transaction that locks the same listing. |
+| PY-6 | Website, staff, and external booking creation expire overdue holds under the listing locks (implemented M9-T4). A job will also expire holds every minute (planned M9-T6). |
 | PY-7 | Refunds are full refunds of the captured amount through the gateway's API; Rivana does not calculate fees. Partial refunds are not offered (Q-66). |
 | PY-8 | No card data is received or stored; secrets are server-only. |
 
@@ -129,9 +129,9 @@ Blocks are not reservations and have their own lifecycle: active, then cancelled
 ## Idempotency
 
 - `POST` create endpoints require an `Idempotency-Key` header (8–128 visible ASCII characters). Without it the request is rejected with `400`.
-- The key's scope is the source plus actor: the public client, or the staff user id. The server stores the key's hash and a SHA-256 fingerprint of the normalized request body on the reservation row, under a unique constraint.
-- The same key with the same body returns `200` with the original reservation's reference and current status (and, for an `AWAITING_PAYMENT` booking still inside its hold, its checkout URL). It does not return the manage token again.
+- The key's scope is the source plus actor: `WEBSITE` with no actor ID, or the staff user ID for staff and external creation. The server stores the key's hash and a SHA-256 fingerprint of the normalized request body on the reservation row, under a unique constraint.
+- A matching replay returns `200` with the original reference, current status, and `manageUrl: null`. An online replay includes the checkout URL while the gateway session is live. If the deadline is still in the future and there is no stored URL, Rivana retries checkout with the original payment ID.
 - The same key with a different body returns `422 IDEMPOTENCY_KEY_REUSED`.
-- Two concurrent requests with the same key: the unique constraint lets one insert win. The other returns the winner's result after commit, or `409 IDEMPOTENCY_IN_PROGRESS` if it still cannot see the row.
-- Retention: the key stays with the reservation (permanent). Failed attempts store nothing.
+- Two matching requests for one verified phone serialize on the guest row and can replay the committed booking. The database uniqueness constraint also protects concurrent key reuse across different phones.
+- Retention: the key stays with the reservation. A failure before the booking commits rolls back the key. A checkout failure after commit leaves the booking available for replay.
 - Payment callbacks have their own idempotency (PY-4).

@@ -71,6 +71,7 @@ const AUDIT_ENTITY_LABELS = [
   "WhatsAppSettings",
   "WhatsAppTemplate",
   "Reservation",
+  "Payment",
   "Guest",
 ];
 
@@ -80,7 +81,7 @@ function propertyName(node: ts.Node | undefined) {
     : undefined;
 }
 
-export function withoutAuditEntityLabels(source: string) {
+function withoutNonPersistenceLabels(source: string) {
   const file = ts.createSourceFile(
     "scanned.ts",
     source,
@@ -90,6 +91,12 @@ export function withoutAuditEntityLabels(source: string) {
   let result = source;
   const blank: [number, number][] = [];
   const visit = (node: ts.Node) => {
+    // The exact outbox event name contains ".payment" but names no delegate.
+    if (
+      ts.isStringLiteral(node) &&
+      node.text === "reservation.payment-not-completed"
+    )
+      blank.push([node.getStart(file), node.getEnd()]);
     if (ts.isStringLiteral(node) && AUDIT_ENTITY_LABELS.includes(node.text)) {
       const parent = node.parent;
       const directValue =
@@ -121,7 +128,7 @@ describe("reservation data boundaries", () => {
   const lowerFirst = (name: string) => name[0]!.toLowerCase() + name.slice(1);
   const references = (source: string, model: string) =>
     new RegExp(`\\.${lowerFirst(model)}\\b|"${model}"`).test(
-      withoutAuditEntityLabels(source),
+      withoutNonPersistenceLabels(source),
     );
 
   it("keeps reservation tables out of every other folder", () => {
@@ -157,7 +164,20 @@ describe("audit entity label exemption", () => {
   const detects = (source: string, model = "PhysicalRoom") =>
     new RegExp(
       `\\.${model[0]!.toLowerCase()}${model.slice(1)}\\b|"${model}"`,
-    ).test(withoutAuditEntityLabels(source));
+    ).test(withoutNonPersistenceLabels(source));
+
+  it("exempts payment audit and outbox labels while retaining Payment access detection", () => {
+    expect(detects('const e = { entityType: "Payment" };', "Payment")).toBe(
+      false,
+    );
+    expect(
+      detects('const kind = "reservation.payment-not-completed";', "Payment"),
+    ).toBe(false);
+    expect(detects("return db.payment.findFirst();", "Payment")).toBe(true);
+    expect(detects('db.$queryRaw`SELECT * FROM "Payment"`;', "Payment")).toBe(
+      true,
+    );
+  });
 
   it("exempts only the exact audit entityType declarations", () => {
     expect(detects('const e = { entityType: "PhysicalRoom", id: 1 };')).toBe(

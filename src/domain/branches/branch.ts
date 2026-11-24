@@ -270,7 +270,7 @@ export const branchCreateSchema = branchFields
  */
 export const branchUpdateSchema = branchFields
   .omit({ slug: true })
-  .extend(managedFields)
+  .extend({ ...managedFields, onlinePaymentEnabled: z.boolean() })
   .partial();
 
 /**

@@ -77,6 +77,9 @@ export const StaffBranch = z.object({
 });
 
 export const StaffBranchList = z.object({ items: z.array(StaffBranch) });
+export const UpdatedStaffBranch = StaffBranch.extend({
+  onlinePaymentEnabled: z.boolean(),
+});
 
 // Shapes only; the branch rules (reserved slugs, map allowlist, times,
 // online booking) are checked by the use case and reported as fieldErrors.
@@ -108,7 +111,11 @@ export const BranchInput = z
 
 /** A partial `BranchInput` without `slug` (fixed once created). */
 export const BranchPatch = z
-  .object({ ...branchFields, name: z.string().optional() })
+  .object({
+    ...branchFields,
+    name: z.string().optional(),
+    onlinePaymentEnabled: z.boolean().optional(),
+  })
   .strict();
 
 export type ImageDto = z.infer<typeof Image>;

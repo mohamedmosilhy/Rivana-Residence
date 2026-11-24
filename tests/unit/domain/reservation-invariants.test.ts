@@ -454,7 +454,7 @@ describe("R-1…R-10 pure reservation invariants (trusted transaction facts supp
       }),
     ).toThrow(DomainValidationError);
   });
-  it("R-10 requires the reserved-inventory fact and refuses payment creation paths in M8", () => {
+  it("R-10 requires reserved inventory and the initial state for the payment method", () => {
     expect(() =>
       validateReservationCreation(fixture(), {
         ...facts,
@@ -465,6 +465,19 @@ describe("R-1…R-10 pure reservation invariants (trusted transaction facts supp
       DomainValidationError,
     );
     expect(() => validate({ ...fixture(), paymentStatus: "PAID" })).toThrow(
+      DomainValidationError,
+    );
+    const hold = {
+      ...fixture(),
+      status: "AWAITING_PAYMENT",
+      paymentMethod: "ONLINE",
+      paymentStatus: "AWAITING",
+    } as const;
+    expect(() => validate(hold)).not.toThrow();
+    expect(() => validate({ ...hold, source: "STAFF" })).toThrow(
+      DomainValidationError,
+    );
+    expect(() => validate(changePrice(hold, { totalMinor: 0 }))).toThrow(
       DomainValidationError,
     );
   });

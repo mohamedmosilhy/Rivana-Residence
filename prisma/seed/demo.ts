@@ -770,10 +770,19 @@ export async function seedDemoReservations(
         },
       });
     }
-    for (const [index, purpose] of [
-      "VERIFICATION_CODE",
-      "BOOKING_CONFIRMED",
-    ].entries()) {
+    for (const [index, [purpose, variables]] of (
+      [
+        ["VERIFICATION_CODE", ["code"]],
+        [
+          "BOOKING_CONFIRMED",
+          ["guestFirstName", "reference", "checkIn", "checkOut"],
+        ],
+        [
+          "PAYMENT_NOT_COMPLETED",
+          ["guestFirstName", "reference", "holdExpiresAt"],
+        ],
+      ] as const
+    ).entries()) {
       await tx.whatsAppTemplate.upsert({
         where: { id: `qvmrseeddemotemplaaaaaa${index}` },
         update: {},
@@ -785,10 +794,7 @@ export async function seedDemoReservations(
           category:
             purpose === "VERIFICATION_CODE" ? "AUTHENTICATION" : "UTILITY",
           // Valid for the purpose's allowlist (M8-T4); still inactive.
-          variables:
-            purpose === "VERIFICATION_CODE"
-              ? ["code"]
-              : ["guestFirstName", "reference", "checkIn", "checkOut"],
+          variables: [...variables],
           previewText: "Fictional demo template, not approved by Meta.",
           active: false,
         },

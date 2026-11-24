@@ -24,6 +24,7 @@ export type BranchRow = BranchRecord &
   Readonly<{
     summary: string | null;
     onlineBookingEnabled: boolean;
+    onlinePaymentEnabled: boolean;
     timeZone: string;
     phone: string | null;
     email: string | null;
