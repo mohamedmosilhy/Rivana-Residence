@@ -1,6 +1,6 @@
 # M9: Online payments (provider neutral), cancellation requests, refunds, guest changes, email verification
 
-Status: **In progress** (all tasks accepted: 14/15 with M9-T9 merged, most recently M9-T12b on 2026-11-26; M9-T12 was split into T12a and T12b on 2026-11-25; milestone close pending). Brief: [m9-payments-and-cancellations.md](../milestones/m9-payments-and-cancellations.md). Branch: `m9-payments-and-cancellations`. Spec [0006](../../specs/0006-m9-payments-and-cancellations.md) and the task breakdown were approved by the owner on 2026-11-22 (Q-94…Q-97, D-A…D-E, all cross check fixes applied; M9-T9 merged into the tasks that send each message).
+Status: **In progress** (14/16 tasks accepted with M9-T9 merged, most recently M9-T12b on 2026-11-26; M9-T12 was split into T12a and T12b on 2026-11-25; M9-T12c was added on 2026-11-26 for Q-100). Brief: [m9-payments-and-cancellations.md](../milestones/m9-payments-and-cancellations.md). Branch: `m9-payments-and-cancellations`. Spec [0006](../../specs/0006-m9-payments-and-cancellations.md) and the task breakdown were approved by the owner on 2026-11-22 (Q-94…Q-97, D-A…D-E, all cross check fixes applied; M9-T9 merged into the tasks that send each message).
 
 ## Task log
 

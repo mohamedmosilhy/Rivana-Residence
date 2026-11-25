@@ -34,6 +34,8 @@ Option 3.
 
 A guest who cannot receive WhatsApp can still book, and the system stays honest about what was proven. Keeping the phone as the identity avoids rewriting caps, blocking, and sessions. Skipping per phone coupon limits for unverified phones follows the rule already accepted for P6 and P7.
 
+**Amended (Q-100, owner 2026-11-26; planned M9-T12c):** a booking verified by email must be paid online. Pay at hotel needs a WhatsApp code.
+
 ## Consequences
 
 - New columns on `PhoneVerification` (`channel`, `email`) and on `Guest` (`phoneVerified`, with `emailVerifiedAt`) in an additive migration (M9-T12).

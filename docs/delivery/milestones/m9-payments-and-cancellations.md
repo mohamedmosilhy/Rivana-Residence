@@ -1,6 +1,6 @@
 # M9 — Online payments (provider neutral), payment holds, cancellation requests, refunds, and email verification
 
-Status: **In progress** (All tasks accepted: 14/15, with M9-T9 merged into the tasks that send each message. M9-T12b was accepted on 2026-11-26. M9-T12 was split into T12a and T12b on 2026-11-25. The milestone close is next.) Spec [0006](../../specs/0006-m9-payments-and-cancellations.md) and the task breakdown were approved on 2026-11-22 with Q-94…Q-97 and decisions D-A…D-E. M9-T9 merged into the tasks that send each message. The owner extended scope on 2026-11-17 with guest booking changes (M9-T10, T11, Q-83…Q-85), and on 2026-11-22 with provider neutral integrations (M9-T0b, T3, Q-92, ADR 030) and email verification as a fallback to WhatsApp (M9-T12, Q-93, ADR 031). Branch `m9-payments-and-cancellations`. [Milestone loop](./README.md#the-loop-every-milestone-follows)
+Status: **In progress** (14/16 tasks accepted, with M9-T9 merged into the tasks that send each message. M9-T12b was accepted on 2026-11-26. M9-T12 was split into T12a and T12b on 2026-11-25. M9-T12c was added on 2026-11-26 (Q-100); the milestone close follows it.) Spec [0006](../../specs/0006-m9-payments-and-cancellations.md) and the task breakdown were approved on 2026-11-22 with Q-94…Q-97 and decisions D-A…D-E. M9-T9 merged into the tasks that send each message. The owner extended scope on 2026-11-17 with guest booking changes (M9-T10, T11, Q-83…Q-85), and on 2026-11-22 with provider neutral integrations (M9-T0b, T3, Q-92, ADR 030) and email verification as a fallback to WhatsApp (M9-T12, Q-93, ADR 031). Branch `m9-payments-and-cancellations`. [Milestone loop](./README.md#the-loop-every-milestone-follows)
 
 ## Objective
 
@@ -65,6 +65,7 @@ Planned, reviewed, and accepted one task at a time ([agent-workflow.md](../../en
 | M9-T11 | Change requests for paid bookings (S56…S58), migration `change_requests` | Critical | T10, T8 | AC 12, 15, 16; T-GCHG-9…12, C-17 | Accepted (2026-11-25) |
 | M9-T12a | Email code for booking: P9 `channel` and `email`, email code adapters, P7 with an email token, per email limits and cap, coupon per phone limit skipped, phone sessions hide email verified bookings, guest messages by email only for email bookings, the Admin email verification switch (A9 and toggle, Q-99), readiness gate, migration `verification_channels` (split 2026-11-25) | Critical | T0b, M8-T5, M8-T7b, M8-T11 | AC 13 (except the email session); T-VCH-1…5, 7, 8 | Accepted (2026-11-26) |
 | M9-T12b | Email guest session (G3…G6 by email) and staff fields (`verificationChannel`, `emailVerifiedAt`) (split 2026-11-25) | Critical | T12a | AC 13 (email session); T-VCH-6 | Accepted (2026-11-26) |
+| M9-T12c | Email verification only with online payment (Q-100): P7 refuses pay at hotel with an email token, the readiness gate counts email only where online payment is available, the demo seed and the email booking tests move to online payment (added 2026-11-26) | Critical | T12a, T12b, T4 | AC 13 as amended by Q-100 | Not started |
 
 AC 10 (the full run on the fake gateway) is recorded at milestone close. The real provider sandbox run belongs to M15-T4.
 
