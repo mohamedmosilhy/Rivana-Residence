@@ -48,7 +48,10 @@ type Options = Readonly<{
   audit?: (inner: AuditLog) => AuditLog;
   /** Wraps the transaction's quote, e.g. to report a branch closed after the locks. */
   quote?: (inner: QuoteBooking) => Pick<QuoteBooking, "execute">;
+  /** WhatsApp readiness (Q-71). Defaults to ready. */
   setupConfigured?: boolean;
+  /** Email readiness for codes (ADR 031). Defaults to not ready. */
+  emailReady?: boolean;
   checkout?: NonNullable<
     ConstructorParameters<typeof CreateWebsiteReservation>[0]["checkout"]
   >;
@@ -119,7 +122,12 @@ export function websiteBooking(client: PrismaClient, options: Options = {}) {
         return tokens.findByTokenHash(hash);
       },
     },
-    setup: { isConfigured: async () => options.setupConfigured ?? true },
+    channels: {
+      isReady: async (channel) =>
+        channel === "WHATSAPP"
+          ? (options.setupConfigured ?? true)
+          : (options.emailReady ?? false),
+    },
     crypto: new NodeBookingCrypto(),
     clock,
     ids,
@@ -196,6 +204,8 @@ export async function issueToken(
     purpose?: "BOOKING" | "GUEST_SESSION";
     expired?: boolean;
     consumed?: boolean;
+    /** Issues an email channel token for this normalized email (ADR 031). */
+    email?: string;
   }> = {},
 ) {
   issued += 1;
@@ -205,6 +215,8 @@ export async function issueToken(
       id: `verification-${phone.slice(1)}-${sha256(token).slice(0, 6)}`,
       phone,
       purpose: options.purpose ?? "BOOKING",
+      channel: options.email ? "EMAIL" : "WHATSAPP",
+      email: options.email ?? null,
       codeHash: "0".repeat(64),
       attempts: 1,
       expiresAt: new Date(NOW.getTime() + 600_000),

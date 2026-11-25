@@ -1,3 +1,4 @@
+import { createHmac } from "node:crypto";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   RequestPhoneVerification,
@@ -26,9 +27,20 @@ let blocked: boolean;
 const sender = {
   send: vi.fn(async () => ({ ok: true as const, providerMessageId: "fake" })),
 };
-const setup = { isConfigured: vi.fn(async () => true) };
+const emailSender = {
+  send: vi.fn<
+    (message: { id: string; to: string; code: string }) => Promise<{
+      ok: true;
+    }>
+  >(async () => ({ ok: true })),
+};
+const ready = { WHATSAPP: true, EMAIL: true };
+const channels = {
+  isReady: vi.fn(async (channel: "WHATSAPP" | "EMAIL") => ready[channel]),
+};
 const repository: PhoneVerificationRepository = {
   lockPhone: async () => success(undefined),
+  lockEmail: async () => success(undefined),
   findById: async (id) => rows.get(id) ?? null,
   findByTokenHash: async (hash) =>
     [...rows.values()].find((row) => row.tokenHash === hash) ?? null,
@@ -39,6 +51,10 @@ const repository: PhoneVerificationRepository = {
   requestHistory: async (number, since) =>
     [...rows.values()]
       .filter((row) => row.phone === number.value && row.createdAt > since)
+      .map((row) => row.createdAt),
+  emailRequestHistory: async (email, since) =>
+    [...rows.values()]
+      .filter((row) => row.email === email && row.createdAt > since)
       .map((row) => row.createdAt),
   insert: async (row) => {
     rows.set(row.id, row);
@@ -76,6 +92,7 @@ const guests: GuestRepository = {
             name: "Guest",
             email: null,
             phoneVerifiedAt: null,
+            emailVerifiedAt: null,
             marketingOptInAt: null,
             marketingConsentVersion: null,
             marketingOptOutAt: null,
@@ -111,10 +128,12 @@ function deps() {
   };
 }
 const request = (input: unknown = { phone, purpose: "BOOKING" }) =>
-  new RequestPhoneVerification({ ...deps(), setup, sender }).execute(
-    input,
-    "hashed-client",
-  );
+  new RequestPhoneVerification({
+    ...deps(),
+    channels,
+    sender,
+    emailSender,
+  }).execute(input, "hashed-client");
 const confirm = (id = "verification-1", code = "000123") =>
   new ConfirmPhoneVerification(deps()).execute(id, { code });
 beforeEach(() => {
@@ -123,8 +142,10 @@ beforeEach(() => {
   sequence = 0;
   blocked = false;
   vi.clearAllMocks();
-  setup.isConfigured.mockResolvedValue(true);
+  ready.WHATSAPP = true;
+  ready.EMAIL = true;
   sender.send.mockResolvedValue({ ok: true, providerMessageId: "fake" });
+  emailSender.send.mockResolvedValue({ ok: true });
 });
 
 describe("phone verification use cases", () => {
@@ -195,8 +216,9 @@ describe("phone verification use cases", () => {
     const service = new RequestPhoneVerification({
       ...deps(),
       crypto: null,
-      setup,
+      channels,
       sender,
+      emailSender,
     });
     expect(
       await service.execute(
@@ -204,11 +226,11 @@ describe("phone verification use cases", () => {
         "hash",
       ),
     ).toMatchObject({ error: { code: "VALIDATION" } });
-    setup.isConfigured.mockResolvedValue(false);
+    ready.WHATSAPP = false;
     expect(
       await service.execute({ phone, purpose: "BOOKING" }, "hash"),
     ).toMatchObject({ error: { code: "WHATSAPP_NOT_CONFIGURED" } });
-    setup.isConfigured.mockResolvedValue(true);
+    ready.WHATSAPP = true;
     expect(
       await service.execute({ phone, purpose: "BOOKING" }, "hash"),
     ).toMatchObject({ error: { code: "VERIFICATION_UNAVAILABLE" } });
@@ -222,7 +244,7 @@ describe("phone verification use cases", () => {
     expect(sender.send).not.toHaveBeenCalled();
   });
   it("refuses missing setup without a verification write", async () => {
-    setup.isConfigured.mockResolvedValue(false);
+    ready.WHATSAPP = false;
     expect(await request()).toMatchObject({
       error: { code: "WHATSAPP_NOT_CONFIGURED" },
     });
@@ -311,31 +333,182 @@ describe("phone verification use cases", () => {
     },
   );
 });
+// T-VCH-1, 2, 5, 8 at the use case level (ADR 031, spec 0006 Decision 9).
+describe("verification by email", () => {
+  const email = "guest@example.test";
+  const byEmail = (extra: Record<string, unknown> = {}) =>
+    request({ phone, purpose: "BOOKING", channel: "EMAIL", email, ...extra });
+  it("sends the code by email after commit, binds it to the address, and confirms it", async () => {
+    const result = await byEmail({ email: "  Guest@Example.TEST " });
+    expect(result.ok).toBe(true);
+    expect(sender.send).not.toHaveBeenCalled();
+    expect(emailSender.send).toHaveBeenCalledWith({
+      id: "verification-1",
+      to: email,
+      code: "000123",
+    });
+    const row = rows.get("verification-1")!;
+    expect(row).toMatchObject({ channel: "EMAIL", email, phone });
+    expect(row.codeHash).toBe(
+      crypto.codeHash(
+        { id: row.id, phone, purpose: "BOOKING", channel: "EMAIL", email },
+        "000123",
+      ),
+    );
+    expect(await confirm()).toMatchObject({ ok: true });
+    // Single use: the code cannot issue a second token.
+    expect(await confirm()).toMatchObject({
+      error: { code: "VERIFICATION_EXPIRED" },
+    });
+  });
+  it("keeps WhatsApp as the default channel with no email stored", async () => {
+    expect((await request()).ok).toBe(true);
+    expect(rows.get("verification-1")).toMatchObject({
+      channel: "WHATSAPP",
+      email: null,
+    });
+    expect(emailSender.send).not.toHaveBeenCalled();
+  });
+  it("answers each channel's readiness on its own", async () => {
+    ready.EMAIL = false;
+    expect(await byEmail()).toMatchObject({
+      error: { code: "EMAIL_NOT_CONFIGURED" },
+    });
+    expect((await request()).ok).toBe(true);
+    ready.EMAIL = true;
+    ready.WHATSAPP = false;
+    expect(await request()).toMatchObject({
+      error: { code: "WHATSAPP_NOT_CONFIGURED" },
+    });
+    expect((await byEmail()).ok).toBe(true);
+    expect(rows.size).toBe(2);
+  });
+  it.each([
+    [{ channel: "EMAIL" }, "email"],
+    [{ channel: "EMAIL", email: "not-an-email" }, "email"],
+    [{ email }, "email"],
+    [{ channel: "WHATSAPP", email }, "email"],
+    [{ channel: "EMAIL", email, purpose: "GUEST_SESSION" }, "channel"],
+    [{ channel: "SMS", email }, "channel"],
+  ])("refuses %j before any write", async (extra, path) => {
+    const result = await request({ phone, purpose: "BOOKING", ...extra });
+    expect(result).toMatchObject({ error: { code: "VALIDATION" } });
+    expect(JSON.stringify(result)).toContain(path);
+    expect(rows.size).toBe(0);
+    expect(emailSender.send).not.toHaveBeenCalled();
+  });
+  it("applies the rolling limits per email across different phones", async () => {
+    const phones = ["+12025550111", "+12025550112", "+12025550113"];
+    for (const other of phones.slice(0, 2))
+      expect((await byEmail({ phone: other })).ok).toBe(true);
+    const third = await byEmail({ phone: phones[2] });
+    expect(third).toMatchObject({
+      value: { resendAvailableAt: new Date(now.getTime() + 900000) },
+    });
+    expect(await byEmail({ phone: "+12025550114" })).toMatchObject({
+      error: { code: "RATE_LIMITED", retryAfterSeconds: 900 },
+    });
+    // Another email from the same phone is not limited by this one.
+    expect(
+      (await byEmail({ phone: "+12025550114", email: "b@example.test" })).ok,
+    ).toBe(true);
+  });
+  it("applies the phone limits to email requests as well", async () => {
+    await request();
+    await request();
+    await request();
+    expect(await byEmail()).toMatchObject({
+      error: { code: "RATE_LIMITED", retryAfterSeconds: 900 },
+    });
+  });
+  it("refuses a blocked phone without sending an email", async () => {
+    blocked = true;
+    expect(await byEmail()).toMatchObject({ error: { code: "PHONE_BLOCKED" } });
+    expect(rows.size).toBe(0);
+    expect(emailSender.send).not.toHaveBeenCalled();
+  });
+  it("invalidates the code when the email cannot be delivered, without its text", async () => {
+    emailSender.send.mockRejectedValueOnce(new Error(`secret 000123 ${email}`));
+    const failed = await byEmail();
+    expect(failed).toMatchObject({
+      error: { code: "VERIFICATION_UNAVAILABLE", retryAfterSeconds: 60 },
+    });
+    expect(JSON.stringify(failed)).not.toContain("000123");
+    expect(await confirm()).toMatchObject({
+      error: { code: "VERIFICATION_EXPIRED" },
+    });
+    emailSender.send.mockResolvedValueOnce({
+      ok: false,
+      code: "PROVIDER_REJECTED",
+    } as never);
+    expect(await byEmail()).toMatchObject({
+      error: { code: "VERIFICATION_UNAVAILABLE" },
+    });
+  });
+});
+
 describe("verification cryptography and contracts", () => {
   it("binds a code to the secret, identity, phone and purpose", () => {
-    const hash = crypto.codeHash("id", phone, "BOOKING", "000123");
-    expect(crypto.codeMatches("id", phone, "BOOKING", "000123", hash)).toBe(
-      true,
-    );
-    for (const [id, p, purpose, code] of [
-      ["other", phone, "BOOKING", "000123"],
-      ["id", "+12025550102", "BOOKING", "000123"],
-      ["id", phone, "GUEST_SESSION", "000123"],
-      ["id", phone, "BOOKING", "000124"],
-    ])
-      expect(crypto.codeMatches(id!, p!, purpose!, code!, hash)).toBe(false);
+    const binding = {
+      id: "id",
+      phone,
+      purpose: "BOOKING",
+      channel: "WHATSAPP",
+      email: null,
+    } as const;
+    const hash = crypto.codeHash(binding, "000123");
+    expect(crypto.codeMatches(binding, "000123", hash)).toBe(true);
+    for (const [change, code] of [
+      [{ id: "other" }, "000123"],
+      [{ phone: "+12025550102" }, "000123"],
+      [{ purpose: "GUEST_SESSION" }, "000123"],
+      [{}, "000124"],
+    ] as const)
+      expect(crypto.codeMatches({ ...binding, ...change }, code, hash)).toBe(
+        false,
+      );
     expect(
       new NodePhoneVerificationCrypto(secret + "x").codeMatches(
-        "id",
-        phone,
-        "BOOKING",
+        binding,
         "000123",
         hash,
       ),
     ).toBe(false);
-    expect(crypto.codeMatches("id", phone, "BOOKING", "000123", "bad")).toBe(
-      false,
+    expect(crypto.codeMatches(binding, "000123", "bad")).toBe(false);
+  });
+  // T-VCH-1: a code confirms only its own channel and email (ADR 031).
+  it("binds an email code to its channel and address, and keeps the M8 WhatsApp input", () => {
+    const whatsApp = {
+      id: "id",
+      phone,
+      purpose: "BOOKING",
+      channel: "WHATSAPP",
+      email: null,
+    } as const;
+    const email = {
+      ...whatsApp,
+      channel: "EMAIL",
+      email: "guest@example.test",
+    } as const;
+    // A WhatsApp code issued before the deploy keeps its original fingerprint.
+    expect(crypto.codeHash(whatsApp, "000123")).toBe(
+      createHmac("sha256", secret)
+        .update(JSON.stringify(["id", phone, "BOOKING", "000123"]))
+        .digest("hex"),
     );
+    const hash = crypto.codeHash(email, "000123");
+    expect(crypto.codeMatches(email, "000123", hash)).toBe(true);
+    expect(crypto.codeMatches(whatsApp, "000123", hash)).toBe(false);
+    expect(
+      crypto.codeMatches(
+        { ...email, email: "other@example.test" },
+        "000123",
+        hash,
+      ),
+    ).toBe(false);
+    expect(
+      crypto.codeMatches(email, "000123", crypto.codeHash(whatsApp, "000123")),
+    ).toBe(false);
   });
   it("generates bounded codes and distinct full entropy tokens", () => {
     const tokens = new Set<string>();
@@ -359,6 +532,21 @@ describe("verification cryptography and contracts", () => {
         phone,
         purpose: "BOOKING",
         price: 10,
+      }).success,
+    ).toBe(false);
+    expect(
+      PhoneVerificationRequest.safeParse({
+        phone,
+        purpose: "BOOKING",
+        channel: "EMAIL",
+        email: "guest@example.test",
+      }).success,
+    ).toBe(true);
+    expect(
+      PhoneVerificationRequest.safeParse({
+        phone,
+        purpose: "BOOKING",
+        channel: "SMS",
       }).success,
     ).toBe(false);
     expect(

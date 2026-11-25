@@ -175,27 +175,39 @@ export class SmtpReservationEmail implements ReservationEmailSender {
       await this.transport.sendMail({
         from: this.from,
         to: { name: "", address: to },
-        messageId: `<${id}@${this.from.split("@")[1]}>`,
+        messageId: messageIdFor(id, this.from),
         ...renderReservationEmail(kind, vars),
       });
       return { ok: true };
     } catch (error) {
-      const response =
-        error && typeof error === "object" && "responseCode" in error
-          ? error.responseCode
-          : undefined;
-      const providerCode =
-        typeof response === "number" && response >= 400 && response <= 599
-          ? response
-          : undefined;
-      return {
-        ok: false,
-        code:
-          providerCode && providerCode >= 500
-            ? "PROVIDER_REJECTED"
-            : "UNAVAILABLE",
-        providerCode,
-      };
+      return smtpDeliveryFailure(error);
     }
   }
+}
+
+/**
+ * A Message-ID on the sender's domain. The sender may be `a@b` or
+ * `Name <a@b>`; the domain is the part after the last `@`, without `>`.
+ */
+export function messageIdFor(id: string, from: string) {
+  const domain = /@([^@\s<>]+)>?\s*$/.exec(from)?.[1] ?? "localhost";
+  return `<${id}@${domain}>`;
+}
+
+/** Maps an SMTP error to a delivery result without keeping its message. */
+export function smtpDeliveryFailure(error: unknown): DeliveryResult {
+  const response =
+    error && typeof error === "object" && "responseCode" in error
+      ? error.responseCode
+      : undefined;
+  const providerCode =
+    typeof response === "number" && response >= 400 && response <= 599
+      ? response
+      : undefined;
+  return {
+    ok: false,
+    code:
+      providerCode && providerCode >= 500 ? "PROVIDER_REJECTED" : "UNAVAILABLE",
+    providerCode,
+  };
 }

@@ -34,10 +34,11 @@ import { PrismaBranchRepository } from "@/infrastructure/db/prisma/repositories/
 import { reservationMessageWriter } from "@/composition/reservation-jobs";
 import { throttleKeys } from "@/composition/auth";
 import { clientAddressFrom } from "@/composition/http";
+import { whatsAppSender } from "@/composition/notifications";
 import {
-  whatsAppSender,
-  whatsAppSetupReader,
-} from "@/composition/notifications";
+  verificationChannelReadiness,
+  verificationCodeEmail,
+} from "@/composition/verification-channels";
 import { NodePhoneVerificationCrypto } from "@/infrastructure/crypto/phone-verification-crypto";
 import { getPrisma } from "@/infrastructure/db/prisma/client";
 import { PrismaGuestRepository } from "@/infrastructure/db/prisma/repositories/reservations/guests/guest-repository";
@@ -73,8 +74,9 @@ export function requestPhoneVerification(input: unknown, headers: Headers) {
   const secret = getServerEnv().PHONE_VERIFICATION_SECRET;
   return new RequestPhoneVerification({
     ...dependencies(secret),
-    setup: whatsAppSetupReader(),
+    channels: verificationChannelReadiness(),
     sender: whatsAppSender(),
+    emailSender: verificationCodeEmail(),
   }).execute(
     input,
     throttleKeys().namespaced(

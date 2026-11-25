@@ -1019,6 +1019,8 @@ describe("Concurrent cancellation requests (20 rounds per race)", () => {
           source: "EXTERNAL",
           externalReference: "REASSIGNMENT-EXTERNAL",
           createdById: admin.id,
+          // Only website bookings record a verification channel (M9-T12a CHECK).
+          verificationChannel: null,
         },
       });
       const sessionAccess = await guestSession(phone, reservation.reference);
@@ -1265,6 +1267,7 @@ it("checks the stored phone on a legacy unlinked booking and distinguishes a lin
       guestId: null,
       source: "EXTERNAL",
       externalReference: "LEGACY-EXTERNAL",
+      verificationChannel: null,
     },
   });
   const view = guestReservationReads({ client, clock }).view;

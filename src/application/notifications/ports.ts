@@ -223,6 +223,8 @@ export type MessageSnapshot = {
   guestName: string;
   guestEmail: string | null;
   guestPhone: string | null;
+  /** EMAIL: the phone was never proven, so no guest WhatsApp goes to it (ADR 031). */
+  verificationChannel: "WHATSAPP" | "EMAIL" | null;
   checkIn: string;
   checkOut: string;
   totalMinor: number | null;
@@ -317,6 +319,23 @@ export type Completion =
 export interface OutboxWorkerStore {
   claim(now: Date): Promise<ClaimedMessage | "exhausted" | null>;
   complete(message: ClaimedMessage, outcome: Completion): Promise<boolean>;
+}
+/** One email verification code (ADR 031). The code is never stored or logged. */
+export type VerificationCodeEmailMessage = Readonly<{
+  /** The verification id; adapters use it only as a message id. */
+  id: string;
+  /** Normalized address the guest asked the code to be sent to. */
+  to: string;
+  code: string;
+}>;
+/**
+ * Sends a verification code by email. Called directly after the request
+ * commits, never inside a transaction and never through the outbox (the
+ * plaintext code must not be stored). The message carries no link and no
+ * booking or branch details.
+ */
+export interface VerificationCodeEmail {
+  send(message: VerificationCodeEmailMessage): Promise<DeliveryResult>;
 }
 export interface ReservationEmailSender {
   send(

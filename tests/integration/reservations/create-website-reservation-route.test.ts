@@ -242,13 +242,14 @@ describe("POST /api/v1/reservations", () => {
     expect((await rowCounts(client)).reservations).toBe(0);
   });
 
-  it("reports WhatsApp not configured as the branch reason", async () => {
+  // With WhatsApp unconfigured and the email switch off (Q-99), no channel is ready.
+  it("reports no verification channel as the branch reason", async () => {
     await seedBookable(client);
     const token = await issueToken(client, phone);
     const response = await send(body(token));
     expect(response.status).toBe(409);
     expect((await problemOf(response)).context).toEqual({
-      reason: "WHATSAPP_NOT_CONFIGURED",
+      reason: "VERIFICATION_NOT_CONFIGURED",
     });
   });
 

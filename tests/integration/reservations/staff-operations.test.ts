@@ -950,6 +950,35 @@ describe("staff operations on PostgreSQL", () => {
     expect(await outbox(booking.id)).toEqual(messages);
   });
 
+  // Spec 0006 Decision 9 (M9-T12a): an email verified booking's phone is unproven.
+  it("S14 sends an email verified booking's link by email only and audits it truthfully", async () => {
+    await seedBookable(client);
+    const phone = phoneOf(98);
+    const created = await websiteBooking(client).execute(
+      bookingBody(
+        phone,
+        await issueToken(client, phone, { email: "amina@example.test" }),
+      ),
+      "operations-email-booking",
+    );
+    if (!created.ok) throw new Error(JSON.stringify(created.error));
+    const booking = await client.reservation.findUniqueOrThrow({
+      where: { reference: created.value.reference },
+    });
+    await client.notificationOutbox.deleteMany();
+    expect((await call(resend, booking.id, "POST")).status).toBe(202);
+    expect((await outbox(booking.id)).map((row) => row.channel)).toEqual([
+      "EMAIL",
+    ]);
+    const audit = await client.auditEvent.findFirstOrThrow({
+      where: { entityId: booking.id, action: "reservation.manage-link-resent" },
+    });
+    expect(audit.changes).toMatchObject({
+      emailQueued: true,
+      whatsappQueued: false,
+    });
+  });
+
   it("S14 refuses a contactless record and can queue an email-only link", async () => {
     const listing = await seedBookable(client);
     const booking = await book(listing.id, { noEmail: true });

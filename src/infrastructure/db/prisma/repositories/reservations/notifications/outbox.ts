@@ -23,6 +23,7 @@ export class PrismaReservationMessageStore implements ReservationMessageStore {
           guestName: true,
           guestEmail: true,
           guestPhone: true,
+          verificationChannel: true,
           checkIn: true,
           checkOut: true,
           totalMinor: true,

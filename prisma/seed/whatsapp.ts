@@ -8,3 +8,16 @@ export async function seedWhatsAppSettings(client: PrismaClient) {
     update: {},
   });
 }
+
+/**
+ * The Admin switch for verification codes by email (Q-99). The migration
+ * creates it off; this only restores a missing row and never changes an
+ * Admin's choice.
+ */
+export async function seedVerificationSettings(client: PrismaClient) {
+  await client.verificationSettings.upsert({
+    where: { id: "default" },
+    create: { id: "default" },
+    update: {},
+  });
+}

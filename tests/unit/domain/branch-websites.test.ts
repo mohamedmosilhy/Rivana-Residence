@@ -7,7 +7,7 @@ import { failure } from "@/application/shared/result";
 import {
   DEFAULT_BRANCH_SLUG,
   ONLINE_BOOKING_NEEDS_CHECK_IN_MESSAGE,
-  ONLINE_BOOKING_NEEDS_WHATSAPP_MESSAGE,
+  ONLINE_BOOKING_NEEDS_VERIFICATION_MESSAGE,
   ONLINE_BOOKING_NOT_READY_MESSAGE,
   branchCreateSchema,
   branchSlugSchema,
@@ -232,15 +232,15 @@ describe("ManageBranches", () => {
       isUsableImage: vi.fn(async (id: string) => id === "ready"),
     };
     const now = new Date("2026-11-07T10:00:00Z");
-    const whatsApp = { isConfigured: vi.fn(async () => false) };
+    const verification = { anyChannelReady: vi.fn(async () => false) };
     const useCase = new ManageBranches({
       branches: fake.repository,
       cache,
       media,
-      whatsApp,
+      verification,
       clock: { now: () => now },
     });
-    return { ...fake, cache, media, whatsApp, useCase, now };
+    return { ...fake, cache, media, verification, useCase, now };
   }
 
   it("refuses an editor before any read or write", async () => {
@@ -374,7 +374,7 @@ describe("ManageBranches", () => {
   // configured, then a check-in time, and stays refused until M10.
   describe("turning online booking on", () => {
     it("refuses while WhatsApp is not configured, before writing", async () => {
-      const { useCase, writes, whatsApp } = setup([
+      const { useCase, writes, verification } = setup([
         branchRow({ id: "b2", slug: "demo-giza", checkInTime: "14:00" }),
       ]);
       const result = await useCase.update(admin, "b2", {
@@ -385,19 +385,19 @@ describe("ManageBranches", () => {
         error: {
           code: "VALIDATION",
           fieldErrors: {
-            onlineBookingEnabled: [ONLINE_BOOKING_NEEDS_WHATSAPP_MESSAGE],
+            onlineBookingEnabled: [ONLINE_BOOKING_NEEDS_VERIFICATION_MESSAGE],
           },
         },
       });
-      expect(whatsApp.isConfigured).toHaveBeenCalledOnce();
+      expect(verification.anyChannelReady).toHaveBeenCalledOnce();
       expect(writes).toEqual([]);
     });
 
     it("then asks for the check-in time, merging the patch with the row", async () => {
-      const { useCase, whatsApp, writes } = setup([
+      const { useCase, verification, writes } = setup([
         branchRow({ id: "b2", slug: "demo-giza", checkInTime: "14:00" }),
       ]);
-      whatsApp.isConfigured.mockResolvedValue(true);
+      verification.anyChannelReady.mockResolvedValue(true);
       expect(
         await useCase.update(admin, "b2", {
           onlineBookingEnabled: true,
@@ -414,10 +414,10 @@ describe("ManageBranches", () => {
     });
 
     it("still refuses until the booking journey ships (M10)", async () => {
-      const { useCase, whatsApp, writes } = setup([
+      const { useCase, verification, writes } = setup([
         branchRow({ id: "b2", slug: "demo-giza", checkInTime: "14:00" }),
       ]);
-      whatsApp.isConfigured.mockResolvedValue(true);
+      verification.anyChannelReady.mockResolvedValue(true);
       expect(
         await useCase.update(admin, "b2", { onlineBookingEnabled: true }),
       ).toMatchObject({
@@ -444,19 +444,19 @@ describe("ManageBranches", () => {
     });
 
     it("lets online booking be turned off without asking WhatsApp", async () => {
-      const { useCase, whatsApp } = setup([
+      const { useCase, verification } = setup([
         branchRow({ id: "b2", slug: "demo-giza", onlineBookingEnabled: true }),
       ]);
       expect(
         (await useCase.update(admin, "b2", { onlineBookingEnabled: false })).ok,
       ).toBe(true);
-      expect(whatsApp.isConfigured).not.toHaveBeenCalled();
+      expect(verification.anyChannelReady).not.toHaveBeenCalled();
     });
 
     it("refuses an editor before reading WhatsApp readiness", async () => {
-      const { useCase, whatsApp } = setup();
+      const { useCase, verification } = setup();
       await useCase.update(editor, "b2", { onlineBookingEnabled: true });
-      expect(whatsApp.isConfigured).not.toHaveBeenCalled();
+      expect(verification.anyChannelReady).not.toHaveBeenCalled();
     });
   });
 

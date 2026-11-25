@@ -66,7 +66,7 @@ describe("create only reservation seed", () => {
   });
   it("adds all M8 states, PMS markers, redemption, blocked guest and sync only in the demo branch", async () => {
     expect(await seedDemoReservations(client, "actor-admin")).toEqual({
-      created: 8,
+      created: 9,
     });
     const state = await snapshot();
     expect(new Set(state.reservations.map((row) => row.status))).toEqual(
@@ -120,7 +120,22 @@ describe("create only reservation seed", () => {
       websites
         .filter((row) => row.pmsEnteredAt === null)
         .map((row) => row.reference),
-    ).toEqual(["RR-DEM00001", "RR-DEM00007", "RR-DEM00008"]);
+    ).toEqual(["RR-DEM00001", "RR-DEM00007", "RR-DEM00008", "RR-DEM00009"]);
+    // ADR 031: one booking verified by email, with an unverified phone.
+    expect(
+      websites.map((row) => [row.reference, row.verificationChannel]),
+    ).toEqual(
+      expect.arrayContaining([
+        ["RR-DEM00001", "WHATSAPP"],
+        ["RR-DEM00009", "EMAIL"],
+      ]),
+    );
+    expect(
+      state.guests.find((row) => row.phone === "+12025550103"),
+    ).toMatchObject({ phoneVerifiedAt: null, email: "guest3@example.test" });
+    expect(
+      state.guests.find((row) => row.phone === "+12025550103")?.emailVerifiedAt,
+    ).not.toBeNull();
     expect(websites.filter((row) => row.pmsEnteredAt !== null)).toHaveLength(1);
     expect(websites.find((row) => row.pmsEnteredAt !== null)).toMatchObject({
       servicesMinor: 3000,
@@ -152,7 +167,8 @@ describe("create only reservation seed", () => {
     expect(await checkpoints.readStatus("demo")).toMatchObject({
       lastCompletedAt: completedAt,
       lastCompletedBy: "actor-admin",
-      notEnteredInHotelSystem: 2,
+      // RR-DEM00001, RR-DEM00008, and the email verified RR-DEM00009.
+      notEnteredInHotelSystem: 3,
     });
     expect(await checkpoints.read(TEST_BRANCH_ID)).toBeNull();
     expect(await checkpoints.readStatus(TEST_BRANCH_ID)).toMatchObject({

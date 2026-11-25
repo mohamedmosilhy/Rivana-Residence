@@ -1714,7 +1714,7 @@
     "/api/v1/phone-verifications": {
       "post": {
         "operationId": "requestPhoneVerification",
-        "summary": "API-P9. Send a WhatsApp verification code after commit. Three per phone per rolling 15 minutes, ten per rolling 24 hours, ten per client per hour.",
+        "summary": "API-P9. Send a verification code after commit, by WhatsApp (default) or email (ADR 031). Three per phone and three per email per rolling 15 minutes, ten per rolling 24 hours, ten per client per hour across both channels.",
         "tags": [
           "Guests"
         ],
@@ -1741,7 +1741,7 @@
             }
           },
           "default": {
-            "description": "Problem details. Codes: INTERNAL, VALIDATION, MALFORMED_JSON, PAYLOAD_TOO_LARGE, UNSUPPORTED_MEDIA_TYPE, PHONE_BLOCKED, WHATSAPP_NOT_CONFIGURED, VERIFICATION_UNAVAILABLE, RATE_LIMITED, TRY_AGAIN.",
+            "description": "Problem details. Codes: INTERNAL, VALIDATION, MALFORMED_JSON, PAYLOAD_TOO_LARGE, UNSUPPORTED_MEDIA_TYPE, PHONE_BLOCKED, WHATSAPP_NOT_CONFIGURED, EMAIL_NOT_CONFIGURED, VERIFICATION_UNAVAILABLE, RATE_LIMITED, TRY_AGAIN.",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -3533,6 +3533,86 @@
         }
       }
     },
+    "/api/v1/staff/settings/verification": {
+      "get": {
+        "operationId": "getVerificationSettings",
+        "summary": "API-A9. The Admin switch for verification codes by email (settings:edit, Admin only), with whether email delivery and WhatsApp are configured (Q-99).",
+        "tags": [
+          "Settings"
+        ],
+        "security": [
+          {
+            "staffSession": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The verification settings.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VerificationSettings"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Problem details. Codes: INTERNAL, UNAUTHENTICATED, FORBIDDEN.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "operationId": "updateVerificationSettings",
+        "summary": "API-A9. Turn verification codes by email on or off (settings:edit, Admin only). Audited under the settings row lock. Turning it on is refused (422) while email delivery is not configured.",
+        "tags": [
+          "Settings"
+        ],
+        "security": [
+          {
+            "staffSession": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VerificationSettingsInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The verification settings.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VerificationSettings"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Problem details. Codes: INTERNAL, UNAUTHENTICATED, FORBIDDEN, CROSS_SITE_REQUEST, VALIDATION, TRY_AGAIN.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/staff/whatsapp-templates": {
       "get": {
         "operationId": "listWhatsAppTemplates",
@@ -4483,6 +4563,19 @@
               "BOOKING",
               "GUEST_SESSION"
             ]
+          },
+          "channel": {
+            "description": "How to send the code. Defaults to WHATSAPP. EMAIL proves the email only; the phone stays unverified (ADR 031). EMAIL with GUEST_SESSION is refused until M9-T12b.",
+            "type": "string",
+            "enum": [
+              "WHATSAPP",
+              "EMAIL"
+            ]
+          },
+          "email": {
+            "description": "Required with channel EMAIL and refused otherwise. Normalized to lowercase.",
+            "type": "string",
+            "maxLength": 400
           },
           "website": {
             "description": "Honeypot. Leave empty.",
@@ -8988,6 +9081,60 @@
         ],
         "additionalProperties": false,
         "description": "The access token is never accepted here; it is a server secret."
+      },
+      "VerificationSettings": {
+        "type": "object",
+        "properties": {
+          "emailVerificationEnabled": {
+            "type": "boolean"
+          },
+          "emailDeliveryConfigured": {
+            "type": "boolean",
+            "description": "Whether the server's email adapter can deliver."
+          },
+          "whatsAppConfigured": {
+            "type": "boolean",
+            "description": "WhatsApp configured per Q-71."
+          },
+          "emailChannelReady": {
+            "type": "boolean",
+            "description": "Email codes are offered: delivery configured and the switch on."
+          },
+          "updatedAt": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time",
+                "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Null only if the settings row is missing, which reads as off."
+          }
+        },
+        "required": [
+          "emailVerificationEnabled",
+          "emailDeliveryConfigured",
+          "whatsAppConfigured",
+          "emailChannelReady",
+          "updatedAt"
+        ],
+        "additionalProperties": false
+      },
+      "VerificationSettingsInput": {
+        "type": "object",
+        "properties": {
+          "emailVerificationEnabled": {
+            "type": "boolean",
+            "description": "Offer verification codes by email. Turning it on is refused while email delivery is not configured. Turning it off stops new email codes; codes and tokens already issued may finish."
+          }
+        },
+        "required": [
+          "emailVerificationEnabled"
+        ],
+        "additionalProperties": false
       },
       "WhatsAppTemplate": {
         "type": "object",

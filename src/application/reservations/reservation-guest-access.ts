@@ -1,3 +1,4 @@
+import { guestWhatsAppAllowed } from "@/domain/guests";
 import type { StaffPrincipal } from "@/application/auth";
 import type { QueueReservationMessages } from "@/application/notifications";
 import {
@@ -77,7 +78,10 @@ export class ResendManageLink {
         "reservation.manage-link-resent",
         {
           emailQueued: Boolean(current.contact.email),
-          whatsappQueued: Boolean(current.contact.phone),
+          whatsappQueued: guestWhatsAppAllowed(
+            current.contact.phone,
+            current.verificationChannel,
+          ),
         },
       );
       return success({ branchId: current.branchId });

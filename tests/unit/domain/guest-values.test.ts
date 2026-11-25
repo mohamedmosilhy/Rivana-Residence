@@ -5,6 +5,8 @@ import {
   parseGuestBlockReason,
   guestPhoneVerifiedAt,
   canReadReservationContact,
+  parseGuestEmail,
+  websiteBookingProfile,
 } from "@/domain/guests";
 import { DomainValidationError } from "@/domain/shared/domain-error";
 
@@ -109,6 +111,129 @@ describe("T-PHONE and T-VAL guest values", () => {
     expect(() => guestPhoneVerifiedAt("WEBSITE", null, null)).toThrow(
       DomainValidationError,
     );
+  });
+  // Decisions 5 and 6 of the M9-T12 plan (spec 0006 Decision 9).
+  describe("website booking profile updates (ADR 031)", () => {
+    const at = new Date("2026-11-25T10:00:00Z");
+    const earlier = new Date("2026-11-01T10:00:00Z");
+    const booking = {
+      name: "Booker",
+      email: "booker@example.test",
+      at,
+      marketingConsentVersion: "marketing-v1",
+    };
+    it("a WhatsApp booking proves the phone, refreshes contact, and records consent", () => {
+      expect(
+        websiteBookingProfile(
+          { phoneVerifiedAt: null, email: null, emailVerifiedAt: null },
+          { ...booking, channel: "WHATSAPP" },
+        ),
+      ).toEqual({
+        contact: { name: "Booker", email: "booker@example.test" },
+        phoneVerifiedAt: at,
+        emailVerifiedAt: null,
+        marketingConsentVersion: "marketing-v1",
+      });
+      // An unchanged email keeps its proof; a new one loses it.
+      const proven = {
+        phoneVerifiedAt: earlier,
+        email: "booker@example.test",
+        emailVerifiedAt: earlier,
+      };
+      expect(
+        websiteBookingProfile(proven, { ...booking, channel: "WHATSAPP" }),
+      ).toMatchObject({ phoneVerifiedAt: earlier, emailVerifiedAt: earlier });
+      expect(
+        websiteBookingProfile(proven, {
+          ...booking,
+          email: "new@example.test",
+          channel: "WHATSAPP",
+        }),
+      ).toMatchObject({ emailVerifiedAt: null });
+    });
+    it("an email booking never verifies the phone or records consent", () => {
+      // A new profile already holds the typed details (created just before),
+      // so its email is the proven one.
+      expect(
+        websiteBookingProfile(
+          {
+            phoneVerifiedAt: null,
+            email: "booker@example.test",
+            emailVerifiedAt: null,
+          },
+          { ...booking, channel: "EMAIL" },
+        ),
+      ).toEqual({
+        phoneVerifiedAt: null,
+        emailVerifiedAt: at,
+        marketingConsentVersion: null,
+      });
+    });
+    it("an email booking leaves an unproven profile's contact and its other email alone", () => {
+      // For example a profile staff created at the desk.
+      expect(
+        websiteBookingProfile(
+          {
+            phoneVerifiedAt: null,
+            email: "desk@example.test",
+            emailVerifiedAt: null,
+          },
+          { ...booking, channel: "EMAIL" },
+        ),
+      ).toEqual({
+        phoneVerifiedAt: null,
+        emailVerifiedAt: null,
+        marketingConsentVersion: null,
+      });
+    });
+    it("an email booking leaves a WhatsApp verified profile's contact alone", () => {
+      const owner = {
+        phoneVerifiedAt: earlier,
+        email: "owner@example.test",
+        emailVerifiedAt: null,
+      };
+      expect(
+        websiteBookingProfile(owner, { ...booking, channel: "EMAIL" }),
+      ).toEqual({
+        phoneVerifiedAt: earlier,
+        emailVerifiedAt: null,
+        marketingConsentVersion: null,
+      });
+      // The owner's own email, proven by email, gains the proof only.
+      expect(
+        websiteBookingProfile(owner, {
+          ...booking,
+          email: "owner@example.test",
+          channel: "EMAIL",
+        }),
+      ).toEqual({
+        phoneVerifiedAt: earlier,
+        emailVerifiedAt: at,
+        marketingConsentVersion: null,
+      });
+    });
+    it("rejects an email booking without an email and an unknown channel", () => {
+      const empty = {
+        phoneVerifiedAt: null,
+        email: null,
+        emailVerifiedAt: null,
+      };
+      expect(() =>
+        websiteBookingProfile(empty, {
+          ...booking,
+          email: null,
+          channel: "EMAIL",
+        }),
+      ).toThrow(DomainValidationError);
+      expect(() =>
+        websiteBookingProfile(empty, { ...booking, channel: "SMS" as never }),
+      ).toThrow(DomainValidationError);
+    });
+  });
+  it("normalizes a verification email like the booking contact", () => {
+    expect(parseGuestEmail(" Guest@Example.TEST ")).toBe("guest@example.test");
+    for (const bad of ["", "not-an-email", 3, null, "a@b.c\n"])
+      expect(() => parseGuestEmail(bad)).toThrow(DomainValidationError);
   });
   it("R-8 scopes contact grants and Q-75 blocks sessions without invalidating the manage link", () => {
     const phone = PhoneNumber.parse("+12025550101"),

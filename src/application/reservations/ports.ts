@@ -19,6 +19,7 @@ import type {
   PaymentMethod,
   ReservationPaymentStatus,
   SyncCheckpointKind,
+  VerificationChannel,
 } from "@/domain/shared/types";
 
 /** The guest can see the request status and the reason for a decision. */
@@ -217,6 +218,10 @@ export type ReservationInsert = Readonly<{
   paymentStatus: ReservationPaymentStatus;
   holdExpiresAt?: Date | null;
   privacyNoticeVersion: string | null;
+  /** WEBSITE only: what the guest's code proved (ADR 031). Staff and external bookings omit it. */
+  verificationChannel?: VerificationChannel | null;
+  /** EMAIL bookings only: the normalized email the code proved. Contact edits never change it. */
+  verifiedEmail?: string | null;
   manageTokenHash: string | null;
   manageTokenExpiresAt: Date | null;
   idempotencyKeyHash: string | null;
@@ -227,8 +232,18 @@ export type ReservationInsert = Readonly<{
 }>;
 /** Internal persistence view. Never return this directly from an endpoint. */
 export type StoredReservation = Readonly<
-  Omit<ReservationInsert, "contact" | "at" | "lines" | "externalChannel"> & {
+  Omit<
+    ReservationInsert,
+    | "contact"
+    | "at"
+    | "lines"
+    | "externalChannel"
+    | "verificationChannel"
+    | "verifiedEmail"
+  > & {
     externalChannel: string | null;
+    /** Null on staff and external bookings, and on website bookings written before ADR 031 (read as WHATSAPP). */
+    verificationChannel: VerificationChannel | null;
     branchTimeZone: string;
     contact: Omit<GuestContact, "phone"> & { readonly phone: string | null };
     lines: readonly StoredReservationLine[];
@@ -446,6 +461,12 @@ export interface ReservationRepository {
   ): Promise<void>;
   /** Website reservations that can count toward the per phone cap, in every branch. */
   listPhoneBookings(phone: PhoneNumber): Promise<readonly PhoneBookingRow[]>;
+  /**
+   * Website reservations whose code proved this normalized email (the stored
+   * `verifiedEmail`, not the editable contact email) that can count toward the
+   * per email cap, in every branch (ADR 031).
+   */
+  listEmailBookings(email: string): Promise<readonly PhoneBookingRow[]>;
 }
 
 /** Randomness and hashing the booking needs. The domain never touches crypto. */

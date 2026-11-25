@@ -69,6 +69,7 @@ const AUDIT_ENTITY_LABELS = [
   "CommercialSettings",
   "Coupon",
   "WhatsAppSettings",
+  "VerificationSettings",
   "WhatsAppTemplate",
   "Reservation",
   "CancellationRequest",

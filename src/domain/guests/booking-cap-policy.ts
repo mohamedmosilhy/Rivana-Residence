@@ -26,15 +26,64 @@ export type PhoneBooking = Readonly<{
   holdExpiresAt: Date | null;
 }>;
 
+/** The per email cap uses the same numbers as the phone cap (Q-93, confirmed 2026-11-25). */
+export const EMAIL_BOOKING_LIMITS = PHONE_BOOKING_LIMITS;
+/** A website booking made with an email code for this normalized email (ADR 031). */
+export type EmailBooking = Omit<PhoneBooking, "phone"> &
+  Readonly<{ email: string }>;
+type BookingLimitResult =
+  | Readonly<{ allowed: true }>
+  | Readonly<{ allowed: false; code: "BOOKING_LIMIT_REACHED" }>;
+
 /** Counts across all supplied branches; callers must not prefilter to the booking branch. */
 export function checkPhoneBookingLimit(
   phone: PhoneNumber,
   bookings: readonly PhoneBooking[],
   requestedMethod: PaymentMethod,
   now: Date,
-):
-  | Readonly<{ allowed: true }>
-  | Readonly<{ allowed: false; code: "BOOKING_LIMIT_REACHED" }> {
+): BookingLimitResult {
+  return checkLimit(
+    bookings,
+    (booking) => booking.phone.equals(phone),
+    requestedMethod,
+    now,
+    PHONE_BOOKING_LIMITS,
+  );
+}
+
+/**
+ * The per email cap (ADR 031): the same rule as the phone cap, counted over
+ * the website bookings verified by an email code for this email, across all
+ * branches. The phone cap still applies to the typed phone as well.
+ */
+export function checkEmailBookingLimit(
+  email: string,
+  bookings: readonly EmailBooking[],
+  requestedMethod: PaymentMethod,
+  now: Date,
+): BookingLimitResult {
+  if (
+    typeof email !== "string" ||
+    email === "" ||
+    email !== email.toLowerCase()
+  )
+    policyInputError("email");
+  return checkLimit(
+    bookings,
+    (booking) => booking.email === email,
+    requestedMethod,
+    now,
+    EMAIL_BOOKING_LIMITS,
+  );
+}
+
+function checkLimit<T extends Omit<PhoneBooking, "phone">>(
+  bookings: readonly T[],
+  owned: (booking: T) => boolean,
+  requestedMethod: PaymentMethod,
+  now: Date,
+  limits: typeof PHONE_BOOKING_LIMITS,
+): BookingLimitResult {
   const timestamp = instant(now);
   if (!PAYMENT_METHODS.includes(requestedMethod))
     policyInputError("paymentMethod");
@@ -55,7 +104,7 @@ export function checkPhoneBookingLimit(
     ids.add(booking.id);
     if (booking.holdExpiresAt !== null)
       instant(booking.holdExpiresAt, "holdExpiresAt");
-    if (!booking.phone.equals(phone) || booking.source !== "WEBSITE") continue;
+    if (!owned(booking) || booking.source !== "WEBSITE") continue;
     if (
       booking.paymentMethod === "PAY_AT_HOTEL" &&
       booking.status === "CONFIRMED" &&
@@ -72,8 +121,8 @@ export function checkPhoneBookingLimit(
   }
   const reached =
     requestedMethod === "PAY_AT_HOTEL"
-      ? upcoming >= PHONE_BOOKING_LIMITS.upcomingPayAtHotel
-      : holds >= PHONE_BOOKING_LIMITS.openPaymentHolds;
+      ? upcoming >= limits.upcomingPayAtHotel
+      : holds >= limits.openPaymentHolds;
   return reached
     ? { allowed: false, code: "BOOKING_LIMIT_REACHED" }
     : { allowed: true };

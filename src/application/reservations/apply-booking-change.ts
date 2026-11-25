@@ -1,6 +1,6 @@
 import type { Clock, IdGenerator } from "@/application/shared/providers";
 import { auditEvent } from "@/domain/audit";
-import { PhoneNumber } from "@/domain/guests";
+import { PhoneNumber, guestWhatsAppAllowed } from "@/domain/guests";
 import { summarizeReservation } from "@/domain/reservations";
 import { DomainValidationError } from "@/domain/shared/domain-error";
 import type { StayRange } from "@/domain/shared/stay-range";
@@ -31,15 +31,23 @@ function replacementLink(
   const previousEmail =
     contact.email !== undefined ? current.contact.email : null;
   if (previousEmail !== null) {
+    // The replacement goes only to a usable phone the guest proved. A booking
+    // verified by email has no proven phone, so the hotel handles recovery
+    // (spec 0006 Decision 9).
+    const revokeOnly = {
+      previousEmail,
+      token: null,
+      manageAccess: { hash: null, expiresAt: null },
+    };
+    if (
+      !guestWhatsAppAllowed(current.contact.phone, current.verificationChannel)
+    )
+      return revokeOnly;
     try {
       PhoneNumber.parse(current.contact.phone);
     } catch (error) {
       if (!(error instanceof DomainValidationError)) throw error;
-      return {
-        previousEmail,
-        token: null,
-        manageAccess: { hash: null, expiresAt: null },
-      };
+      return revokeOnly;
     }
     const token = crypto.generateToken();
     return {

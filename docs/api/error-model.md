@@ -39,7 +39,7 @@ The application layer already returns `Result<T>` with `ApplicationErrorCode` (`
 | `INVALID_TRANSITION` | 409 | `context.status` (current). **Implemented (M8-T9)** |
 | `ROOM_ALREADY_ASSIGNED` | 409 | |
 | `ROOM_BLOCKED` | 409 | |
-| `BRANCH_NOT_BOOKABLE` | 409 | Branch inactive, online booking disabled, WhatsApp not configured, or check-in time missing; `context.reason` is `ONLINE_BOOKING_DISABLED`, `CHECK_IN_TIME_MISSING` or `WHATSAPP_NOT_CONFIGURED` (**implemented M8-T7b**; public inactive branch: 404 instead). **Planned (M9-T12, ADR 031):** the WhatsApp reason becomes `NO_VERIFICATION_CHANNEL` and applies only when neither WhatsApp nor email is ready |
+| `BRANCH_NOT_BOOKABLE` | 409 | Branch inactive, online booking disabled, no verification channel ready, or check-in time missing; `context.reason` is `ONLINE_BOOKING_DISABLED`, `CHECK_IN_TIME_MISSING` or `VERIFICATION_NOT_CONFIGURED` (**implemented M8-T7b**; public inactive branch: 404 instead). **M9-T12a (ADR 031):** `VERIFICATION_NOT_CONFIGURED` replaced `WHATSAPP_NOT_CONFIGURED` and applies only when neither WhatsApp nor email codes are ready |
 | `ROOM_TYPE_NOT_BOOKABLE` | 409 | Unpublished, no units, or unpriced nights |
 | `STALE_VERSION` | 412 | `context.currentVersion`. **Implemented (M8-T9)**: the `If-Match` version no longer matches |
 | `PRECONDITION_REQUIRED` | 428 | **Implemented (M8-T9)**: a reservation write sent no usable `If-Match` |
@@ -63,7 +63,7 @@ The application layer already returns `Result<T>` with `ApplicationErrorCode` (`
 | `CHANGE_NOT_ALLOWED` | 403 | **Implemented (M9-T10 and M9-T11).** `context.reason` is `DEADLINE_PASSED`, `REQUEST_OPEN`, `PHONE_BLOCKED`, or `STATUS`. A deadline refusal also includes `context.deadline` (UTC or null) and `context.branch` (`name`, `slug`, `phone`, `email`). |
 | `CANCELLATION_WINDOW_CLOSED` | 409 | **Implemented (M9-T7).** At or after the deadline, or when the branch lacks a check-in time. `context.deadline` is a UTC instant or null. `context.branch` contains `name`, `slug`, `phone`, and `email`. |
 | `CANCELLATION_REQUEST_EXISTS` | 409 | **Implemented (M9-T7, extended in M9-T11).** A cancellation submission is blocked by an active cancellation or an open change request for the reservation. |
-| `EMAIL_NOT_CONFIGURED` | 503 | **Planned (M9-T12, ADR 031).** The email channel was requested but no email adapter is configured; nothing is sent |
+| `EMAIL_NOT_CONFIGURED` | 503 | **Implemented (M9-T12a, ADR 031, Q-99).** P9 asked for an email code while email delivery is not configured or the Admin switch is off; nothing is written or sent; no `Retry-After` |
 | `WHATSAPP_NOT_CONFIGURED` | 503 | Business number, access token, or the template for this purpose is missing; nothing is sent (verification requests fail this way while the number is a placeholder) |
 | `WHATSAPP_TEST_FAILED` | 502 | The Admin's test message was refused by the provider; `detail` carries the provider's error text without secrets |
 | `REFUND_FAILED` | 502 | The payment gateway refused or failed the refund; the request is `REFUND_FAILED` and can be retried (S45) |

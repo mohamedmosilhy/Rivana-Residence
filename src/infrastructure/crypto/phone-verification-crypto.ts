@@ -6,7 +6,10 @@ import {
   randomInt,
   timingSafeEqual,
 } from "node:crypto";
-import type { PhoneVerificationCrypto } from "@/application/guests";
+import type {
+  PhoneVerificationCrypto,
+  VerificationCodeBinding,
+} from "@/application/guests";
 
 export class NodePhoneVerificationCrypto implements PhoneVerificationCrypto {
   constructor(private readonly secret: string) {
@@ -16,22 +19,27 @@ export class NodePhoneVerificationCrypto implements PhoneVerificationCrypto {
   generateCode() {
     return randomInt(0, 1_000_000).toString().padStart(6, "0");
   }
-  codeHash(id: string, phone: string, purpose: string, code: string) {
+  codeHash(binding: VerificationCodeBinding, code: string) {
+    // WhatsApp codes keep the M8 input, so a code sent before a deploy still
+    // confirms after it. Email codes add the channel and the address (ADR 031),
+    // so neither kind can ever confirm the other.
+    const input =
+      binding.channel === "WHATSAPP"
+        ? [binding.id, binding.phone, binding.purpose, code]
+        : [
+            binding.id,
+            binding.phone,
+            binding.purpose,
+            binding.channel,
+            binding.email,
+            code,
+          ];
     return createHmac("sha256", this.secret)
-      .update(JSON.stringify([id, phone, purpose, code]))
+      .update(JSON.stringify(input))
       .digest("hex");
   }
-  codeMatches(
-    id: string,
-    phone: string,
-    purpose: string,
-    code: string,
-    hash: string,
-  ) {
-    const expected = Buffer.from(
-      this.codeHash(id, phone, purpose, code),
-      "hex",
-    );
+  codeMatches(binding: VerificationCodeBinding, code: string, hash: string) {
+    const expected = Buffer.from(this.codeHash(binding, code), "hex");
     const stored = Buffer.from(hash, "hex");
     return (
       stored.length === expected.length && timingSafeEqual(stored, expected)

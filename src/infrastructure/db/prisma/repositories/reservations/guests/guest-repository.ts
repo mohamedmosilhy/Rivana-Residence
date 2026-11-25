@@ -2,7 +2,7 @@ import "server-only";
 
 import type { GuestIdentity, GuestRepository } from "@/application/guests";
 import { failure, success } from "@/application/shared/result";
-import type { PhoneNumber } from "@/domain/guests";
+import { websiteBookingProfile, type PhoneNumber } from "@/domain/guests";
 import { postgresErrorCode } from "@/infrastructure/db/prisma/error-translation";
 import type { DatabaseClient } from "@/infrastructure/db/prisma/transaction";
 
@@ -49,20 +49,27 @@ export class PrismaGuestRepository implements GuestRepository {
     // The caller holds the guest row lock, so this read cannot go stale.
     const current = await this.client.guest.findUniqueOrThrow({
       where: { id: input.id },
-      select: { phoneVerifiedAt: true },
+      select: { phoneVerifiedAt: true, email: true, emailVerifiedAt: true },
+    });
+    const update = websiteBookingProfile(current, {
+      name: input.name,
+      email: input.email,
+      channel: input.channel,
+      at: input.verifiedAt,
+      marketingConsentVersion: input.marketingConsentVersion,
     });
     return this.client.guest.update({
       where: { id: input.id },
       data: {
-        name: input.name,
-        email: input.email,
+        ...(update.contact ?? {}),
         updatedAt: input.verifiedAt,
-        phoneVerifiedAt: current.phoneVerifiedAt ?? input.verifiedAt,
-        ...(input.marketingConsentVersion === null
+        phoneVerifiedAt: update.phoneVerifiedAt,
+        emailVerifiedAt: update.emailVerifiedAt,
+        ...(update.marketingConsentVersion === null
           ? {}
           : {
               marketingOptInAt: input.verifiedAt,
-              marketingConsentVersion: input.marketingConsentVersion,
+              marketingConsentVersion: update.marketingConsentVersion,
               marketingOptOutAt: null,
             }),
       },
@@ -115,10 +122,20 @@ export class PrismaGuestRepository implements GuestRepository {
     });
   }
 
-  updateContact(input: Parameters<GuestRepository["updateContact"]>[0]) {
+  async updateContact(input: Parameters<GuestRepository["updateContact"]>[0]) {
+    // The caller holds the guest row lock. A new address was never proven.
+    const current = await this.client.guest.findUniqueOrThrow({
+      where: { id: input.id },
+      select: { email: true },
+    });
     return this.client.guest.update({
       where: { id: input.id },
-      data: { name: input.name, email: input.email, updatedAt: input.at },
+      data: {
+        name: input.name,
+        email: input.email,
+        updatedAt: input.at,
+        ...(current.email === input.email ? {} : { emailVerifiedAt: null }),
+      },
     });
   }
 }

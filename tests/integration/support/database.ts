@@ -29,6 +29,8 @@ export async function resetDatabase(client: PrismaClient) {
   // always has the first one, so a reset database has it too.
   await createBranch(client, { id: TEST_BRANCH_ID, slug: "new-cairo" });
   await client.whatsAppSettings.create({ data: { id: "default" } });
+  // Restore the row verification_channels inserts, with email codes off (Q-99).
+  await client.verificationSettings.create({ data: { id: "default" } });
   // Restore the required row that commercial_rules inserts on migration.
   await client.commercialSettings.create({
     data: { id: "default", vatRateBasisPoints: 1500 },

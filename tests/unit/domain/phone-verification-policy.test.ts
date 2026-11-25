@@ -27,6 +27,8 @@ const token = (
 ): PhoneVerificationToken => ({
   purpose: "BOOKING",
   phone,
+  channel: "WHATSAPP",
+  email: null,
   verifiedAt: start,
   tokenExpiresAt: at(1_800_000),
   consumedAt: null,
@@ -175,7 +177,7 @@ describe("GV-1/2/3 pure verification policy", () => {
         at(1_799_999),
         false,
       ),
-    ).toEqual({ valid: true });
+    ).toEqual({ valid: true, channel: "WHATSAPP" });
     for (const row of [
       null,
       token({ verifiedAt: null }),
@@ -211,10 +213,74 @@ describe("GV-1/2/3 pure verification policy", () => {
     const row = Object.freeze(token({ purpose: "GUEST_SESSION" }));
     expect(
       checkPhoneVerificationToken(row, "GUEST_SESSION", phone, at(1), false),
-    ).toEqual({ valid: true });
+    ).toEqual({ valid: true, channel: "WHATSAPP" });
     expect(
       checkPhoneVerificationToken(row, "GUEST_SESSION", phone, at(1), true),
     ).toEqual({ valid: false, code: "PHONE_BLOCKED" });
     expect(row.consumedAt).toBeNull();
+  });
+  // T-VCH-3: an email token proves only its email (ADR 031).
+  it("accepts an email token only for the email it proved", () => {
+    const email = "guest@example.test";
+    const row = token({ channel: "EMAIL", email });
+    expect(
+      checkPhoneVerificationToken(row, "BOOKING", phone, at(1), false, email),
+    ).toEqual({ valid: true, channel: "EMAIL" });
+    for (const expected of [
+      undefined,
+      null,
+      "other@example.test",
+      "Guest@example.test",
+    ])
+      expect(
+        checkPhoneVerificationToken(
+          row,
+          "BOOKING",
+          phone,
+          at(1),
+          false,
+          expected,
+        ),
+      ).toEqual({ valid: false, code: "PHONE_NOT_VERIFIED" });
+    // A phone session passes no email, so an email session token is refused.
+    expect(
+      checkPhoneVerificationToken(
+        token({ purpose: "GUEST_SESSION", channel: "EMAIL", email }),
+        "GUEST_SESSION",
+        phone,
+        at(1),
+        false,
+      ),
+    ).toEqual({ valid: false, code: "PHONE_NOT_VERIFIED" });
+    // A blocked phone is refused before the channel is considered.
+    expect(
+      checkPhoneVerificationToken(row, "BOOKING", phone, at(1), true, email),
+    ).toEqual({ valid: false, code: "PHONE_BLOCKED" });
+    // A WhatsApp token ignores the expected email.
+    expect(
+      checkPhoneVerificationToken(
+        token(),
+        "BOOKING",
+        phone,
+        at(1),
+        false,
+        email,
+      ),
+    ).toEqual({ valid: true, channel: "WHATSAPP" });
+    for (const broken of [
+      token({ channel: "EMAIL", email: null }),
+      token({ channel: "WHATSAPP", email }),
+      token({ channel: "SMS" as never }),
+    ])
+      expect(() =>
+        checkPhoneVerificationToken(
+          broken,
+          "BOOKING",
+          phone,
+          at(1),
+          false,
+          email,
+        ),
+      ).toThrow(DomainValidationError);
   });
 });

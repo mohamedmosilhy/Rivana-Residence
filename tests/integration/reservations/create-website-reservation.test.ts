@@ -219,7 +219,7 @@ describe("CreateWebsiteReservation", () => {
     await nothingWritten();
   });
 
-  it("refuses a branch that does not take online bookings, or has no WhatsApp setup", async () => {
+  it("refuses a branch that does not take online bookings, or has no verification channel", async () => {
     await seedBookable(client);
     const token = await issueToken(client, phone);
     await client.branch.update({
@@ -244,11 +244,13 @@ describe("CreateWebsiteReservation", () => {
       where: { id: TEST_BRANCH_ID },
       data: { checkInTime: "14:00" },
     });
+    // T-VCH-8: neither WhatsApp nor email ready (ADR 031).
     const unconfigured = await websiteBooking(client, {
       setupConfigured: false,
+      emailReady: false,
     }).execute(bookingBody(phone, token), key("a"));
     expectFailure(unconfigured, "BRANCH_NOT_BOOKABLE", {
-      reason: "WHATSAPP_NOT_CONFIGURED",
+      reason: "VERIFICATION_NOT_CONFIGURED",
     });
     expect((await rowCounts(client)).reservations).toBe(0);
     // The token was never consumed by any refusal.
@@ -713,6 +715,331 @@ describe("CreateWebsiteReservation", () => {
       });
       expect(booking.ok).toBe(true);
     });
+  });
+
+  // T-VCH-3, 4, 5, 7, 8 (ADR 031, spec 0006 Decision 9).
+  describe("email verified bookings", () => {
+    const email = "amina@example.test";
+    const emailToken = (who = phone, address = email) =>
+      issueToken(client, who, { email: address });
+    const bookByEmail = async (
+      overrides: Record<string, unknown> = {},
+      idempotencyKey = key("email"),
+      who = phone,
+      options: Parameters<typeof websiteBooking>[1] = {},
+    ) =>
+      websiteBooking(client, options).execute(
+        bookingBody(who, await emailToken(who), overrides),
+        idempotencyKey,
+      );
+
+    it("books with an email token, records the channel, and never verifies the phone", async () => {
+      await seedBookable(client);
+      const result = await bookByEmail({
+        marketingOptIn: { consentVersion: MARKETING },
+      });
+      expect(result.ok).toBe(true);
+      if (!result.ok) return;
+      const row = await client.reservation.findUniqueOrThrow({
+        where: { id: result.value.reservationId },
+        include: { guest: true },
+      });
+      expect(row).toMatchObject({
+        verificationChannel: "EMAIL",
+        verifiedEmail: email,
+        guestEmail: email,
+        guestPhone: phone,
+      });
+      expect(row.guest).toMatchObject({
+        phone,
+        email,
+        phoneVerifiedAt: null,
+        // An email booking never records marketing consent for the phone.
+        marketingOptInAt: null,
+        marketingConsentVersion: null,
+      });
+      expect(row.guest!.emailVerifiedAt).not.toBeNull();
+      // Guest messages go by email only: nothing to the unproven phone.
+      const outbox = await client.notificationOutbox.findMany();
+      expect(
+        outbox.map((message) => [message.channel, message.kind]).sort(),
+      ).toEqual([
+        ["EMAIL", "reservation.confirmed"],
+        ["EMAIL", "reservation.staff-alert"],
+      ]);
+      expect(
+        outbox.find((m) => m.kind === "reservation.confirmed")?.recipient,
+      ).toBe(email);
+    });
+
+    it("needs the booking email to equal the verified email", async () => {
+      await seedBookable(client);
+      const token = await emailToken(phone, "other@example.test");
+      const result = await websiteBooking(client).execute(
+        bookingBody(phone, token),
+        key("mismatch"),
+      );
+      expectFailure(result, "PHONE_NOT_VERIFIED");
+      // Case is normalized before comparing, so a capitalized entry matches.
+      const upper = await bookByEmail(
+        {
+          guest: {
+            fullName: "Amina Hassan",
+            email: "Amina@Example.TEST",
+            phone,
+            country: "EG",
+          },
+        },
+        key("upper"),
+      );
+      expect(upper.ok).toBe(true);
+      const counts = await rowCounts(client);
+      expect(counts.reservations).toBe(1);
+      expect(counts.consumed).toBe(1);
+    });
+
+    it("keeps a WhatsApp verified profile's contact and proof", async () => {
+      await seedBookable(client);
+      const first = await book(
+        {
+          guest: {
+            fullName: "Phone Owner",
+            email: "owner@example.test",
+            phone,
+            country: "EG",
+          },
+          marketingOptIn: { consentVersion: MARKETING },
+        },
+        key("owner"),
+      );
+      expect(first.ok).toBe(true);
+      const before = await client.guest.findUniqueOrThrow({ where: { phone } });
+      const second = await bookByEmail(
+        { stay: { checkIn: "2031-05-10", checkOut: "2031-05-13" } },
+        key("claimer"),
+      );
+      expect(second.ok).toBe(true);
+      const after = await client.guest.findUniqueOrThrow({ where: { phone } });
+      expect(after).toMatchObject({
+        name: "Phone Owner",
+        email: "owner@example.test",
+        phoneVerifiedAt: before.phoneVerifiedAt,
+        marketingConsentVersion: MARKETING,
+        emailVerifiedAt: null,
+      });
+      // The reservation keeps what the email guest typed.
+      const reservation = await client.reservation.findFirstOrThrow({
+        where: { verificationChannel: "EMAIL" },
+      });
+      expect(reservation).toMatchObject({
+        guestName: "Amina Hassan",
+        guestEmail: email,
+      });
+    });
+
+    it("leaves the contact of an unproven profile staff created at the desk alone", async () => {
+      await seedBookable(client);
+      await client.guest.create({
+        data: {
+          id: "desk-guest",
+          phone,
+          name: "Desk Guest",
+          email: "desk@example.test",
+        },
+      });
+      expect((await bookByEmail({}, key("desk-claimer"))).ok).toBe(true);
+      expect(
+        await client.guest.findUniqueOrThrow({ where: { phone } }),
+      ).toMatchObject({
+        name: "Desk Guest",
+        email: "desk@example.test",
+        phoneVerifiedAt: null,
+        emailVerifiedAt: null,
+        marketingConsentVersion: null,
+      });
+      expect(
+        await client.reservation.findFirstOrThrow({
+          where: { verificationChannel: "EMAIL" },
+        }),
+      ).toMatchObject({
+        guestName: "Amina Hassan",
+        guestEmail: email,
+        verifiedEmail: email,
+      });
+    });
+
+    it("neither applies nor reveals a per phone coupon limit, and stores the use without a phone", async () => {
+      await seedBookable(client);
+      await coupon(null, 1000, 1);
+      const discounted = { amountMinor: 31_050, currency: "USD" };
+      // The phone's owner has used the coupon once already, by WhatsApp.
+      expect(
+        (await book({ couponCode: "WELCOME", expectedTotal: discounted })).ok,
+      ).toBe(true);
+      const byEmail = await bookByEmail(
+        {
+          couponCode: "WELCOME",
+          stay: { checkIn: "2031-05-10", checkOut: "2031-05-13" },
+          expectedTotal: discounted,
+        },
+        key("coupon-email"),
+      );
+      expect(byEmail.ok).toBe(true);
+      const redemptions = await client.couponRedemption.findMany({
+        orderBy: { createdAt: "asc" },
+        include: { reservation: { select: { verificationChannel: true } } },
+      });
+      expect(
+        redemptions.map((row) => [
+          row.reservation.verificationChannel,
+          row.phone,
+        ]),
+      ).toEqual(
+        expect.arrayContaining([
+          ["WHATSAPP", phone],
+          ["EMAIL", null],
+        ]),
+      );
+    });
+
+    it("refuses a blocked phone", async () => {
+      await seedBookable(client);
+      const token = await emailToken();
+      await client.guest.create({
+        data: {
+          id: "blocked-guest",
+          phone,
+          name: "Blocked",
+          blockedAt: new Date("2031-02-01T00:00:00Z"),
+          blockReason: "Test",
+        },
+      });
+      const result = await websiteBooking(client).execute(
+        bookingBody(phone, token),
+        key("blocked"),
+      );
+      expectFailure(result, "PHONE_BLOCKED");
+      expect((await rowCounts(client)).reservations).toBe(0);
+    });
+
+    it("counts against the phone cap and the per email cap", async () => {
+      await seedBookable(client);
+      const stays = [
+        { checkIn: "2031-04-10", checkOut: "2031-04-13" },
+        { checkIn: "2031-05-10", checkOut: "2031-05-13" },
+        { checkIn: "2031-06-10", checkOut: "2031-06-13" },
+      ];
+      // Two email bookings from two different phones fill the email cap.
+      expect(
+        (await bookByEmail({ stay: stays[0] }, key("e1"), phoneOf(11))).ok,
+      ).toBe(true);
+      expect(
+        (await bookByEmail({ stay: stays[1] }, key("e2"), phoneOf(12))).ok,
+      ).toBe(true);
+      expectFailure(
+        await bookByEmail({ stay: stays[2] }, key("e3"), phoneOf(13)),
+        "BOOKING_LIMIT_REACHED",
+      );
+      // WhatsApp bookings with that email do not count toward the email cap.
+      expect((await book({ stay: stays[2] }, key("w1"), phoneOf(14))).ok).toBe(
+        true,
+      );
+      // The phone cap still counts email bookings for the typed phone.
+      await resetDatabase(client);
+      await seedBookable(client);
+      expect((await book({ stay: stays[0] }, key("p1"))).ok).toBe(true);
+      expect((await book({ stay: stays[1] }, key("p2"))).ok).toBe(true);
+      expectFailure(
+        await bookByEmail({ stay: stays[2] }, key("p3"), phone),
+        "BOOKING_LIMIT_REACHED",
+      );
+    });
+
+    it("keeps counting a booking in the email cap after its contact email changes", async () => {
+      await seedBookable(client);
+      const stays = [
+        { checkIn: "2031-04-10", checkOut: "2031-04-13" },
+        { checkIn: "2031-05-10", checkOut: "2031-05-13" },
+        { checkIn: "2031-06-10", checkOut: "2031-06-13" },
+      ];
+      for (const [index, stay] of stays.slice(0, 2).entries())
+        expect(
+          (
+            await bookByEmail(
+              { stay },
+              key(`moved-${index}`),
+              phoneOf(31 + index),
+            )
+          ).ok,
+        ).toBe(true);
+      expect(
+        (
+          await client.reservation.findMany({
+            select: { verifiedEmail: true },
+          })
+        ).map((row) => row.verifiedEmail),
+      ).toEqual([email, email]);
+      // A guest change or a staff edit moves both contact emails elsewhere.
+      await client.reservation.updateMany({
+        data: { guestEmail: "moved@example.test" },
+      });
+      expectFailure(
+        await bookByEmail({ stay: stays[2] }, key("moved-2"), phoneOf(33)),
+        "BOOKING_LIMIT_REACHED",
+      );
+    });
+
+    it("books when WhatsApp is not ready but email is", async () => {
+      await seedBookable(client);
+      const result = await bookByEmail({}, key("email-only"), phone, {
+        setupConfigured: false,
+        emailReady: true,
+      });
+      expect(result.ok).toBe(true);
+    });
+
+    it("C-VCH: two email bookings from different phones at the email cap book only one, waiting on the email lock (20 rounds)", async () => {
+      for (let round = 0; round < ROUNDS; round += 1) {
+        await resetDatabase(client);
+        await seedBookable(client);
+        await seedBookable(client, { slug: "nile" });
+        expect((await bookByEmail({}, key("prior"), phoneOf(21))).ok).toBe(
+          true,
+        );
+        const tokens = [
+          await emailToken(phoneOf(22)),
+          await emailToken(phoneOf(23)),
+        ];
+        const paused = pausedAudit();
+        const results = await withIndependentClients(3, async (clients) => {
+          const first = websiteBooking(clients[0]!, {
+            audit: paused.audit,
+          }).execute(
+            bookingBody(phoneOf(22), tokens[0]!, {
+              stay: { checkIn: "2031-05-10", checkOut: "2031-05-13" },
+            }),
+            key("race-a"),
+          );
+          await paused.reached;
+          const second = websiteBooking(clients[1]!).execute(
+            bookingBody(phoneOf(23), tokens[1]!, {
+              lines: [
+                { roomSlug: "nile", occupancy: { adults: 2, children: 0 } },
+              ],
+              stay: { checkIn: "2031-06-10", checkOut: "2031-06-13" },
+            }),
+            key("race-b"),
+          );
+          // Different phones, so only the email lock can make it wait.
+          await waitForLockWaiters(clients[2]!, 1);
+          paused.release();
+          return Promise.all([first, second]);
+        });
+        expect(results[0]!.ok).toBe(true);
+        expectFailure(results[1]!, "BOOKING_LIMIT_REACHED");
+        expect((await rowCounts(client)).reservations).toBe(2);
+      }
+    }, 120_000);
   });
 
   describe("concurrency (20 rounds each)", () => {

@@ -13,7 +13,7 @@ import {
   DEFAULT_BRANCH_DEACTIVATION_MESSAGE,
   DEFAULT_BRANCH_SLUG,
   ONLINE_BOOKING_NEEDS_CHECK_IN_MESSAGE,
-  ONLINE_BOOKING_NEEDS_WHATSAPP_MESSAGE,
+  ONLINE_BOOKING_NEEDS_VERIFICATION_MESSAGE,
   ONLINE_BOOKING_NOT_READY_MESSAGE,
   branchCreateSchema,
   branchCrossFieldIssues,
@@ -34,9 +34,9 @@ export interface BranchMediaCheck {
   isUsableImage(id: string): Promise<boolean>;
 }
 
-/** Whether WhatsApp counts as configured (Q-71). */
-export interface WhatsAppReadinessCheck {
-  isConfigured(): Promise<boolean>;
+/** Whether any verification channel (WhatsApp per Q-71, or email) is ready (ADR 031). */
+export interface VerificationReadinessCheck {
+  anyChannelReady(): Promise<boolean>;
 }
 
 /** The raw check-in time a body sent: undefined when absent, null when blank. */
@@ -70,7 +70,7 @@ export class ManageBranches {
       branches: BranchRepository;
       cache: CacheInvalidator;
       media: BranchMediaCheck;
-      whatsApp: WhatsAppReadinessCheck;
+      verification: VerificationReadinessCheck;
       paymentReady?: () => boolean;
       clock: Clock;
     }>,
@@ -242,8 +242,8 @@ export class ManageBranches {
   }
 
   /**
-   * Turning online booking on needs WhatsApp configured (Q-71) and a
-   * check-in time (Q-09). Until the booking journey ships (M10) it is refused
+   * Turning online booking on needs a verification channel ready, WhatsApp
+   * (Q-71) or email (ADR 031), and a check-in time (Q-09). Until the booking journey ships (M10) it is refused
    * even then; M10 removes only that last refusal.
    */
   private async onlineBookingIssues(
@@ -252,8 +252,8 @@ export class ManageBranches {
     const issue = (message: string) => [
       { path: "onlineBookingEnabled", message },
     ];
-    if (!(await this.deps.whatsApp.isConfigured())) {
-      return issue(ONLINE_BOOKING_NEEDS_WHATSAPP_MESSAGE);
+    if (!(await this.deps.verification.anyChannelReady())) {
+      return issue(ONLINE_BOOKING_NEEDS_VERIFICATION_MESSAGE);
     }
     if (!checkInTime) return issue(ONLINE_BOOKING_NEEDS_CHECK_IN_MESSAGE);
     return issue(ONLINE_BOOKING_NOT_READY_MESSAGE);

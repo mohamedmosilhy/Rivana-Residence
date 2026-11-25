@@ -143,6 +143,24 @@ export default async function SettingsPage() {
         </p>
       </Panel>
 
+      <Panel
+        title="Guest verification"
+        titleId="verification-title"
+        description={
+          <p>
+            Whether guests may receive their verification code by email as well
+            as by WhatsApp.
+          </p>
+        }
+        wide
+      >
+        <p>
+          <Link href="/admin/settings/verification" className={link}>
+            Open guest verification
+          </Link>
+        </p>
+      </Panel>
+
       <Panel title="Online booking" titleId="booking-title" wide>
         <p className="mb-0">
           <Badge tone="neutral">

@@ -108,6 +108,7 @@ function map(row: Row): StoredReservation {
     paymentMethod: row.paymentMethod,
     paymentStatus: row.paymentStatus,
     privacyNoticeVersion: row.privacyNoticeVersion,
+    verificationChannel: row.verificationChannel,
     manageTokenHash: row.manageTokenHash,
     manageTokenExpiresAt: row.manageTokenExpiresAt,
     idempotencyKeyHash: row.idempotencyKeyHash,
@@ -201,11 +202,21 @@ export class PrismaReservationRepository implements ReservationRepository {
     return row ? map(row) : null;
   }
 
-  async listPhoneBookings(phone: PhoneNumber) {
+  listPhoneBookings(phone: PhoneNumber) {
+    // Through the unique guest phone, so the indexed guest id is used.
+    return this.capBookings({ guest: { phone: phone.value } });
+  }
+
+  listEmailBookings(email: string) {
+    // The proven email, stored once at booking: changing the contact email
+    // later never takes a booking out of the cap.
+    return this.capBookings({ verifiedEmail: email });
+  }
+
+  private async capBookings(owner: Prisma.ReservationWhereInput) {
     const rows = await this.client.reservation.findMany({
       where: {
-        // Through the unique guest phone, so the indexed guest id is used.
-        guest: { phone: phone.value },
+        ...owner,
         source: "WEBSITE",
         status: { in: ["CONFIRMED", "AWAITING_PAYMENT"] },
       },
@@ -784,6 +795,8 @@ export class PrismaReservationRepository implements ReservationRepository {
           paymentStatus: input.paymentStatus,
           holdExpiresAt: input.holdExpiresAt ?? null,
           privacyNoticeVersion: input.privacyNoticeVersion,
+          verificationChannel: input.verificationChannel ?? null,
+          verifiedEmail: input.verifiedEmail ?? null,
           manageTokenHash: input.manageTokenHash,
           manageTokenExpiresAt: input.manageTokenExpiresAt,
           idempotencyKeyHash: input.idempotencyKeyHash,

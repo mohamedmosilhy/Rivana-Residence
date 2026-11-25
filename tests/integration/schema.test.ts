@@ -52,6 +52,7 @@ describe("migration from an empty database", () => {
       "Guest",
       "PhoneVerification",
       "WhatsAppSettings",
+      "VerificationSettings",
       "WhatsAppTemplate",
       "NotificationOutbox",
     ]);

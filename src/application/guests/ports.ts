@@ -1,5 +1,8 @@
 import type { PhoneNumber } from "@/domain/guests";
-import type { VerificationPurpose } from "@/domain/shared/types";
+import type {
+  VerificationChannel,
+  VerificationPurpose,
+} from "@/domain/shared/types";
 import type { BranchScope } from "@/application/auth";
 import type { PagedResult, PageRequest } from "@/application/shared/pagination";
 import type { Result } from "@/application/shared/result";
@@ -14,6 +17,7 @@ export type GuestProfile = Readonly<{
   name: string;
   email: string | null;
   phoneVerifiedAt: Date | null;
+  emailVerifiedAt: Date | null;
   marketingOptInAt: Date | null;
   marketingConsentVersion: string | null;
   marketingOptOutAt: Date | null;
@@ -38,10 +42,19 @@ export interface GuestRepository {
   /** Transaction only. Lock before inspecting blocking or counting per phone bookings. */
   lockByPhone(phone: PhoneNumber): Promise<Result<GuestProfile | null>>;
   /**
-   * Transaction only, after lock. A website booking proves the phone, so it
-   * sets the verification time once, refreshes the latest name and email, and
-   * records a marketing opt in with its wording version. Block and earlier
-   * consent are never cleared by anything but an explicit opt in.
+   * Transaction only, after lock. What a website booking writes depends on
+   * what its code proved (ADR 031, spec 0006 Decision 9):
+   *
+   * - `WHATSAPP` proves the phone: sets `phoneVerifiedAt` once, refreshes the
+   *   latest name and email (keeping `emailVerifiedAt` only when the email is
+   *   unchanged), and records a marketing opt in with its wording version.
+   * - `EMAIL` proves only the email: never sets `phoneVerifiedAt` and never
+   *   records marketing consent. A profile whose phone is unproven takes the
+   *   latest name and email and `emailVerifiedAt`; a WhatsApp verified profile
+   *   keeps its name and email, and gains `emailVerifiedAt` only when its email
+   *   is the one just proven.
+   *
+   * Block and earlier consent are never cleared by anything but an explicit opt in.
    */
   recordWebsiteBooking(
     input: Readonly<{
@@ -49,6 +62,7 @@ export interface GuestRepository {
       name: string;
       email: string | null;
       verifiedAt: Date;
+      channel: VerificationChannel;
       marketingConsentVersion: string | null;
     }>,
   ): Promise<GuestProfile>;
@@ -63,7 +77,10 @@ export interface GuestRepository {
   clearBlocked(
     input: Readonly<{ id: string; at: Date }>,
   ): Promise<GuestProfile>;
-  /** Transaction only, after lock. Updates contact only, preserving verification, block and consent. */
+  /**
+   * Transaction only, after lock. Updates contact only, preserving phone
+   * verification, block and consent. A changed email clears `emailVerifiedAt`.
+   */
   updateContact(
     input: Readonly<{
       id: string;
@@ -78,6 +95,9 @@ export type VerificationRecord = Readonly<{
   id: string;
   phone: string;
   purpose: VerificationPurpose;
+  channel: VerificationChannel;
+  /** Normalized; present exactly when the channel is EMAIL (database CHECK). */
+  email: string | null;
   codeHash: string;
   attempts: number;
   expiresAt: Date;
@@ -92,6 +112,11 @@ export type VerificationRecord = Readonly<{
 export interface PhoneVerificationRepository {
   /** Transaction scoped, including phones without a guest or verification row. */
   lockPhone(phone: PhoneNumber): Promise<Result<void>>;
+  /**
+   * Transaction scoped advisory lock on a normalized email (ADR 031). Lock
+   * order: phone, guest row, email, verification row.
+   */
+  lockEmail(email: string): Promise<Result<void>>;
   findById(id: string): Promise<VerificationRecord | null>;
   /** Lookup by the SHA-256 of a presented token. Lock the row before trusting it. */
   findByTokenHash(tokenHash: string): Promise<VerificationRecord | null>;
@@ -100,6 +125,8 @@ export interface PhoneVerificationRepository {
   /** Lock after the guest row, then reload the verification. */
   lock(id: string): Promise<Result<VerificationRecord | null>>;
   requestHistory(phone: PhoneNumber, since: Date): Promise<readonly Date[]>;
+  /** Email code requests for a normalized email since a time (GV-1 per email). */
+  emailRequestHistory(email: string, since: Date): Promise<readonly Date[]>;
   insert(record: VerificationRecord): Promise<void>;
   saveConfirmation(
     id: string,
@@ -154,16 +181,67 @@ export interface GuestDirectoryReader {
   find(id: string, scope: BranchScope): Promise<GuestDetail | null>;
 }
 
+/**
+ * What a code is bound to. A code confirms only the request it was sent for:
+ * the same id, phone, purpose, channel, and (for email) address.
+ */
+export type VerificationCodeBinding = Readonly<{
+  id: string;
+  phone: string;
+  purpose: VerificationPurpose;
+  channel: VerificationChannel;
+  email: string | null;
+}>;
 export interface PhoneVerificationCrypto {
   generateCode(): string;
-  codeHash(id: string, phone: string, purpose: string, code: string): string;
+  codeHash(binding: VerificationCodeBinding, code: string): string;
   codeMatches(
-    id: string,
-    phone: string,
-    purpose: string,
+    binding: VerificationCodeBinding,
     code: string,
     hash: string,
   ): boolean;
   generateToken(): string;
   tokenHash(token: string): string;
+}
+
+/**
+ * Whether a verification channel can deliver codes now (ADR 031). WhatsApp is
+ * ready when configured per Q-71; email when the email adapter is configured.
+ */
+export interface VerificationChannelReadiness {
+  isReady(channel: VerificationChannel): Promise<boolean>;
+}
+/** Online booking needs at least one ready channel (Q-71 amended by Q-93). */
+export async function anyVerificationChannelReady(
+  readiness: VerificationChannelReadiness,
+): Promise<boolean> {
+  return (
+    (await readiness.isReady("WHATSAPP")) || (await readiness.isReady("EMAIL"))
+  );
+}
+
+/** The Admin switch for verification codes by email (Q-99). One row. */
+export type VerificationSettingsRecord = Readonly<{
+  emailEnabled: boolean;
+  updatedAt: Date;
+}>;
+export interface VerificationSettingsRepository {
+  /** Null when the row is missing; callers treat that as email codes off. */
+  read(): Promise<VerificationSettingsRecord | null>;
+  /** Transaction only. Locks the row, then writes only a real change. */
+  update(
+    write: Readonly<{
+      emailEnabled: boolean;
+      updatedById: string;
+      now: () => Date;
+    }>,
+  ): Promise<
+    Result<
+      Readonly<{
+        before: VerificationSettingsRecord;
+        after: VerificationSettingsRecord;
+        changed: boolean;
+      }>
+    >
+  >;
 }

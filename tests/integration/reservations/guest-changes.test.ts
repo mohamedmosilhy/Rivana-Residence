@@ -64,12 +64,19 @@ const crypto = new NodeBookingCrypto();
 beforeEach(() => resetDatabase(client));
 afterAll(() => client.$disconnect());
 
-async function book(units = 1) {
+async function book(units = 1, options: { email?: string } = {}) {
   await createActor(client);
   const listing = await seedBookable(client, { units });
   const phone = phoneOf(11);
   const created = await websiteBooking(client).execute(
-    bookingBody(phone, await issueToken(client, phone)),
+    bookingBody(
+      phone,
+      await issueToken(
+        client,
+        phone,
+        options.email ? { email: options.email } : {},
+      ),
+    ),
     "guest-change-booking",
   );
   if (!created.ok || !created.value.manageToken)
@@ -721,6 +728,42 @@ describe("Guest preview and apply (AC-11, T-GCHG-1…8)", () => {
     expect(
       await client.guest.findUnique({ where: { id: row.guestId! } }),
     ).toMatchObject({ email: row.guestEmail });
+  });
+
+  // Spec 0006 Decision 9: an email verified booking has no proven phone.
+  it("revokes the link of an email verified booking without sending a replacement or any WhatsApp", async () => {
+    const { row, access } = await book(1, { email: "amina@example.test" });
+    expect(row.verificationChannel).toBe("EMAIL");
+    await client.notificationOutbox.deleteMany();
+    const newEmail = "new-contact@example.test";
+    expect(
+      await changes().apply.execute(
+        access,
+        row.version,
+        success({
+          guest: { email: newEmail },
+          expectedTotal: money(TOTAL_MINOR),
+        }),
+      ),
+    ).toMatchObject({ ok: true });
+    const rows = await client.notificationOutbox.findMany({
+      where: { reservationId: row.id },
+    });
+    expect(rows.every((message) => message.channel === "EMAIL")).toBe(true);
+    expect(rows.map((message) => message.kind).sort()).toEqual([
+      "reservation.change-staff-alert",
+      "reservation.email-changed",
+      "reservation.modified",
+    ]);
+    const stored = await client.reservation.findUniqueOrThrow({
+      where: { id: row.id },
+    });
+    expect(stored.manageTokenHash).toBeNull();
+    const { view } = guestReservationReads({ client, clock });
+    expect(await view.execute(access.token)).toMatchObject({
+      ok: false,
+      error: { code: "UNAUTHENTICATED" },
+    });
   });
 
   it("clears the link of a priced staff booking with no usable phone and sends email only", async () => {

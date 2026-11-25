@@ -16,6 +16,14 @@ import { PrismaGuestRepository } from "./guest-repository";
 
 /** "My reservations" is the most recent N of a phone. */
 const SUMMARY_LIMIT = 100;
+/**
+ * A phone session proves the phone, so it never sees a booking someone made
+ * with an email code while typing that phone (spec 0006 Decision 9). A null
+ * channel is a staff, external, or pre ADR 031 WhatsApp booking.
+ */
+const NOT_EMAIL_VERIFIED: Prisma.ReservationWhereInput = {
+  OR: [{ verificationChannel: null }, { verificationChannel: "WHATSAPP" }],
+};
 const day = (value: Date) => value.toISOString().slice(0, 10);
 
 /**
@@ -34,12 +42,13 @@ export class PrismaGuestReservationReader implements GuestReservationReader {
     return this.load({
       reference: reference.value,
       guest: { phone: phone.value },
+      ...NOT_EMAIL_VERIFIED,
     });
   }
 
   async listForPhone(phone: PhoneNumber) {
     const rows = await this.client.reservation.findMany({
-      where: { guest: { phone: phone.value } },
+      where: { guest: { phone: phone.value }, ...NOT_EMAIL_VERIFIED },
       orderBy: [{ createdAt: "desc" }, { id: "asc" }],
       take: SUMMARY_LIMIT,
       select: {

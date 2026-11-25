@@ -1,4 +1,5 @@
 import type { Clock, IdGenerator } from "@/application/shared/providers";
+import { guestWhatsAppAllowed } from "@/domain/guests";
 import type {
   ReservationMessageStore,
   ReservationMessageEvent,
@@ -199,7 +200,12 @@ export class QueueReservationMessages {
       !(event.kind === "reservation.manage-link" && event.whatsappOnly)
     )
       add("EMAIL", event.kind, booking.guestEmail, payload);
-    if (booking.guestPhone)
+    // A booking verified by email never messages its unproven phone: not the
+    // booking details and never a manage link (spec 0006 Decision 9).
+    if (
+      booking.guestPhone &&
+      guestWhatsAppAllowed(booking.guestPhone, booking.verificationChannel)
+    )
       add("WHATSAPP", event.kind, booking.guestPhone, payload);
     // Preserve a visible delivery failure when the branch has no inbox.
     if (websiteConfirmation)

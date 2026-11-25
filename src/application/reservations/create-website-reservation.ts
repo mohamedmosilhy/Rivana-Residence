@@ -1,18 +1,17 @@
 import type { BranchRepository } from "@/application/branches";
 import type { PublicListing, PublicListingReader } from "@/application/content";
 import type { CouponRedemptionStore } from "@/application/coupons";
-import type {
-  PhoneVerificationRepository,
-  VerificationRecord,
+import {
+  anyVerificationChannelReady,
+  type PhoneVerificationRepository,
+  type VerificationChannelReadiness,
+  type VerificationRecord,
 } from "@/application/guests";
 import {
   InventoryGuard,
   type InventoryGuardOperation,
 } from "@/application/inventory";
-import type {
-  QueueReservationMessages,
-  WhatsAppSetupReader,
-} from "@/application/notifications";
+import type { QueueReservationMessages } from "@/application/notifications";
 import type { BookingPaymentStore } from "@/application/payments";
 import type { QuoteBooking, QuoteView } from "@/application/quotes";
 import type { Clock, IdGenerator } from "@/application/shared/providers";
@@ -29,8 +28,10 @@ import { normalizeCouponCode } from "@/domain/coupons";
 import { auditEvent } from "@/domain/audit";
 import {
   PhoneNumber,
+  checkEmailBookingLimit,
   checkPhoneBookingLimit,
   checkPhoneVerificationToken,
+  type EmailBooking,
   type PhoneBooking,
 } from "@/domain/guests";
 import { AvailabilityCalculator } from "@/domain/inventory";
@@ -43,7 +44,10 @@ import {
 import { Money } from "@/domain/shared/money";
 import { Occupancy } from "@/domain/shared/occupancy";
 import { localDateAt } from "@/domain/shared/zoned-time";
-import type { ReservationStatus } from "@/domain/shared/types";
+import type {
+  ReservationStatus,
+  VerificationChannel,
+} from "@/domain/shared/types";
 
 import {
   bookingFingerprintSource,
@@ -98,7 +102,8 @@ type Dependencies = Readonly<{
   payments: Pick<BookingPaymentStore, "findInitiated">;
   checkout?: WebsiteCheckoutConnection;
   tokens: Pick<PhoneVerificationRepository, "findByTokenHash">;
-  setup: Pick<WhatsAppSetupReader, "isConfigured">;
+  /** Online booking needs WhatsApp or email ready for codes (ADR 031). */
+  channels: VerificationChannelReadiness;
   crypto: BookingCrypto;
   clock: Clock;
   ids: IdGenerator;
@@ -107,6 +112,10 @@ type Dependencies = Readonly<{
 type Prepared = Readonly<{
   guestId: string;
   phone: PhoneNumber;
+  /** What the booking token proved. EMAIL proves only the booking email (ADR 031). */
+  channel: VerificationChannel;
+  /** The normalized email an EMAIL code proved; null for WhatsApp. */
+  verifiedEmail: string | null;
   keyHash: string;
   fingerprint: string;
 }>;
@@ -117,6 +126,11 @@ type State = Readonly<{
 }>;
 
 const REFERENCE_ATTEMPTS = 3;
+function withoutPhone(body: Readonly<Record<string, unknown>>) {
+  return Object.fromEntries(
+    Object.entries(body).filter(([key]) => key !== "phone"),
+  );
+}
 const NOT_VERIFIED = () =>
   failure("PHONE_NOT_VERIFIED", "Verify your phone number to continue.");
 const PAYMENT_METHOD_UNAVAILABLE = () =>
@@ -173,7 +187,9 @@ export class CreateWebsiteReservation {
       known.consumedAt !== null ||
       known.verifiedAt === null ||
       known.tokenExpiresAt === null ||
-      known.tokenExpiresAt.getTime() <= now.getTime()
+      known.tokenExpiresAt.getTime() <= now.getTime() ||
+      // An email token is good only for the email it proved (ADR 031).
+      (known.channel === "EMAIL" && known.email !== booking.contact.email)
     ) {
       // A matching request may commit between the first replay lookup and
       // the token check. The committed row takes precedence over token reuse.
@@ -190,8 +206,8 @@ export class CreateWebsiteReservation {
     if (!branch.onlineBookingEnabled)
       return branchNotBookable("ONLINE_BOOKING_DISABLED");
     if (!branch.checkInTime) return branchNotBookable("CHECK_IN_TIME_MISSING");
-    if (!(await this.deps.setup.isConfigured()))
-      return branchNotBookable("WHATSAPP_NOT_CONFIGURED");
+    if (!(await anyVerificationChannelReady(this.deps.channels)))
+      return branchNotBookable("VERIFICATION_NOT_CONFIGURED");
     if (booking.paymentMethod === "ONLINE" && !branch.onlinePaymentEnabled)
       return PAYMENT_METHOD_UNAVAILABLE();
 
@@ -356,10 +372,17 @@ export class CreateWebsiteReservation {
     if (late) return this.replay(late, fingerprint);
 
     const now = clock.now();
-    // The guest row is held, so this follows the T5 order: guest, then verification.
+    // The guest row is held, so this follows the T5 order: guest, then
+    // verification. An email token adds the email lock between them (ADR 031),
+    // so bookings for one email from different phones are counted one at a time.
     const unlocked = await context.verifications.findByTokenHash(tokenHash);
     let record: VerificationRecord | null = null;
     if (unlocked) {
+      // Channel and email never change after insert, so the unlocked read is safe.
+      if (unlocked.channel === "EMAIL" && unlocked.email !== null) {
+        const emailLock = await context.verifications.lockEmail(unlocked.email);
+        if (!emailLock.ok) return emailLock;
+      }
       const lockedRecord = await context.verifications.lock(unlocked.id);
       if (!lockedRecord.ok) return lockedRecord;
       record = lockedRecord.value;
@@ -369,6 +392,8 @@ export class CreateWebsiteReservation {
         ? {
             purpose: record.purpose,
             phone: PhoneNumber.parse(record.phone),
+            channel: record.channel,
+            email: record.email,
             verifiedAt: record.verifiedAt,
             tokenExpiresAt: record.tokenExpiresAt,
             consumedAt: record.consumedAt,
@@ -378,6 +403,7 @@ export class CreateWebsiteReservation {
       phone,
       now,
       guest.blockedAt !== null,
+      booking.contact.email,
     );
     if (!checked.valid)
       return checked.code === "PHONE_BLOCKED"
@@ -408,10 +434,46 @@ export class CreateWebsiteReservation {
         "BOOKING_LIMIT_REACHED",
         "Please contact the hotel to book more stays.",
       );
+    // An email booking also counts against the per email cap (ADR 031, Q-93).
+    if (checked.channel === "EMAIL") {
+      const email = record!.email!;
+      const emailBookings = (
+        await context.reservations.listEmailBookings(email)
+      ).map(
+        (row): EmailBooking => ({
+          id: row.id,
+          email,
+          source: row.source,
+          status: row.status,
+          paymentMethod: row.paymentMethod,
+          checkIn: row.checkIn,
+          branchToday: localDateAt(now, row.branchTimeZone),
+          holdExpiresAt: row.holdExpiresAt,
+        }),
+      );
+      const emailCap = checkEmailBookingLimit(
+        email,
+        emailBookings,
+        booking.paymentMethod,
+        now,
+      );
+      if (!emailCap.allowed)
+        return failure(
+          "BOOKING_LIMIT_REACHED",
+          "Please contact the hotel to book more stays.",
+        );
+    }
 
     return success({
       done: false,
-      prepared: { guestId: guest.id, phone, keyHash, fingerprint },
+      prepared: {
+        guestId: guest.id,
+        phone,
+        channel: checked.channel,
+        verifiedEmail: checked.channel === "EMAIL" ? record!.email : null,
+        keyHash,
+        fingerprint,
+      },
     } as const);
   }
 
@@ -439,7 +501,13 @@ export class CreateWebsiteReservation {
       this.deps.clock.now(),
     );
     if (!expired.ok) return expired;
-    const quoted = await context.quote.execute(booking.quoteBody);
+    // An email booking is priced without the phone: the phone was never
+    // proven, so its per phone coupon limit is neither applied nor revealed.
+    const quoted = await context.quote.execute(
+      prepared.channel === "EMAIL"
+        ? withoutPhone(booking.quoteBody)
+        : booking.quoteBody,
+    );
     if (!quoted.ok) return quoted;
     const result = quoted.value;
     if (!result.bookable)
@@ -641,6 +709,8 @@ export class CreateWebsiteReservation {
         paymentStatus,
         holdExpiresAt,
         privacyNoticeVersion: booking.consent.privacyNoticeVersion,
+        verificationChannel: prepared.channel,
+        verifiedEmail: prepared.verifiedEmail,
         manageTokenHash: crypto.sha256(manageToken),
         manageTokenExpiresAt,
         idempotencyKeyHash: prepared.keyHash,
@@ -684,7 +754,8 @@ export class CreateWebsiteReservation {
       await context.redemptions.record({
         couponId: state.couponId,
         reservationId,
-        phone: phone.value,
+        // An email booking's use never counts against the owner of that phone.
+        phone: prepared.channel === "EMAIL" ? null : phone.value,
         at: now,
       });
     }
@@ -693,6 +764,7 @@ export class CreateWebsiteReservation {
       name: booking.contact.fullName,
       email: booking.contact.email,
       verifiedAt: now,
+      channel: prepared.channel,
       marketingConsentVersion: booking.consent.marketingConsentVersion,
     });
     await context.messages.enqueue(branchId, reservationId, {

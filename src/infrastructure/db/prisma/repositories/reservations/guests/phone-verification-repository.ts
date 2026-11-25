@@ -33,6 +33,13 @@ export class PrismaPhoneVerificationRepository
         .$queryRaw`SELECT pg_advisory_xact_lock(hashtextextended(${`phone-verification:${phone.value}`}, 0))::text`;
     });
   }
+  lockEmail(email: string) {
+    return this.locked(async () => {
+      // Its own namespace: an email never shares a lock key with a phone.
+      await this.client
+        .$queryRaw`SELECT pg_advisory_xact_lock(hashtextextended(${`verification-email:${email}`}, 0))::text`;
+    });
+  }
   findById(id: string) {
     return this.client.phoneVerification.findUnique({ where: { id } });
   }
@@ -57,6 +64,13 @@ export class PrismaPhoneVerificationRepository
   async requestHistory(phone: PhoneNumber, since: Date) {
     const rows = await this.client.phoneVerification.findMany({
       where: { phone: phone.value, createdAt: { gt: since } },
+      select: { createdAt: true },
+    });
+    return rows.map((row) => row.createdAt);
+  }
+  async emailRequestHistory(email: string, since: Date) {
+    const rows = await this.client.phoneVerification.findMany({
+      where: { email, createdAt: { gt: since } },
       select: { createdAt: true },
     });
     return rows.map((row) => row.createdAt);

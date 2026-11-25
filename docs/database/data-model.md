@@ -6,7 +6,7 @@ The implemented schema is `prisma/schema.prisma` (9 migrations; M4 added `…_st
 
 ## Conventions
 
-- IDs are application-generated CUID2 strings (`VARCHAR(32)`); do not mix strategies. The `SiteSettings`, `CommercialSettings`, and `WhatsAppSettings` singletons use the fixed key `default`.
+- IDs are application-generated CUID2 strings (`VARCHAR(32)`); do not mix strategies. The `SiteSettings`, `CommercialSettings`, `WhatsAppSettings`, and `VerificationSettings` singletons use the fixed key `default`.
 - Instants are `timestamptz(3)` in UTC, formatted in the presentation layer. Every Prisma connection sets `-c TimeZone=UTC`, because the pg adapter exchanges instants as zone-less UTC wall time (see `src/infrastructure/db/prisma/client.ts`).
 - Stay dates are `DATE`, never instants (ADR 020). Money is `INTEGER` minor units (cents) with a `currency` column; the currency is USD.
 - Strings are bounded `VARCHAR`s. Room size is `NUMERIC(6,2)` square metres, mapped to `number` at the repository boundary.
@@ -35,7 +35,7 @@ The implemented schema is `prisma/schema.prisma` (9 migrations; M4 added `…_st
 | Transfer cars | `ServicePriceUnit.PER_VEHICLE`, `ServiceOffering.maxVehicles`, `ReservationService.vehicles` | Implemented (M8-T3b, Q-82): migrations `20261117120000_transfer_vehicle_unit` (enum value, on its own so the next migration can use it) and `20261117120100_transfer_vehicles` (columns, backfill of 3 cars per transfer offering and 1 car per stored transfer line, checks `ServiceOffering_vehicles_check`, `ServiceOffering_vehicle_unit_check`, `ReservationService_vehicles_check`, `ReservationService_vehicle_unit_check`) |
 | Website analytics | `SiteEvent`, `SiteDailyTotal`, `AnalyticsSalt` | Planned (M10-T0a, T0b; ADR 029, Q-86, Q-87) |
 | Guests | `Guest` (verified phone profiles, blocking, marketing consent), `PhoneVerification` | Storage implemented (M8-T1); verification and guest-access workflows remain planned |
-| Messaging settings | `WhatsAppSettings`, `WhatsAppTemplate` (Admin-managed, Q-67) | Storage implemented (M8-T1), empty settings singleton; setup API and UI remain planned (T4) |
+| Messaging settings | `WhatsAppSettings`, `WhatsAppTemplate` (Admin-managed, Q-67), `VerificationSettings` (the Admin email verification switch, Q-99; implemented M9-T12a) | Storage implemented (M8-T1), empty settings singleton; setup API and UI remain planned (T4) |
 | Marketing | `Broadcast` | Planned (M13) |
 | Cross-cutting | `AuditEvent`, `NotificationOutbox` | Audit implemented in M4, outbox storage in M8-T1, and dispatcher in M8-T6. M9-T1 adds `HELD`, which the dispatcher skips |
 
@@ -354,6 +354,8 @@ model Reservation {
   pmsEnteredAt         DateTime?         @db.Timestamptz(3) // WEBSITE only (Q-40)
   pmsEnteredById       String?           @db.VarChar(32)
   privacyNoticeVersion String?           @db.VarChar(40)
+  verificationChannel VerificationChannel? // WEBSITE only (CHECK): WHATSAPP or EMAIL; null on a website row reads as WHATSAPP (M9-T12a, ADR 031)
+  verifiedEmail       String?             @db.VarChar(320) // EMAIL bookings only (CHECK): the lowercased email the code proved; contact edits never change it; the per email cap counts by it (M9-T12a)
   manageTokenHash      String?           @unique @db.VarChar(64)
   manageTokenExpiresAt DateTime?         @db.Timestamptz(3)
   idempotencyKeyHash   String?           @db.VarChar(64)
@@ -417,7 +419,8 @@ model Guest {
   phone           String    @unique @db.VarChar(20)   // normalized E.164
   name            String    @db.VarChar(120)          // latest used
   email           String?   @db.VarChar(320)          // latest used
-  phoneVerifiedAt DateTime? @db.Timestamptz(3)        // null for staff-entered profiles
+  phoneVerifiedAt DateTime? @db.Timestamptz(3)        // null for staff-entered profiles; never set by an email verified booking (ADR 031)
+  emailVerifiedAt DateTime? @db.Timestamptz(3)        // the profile's email was proven by an email code; cleared when the email changes (M9-T12a)
   marketingOptInAt        DateTime? @db.Timestamptz(3)   // Q-58
   marketingConsentVersion String?   @db.VarChar(40)
   marketingOptOutAt       DateTime? @db.Timestamptz(3)
@@ -433,6 +436,8 @@ model PhoneVerification {
   id          String              @id @db.VarChar(32)
   phone       String              @db.VarChar(20)
   purpose     VerificationPurpose
+  channel     VerificationChannel @default(WHATSAPP)    // M9-T12a, ADR 031
+  email       String?             @db.VarChar(320)      // normalized; present exactly when channel is EMAIL (CHECK)
   codeHash    String              @db.VarChar(64)
   attempts    Int                 @default(0)
   expiresAt   DateTime            @db.Timestamptz(3)    // created + 10 minutes
@@ -443,6 +448,7 @@ model PhoneVerification {
   clientKey   String              @db.VarChar(80)       // HMAC of the client address, for limits
   createdAt   DateTime            @default(now()) @db.Timestamptz(3)
   @@index([phone, createdAt])
+  @@index([email, createdAt])                           // per email limits (M9-T12a)
   @@index([clientKey, createdAt])
 }
 
@@ -522,6 +528,12 @@ model WhatsAppSettings {               // singleton id "default" (Q-67, ADR 028)
   lastTestAt            DateTime? @db.Timestamptz(3)
   lastTestOk            Boolean?
   lastTestError         String?   @db.VarChar(200)
+  updatedAt / updatedById
+}
+
+model VerificationSettings {           // singleton id "default", inserted off by verification_channels (Q-99, M9-T12a)
+  id           String   @id @db.VarChar(32)
+  emailEnabled Boolean  @default(false)   // the Admin switch for codes by email; on only while email delivery is configured
   updatedAt / updatedById
 }
 
@@ -726,6 +738,7 @@ Notes:
 - **Manage token in outbox payload (dispatcher planned, M8-T6).** A manage link may appear in queued email and WhatsApp payloads. Every payload holding it is scrubbed when its row reaches `SENT` or `FAILED` (spec 0005, Decision 4). Never log payloads.
 - **The manage token is not stored in plaintext anywhere else.**
 - **Verification codes (implemented M8-T5)** are sent by WhatsApp directly after their verification transaction commits, not through the outbox. Only an identity-bound HMAC-SHA-256 under `PHONE_VERIFICATION_SECRET` is stored. Request admission takes a transaction advisory lock for the normalized phone before counting retained rolling history. Confirmation locks the guest, then the verification row; wrong guesses commit their attempt count. Failed delivery exhausts the retained row and clears token fields. Token issuance stores only SHA-256; booking consumption remains M8-T7 and token cleanup M8-T6.
+- **Email verification codes (implemented M9-T12a, ADR 031)** go by the email adapter after commit, never through the outbox. An email code's HMAC also binds the channel and the normalized address, so it can never confirm a WhatsApp request or another address; WhatsApp codes keep the M8 input. Requests take the phone lock, the guest row, then an email advisory lock (`verification-email:` namespace), and count rolling history per phone and per email. Email codes are offered only while the email adapter is configured and `VerificationSettings.emailEnabled` is on (Q-99).
 - **Retention:** guest and reservation rows are kept indefinitely (Q-13). Verification rows are also kept, as evidence for abuse investigations; their code and token hashes are useless after expiry.
 
 ### SQL-only constraints (migration)
@@ -747,6 +760,9 @@ ALTER TABLE "Coupon"          ADD CHECK ("endsAt" IS NULL OR "startsAt" IS NULL 
 CREATE UNIQUE INDEX "Coupon_code_upper_key" ON "Coupon" (upper("code")); -- implemented (M7-T3)
 ALTER TABLE "CommercialSettings" ADD CHECK ("vatRateBasisPoints" BETWEEN 0 AND 10000); -- implemented (M7-T3), column also NOT NULL
 ALTER TABLE "CommercialSettings" ADD CHECK ("id" = 'default'); -- implemented (M7-T3), migration inserts the singleton at 1500
+ALTER TABLE "PhoneVerification" ADD CONSTRAINT "PhoneVerification_channel_email_check" CHECK (("channel" = 'EMAIL') = ("email" IS NOT NULL) AND ("email" IS NULL OR "email" = lower("email"))); -- implemented (M9-T12a)
+ALTER TABLE "Reservation" ADD CONSTRAINT "Reservation_verification_channel_check" CHECK ("verificationChannel" IS NULL OR "source" = 'WEBSITE'); -- implemented (M9-T12a); existing website rows backfilled WHATSAPP
+ALTER TABLE "Reservation" ADD CONSTRAINT "Reservation_verified_email_check" CHECK (COALESCE("verificationChannel" = 'EMAIL', false) = ("verifiedEmail" IS NOT NULL) AND ("verifiedEmail" IS NULL OR "verifiedEmail" = lower("verifiedEmail"))); -- implemented (M9-T12a)
 ALTER TABLE "Reservation"     ADD CHECK ("status" <> 'AWAITING_PAYMENT' OR ("paymentMethod" = 'ONLINE' AND "holdExpiresAt" IS NOT NULL));
 ALTER TABLE "Reservation"
   ADD CONSTRAINT "Reservation_snapshot_check" CHECK (
@@ -861,7 +877,7 @@ erDiagram
   }
 ```
 
-`Promotion` (retired), `ContactEnquiry`, `CommercialSettings`, `WhatsAppSettings`, `WhatsAppTemplate`, `Broadcast`, `AuditEvent`, `Verification`, and `LoginThrottle` are standalone. Records also reference their creating or updating `User` (`updatedById`, `createdById`); `AuditEvent.actorId` is deliberately not a foreign key, so history survives user removal.
+`Promotion` (retired), `ContactEnquiry`, `CommercialSettings`, `WhatsAppSettings`, `VerificationSettings`, `WhatsAppTemplate`, `Broadcast`, `AuditEvent`, `Verification`, and `LoginThrottle` are standalone. Records also reference their creating or updating `User` (`updatedById`, `createdById`); `AuditEvent.actorId` is deliberately not a foreign key, so history survives user removal.
 
 ## Transactions
 

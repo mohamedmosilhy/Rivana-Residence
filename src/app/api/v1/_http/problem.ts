@@ -52,6 +52,10 @@ export const PROBLEMS: Readonly<Record<ProblemCode, ProblemDefinition>> = {
     status: 503,
     title: "WhatsApp messaging is not set up",
   },
+  EMAIL_NOT_CONFIGURED: {
+    status: 503,
+    title: "Email delivery is not set up",
+  },
   WHATSAPP_TEST_FAILED: {
     status: 502,
     title: "WhatsApp refused the test message",
@@ -173,7 +177,7 @@ export function problem(code: ProblemCode, options: ProblemOptions) {
   });
   // A setup gap only an Admin can fix is not worth retrying automatically.
   const defaultRetry =
-    code === "WHATSAPP_NOT_CONFIGURED"
+    code === "WHATSAPP_NOT_CONFIGURED" || code === "EMAIL_NOT_CONFIGURED"
       ? null
       : status === 503
         ? 5

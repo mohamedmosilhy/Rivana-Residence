@@ -11,6 +11,7 @@ The rule: **Rivana owns the logic; an adapter only translates.** If a change to 
 | Online payment | `PaymentGateway` (`src/application/payments`) | `createCheckout`, `verifyCallback`, `getTransaction`, `refund` | `PAYMENT_PROVIDER` | Implemented (M9-T3), with a simulated checkout page | `src/infrastructure/payments/<provider>/` |
 | WhatsApp | `WhatsAppTransport` (`src/application/notifications`) | `deliver` | `WHATSAPP_PROVIDER` (`meta`, `fake`) | Implemented (M8-T4) | `src/infrastructure/whatsapp/` |
 | Email | `ReservationEmailSender` (`src/application/notifications`) | `send` | `EMAIL_PROVIDER` (`smtp`, `fake`) | Implemented (M9-T0b) | `src/infrastructure/email/` |
+| Email codes | `VerificationCodeEmail` (`src/application/notifications`) | `send({ id, to, code })` | `EMAIL_PROVIDER` (same adapter choice) | Implemented (M9-T12a, ADR 031) | `src/infrastructure/email/verification-code-email.ts` |
 
 Adapters are constructed in `src/composition` from the environment. `readProviderReadiness()` reports `unconfigured`, `fake`, or `real` per kind using configuration alone. WhatsApp reports transport readiness, and branch settings and templates still govern sending. Payment reports `fake` in development and test with the fake gateway selected. Production reports `unconfigured` until a real gateway is registered and selected. An unconfigured adapter is a setup gap.
 
@@ -35,7 +36,7 @@ Checkout, transaction, and refund records live in one server process and reset o
 
 ## Contract tests
 
-Each port has one shared suite that every adapter must pass. `npm run test` runs the messaging suites against both fakes and the existing Meta and SMTP adapters with stubbed provider responses. The fake email adapter keeps the latest 100 successful deliveries in process memory. The payment suite covers invalid signatures, repeated requests, exact amounts and currencies, expiry, refund idempotency, and a delayed failure from an earlier refund attempt. [WhatsApp transport](../../tests/contract/whatsapp-transport.test.ts) · [Reservation email](../../tests/contract/reservation-email.test.ts) · [Payment gateway](../../tests/contract/payment-gateway.test.ts)
+Each port has one shared suite that every adapter must pass. `npm run test` runs the messaging suites against both fakes and the existing Meta and SMTP adapters with stubbed provider responses. The fake email adapter keeps the latest 100 successful deliveries in process memory. The payment suite covers invalid signatures, repeated requests, exact amounts and currencies, expiry, refund idempotency, and a delayed failure from an earlier refund attempt. [WhatsApp transport](../../tests/contract/whatsapp-transport.test.ts) · [Reservation email](../../tests/contract/reservation-email.test.ts) · [Verification code email](../../tests/contract/verification-code-email.test.ts) · [Payment gateway](../../tests/contract/payment-gateway.test.ts)
 
 ## Environment variables
 

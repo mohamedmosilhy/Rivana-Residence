@@ -29,14 +29,14 @@ const optionalText = (max: number) =>
     .nullable()
     .default(null)
     .transform((value) => (value === "" ? null : value));
+/** Trimmed, checked, and lowercased: the one email form compared anywhere (ADR 031). */
+const emailSchema = text(GUEST_FIELD_LIMITS.email)
+  .pipe(z.email())
+  .transform((value) => value.toLowerCase());
 const guestSchema = z
   .object({
     fullName: text(GUEST_FIELD_LIMITS.fullName),
-    email: text(GUEST_FIELD_LIMITS.email)
-      .pipe(z.email())
-      .transform((value) => value.toLowerCase())
-      .nullable()
-      .default(null),
+    email: emailSchema.nullable().default(null),
     phone: z.string().nullable().default(null),
     country: z
       .string()
@@ -79,6 +79,16 @@ export function parseGuestBlockReason(input: unknown): string {
   if (!parsed.success)
     throw new DomainValidationError(
       "The block reason is invalid.",
+      issuesFromZod(parsed.error.issues),
+    );
+  return parsed.data;
+}
+/** The normalized guest email, the same form P7 stores on a booking. */
+export function parseGuestEmail(input: unknown): string {
+  const parsed = emailSchema.safeParse(input);
+  if (!parsed.success)
+    throw new DomainValidationError(
+      "The email address is invalid.",
       issuesFromZod(parsed.error.issues),
     );
   return parsed.data;

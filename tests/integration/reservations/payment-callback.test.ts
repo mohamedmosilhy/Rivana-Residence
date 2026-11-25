@@ -43,7 +43,7 @@ const connection = {
 beforeEach(() => resetDatabase(client));
 afterAll(() => client.$disconnect());
 
-async function book(options: { coupon?: boolean } = {}) {
+async function book(options: { coupon?: boolean; email?: string } = {}) {
   await seedBookable(client, { units: 1 });
   await client.branch.update({
     where: { id: TEST_BRANCH_ID },
@@ -60,7 +60,12 @@ async function book(options: { coupon?: boolean } = {}) {
         allBranches: true,
       },
     });
-  const body = bookingBody(phone, await issueToken(client, phone), {
+  const token = await issueToken(
+    client,
+    phone,
+    options.email ? { email: options.email } : {},
+  );
+  const body = bookingBody(phone, token, {
     paymentMethod: "ONLINE",
     ...(options.coupon
       ? {
@@ -277,6 +282,37 @@ describe("payment callback (AC-1, AC-2, AC-3, AC-5)", () => {
     expect(
       await client.payment.findUniqueOrThrow({ where: { id: payment.id } }),
     ).toMatchObject({ status: "INITIATED" });
+  });
+});
+
+// Spec 0006 Decision 9: an email verified booking holds no WhatsApp row, and
+// the link the guest already holds keeps working after payment (M9-T12a).
+describe("payment callback for a booking verified by email", () => {
+  it("releases the held email confirmation without rotating the manage link", async () => {
+    const payment = await book({ email: "amina@example.test" });
+    const before = await reservationOf(payment.reservationId);
+    expect(before.verificationChannel).toBe("EMAIL");
+    expect(before.notifications.map((row) => row.channel).sort()).toEqual([
+      "EMAIL",
+      "EMAIL",
+    ]);
+    const { useCase } = paymentCallback(client);
+    expect(await useCase.execute(signed(callbackEvent(payment)))).toMatchObject(
+      { ok: true },
+    );
+    const after = await reservationOf(payment.reservationId);
+    expect(after.status).toBe("CONFIRMED");
+    // The held rows were released, not replaced by a fresh confirmation.
+    expect(after.manageTokenHash).toBe(before.manageTokenHash);
+    expect(after.notifications.map((row) => row.id).sort()).toEqual(
+      before.notifications.map((row) => row.id).sort(),
+    );
+    expect(after.notifications.every((row) => row.status === "PENDING")).toBe(
+      true,
+    );
+    expect(after.notifications.some((row) => row.channel === "WHATSAPP")).toBe(
+      false,
+    );
   });
 });
 

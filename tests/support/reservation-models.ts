@@ -24,6 +24,7 @@ export const RESERVATION_MODELS = [
   "Guest",
   "PhoneVerification",
   "WhatsAppSettings",
+  "VerificationSettings",
   "WhatsAppTemplate",
   "Broadcast",
   "NotificationOutbox",

@@ -137,18 +137,19 @@ model User {
   updatedCoupons            Coupon[]             @relation("CouponUpdatedBy")
   updatedCommercialSettings CommercialSettings[] @relation("CommercialSettingsUpdatedBy")
 
-  branchAssignments        StaffBranchAssignment[]
-  updatedPhysicalRooms     PhysicalRoom[]          @relation("PhysicalRoomUpdatedBy")
-  createdInventoryBlocks   InventoryBlock[]        @relation("InventoryBlockCreatedBy")
-  cancelledInventoryBlocks InventoryBlock[]        @relation("InventoryBlockCancelledBy")
-  updatedBaseRates         RoomBaseRate[]          @relation("RoomBaseRateUpdatedBy")
-  updatedRatePeriods       RatePeriod[]            @relation("RatePeriodUpdatedBy")
-  createdReservations      Reservation[]           @relation("ReservationCreatedBy")
-  pmsEnteredReservations   Reservation[]           @relation("ReservationPmsEnteredBy")
-  blockedGuests            Guest[]                 @relation("GuestBlockedBy")
-  whatsAppSettingsUpdates  WhatsAppSettings[]      @relation("WhatsAppSettingsUpdatedBy")
-  whatsAppTemplateUpdates  WhatsAppTemplate[]      @relation("WhatsAppTemplateUpdatedBy")
-  syncCheckpoints          BranchSyncCheckpoint[]
+  branchAssignments           StaffBranchAssignment[]
+  updatedPhysicalRooms        PhysicalRoom[]          @relation("PhysicalRoomUpdatedBy")
+  createdInventoryBlocks      InventoryBlock[]        @relation("InventoryBlockCreatedBy")
+  cancelledInventoryBlocks    InventoryBlock[]        @relation("InventoryBlockCancelledBy")
+  updatedBaseRates            RoomBaseRate[]          @relation("RoomBaseRateUpdatedBy")
+  updatedRatePeriods          RatePeriod[]            @relation("RatePeriodUpdatedBy")
+  createdReservations         Reservation[]           @relation("ReservationCreatedBy")
+  pmsEnteredReservations      Reservation[]           @relation("ReservationPmsEnteredBy")
+  blockedGuests               Guest[]                 @relation("GuestBlockedBy")
+  whatsAppSettingsUpdates     WhatsAppSettings[]      @relation("WhatsAppSettingsUpdatedBy")
+  verificationSettingsUpdates VerificationSettings[]  @relation("VerificationSettingsUpdatedBy")
+  whatsAppTemplateUpdates     WhatsAppTemplate[]      @relation("WhatsAppTemplateUpdatedBy")
+  syncCheckpoints             BranchSyncCheckpoint[]
 
   decidedCancellationRequests CancellationRequest[]
   decidedChangeRequests       ChangeRequest[]
@@ -861,6 +862,12 @@ enum VerificationPurpose {
   GUEST_SESSION
 }
 
+// How a verification code was delivered (ADR 031). EMAIL proves only the email.
+enum VerificationChannel {
+  WHATSAPP
+  EMAIL
+}
+
 enum SyncCheckpointKind {
   STARTED
   COMPLETED
@@ -907,6 +914,8 @@ model Reservation {
   changeSeq             Int                      @default(0) // last ReservationChange.seq (M8-T9)
   pmsUpdatePendingSince DateTime?                @db.Timestamptz(3) // set by a change after hotel-system entry (Q-84)
   privacyNoticeVersion  String?                  @db.VarChar(40)
+  verificationChannel   VerificationChannel? // WEBSITE: how the contact was verified; null reads as WHATSAPP (ADR 031)
+  verifiedEmail         String?                  @db.VarChar(320) // the email an EMAIL code proved; never changed by contact edits (CHECK)
   manageTokenHash       String?                  @unique @db.VarChar(64)
   manageTokenExpiresAt  DateTime?                @db.Timestamptz(3)
   idempotencyKeyHash    String?                  @db.VarChar(64)
@@ -934,6 +943,7 @@ model Reservation {
   @@index([branchId, status, checkIn])
   @@index([branchId, checkIn, checkOut])
   @@index([guestEmail])
+  @@index([verifiedEmail]) // per email cap (ADR 031)
   @@index([guestId, checkIn])
   @@index([status, holdExpiresAt]) // hold expiry job
   @@index([branchId, source, pmsEnteredAt])
@@ -1113,6 +1123,7 @@ model Guest {
   name                    String        @db.VarChar(120) // latest used
   email                   String?       @db.VarChar(320) // latest used
   phoneVerifiedAt         DateTime?     @db.Timestamptz(3) // null for staff-entered profiles
+  emailVerifiedAt         DateTime?     @db.Timestamptz(3) // email of the profile proven by an email code (ADR 031)
   marketingOptInAt        DateTime?     @db.Timestamptz(3) // Q-58
   marketingConsentVersion String?       @db.VarChar(40)
   marketingOptOutAt       DateTime?     @db.Timestamptz(3)
@@ -1132,6 +1143,8 @@ model PhoneVerification {
   id             String              @id @db.VarChar(32)
   phone          String              @db.VarChar(20)
   purpose        VerificationPurpose
+  channel        VerificationChannel @default(WHATSAPP)
+  email          String?             @db.VarChar(320) // normalized; EMAIL channel only (CHECK)
   codeHash       String              @db.VarChar(64)
   attempts       Int                 @default(0)
   expiresAt      DateTime            @db.Timestamptz(3) // created + 10 minutes
@@ -1143,6 +1156,7 @@ model PhoneVerification {
   createdAt      DateTime            @default(now()) @db.Timestamptz(3)
 
   @@index([phone, createdAt])
+  @@index([email, createdAt])
   @@index([clientKey, createdAt])
 }
 
@@ -1169,6 +1183,16 @@ model WhatsAppSettings {
   updatedAt             DateTime  @updatedAt @db.Timestamptz(3)
   updatedById           String?   @db.VarChar(32)
   updatedBy             User?     @relation("WhatsAppSettingsUpdatedBy", fields: [updatedById], references: [id], onDelete: Restrict, onUpdate: Restrict)
+}
+
+// The Admin's switch for verification codes by email (ADR 031, Q-99). One
+// row ("default"), created by the verification_channels migration, off.
+model VerificationSettings {
+  id           String   @id @db.VarChar(32)
+  emailEnabled Boolean  @default(false)
+  updatedAt    DateTime @updatedAt @db.Timestamptz(3)
+  updatedById  String?  @db.VarChar(32)
+  updatedBy    User?    @relation("VerificationSettingsUpdatedBy", fields: [updatedById], references: [id], onDelete: Restrict, onUpdate: Restrict)
 }
 
 model WhatsAppTemplate {

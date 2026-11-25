@@ -107,10 +107,17 @@ const GUEST_NAME = "Amina Hassan";
 
 type Booked = { reference: string; manageToken: string; phone: string };
 let bookings = 0;
-async function book(phone: string): Promise<Booked> {
+async function book(
+  phone: string,
+  options: { email?: string } = {},
+): Promise<Booked> {
   bookings += 1;
   const offset = 40 + bookings * 7;
-  const token = await issueToken(client, phone);
+  const token = await issueToken(
+    client,
+    phone,
+    options.email ? { email: options.email } : {},
+  );
   const created = await websiteBooking(client).execute(
     bookingBody(phone, token, {
       stay: { checkIn: date(offset), checkOut: date(offset + 3) },
@@ -189,7 +196,11 @@ const problemOf = async (response: Response) => {
 /** A confirmed verification with a real 43 character token, as P10 issues. */
 async function session(
   phone: string,
-  options: { purpose?: "BOOKING" | "GUEST_SESSION"; expired?: boolean } = {},
+  options: {
+    purpose?: "BOOKING" | "GUEST_SESSION";
+    expired?: boolean;
+    email?: string;
+  } = {},
 ) {
   const token = randomBytes(32).toString("base64url");
   await client.phoneVerification.create({
@@ -197,6 +208,7 @@ async function session(
       id: `verification-${sha256(token).slice(0, 12)}`,
       phone,
       purpose: options.purpose ?? "GUEST_SESSION",
+      ...(options.email ? { channel: "EMAIL", email: options.email } : {}),
       codeHash: "0".repeat(64),
       attempts: 1,
       expiresAt: new Date(NOW.getTime() + 600_000),
@@ -512,6 +524,54 @@ describe("G3 and G4 guest session (T-LKP-4)", () => {
       "A".repeat(43),
     ])
       expect(await problemOf(await guestCall(g3, token))).toEqual(expected);
+  });
+});
+
+// Spec 0006 Decision 9: a phone session proves the phone, so it never sees a
+// booking someone made with an email code while typing that phone (M9-T12a).
+describe("phone sessions and email verified bookings", () => {
+  it("hides an email verified booking from the phone's WhatsApp session", async () => {
+    const own = await book(phoneOf(1));
+    const claimed = await book(phoneOf(1), { email: "amina@example.test" });
+    const token = await session(phoneOf(1));
+
+    const list = GuestReservationList.parse(
+      await (await guestCall(g3, token)).json(),
+    );
+    expect(list.items.map((item) => item.reference)).toEqual([own.reference]);
+
+    const notFound = await problemOf(
+      await guestCall(g4, token, { reference: "RR-00000000" }),
+    );
+    expect(
+      await problemOf(
+        await guestCall(g4, token, { reference: claimed.reference }),
+      ),
+    ).toEqual(notFound);
+    expect(
+      await problemOf(
+        await guestCall(g4Request, token, {
+          method: "POST",
+          reference: claimed.reference,
+        }),
+      ),
+    ).toEqual(notFound);
+    expect(
+      await client.cancellationRequest.count({
+        where: { reservation: { reference: claimed.reference } },
+      }),
+    ).toBe(0);
+    // The guest who booked by email still has the manage link.
+    expect((await guestCall(g1, claimed.manageToken)).status).toBe(200);
+  });
+
+  it("refuses an email session token until M9-T12b", async () => {
+    await book(phoneOf(1), { email: "amina@example.test" });
+    const token = await session(phoneOf(1), { email: "amina@example.test" });
+    expect(await problemOf(await guestCall(g3, token))).toMatchObject({
+      status: 401,
+      code: "PHONE_NOT_VERIFIED",
+    });
   });
 });
 
@@ -907,9 +967,13 @@ describe("block concurrency (20 rounds each)", () => {
           phone: mine.phone,
           purpose: "GUEST_SESSION",
           codeHash: verificationCrypto.codeHash(
-            verificationId,
-            mine.phone,
-            "GUEST_SESSION",
+            {
+              id: verificationId,
+              phone: mine.phone,
+              purpose: "GUEST_SESSION",
+              channel: "WHATSAPP",
+              email: null,
+            },
             code,
           ),
           attempts: 0,

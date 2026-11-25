@@ -21,6 +21,7 @@ export type ApplicationErrorCode =
   | "TRY_AGAIN"
   | "VALIDATION"
   | "WHATSAPP_NOT_CONFIGURED"
+  | "EMAIL_NOT_CONFIGURED"
   | "WHATSAPP_TEST_FAILED"
   | "PHONE_BLOCKED"
   | "VERIFICATION_CODE_INVALID"
@@ -63,7 +64,8 @@ type StandardApplicationErrorCode = Exclude<
 export type BranchNotBookableReason =
   | "ONLINE_BOOKING_DISABLED"
   | "CHECK_IN_TIME_MISSING"
-  | "WHATSAPP_NOT_CONFIGURED";
+  /** Neither WhatsApp nor email can deliver verification codes (ADR 031). */
+  | "VERIFICATION_NOT_CONFIGURED";
 
 export type BranchNotBookableError = Readonly<{
   code: "BRANCH_NOT_BOOKABLE";

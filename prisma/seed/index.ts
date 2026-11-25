@@ -2,7 +2,7 @@ import type { StaffPrincipal } from "../../src/application/auth/ports.ts";
 import type { PrismaClient } from "../../src/generated/prisma/client.ts";
 import { seedDatabase } from "../seed-data.ts";
 import { ensureSeedAdmin } from "./admin.ts";
-import { seedWhatsAppSettings } from "./whatsapp.ts";
+import { seedVerificationSettings, seedWhatsAppSettings } from "./whatsapp.ts";
 import { SEED_ADMIN } from "./admin-credentials.ts";
 import { seedBranchDetails, seedBranchHero } from "./branch.ts";
 import { SEEDED_COUNTS, seedContent } from "./content.ts";
@@ -22,7 +22,8 @@ import {
  *   3. branch     the branch's contact, address, map, and check-in times
  *               (its hero image is set after the content step)
  *   4. content    the old site's rooms, facilities, photos, and page text
- *   5. WhatsApp   required empty setup, existing configuration preserved
+ *   5. WhatsApp   required empty setup, existing configuration preserved;
+ *                 the email verification switch (off unless an Admin set it)
  *   6. demo       only with --demo, never in production: fictional data
  */
 export async function runSeed(
@@ -100,8 +101,12 @@ export async function runSeed(
   );
 
   await seedWhatsAppSettings(client);
+  await seedVerificationSettings(client);
   log(
     "WhatsApp: required settings are in place; existing configuration preserved.",
+  );
+  log(
+    "Verification: the email code switch is in place; an Admin's choice is preserved.",
   );
 
   if (options.demo) {

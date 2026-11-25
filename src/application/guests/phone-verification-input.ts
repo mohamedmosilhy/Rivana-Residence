@@ -1,5 +1,6 @@
 import { z } from "zod";
-import { PhoneNumber } from "@/domain/guests";
+import { PhoneNumber, parseGuestEmail } from "@/domain/guests";
+import type { VerificationChannel } from "@/domain/shared/types";
 import {
   DomainValidationError,
   issuesFromZod,
@@ -13,9 +14,14 @@ const requestInput = z
       .max(40)
       .regex(/^\+[1-9]\d{1,14}$/),
     purpose: z.enum(["BOOKING", "GUEST_SESSION"]),
+    channel: z.enum(["WHATSAPP", "EMAIL"]).optional(),
+    email: z.string().max(400).optional(),
     website: z.string().max(32_768).optional(),
   })
   .strict();
+/** Until M9-T12b, a guest session can be opened only with a WhatsApp code. */
+export const EMAIL_SESSION_NOT_AVAILABLE =
+  "Use WhatsApp to open your bookings.";
 export function parseVerificationRequest(input: unknown) {
   const parsed = requestInput.safeParse(input);
   if (!parsed.success)
@@ -25,10 +31,35 @@ export function parseVerificationRequest(input: unknown) {
     );
   if (parsed.data.website)
     return invalid("Check the verification details.", []);
+  const channel: VerificationChannel = parsed.data.channel ?? "WHATSAPP";
+  if (channel === "WHATSAPP" && parsed.data.email !== undefined)
+    return invalid("Check the verification details.", [
+      { path: "email", message: "Send an email only with the EMAIL channel." },
+    ]);
+  if (channel === "EMAIL" && parsed.data.email === undefined)
+    return invalid("Check the verification details.", [
+      { path: "email", message: "Enter the email address for the code." },
+    ]);
+  if (channel === "EMAIL" && parsed.data.purpose === "GUEST_SESSION")
+    return invalid("Check the verification details.", [
+      { path: "channel", message: EMAIL_SESSION_NOT_AVAILABLE },
+    ]);
+  let email: string | null = null;
+  if (channel === "EMAIL")
+    try {
+      email = parseGuestEmail(parsed.data.email);
+    } catch (error) {
+      if (!(error instanceof DomainValidationError)) throw error;
+      return invalid("Check the verification details.", [
+        { path: "email", message: "Enter a valid email address." },
+      ]);
+    }
   try {
     return success({
       phone: PhoneNumber.parse(parsed.data.phone),
       purpose: parsed.data.purpose,
+      channel,
+      email,
     });
   } catch (error) {
     if (error instanceof DomainValidationError)

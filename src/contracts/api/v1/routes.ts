@@ -36,6 +36,10 @@ import {
   StaffCancellationRequestQuery,
 } from "./cancellation-requests";
 import { PaymentCallbackAck } from "./payments";
+import {
+  VerificationSettings,
+  VerificationSettingsInput,
+} from "./verification-settings";
 import { QuoteRequest, QuoteResponse } from "./quotes";
 import {
   CancelReservationRequest,
@@ -697,7 +701,7 @@ export const API_ROUTES: readonly ApiRoute[] = [
     path: "/api/v1/phone-verifications",
     operationId: "requestPhoneVerification",
     summary:
-      "API-P9. Send a WhatsApp verification code after commit. Three per phone per rolling 15 minutes, ten per rolling 24 hours, ten per client per hour.",
+      "API-P9. Send a verification code after commit, by WhatsApp (default) or email (ADR 031). Three per phone and three per email per rolling 15 minutes, ten per rolling 24 hours, ten per client per hour across both channels.",
     tag: "Guests",
     security: "public",
     request: PhoneVerificationRequest,
@@ -715,6 +719,7 @@ export const API_ROUTES: readonly ApiRoute[] = [
       "UNSUPPORTED_MEDIA_TYPE",
       "PHONE_BLOCKED",
       "WHATSAPP_NOT_CONFIGURED",
+      "EMAIL_NOT_CONFIGURED",
       "VERIFICATION_UNAVAILABLE",
       "RATE_LIMITED",
       "TRY_AGAIN",
@@ -1370,6 +1375,45 @@ export const API_ROUTES: readonly ApiRoute[] = [
     request: WhatsAppSettingsInput,
     responses: {
       200: { description: "The WhatsApp setup.", schema: WhatsAppSetup },
+    },
+    errors: [
+      "UNAUTHENTICATED",
+      "FORBIDDEN",
+      "CROSS_SITE_REQUEST",
+      "VALIDATION",
+      "TRY_AGAIN",
+    ],
+  },
+  {
+    method: "get",
+    path: "/api/v1/staff/settings/verification",
+    operationId: "getVerificationSettings",
+    summary:
+      "API-A9. The Admin switch for verification codes by email (settings:edit, Admin only), with whether email delivery and WhatsApp are configured (Q-99).",
+    tag: "Settings",
+    security: "staff",
+    responses: {
+      200: {
+        description: "The verification settings.",
+        schema: VerificationSettings,
+      },
+    },
+    errors: ["UNAUTHENTICATED", "FORBIDDEN"],
+  },
+  {
+    method: "put",
+    path: "/api/v1/staff/settings/verification",
+    operationId: "updateVerificationSettings",
+    summary:
+      "API-A9. Turn verification codes by email on or off (settings:edit, Admin only). Audited under the settings row lock. Turning it on is refused (422) while email delivery is not configured.",
+    tag: "Settings",
+    security: "staff",
+    request: VerificationSettingsInput,
+    responses: {
+      200: {
+        description: "The verification settings.",
+        schema: VerificationSettings,
+      },
     },
     errors: [
       "UNAUTHENTICATED",

@@ -71,6 +71,10 @@ import {
 } from "./commercial";
 import { HealthResponse } from "./health";
 import {
+  VerificationSettings,
+  VerificationSettingsInput,
+} from "./verification-settings";
+import {
   WhatsAppSettingsInput,
   WhatsAppSetup,
   WhatsAppTemplate,
@@ -177,6 +181,8 @@ const COMPONENTS: Readonly<Record<string, z.ZodType>> = {
   CommercialSettingsInput,
   WhatsAppSetup,
   WhatsAppSettingsInput,
+  VerificationSettings,
+  VerificationSettingsInput,
   WhatsAppTemplate,
   WhatsAppTemplateInput,
   WhatsAppTemplatePatch,

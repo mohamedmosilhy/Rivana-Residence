@@ -19,6 +19,7 @@ import {
   UpdateSiteSettings,
 } from "@/application/settings";
 import { ManageCommercialSettings } from "@/application/commercial";
+import { ManageVerificationSettings } from "@/application/guests";
 import { ManageServices } from "@/application/services";
 import {
   ManageWhatsAppSettings,
@@ -83,7 +84,7 @@ const branches = () =>
     branches: tripwire("branches"),
     cache: tripwire("cache"),
     media: tripwire("media"),
-    whatsApp: tripwire("whatsApp"),
+    verification: tripwire("verification"),
     clock: tripwire("clock"),
   });
 const settingsRepo = () => tripwire("settings");
@@ -131,7 +132,27 @@ const whatsAppTest = () =>
     limiter: tripwire("limiter"),
     clock: tripwire("clock"),
   });
+// M9-T12a: the email verification switch, Admin only (settings:edit, Q-99).
+const verificationSettings = () =>
+  new ManageVerificationSettings({
+    unitOfWork: tripwire("unitOfWork"),
+    settings: tripwire("settings"),
+    emailDelivery: tripwire("emailDelivery"),
+    whatsApp: tripwire("whatsApp"),
+    clock: tripwire("clock"),
+  });
 const CALLS: readonly Call[] = [
+  {
+    name: "verification.settings.read",
+    capability: "settings:edit",
+    run: (s) => verificationSettings().read(s),
+  },
+  {
+    name: "verification.settings.update",
+    capability: "settings:edit",
+    run: (s) =>
+      verificationSettings().update(s, { emailVerificationEnabled: true }),
+  },
   {
     name: "whatsapp.settings.read",
     capability: "settings:edit",

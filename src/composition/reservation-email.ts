@@ -6,7 +6,7 @@ import { SmtpReservationEmail } from "@/infrastructure/email/reservation-email";
 import { createSmtpTransport } from "@/infrastructure/email/smtp-contact-delivery";
 import { getServerEnv } from "@/lib/env/server";
 
-function reservationEmailConfig() {
+export function reservationEmailConfig() {
   const env = getServerEnv();
   if (env.EMAIL_PROVIDER === "fake") return { mode: "fake" } as const;
   const { SMTP_HOST, SMTP_USER, SMTP_PASSWORD, CONTACT_FROM } = env;

@@ -1,5 +1,7 @@
 import {
+  VERIFICATION_CHANNELS,
   VERIFICATION_PURPOSES,
+  type VerificationChannel,
   type VerificationPurpose,
 } from "@/domain/shared/types";
 import type { PhoneNumber } from "./phone-number";
@@ -24,6 +26,10 @@ export type VerificationCodeState = Readonly<{
 export type PhoneVerificationToken = Readonly<{
   purpose: VerificationPurpose;
   phone: PhoneNumber;
+  /** WHATSAPP proves the phone. EMAIL proves only `email`; the phone is claimed (ADR 031). */
+  channel: VerificationChannel;
+  /** Normalized; present exactly when the channel is EMAIL. */
+  email: string | null;
   verifiedAt: Date | null;
   tokenExpiresAt: Date | null;
   consumedAt: Date | null;
@@ -146,15 +152,22 @@ export function confirmVerificationCode(
       };
 }
 
-/** A record is supplied only after hashed-token lookup. This function does not authenticate a bearer string. */
+/**
+ * A record is supplied only after hashed-token lookup. This function does not authenticate a bearer string.
+ *
+ * An email token is accepted only when the caller names the normalized email it
+ * must prove (`expectedEmail`). A caller that passes none, such as a phone
+ * session, refuses every email token: the phone in it was never proven.
+ */
 export function checkPhoneVerificationToken(
   token: PhoneVerificationToken | null,
   expectedPurpose: VerificationPurpose,
   expectedPhone: PhoneNumber,
   now: Date,
   blocked: boolean,
+  expectedEmail?: string | null,
 ):
-  | Readonly<{ valid: true }>
+  | Readonly<{ valid: true; channel: VerificationChannel }>
   | Readonly<{ valid: false; code: "PHONE_BLOCKED" | "PHONE_NOT_VERIFIED" }> {
   const timestamp = instant(now);
   if (
@@ -166,6 +179,11 @@ export function checkPhoneVerificationToken(
   if (!token) return { valid: false, code: "PHONE_NOT_VERIFIED" };
   if (!VERIFICATION_PURPOSES.includes(token.purpose))
     policyInputError("purpose");
+  if (
+    !VERIFICATION_CHANNELS.includes(token.channel) ||
+    (token.channel === "EMAIL") !== (typeof token.email === "string")
+  )
+    policyInputError("channel");
   if (token.verifiedAt !== null) instant(token.verifiedAt, "verifiedAt");
   if (token.tokenExpiresAt !== null)
     instant(token.tokenExpiresAt, "tokenExpiresAt");
@@ -183,5 +201,10 @@ export function checkPhoneVerificationToken(
     token.consumedAt !== null
   )
     return { valid: false, code: "PHONE_NOT_VERIFIED" };
-  return { valid: true };
+  if (
+    token.channel === "EMAIL" &&
+    (typeof expectedEmail !== "string" || token.email !== expectedEmail)
+  )
+    return { valid: false, code: "PHONE_NOT_VERIFIED" };
+  return { valid: true, channel: token.channel };
 }

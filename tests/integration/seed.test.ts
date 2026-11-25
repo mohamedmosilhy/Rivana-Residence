@@ -156,6 +156,7 @@ describe("the one seed (runSeed)", () => {
       "Branch",
       "Inventory",
       "WhatsApp",
+      "Verification",
     ]);
     await rm(mediaRoot, { recursive: true, force: true });
   }, 120_000);

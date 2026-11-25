@@ -4,7 +4,10 @@ import {
   ConfirmPhoneVerification,
   type VerificationContext,
 } from "@/application/guests";
-import type { WhatsAppSender } from "@/application/notifications";
+import type {
+  VerificationCodeEmail,
+  WhatsAppSender,
+} from "@/application/notifications";
 import { PhoneNumber } from "@/domain/guests";
 import type { PrismaClient } from "@/generated/prisma/client";
 import { NodePhoneVerificationCrypto } from "@/infrastructure/crypto/phone-verification-crypto";
@@ -72,11 +75,19 @@ function dependencies(connection: PrismaClient = client) {
     ids: { next: () => `verification-${++sequence}` },
   };
 }
+let emailed: { id: string; to: string; code: string }[];
+const emailProvider: VerificationCodeEmail = {
+  send: async (message) => {
+    emailed.push(message);
+    return { ok: true };
+  },
+};
 function requester(connection = client, provider = sender) {
   return new RequestPhoneVerification({
     ...dependencies(connection),
-    setup: { isConfigured: async () => true },
+    channels: { isReady: async () => true },
     sender: provider,
+    emailSender: emailProvider,
   });
 }
 const request = (purpose: "BOOKING" | "GUEST_SESSION" = "BOOKING") =>
@@ -134,6 +145,7 @@ beforeEach(async () => {
   await resetDatabase(client);
   now = new Date("2026-11-18T10:00:00Z");
   sent = 0;
+  emailed = [];
   const fake = whatsAppTransport();
   if (fake instanceof FakeWhatsAppTransport) fake.deliveries.length = 0;
 });
@@ -151,7 +163,13 @@ describe("verification transactions on PostgreSQL", () => {
       const row = await client.phoneVerification.findUniqueOrThrow({
         where: { id: result.value.verificationId },
       });
-      expect(row.codeHash).toBe(crypto.codeHash(row.id, phone, purpose, code));
+      expect(row.codeHash).toBe(
+        crypto.codeHash(
+          { id: row.id, phone, purpose, channel: "WHATSAPP", email: null },
+          code,
+        ),
+      );
+      expect(row).toMatchObject({ channel: "WHATSAPP", email: null });
       expect(row.tokenHash).toBeNull();
       expect(row.clientKey).toBe("hashed-client");
       const confirmed = await confirm(row.id);
@@ -283,8 +301,9 @@ describe("verification transactions on PostgreSQL", () => {
           })(t),
         }),
       ),
-      setup: { isConfigured: async () => true },
+      channels: { isReady: async () => true },
       sender,
+      emailSender: emailProvider,
     });
     await expect(
       failing.execute({ phone, purpose: "BOOKING" }, "hashed-client"),
@@ -473,8 +492,9 @@ describe("verification concurrency", () => {
                 })(t),
             }),
           ),
-          setup: { isConfigured: async () => true },
+          channels: { isReady: async () => true },
           sender,
+          emailSender: emailProvider,
         });
         const held = holding.execute({ phone, purpose: "BOOKING" }, "hash");
         await ready.promise;
@@ -496,8 +516,9 @@ describe("verification concurrency", () => {
                 })(t),
             }),
           ),
-          setup: { isConfigured: async () => true },
+          channels: { isReady: async () => true },
           sender,
+          emailSender: emailProvider,
         });
         const queued = waiting.execute(
           { phone, purpose: "GUEST_SESSION" },
@@ -517,6 +538,93 @@ describe("verification concurrency", () => {
         expect(final.filter((result) => result.ok)).toHaveLength(1);
         expect(await client.phoneVerification.count()).toBe(3);
         expect(await client.guest.count()).toBe(0);
+      }
+    });
+  });
+  // T-VCH-2 (ADR 031): the email lock serializes requests for one email across
+  // different phones, so the per email limit cannot be overrun.
+  it("serializes email code requests for one email from different phones on the email lock (20 rounds)", async () => {
+    const email = "guest@example.test";
+    const emailRequest = (number: string) => ({
+      phone: number,
+      purpose: "BOOKING",
+      channel: "EMAIL",
+      email,
+    });
+    await withIndependentClients(2, async ([holder, contender]) => {
+      for (let round = 0; round < 20; round++) {
+        await client.phoneVerification.deleteMany();
+        // Two earlier codes for this email leave room for exactly one more.
+        for (const [index, number] of [
+          "+12025550131",
+          "+12025550132",
+        ].entries())
+          expect(
+            (await requester().execute(emailRequest(number), `seed-${index}`))
+              .ok,
+          ).toBe(true);
+        const ready = deferred(),
+          release = deferred(),
+          pid = deferred<number>();
+        const holding = new RequestPhoneVerification({
+          ...dependencies(holder),
+          unitOfWork: new PrismaReservationUnitOfWork<VerificationContext>(
+            holder!,
+            (t) => ({
+              guests: new PrismaGuestRepository(t),
+              verifications:
+                new (class extends PrismaPhoneVerificationRepository {
+                  override async lockEmail(address: string) {
+                    const result = await super.lockEmail(address);
+                    ready.resolve();
+                    await release.promise;
+                    return result;
+                  }
+                })(t),
+            }),
+          ),
+          channels: { isReady: async () => true },
+          sender,
+          emailSender: emailProvider,
+        });
+        const held = holding.execute(emailRequest("+12025550133"), "a");
+        await ready.promise;
+        const waiting = new RequestPhoneVerification({
+          ...dependencies(contender),
+          unitOfWork: new PrismaReservationUnitOfWork<VerificationContext>(
+            contender!,
+            (t) => ({
+              guests: new PrismaGuestRepository(t),
+              verifications:
+                new (class extends PrismaPhoneVerificationRepository {
+                  override async lockEmail(address: string) {
+                    const [backend] = await t.$queryRaw<
+                      { pid: number }[]
+                    >`SELECT pg_backend_pid() AS pid`;
+                    pid.resolve(backend!.pid);
+                    return super.lockEmail(address);
+                  }
+                })(t),
+            }),
+          ),
+          channels: { isReady: async () => true },
+          sender,
+          emailSender: emailProvider,
+        });
+        const queued = waiting.execute(emailRequest("+12025550134"), "b");
+        try {
+          await waitForDatabaseLock(client, await pid.promise);
+        } finally {
+          release.resolve();
+        }
+        expect((await held).ok).toBe(true);
+        expect(await queued).toMatchObject({
+          ok: false,
+          error: { code: "RATE_LIMITED" },
+        });
+        expect(await client.phoneVerification.count({ where: { email } })).toBe(
+          3,
+        );
       }
     });
   });

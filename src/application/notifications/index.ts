@@ -35,6 +35,8 @@ export type {
   Completion,
   DeliveryResult,
   ReservationEmailSender,
+  VerificationCodeEmail,
+  VerificationCodeEmailMessage,
   OutboxWorkerStore,
   StaffActionLimiter,
   WhatsAppDelivery,

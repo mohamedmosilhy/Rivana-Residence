@@ -27,6 +27,97 @@ test("public verification rejects invalid input and refuses unavailable WhatsApp
   });
   expect(missing.headers()["cache-control"]).toBe("no-store");
 });
+// ADR 031, Q-99: the email channel on the production server, where no SMTP
+// settings exist, so email delivery is not configured.
+test("public verification by email refuses bad input and unavailable email delivery", async ({
+  playwright,
+  baseURL,
+}, testInfo) => {
+  // Each project gets its own client address: the shared per client limit
+  // (10 requests per hour) would otherwise count both projects together.
+  const request = await playwright.request.newContext({
+    ...(baseURL ? { baseURL } : {}),
+    extraHTTPHeaders: {
+      "X-Forwarded-For":
+        testInfo.project.name === "desktop-chromium"
+          ? "198.51.100.80"
+          : "198.51.100.81",
+    },
+  });
+  const base = {
+    phone: "+12025550101",
+    purpose: "BOOKING",
+    channel: "EMAIL",
+  };
+  for (const data of [
+    base,
+    { ...base, email: "not-an-email" },
+    { ...base, email: "guest@example.test", purpose: "GUEST_SESSION" },
+    { phone: base.phone, purpose: "BOOKING", email: "guest@example.test" },
+  ])
+    expect(
+      (await request.post("/api/v1/phone-verifications", { data })).status(),
+    ).toBe(422);
+  const missing = await request.post("/api/v1/phone-verifications", {
+    data: { ...base, email: "guest@example.test" },
+  });
+  expect(missing.status()).toBe(503);
+  expect(await missing.json()).toMatchObject({ code: "EMAIL_NOT_CONFIGURED" });
+  expect(missing.headers()["cache-control"]).toBe("no-store");
+  expect(missing.headers()["retry-after"]).toBeUndefined();
+  await request.dispose();
+});
+test("public confirmation of an email code needs its channel and address binding", async ({
+  request,
+}, testInfo) => {
+  const id = `t12-${testInfo.project.name === "desktop-chromium" ? "desktop" : "mobile"}-email`;
+  const phone = "+12025550104",
+    email = "guest@example.test",
+    code = "000456";
+  const now = new Date();
+  const insert = (hashInput: unknown[], rowId: string) =>
+    sql(
+      'INSERT INTO "PhoneVerification" (id,phone,purpose,channel,email,"codeHash","expiresAt","clientKey","createdAt") VALUES ($1,$2,$3::"VerificationPurpose",$4::"VerificationChannel",$5,$6,$7,$8,$9)',
+      [
+        rowId,
+        phone,
+        "BOOKING",
+        "EMAIL",
+        email,
+        createHmac("sha256", secret)
+          .update(JSON.stringify(hashInput))
+          .digest("hex"),
+        new Date(now.getTime() + 600000),
+        "e2e-hashed-client",
+        now,
+      ],
+    );
+  // A WhatsApp style fingerprint on an email row never confirms.
+  await insert([`${id}-wa`, phone, "BOOKING", code], `${id}-wa`);
+  await insert([id, phone, "BOOKING", "EMAIL", email, code], id);
+  try {
+    expect(
+      (
+        await request.post(
+          `/api/v1/phone-verifications/${id}-wa/confirmation`,
+          {
+            data: { code },
+          },
+        )
+      ).status(),
+    ).toBe(422);
+    const confirmed = await request.post(
+      `/api/v1/phone-verifications/${id}/confirmation`,
+      { data: { code } },
+    );
+    expect(confirmed.status()).toBe(200);
+    expect((await confirmed.json()).token).toMatch(/^[A-Za-z0-9_-]{43}$/);
+  } finally {
+    await sql('DELETE FROM "PhoneVerification" WHERE id = ANY($1)', [
+      [id, `${id}-wa`],
+    ]);
+  }
+});
 test("public confirmation persists wrong guesses and issues each purpose once", async ({
   request,
 }, testInfo) => {

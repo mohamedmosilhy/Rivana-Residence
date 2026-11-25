@@ -1,3 +1,4 @@
+import { guestWhatsAppAllowed } from "@/domain/guests";
 import type { CouponRedemptionStore } from "@/application/coupons";
 import type { InventoryGuardOperation } from "@/application/inventory";
 import { InventoryGuard } from "@/application/inventory";
@@ -552,7 +553,14 @@ export class ProcessPaymentCallback {
     const whatsapp = recipients("WHATSAPP");
     if (
       email.length !== (reservation.contact.email ? 1 : 0) ||
-      whatsapp.length !== (reservation.contact.phone ? 1 : 0) ||
+      // An email verified booking queues no WhatsApp (spec 0006 Decision 9).
+      whatsapp.length !==
+        (guestWhatsAppAllowed(
+          reservation.contact.phone,
+          reservation.verificationChannel,
+        )
+          ? 1
+          : 0) ||
       (email[0] && email[0].recipient !== reservation.contact.email) ||
       (whatsapp[0] && whatsapp[0].recipient !== reservation.contact.phone)
     )

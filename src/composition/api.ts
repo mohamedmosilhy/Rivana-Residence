@@ -1,6 +1,7 @@
 import "server-only";
 
 import type { StaffPrincipal } from "@/application/auth";
+import { manageVerificationSettings } from "@/composition/verification-channels";
 import { ListBranches } from "@/application/branches";
 import { CheckHealth } from "@/application/health";
 import { RateLimiter } from "@/application/shared/rate-limit";
@@ -249,6 +250,12 @@ export const readWhatsAppSettings = (staff: StaffPrincipal) =>
   manageWhatsAppSettings().read(staff);
 export const updateWhatsAppSettings = (staff: StaffPrincipal, input: unknown) =>
   manageWhatsAppSettings().update(staff, input);
+export const readVerificationSettings = (staff: StaffPrincipal) =>
+  manageVerificationSettings().read(staff);
+export const updateVerificationSettings = (
+  staff: StaffPrincipal,
+  input: unknown,
+) => manageVerificationSettings().update(staff, input);
 export const listWhatsAppTemplates = (staff: StaffPrincipal) =>
   manageWhatsAppTemplates().list(staff);
 export const createWhatsAppTemplate = (staff: StaffPrincipal, input: unknown) =>

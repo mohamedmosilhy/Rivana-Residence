@@ -258,6 +258,8 @@ export async function sessionPhone(
     {
       purpose: record.purpose,
       phone,
+      channel: record.channel,
+      email: record.email,
       verifiedAt: record.verifiedAt,
       tokenExpiresAt: record.tokenExpiresAt,
       consumedAt: record.consumedAt,
@@ -266,6 +268,7 @@ export async function sessionPhone(
     phone,
     deps.clock.now(),
     Boolean(guest?.blockedAt),
+    // No expected email: this is a phone session, so an email token is refused.
   );
   if (checked.valid) return success(phone);
   return checked.code === "PHONE_BLOCKED"

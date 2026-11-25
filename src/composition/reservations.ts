@@ -46,7 +46,7 @@ import {
   type ReservationUnitOfWork,
 } from "@/application/reservations";
 import { QuoteBooking } from "@/application/quotes";
-import { whatsAppSetupReader } from "@/composition/whatsapp-sender";
+import { verificationChannelReadiness } from "@/composition/verification-channels";
 import { reservationMessageWriter } from "@/composition/reservation-jobs";
 import {
   paymentGateway,
@@ -214,7 +214,7 @@ export function createWebsiteReservation(
     payments: new PrismaBookingPaymentStore(client),
     ...(checkout ? { checkout } : {}),
     tokens: new PrismaPhoneVerificationRepository(client),
-    setup: whatsAppSetupReader(),
+    channels: verificationChannelReadiness(),
     crypto: new NodeBookingCrypto(),
     clock,
     ids: new Cuid2IdGenerator(),

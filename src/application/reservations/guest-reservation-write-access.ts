@@ -140,7 +140,9 @@ export async function lockGuestBooking(
       !current ||
       !guest ||
       current.guestId !== guest.id ||
-      guest.phone !== phone.value.value
+      guest.phone !== phone.value.value ||
+      // A phone session never acts on a booking verified by email (Decision 9).
+      current.verificationChannel === "EMAIL"
     )
       return guestReservationNotFound();
   }

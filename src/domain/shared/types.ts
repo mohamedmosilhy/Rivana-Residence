@@ -92,5 +92,8 @@ export type CancellationClosedReason =
   (typeof CANCELLATION_CLOSED_REASONS)[number];
 export const VERIFICATION_PURPOSES = ["BOOKING", "GUEST_SESSION"] as const;
 export type VerificationPurpose = (typeof VERIFICATION_PURPOSES)[number];
+/** How a verification code was delivered, and so what it proves (ADR 031). */
+export const VERIFICATION_CHANNELS = ["WHATSAPP", "EMAIL"] as const;
+export type VerificationChannel = (typeof VERIFICATION_CHANNELS)[number];
 export const SYNC_CHECKPOINT_KINDS = ["STARTED", "COMPLETED"] as const;
 export type SyncCheckpointKind = (typeof SYNC_CHECKPOINT_KINDS)[number];

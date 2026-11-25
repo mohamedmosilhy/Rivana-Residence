@@ -2,6 +2,8 @@
 
 Status: **Accepted** (2026-11-22, owner decision, Q-93). Extends [ADR 019](./019-guest-reservation-access.md) and [ADR 028](./028-whatsapp-guest-messaging.md); amends Q-71 (what makes online booking possible). Built in M9-T12; the booking form support is in M10.
 
+**As built (M9-T12a, 2026-11-25; spec 0006 Decision 9).** Owner decisions refined this ADR: the existing `Guest.phoneVerifiedAt` stays the phone verified fact (no separate `phoneVerified` column); `Reservation.verificationChannel` records what each website booking proved; `Reservation.verifiedEmail` stores the lowercased email an email code proved (set at booking only, never changed by contact edits, enforced by a CHECK), and the per email cap counts by it; an email booking never records marketing consent and never overwrites the name or email of an existing guest profile (WhatsApp verified or not, owner decision 2026-11-26); a WhatsApp session does not show bookings verified by email; an email booking's guest messages, including any manage link, go by email only; the per email cap is 2 upcoming pay at hotel bookings and 1 open hold; and an Admin switch (Q-99, API-A9, off by default) must be on for email codes to be offered. The guest session by email and the staff fields follow in M9-T12b.
+
 ## Context
 
 A booking needs a verified contact before the guest can submit (M8-T5, GV-1…6). The code is sent by WhatsApp, so a branch cannot take online bookings until a WhatsApp provider, number, token, and approved templates exist, and a guest whose WhatsApp message does not arrive cannot book. The provider choice is open until launch (ADR 030). The owner wants a second channel, email, so booking does not depend on one provider.

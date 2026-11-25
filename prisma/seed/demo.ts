@@ -516,6 +516,16 @@ const RESERVATION_FIXTURES = [
     entered: false,
     openCancellation: true,
   },
+  // A guest who verified by email (ADR 031): phone not verified, email verified.
+  {
+    id: "qvmrseeddemobookingaaaaai",
+    reference: "RR-DEM00009",
+    status: "CONFIRMED",
+    source: "WEBSITE",
+    day: "2027-03-17",
+    entered: false,
+    emailVerified: true,
+  },
 ] as const;
 
 export async function seedDemoReservations(
@@ -562,6 +572,20 @@ export async function seedDemoReservations(
         blockedAt: new Date("2026-11-01T00:00:00Z"),
         blockedById: staffId,
         blockReason: "Fictional demo block",
+      },
+    });
+    const emailGuest = {
+      id: "qvmrseeddemoguestaaaaaac",
+      phone: "+12025550103",
+      name: "Fictional email verified guest",
+      email: "guest3@example.test",
+    };
+    await tx.guest.upsert({
+      where: { id: emailGuest.id },
+      update: {},
+      create: {
+        ...emailGuest,
+        emailVerifiedAt: new Date("2026-11-01T00:00:00Z"),
       },
     });
     const paymentCreatedAt = new Date("2026-10-31T23:47:00Z");
@@ -629,10 +653,24 @@ export async function seedDemoReservations(
           status: fixture.status,
           checkIn,
           checkOut,
-          guestId,
-          guestName: "Fictional demo guest",
-          guestEmail: "guest1@example.test",
-          guestPhone: "+12025550101",
+          ...("emailVerified" in fixture
+            ? {
+                guestId: emailGuest.id,
+                guestName: emailGuest.name,
+                guestEmail: emailGuest.email,
+                guestPhone: emailGuest.phone,
+                verificationChannel: "EMAIL" as const,
+                verifiedEmail: emailGuest.email,
+              }
+            : {
+                guestId,
+                guestName: "Fictional demo guest",
+                guestEmail: "guest1@example.test",
+                guestPhone: "+12025550101",
+                ...(fixture.source === "WEBSITE"
+                  ? { verificationChannel: "WHATSAPP" as const }
+                  : {}),
+              }),
           internalNotes: "Fictional demo reservation for local review only.",
           externalReference: unpriced ? "FICTIONAL-EXT-1" : null,
           externalChannel: unpriced ? "Fictional partner" : null,

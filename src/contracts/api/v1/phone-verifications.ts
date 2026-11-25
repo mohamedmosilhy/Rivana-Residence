@@ -8,6 +8,19 @@ export const PhoneVerificationRequest = z
       .regex(/^\+[1-9]\d{1,14}$/)
       .describe("Valid international E.164 phone."),
     purpose: z.enum(["BOOKING", "GUEST_SESSION"]),
+    channel: z
+      .enum(["WHATSAPP", "EMAIL"])
+      .optional()
+      .describe(
+        "How to send the code. Defaults to WHATSAPP. EMAIL proves the email only; the phone stays unverified (ADR 031). EMAIL with GUEST_SESSION is refused until M9-T12b.",
+      ),
+    email: z
+      .string()
+      .max(400)
+      .optional()
+      .describe(
+        "Required with channel EMAIL and refused otherwise. Normalized to lowercase.",
+      ),
     website: z
       .string()
       .max(32_768)

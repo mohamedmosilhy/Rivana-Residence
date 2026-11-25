@@ -133,6 +133,10 @@ export type AuditChanges = {
       to: string | null;
     }>;
   }>;
+  /** The Admin switch for verification codes by email (Q-99). */
+  "verification-settings.updated": Readonly<{
+    emailVerificationEnabled: Readonly<{ from: boolean; to: boolean }>;
+  }>;
   "whatsapp-template.created": Readonly<{
     before: null;
     after: WhatsAppTemplateSnapshot;
@@ -375,6 +379,7 @@ export type AuditEvent<A extends AuditAction = AuditAction> = Readonly<{
     | "CommercialSettings"
     | "Coupon"
     | "WhatsAppSettings"
+    | "VerificationSettings"
     | "WhatsAppTemplate"
     | "Reservation"
     | "CancellationRequest"

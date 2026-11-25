@@ -1,7 +1,11 @@
 import { describe, expect, it } from "vitest";
 import {
+  EMAIL_BOOKING_LIMITS,
+  PHONE_BOOKING_LIMITS,
   PhoneNumber,
+  checkEmailBookingLimit,
   checkPhoneBookingLimit,
+  type EmailBooking,
   type PhoneBooking,
 } from "@/domain/guests";
 import { LocalDate } from "@/domain/shared/local-date";
@@ -114,5 +118,74 @@ describe("Q-60/78/81 global booking caps", () => {
       checkPhoneBookingLimit(phone, [], "PAY_AT_HOTEL", new Date("bad")),
     ).toThrow(DomainValidationError);
     expect(original.status).toBe("CONFIRMED");
+  });
+});
+
+// T-VCH-7 (domain): the per email cap mirrors the phone cap (Q-93, ADR 031).
+describe("per email booking cap", () => {
+  const email = "guest@example.test";
+  const emailRow = (
+    id: string,
+    patch: Partial<EmailBooking> = {},
+  ): EmailBooking => {
+    const { phone, ...base } = row(id);
+    void phone;
+    return { ...base, email, ...patch };
+  };
+  it("uses the same numbers as the phone cap", () => {
+    expect(EMAIL_BOOKING_LIMITS).toEqual(PHONE_BOOKING_LIMITS);
+  });
+  it("refuses a third upcoming pay at hotel booking for one email", () => {
+    expect(
+      checkEmailBookingLimit(email, [emailRow("a")], "PAY_AT_HOTEL", now),
+    ).toEqual({ allowed: true });
+    expect(
+      checkEmailBookingLimit(
+        email,
+        [emailRow("a"), emailRow("b")],
+        "PAY_AT_HOTEL",
+        now,
+      ),
+    ).toEqual({ allowed: false, code: "BOOKING_LIMIT_REACHED" });
+  });
+  it("refuses a second open payment hold for one email", () => {
+    const hold = emailRow("hold", {
+      paymentMethod: "ONLINE",
+      status: "AWAITING_PAYMENT",
+      holdExpiresAt: new Date(now.getTime() + 60_000),
+    });
+    expect(checkEmailBookingLimit(email, [hold], "ONLINE", now)).toEqual({
+      allowed: false,
+      code: "BOOKING_LIMIT_REACHED",
+    });
+    expect(
+      checkEmailBookingLimit(
+        email,
+        [{ ...hold, holdExpiresAt: new Date(now.getTime()) }],
+        "ONLINE",
+        now,
+      ),
+    ).toEqual({ allowed: true });
+  });
+  it("ignores other emails, staff bookings, and past arrivals", () => {
+    expect(
+      checkEmailBookingLimit(
+        email,
+        [
+          emailRow("other", { email: "other@example.test" }),
+          emailRow("staff", { source: "STAFF" }),
+          emailRow("past", { checkIn: LocalDate.parse("2026-11-14") }),
+          emailRow("one"),
+        ],
+        "PAY_AT_HOTEL",
+        now,
+      ),
+    ).toEqual({ allowed: true });
+  });
+  it("requires a normalized email", () => {
+    for (const bad of ["", "Guest@example.test"])
+      expect(() =>
+        checkEmailBookingLimit(bad, [], "PAY_AT_HOTEL", now),
+      ).toThrow(DomainValidationError);
   });
 });

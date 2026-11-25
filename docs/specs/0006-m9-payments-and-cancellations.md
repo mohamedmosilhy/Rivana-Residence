@@ -209,7 +209,22 @@ Take the payment, then create the reservation.
 
 ### Decision 9. Email verification (M9-T12, ADR 031)
 
-As ADR 031 and the brief item 14. An email verified booking still counts against the per phone cap and the one open hold rule for the phone the guest typed (Q-60), and also against the per email cap. The per email cap default (2 upcoming bookings) is confirmed in the M9-T12 plan (Q-93).
+As ADR 031 and the brief item 14. An email verified booking still counts against the per phone cap and the one open hold rule for the phone the guest typed (Q-60), and also against the per email cap.
+
+Decisions from the M9-T12 plan (owner, 2026-11-25):
+
+- **Split.** M9-T12a delivers the email code for booking (P9, P10, P7, limits, caps, coupons, the readiness gate, the migration). M9-T12b delivers the guest session by email (G3…G6) and the staff fields. Until T12b, P9 refuses `channel: EMAIL` with `purpose: GUEST_SESSION` (`422`).
+- **Per email cap (Q-93).** 2 upcoming pay at hotel bookings and 1 open payment hold per verified email, the same numbers and definitions as the phone cap (Q-60, Q-81). Only `WEBSITE` bookings made with an email code for that email count, matched by `Reservation.verifiedEmail` (the proven email stored at booking, which contact edits never change), so changing a booking's contact email cannot take it out of the cap. An email advisory lock in P7 serializes bookings for one email across different phones. As ADR 031 says, an email booking also counts against the per phone cap of the phone the guest typed, so someone who types another person's phone can use up that phone's two pay at hotel bookings; this trade off is accepted (known limitation L-19; address aliases count as separate emails, L-20).
+- **Phone sessions.** A WhatsApp session lists and acts only on bookings not verified by email. A booking someone made by email with a typed phone stays invisible to that phone's session. Staff and WhatsApp bookings show as before.
+- **Coupons.** An email booking is quoted without a phone, so the per phone coupon limit is neither applied nor revealed, and its redemption is stored with no phone, so it never counts against the owner of that number. The coupon's total limit still applies.
+- **Columns.** `Guest.phoneVerifiedAt` stays the phone verified fact (ADR 031's `phoneVerified` is not added). New: `Guest.emailVerifiedAt`, `PhoneVerification.channel` and `email`, `Reservation.verificationChannel` (null on staff and external bookings; a null on a website booking means WhatsApp, which keeps the previous release safe during a deploy).
+- **Shared guest profile.** An email booking never records marketing consent for the phone and never sets `phoneVerifiedAt`. It never overwrites the name or email of an existing profile, whether its phone was verified by WhatsApp or not (for example a profile staff created at the desk; owner decision 2026-11-26, from the M9-T12a review). A new profile starts with the details the guest typed, and `emailVerifiedAt` is set only when the profile's own email is the proven one. The reservation always keeps the details the guest typed.
+- **Guest messages for an email booking (owner, 2026-11-25, during M9-T12a).** A booking verified by email gets every guest message by email only. No WhatsApp message goes to its unproven phone: not the confirmation, changes, cancellations, request outcomes, or a manage link replacement. A lost manage link is recovered by the hotel, as M9-T10 already does when no usable phone exists. Staff confirm the phone on arrival.
+- **Admin switch for email verification (owner, 2026-11-25, during M9-T12a; Q-99).** One global setting, `emailVerificationEnabled`, off by default, changed only by an Admin (`settings:edit`) through API-A9 and a toggle on the admin settings page, and audited. Turning it on is refused while email delivery is not configured. Email counts as a ready verification channel only when delivery is configured **and** the switch is on. Turning it off stops new email codes at once (P9 `503 EMAIL_NOT_CONFIGURED`); codes and booking tokens already issued may still be confirmed and used until they expire (10 and 30 minutes), so no guest is cut off mid booking. Turning it off is allowed even when WhatsApp is not ready; branches then stop taking bookings (`BRANCH_NOT_BOOKABLE`), as when an Admin clears the WhatsApp number (Q-71).
+- **Gate wording.** `BRANCH_NOT_BOOKABLE` reason `WHATSAPP_NOT_CONFIGURED` becomes `VERIFICATION_NOT_CONFIGURED` (no verification channel ready). P9 returns `503 WHATSAPP_NOT_CONFIGURED` or `503 EMAIL_NOT_CONFIGURED` for the chosen channel. Email is ready when the email adapter is configured (`fake`, or SMTP with host, user, password, and sender).
+- **Code fingerprint.** Email codes are bound to id, phone, purpose, channel, and email. WhatsApp codes keep the M8 binding, so codes issued before a deploy still confirm.
+- **Lock order.** Phone advisory lock, guest row, email advisory lock, verification row.
+- **Email text** (placeholder until Q-30): subject "Your verification code"; body "Your Rivana Residence code is 123456. It expires in 10 minutes. If you did not ask for it, ignore this email." No link, no booking or branch details.
 
 ### Decision 10. Authorization, audit, logging
 
@@ -322,7 +337,7 @@ Keeping the hold across a declined attempt (Q-95) matches how hosted checkouts b
 
 ## Build plan
 
-Execution order (ids kept from the brief): T0b → T1 → T2 → T3 → T4 → T5 → T6 → T7 → T8 → T10 → T11 → T12. Messages are built inside the task that sends them (proposed change D-C), so every "messaged" criterion is proven in its own task.
+Execution order (ids kept from the brief): T0b → T1 → T2 → T3 → T4 → T5 → T6 → T7 → T8 → T10 → T11 → T12a → T12b. Messages are built inside the task that sends them (proposed change D-C), so every "messaged" criterion is proven in its own task.
 
 1. **M9-T0b** adapter foundations: `EMAIL_PROVIDER`, fake email adapter, `fake` refusal for all kinds, WhatsApp and email contract suites, readiness reader, satisfies **AC-9**, **AC-10**.
 2. **M9-T1** migration `payments_and_cancellations` (Decision 2), satisfies **AC-1**, **AC-6**, **AC-14**, **AC-15**.
@@ -335,7 +350,7 @@ Execution order (ids kept from the brief): T0b → T1 → T2 → T3 → T4 → T
 9. **M9-T8** decisions, refunds, retry, paid staff cancellation, satisfies **AC-7**, **AC-8**, **AC-10**.
 10. **M9-T10** guest changes, pay at hotel, satisfies **AC-11**.
 11. **M9-T11** change requests, migration `change_requests`, staff alert and Q-96 closing for change requests, satisfies **AC-12**, **AC-15**, **AC-16**.
-12. **M9-T12** email verification, migration `verification_channels`, satisfies **AC-13**.
+12. **M9-T12a** email code for booking, migration `verification_channels`, and **M9-T12b** email guest session and staff fields (split 2026-11-25), together satisfy **AC-13**.
 
 ## Task breakdown (approved 2026-11-22)
 
@@ -354,7 +369,8 @@ Execution order (ids kept from the brief): T0b → T1 → T2 → T3 → T4 → T
 | M9-T9 | Merged into T4…T11 (each task sends its own messages) | — | — | — | Merged (D-C) |
 | M9-T10 | Guest changes, pay at hotel (G5, G6) | Critical | T2, M8-T9b, M8-T11 | AC 11; T-GCHG-1…8, C-16 | [Task status in the brief](../delivery/milestones/m9-payments-and-cancellations.md#task-breakdown) |
 | M9-T11 | Change requests for paid bookings (S56…S58), migration `change_requests` | Critical | T10, T8 | AC 12, 15, 16; T-GCHG-9…12, C-17 | [Task status in the brief](../delivery/milestones/m9-payments-and-cancellations.md#task-breakdown) |
-| M9-T12 | Email verification fallback, migration `verification_channels` | Critical | T0b, M8-T5, M8-T7b, M8-T11 | AC 13; T-VCH-1…8 | Not started |
+| M9-T12a | Email code for booking, migration `verification_channels` | Critical | T0b, M8-T5, M8-T7b, M8-T11 | AC 13 (except the email session); T-VCH-1…5, 7, 8 | [Task status in the brief](../delivery/milestones/m9-payments-and-cancellations.md#task-breakdown) |
+| M9-T12b | Email guest session and staff fields | Critical | T12a | AC 13 (email session); T-VCH-6 | [Task status in the brief](../delivery/milestones/m9-payments-and-cancellations.md#task-breakdown) |
 
 Changes from the brief: T9 merged into the tasks that send each message (D-C); T4 also carries the branch switch and P6 `paymentMethods` (Q-94); T7 and T11 carry the staff alert (Q-97) and the closing rule (Q-96); T1 adds `onlinePaymentEnabled`, `checkoutUrl`, `EXPIRED`, `requestedBy`, `CLOSED`, and outbox `HELD`; T5 carries the mid milestone security review.
 
@@ -384,7 +400,7 @@ Changes from the brief: T9 merged into the tasks that send each message (D-C); T
 - [ ] On approval: record Q-94…Q-97, amend ADR 025 step 3 (Q-95), R-10 (D-A), and the lifecycle row "create website, online" ("same writes except confirmations" becomes "confirmations written as held rows"), and update the brief's task table and criteria to match this spec.
 - [x] M9-T10: add `CHANGE_NOT_ALLOWED` to the error model (the other M9 codes are already listed there).
 - [x] M9-T10 plan: send the old address a minimal security notice (Decision 8).
-- [ ] M9-T12 plan: confirm the per email cap default (Q-93).
+- [x] M9-T12 plan: confirm the per email cap default (Q-93): 2 upcoming pay at hotel bookings and 1 open hold per email (2026-11-25).
 - [ ] `docs/domain/reservation-lifecycle.md`, `api-contracts.md`, `data-model.md`, `integrity-and-concurrency.md`, `test-matrix.md`, and OpenAPI get their Implemented marks task by task.
 - [ ] The mid milestone security review file is `docs/reviews/<date>-m9-security.md` (with T5).
 
