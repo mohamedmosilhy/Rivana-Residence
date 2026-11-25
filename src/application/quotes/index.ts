@@ -6,3 +6,5 @@ export {
   type QuoteView,
 } from "./quote-booking";
 export type { QuoteBookingReaders } from "./quote-readers";
+
+export { displayQuote } from "./quote-display";

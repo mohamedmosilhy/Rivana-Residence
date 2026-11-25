@@ -171,6 +171,7 @@ type GuestMessageKind =
   | "reservation.cancelled"
   | "reservation.modified"
   | "reservation.manage-link"
+  | "reservation.email-changed"
   | "reservation.payment-not-completed"
   | "cancellation-request.received"
   | "cancellation-request.approved"
@@ -180,6 +181,7 @@ type GuestMessageKind =
 /** Staff messages go to the branch inbox by email only, never to a guest. */
 export type StaffMessageKind =
   | "reservation.staff-alert"
+  | "reservation.change-staff-alert"
   | "request.staff-alert"
   | "payment.staff-alert"
   | "refund.staff-alert"
@@ -194,6 +196,11 @@ export type MessageVariables = {
   checkIn?: string;
   checkOut?: string;
   total?: string;
+  previousCheckIn?: string;
+  previousCheckOut?: string;
+  previousTotal?: string;
+  hotelPhone?: string;
+  hotelEmail?: string;
   reason?: string;
   manageLink?: string;
   holdExpiresAt?: string;
@@ -242,6 +249,7 @@ export type HeldMessage = {
   recipient: string;
   payload: MessageVariables;
 };
+type PreviousStay = { checkIn: string; checkOut: string; totalMinor: number };
 export type ReservationMessageEvent =
   | {
       kind: "reservation.confirmed";
@@ -250,8 +258,23 @@ export type ReservationMessageEvent =
       held?: boolean;
     }
   | { kind: "reservation.cancelled"; notifyGuest: boolean; reason: string }
-  | { kind: "reservation.modified"; notifyGuest: boolean }
-  | { kind: "reservation.manage-link"; manageToken: string }
+  | {
+      kind: "reservation.modified";
+      notifyGuest: boolean;
+      previous?: PreviousStay;
+    }
+  | { kind: "reservation.change-staff-alert"; previous: PreviousStay }
+  | {
+      kind: "reservation.email-changed";
+      previousEmail: string;
+      hotelPhone: string | null;
+      hotelEmail: string | null;
+    }
+  | {
+      kind: "reservation.manage-link";
+      manageToken: string;
+      whatsappOnly?: boolean;
+    }
   | { kind: "reservation.payment-not-completed"; holdExpiresAt: Date }
   | { kind: "cancellation-request.received" }
   /** `refundMinor` is set when the approval starts a refund. */

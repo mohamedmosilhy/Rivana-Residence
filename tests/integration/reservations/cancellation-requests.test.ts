@@ -1284,7 +1284,7 @@ it("checks the stored phone on a legacy unlinked booking and distinguishes a lin
   ).toBe(true);
   expect(await view.execute(access.token)).toMatchObject({
     ok: true,
-    value: { allowedActions: ["REQUEST_CANCELLATION"] },
+    value: { allowedActions: ["REQUEST_CANCELLATION", "CHANGE_RESERVATION"] },
   });
   expect((await request.execute(access, {})).ok).toBe(true);
   expect(await requestAudits("created")).toEqual([

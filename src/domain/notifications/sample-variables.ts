@@ -19,5 +19,8 @@ export const WHATSAPP_SAMPLE_VARIABLES: Readonly<
   holdExpiresAt: "2030-01-01 12:00",
   refundAmount: "USD 0.00",
   reason: "Test message",
+  previousCheckIn: "2026-12-12",
+  previousCheckOut: "2026-12-14",
+  previousTotal: "USD 220.00",
   feedbackLink: "https://example.com/test",
 };

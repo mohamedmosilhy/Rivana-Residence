@@ -82,7 +82,7 @@ Every transition:
 
 ## Guest changes (Q-83…Q-85)
 
-*Planned:* the change engine in M8-T9 (staff), the guest entry points in M9-T10 (pay at hotel) and M9-T11 (paid bookings).
+**Implemented:** the staff change engine (M8-T9 and M8-T9b) and guest changes to confirmed, priced pay-at-hotel bookings (M9-T10). **Planned:** paid booking changes and approvals (M9-T11).
 
 | Rule | Definition |
 | --- | --- |
@@ -92,6 +92,8 @@ Every transition:
 | GC-4 | Pay at hotel: the change applies at once (ADR 024). Paid online: applies at once when the new total equals the paid total; otherwise an `OPEN` change request is stored with the requested change and holds no inventory (Q-85). |
 | GC-5 | A Manager of the branch or an Admin approves or rejects a change request with a reason, in the cancellation-request queue. Approval re-checks inventory and prices under the locks and applies the change, or fails with the conflict shown; the difference is settled at the desk (Q-66). |
 | GC-6 | Every applied change appends a change-history row (actor kind guest or staff, before and after totals and details), an audit event without personal values, outbox messages (`RESERVATION_MODIFIED`, and the staff alert), and, when `pmsEnteredAt` is set, a pending "changed, update hotel system" flag. |
+
+On pay-at-hotel changes, the preview returns a full quote and the booking version. Apply rechecks both arrival deadlines, access, inventory, and price under the locks. Replacing the booking email sends a minimal notice to the previous address and revokes the old manage link. A replacement goes only by WhatsApp to the existing phone when usable. The hotel handles recovery when the booking has no usable phone.
 
 Change request states: `OPEN → APPROVED` (applied) or `OPEN → REJECTED`; an approval whose re-check fails leaves the request `OPEN` with the conflict shown.
 

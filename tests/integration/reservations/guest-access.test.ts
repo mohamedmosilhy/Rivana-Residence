@@ -407,7 +407,7 @@ describe("G1 manage link (T-LKP-1…3)", () => {
       price: { totalMinor: TOTAL_MINOR },
       cancellationDeadline: expect.any(String),
       cancellationRequest: null,
-      allowedActions: ["REQUEST_CANCELLATION"],
+      allowedActions: ["REQUEST_CANCELLATION", "CHANGE_RESERVATION"],
     });
     expect(JSON.stringify(view)).not.toContain("physicalRoomId");
 

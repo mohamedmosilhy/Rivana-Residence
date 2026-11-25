@@ -13,6 +13,9 @@ import {
   ListGuestReservations,
   ViewGuestSessionReservation,
   RequestCancellation,
+  PreviewGuestChange,
+  ApplyGuestChange,
+  type GuestChangeContext,
   type RequestCancellationContext,
 } from "@/application/reservations";
 import type { Clock } from "@/application/shared/providers";
@@ -41,6 +44,12 @@ import { PrismaReservationUnitOfWork } from "@/infrastructure/db/prisma/unit-of-
 import type { DatabaseClient } from "@/infrastructure/db/prisma/transaction";
 import { Cuid2IdGenerator } from "@/infrastructure/ids/cuid2-id-generator";
 import { getServerEnv } from "@/lib/env/server";
+import { PrismaAvailabilityCatalog } from "@/infrastructure/db/prisma/repositories/reservations/inventory/availability-catalog";
+import { PrismaInventoryLock } from "@/infrastructure/db/prisma/repositories/reservations/inventory/inventory-lock";
+import { PrismaInventoryReader } from "@/infrastructure/db/prisma/repositories/reservations/inventory/inventory-reader";
+import { PrismaReservationConsumptionReader } from "@/infrastructure/db/prisma/repositories/reservations/inventory/reservation-consumption-reader";
+import { PrismaServiceOfferingRepository } from "@/infrastructure/db/prisma/repositories/reservations/commercial/service-repository";
+import { PrismaRateRepository } from "@/infrastructure/db/prisma/repositories/reservations/pricing/rate-repository";
 
 function dependencies(secret: string | undefined) {
   const client = getPrisma();
@@ -165,4 +174,50 @@ export function requestCancellation(
       requestCancellationContext,
     ),
   });
+}
+
+function guestChangeReaders(client: DatabaseClient) {
+  return {
+    catalog: new PrismaAvailabilityCatalog(client),
+    inventoryReader: new PrismaInventoryReader(
+      client,
+      new PrismaReservationConsumptionReader(client),
+    ),
+    rates: new PrismaRateRepository(client),
+    services: new PrismaServiceOfferingRepository(client),
+  };
+}
+
+/** G5 and G6 share booking access, with quote reads bound to the G6 transaction. */
+export function guestReservationChanges(
+  options: Readonly<{
+    client?: ReturnType<typeof getPrisma>;
+    clock?: Clock;
+  }> = {},
+) {
+  const client = options.client ?? getPrisma();
+  const access = guestReservationAccess(client, options.clock);
+  const readers = guestChangeReaders(client);
+  return {
+    preview: new PreviewGuestChange({ ...access, readers }),
+    apply: new ApplyGuestChange({
+      ...access,
+      catalog: readers.catalog,
+      ids: new Cuid2IdGenerator(),
+      unitOfWork: new PrismaReservationUnitOfWork(client, guestChangeContext),
+    }),
+  };
+}
+
+export function guestChangeContext(
+  transaction: DatabaseClient,
+): GuestChangeContext {
+  return {
+    ...requestCancellationContext(transaction),
+    ...guestChangeReaders(transaction),
+    reservations: new PrismaReservationRepository(transaction),
+    guests: new PrismaGuestRepository(transaction),
+    consumption: new PrismaReservationConsumptionReader(transaction),
+    inventoryLock: new PrismaInventoryLock(transaction),
+  };
 }

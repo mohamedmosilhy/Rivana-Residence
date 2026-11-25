@@ -121,7 +121,13 @@ export function guestReservationView(
       : null,
     allowedActions:
       showContact && eligibility.allowed
-        ? (["REQUEST_CANCELLATION"] as const)
+        ? ([
+            "REQUEST_CANCELLATION",
+            ...(reservation.paymentMethod === "PAY_AT_HOTEL" &&
+            reservation.snapshot
+              ? (["CHANGE_RESERVATION"] as const)
+              : []),
+          ] as const)
         : [],
     createdAt: reservation.createdAt,
   } as const;

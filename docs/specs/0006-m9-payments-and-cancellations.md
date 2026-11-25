@@ -202,7 +202,9 @@ Take the payment, then create the reservation.
 
 - As the brief items 11 and 12, on the M8 `ModifyReservation` engine. Limits: `guest-change-preview` 30 per client per 10 minutes; `guest-change` 10 per client per hour and at most 5 applied guest changes per reservation per 24 hours (owner decision D-B).
 - `ChangeRequest` adds `CLOSED` and `closedReason` like `CancellationRequest` (Q-96); the staff alert applies (Q-97).
-- Whether an email change also notifies the old address is decided in the M9-T10 plan (brief).
+- **M9-T10 plan approved (2026-11-25).** This slice applies to confirmed, priced pay at hotel bookings the guest can already access, including staff bookings. Changed dates follow the public stay limits (Q-09). Added units must be publicly listed in the booking's branch. Existing dates and units may be kept for a contact edit. Paid changes and change requests follow in M9-T11.
+- G5 returns the booking version in `ETag`. G6 requires that value in `If-Match` and returns the new version in `ETag` on success.
+- When a guest changes an existing email address, send a short security notice to the old address with the hotel's contact details. The notice contains no booking details, new address, or manage link. Replace the existing link and send the new one only to the unchanged booking phone by WhatsApp when a usable number exists. Otherwise the hotel handles recovery. This extends the existing staff contact protection in Spec 0005 and follows the access and expiry rules in ADR 019.
 
 ### Decision 9. Email verification (M9-T12, ADR 031)
 
@@ -348,7 +350,7 @@ Execution order (ids kept from the brief): T0b → T1 → T2 → T3 → T4 → T
 | M9-T7 | Guest cancellation requests (G2, G4), staff alert, Q-96 closing | Critical | T1, T2 | AC 6, 15, 16; T-CXL-4…5 | Accepted (2026-11-24) |
 | M9-T8 | Decisions and refunds (S9 paid, S17…S19, S44, S45) | Critical | T5, T7 | AC 7, 8, 10; T-PAY-8…10, T-CXL-6…8 | Accepted (2026-11-25) |
 | M9-T9 | Merged into T4…T11 (each task sends its own messages) | — | — | — | Merged (D-C) |
-| M9-T10 | Guest changes, pay at hotel (G5, G6) | Critical | T2, M8-T9b, M8-T11 | AC 11; T-GCHG-1…8, C-16 | Not started |
+| M9-T10 | Guest changes, pay at hotel (G5, G6) | Critical | T2, M8-T9b, M8-T11 | AC 11; T-GCHG-1…8, C-16 | [Task status in the brief](../delivery/milestones/m9-payments-and-cancellations.md#task-breakdown) |
 | M9-T11 | Change requests for paid bookings (S56…S58), migration `change_requests` | Critical | T10, T8 | AC 12, 15, 16; T-GCHG-9…12, C-17 | Not started |
 | M9-T12 | Email verification fallback, migration `verification_channels` | Critical | T0b, M8-T5, M8-T7b, M8-T11 | AC 13; T-VCH-1…8 | Not started |
 
@@ -378,8 +380,8 @@ Changes from the brief: T9 merged into the tasks that send each message (D-C); T
 ## Follow-up
 
 - [ ] On approval: record Q-94…Q-97, amend ADR 025 step 3 (Q-95), R-10 (D-A), and the lifecycle row "create website, online" ("same writes except confirmations" becomes "confirmations written as held rows"), and update the brief's task table and criteria to match this spec.
-- [ ] M9-T10: add `CHANGE_NOT_ALLOWED` to the error model (the other M9 codes are already listed there).
-- [ ] M9-T10 plan: decide whether an email change also notifies the old address.
+- [x] M9-T10: add `CHANGE_NOT_ALLOWED` to the error model (the other M9 codes are already listed there).
+- [x] M9-T10 plan: send the old address a minimal security notice (Decision 8).
 - [ ] M9-T12 plan: confirm the per email cap default (Q-93).
 - [ ] `docs/domain/reservation-lifecycle.md`, `api-contracts.md`, `data-model.md`, `integrity-and-concurrency.md`, `test-matrix.md`, and OpenAPI get their Implemented marks task by task.
 - [ ] The mid milestone security review file is `docs/reviews/<date>-m9-security.md` (with T5).

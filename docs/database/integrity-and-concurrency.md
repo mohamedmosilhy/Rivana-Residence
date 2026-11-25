@@ -139,7 +139,7 @@ Raw SQL is parameterized through Prisma's tagged `$queryRaw` and lives only in `
 | C-13 duplicate callbacks | `AWAITING_PAYMENT` | Same verified callback ×5 in parallel | One `CONFIRMED` transition, one set of messages **Implemented (M9-T5)**: five parallel copies serialize on the reservation lock. |
 | C-14 hold versus booking | Last unit held, hold just expired | Expiry job, a new booking, and a success callback race | Never more than one inventory-consuming reservation for the unit |
 | C-15 multi-unit booking | Listing with 2 free units | Booking for 2 units racing a booking for 1 | Never more than 2 units sold; the losing request creates nothing |
-| C-16 guest change versus booking *(planned M9-T10, Q-84)* | Last free night of a listing | A guest change extending a stay onto it races a new booking for it | Exactly one succeeds; the losing change leaves the reservation unchanged (no history row, no outbox row) |
+| C-16 guest change versus booking *(implemented M9-T10, Q-84)* | Last free night of a listing | A guest change extending a stay onto it races a new booking for it | Exactly one succeeds; the losing change leaves the reservation unchanged (no history row, no outbox row) |
 | C-17 change-request approval versus booking *(planned M9-T11, Q-85)* | Paid booking with an open change request needing the last unit | Approval races a new booking | Never oversold; a losing approval keeps the request `OPEN` with the conflict recorded |
 
 Each test repeats (for example 20 iterations) and asserts the final database state.

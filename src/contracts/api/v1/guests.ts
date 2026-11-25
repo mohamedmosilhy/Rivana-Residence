@@ -1,6 +1,8 @@
 import { z } from "zod";
 
 import { isoDate, Money, Occupancy, Stay } from "./primitives";
+import { Quote, ServiceInput } from "./quotes";
+import { BookingLineInput } from "./reservations";
 
 // Zod only (D-7). S50 to S53 are staff endpoints; G1, G3 and G4 are guest
 // endpoints use bearer tokens.
@@ -177,6 +179,34 @@ export const GuestReservation = z.strictObject({
     .nullable(),
   cancellationDeadline: z.iso.datetime().nullable(),
   cancellationRequest: CancellationRequest.nullable(),
-  allowedActions: z.array(z.string()),
+  allowedActions: z
+    .array(z.string())
+    .describe("Eligible actions: REQUEST_CANCELLATION and CHANGE_RESERVATION."),
   createdAt: z.iso.datetime(),
+});
+
+export const GuestChangeInput = z.strictObject({
+  stay: Stay.optional(),
+  lines: z.array(BookingLineInput).min(1).max(5).optional(),
+  services: z.array(ServiceInput).max(2).optional(),
+  guest: z
+    .strictObject({
+      fullName: z.string().min(1).max(120).optional(),
+      email: z.string().min(3).max(320).optional(),
+      specialRequests: z.string().max(1000).optional(),
+    })
+    .optional(),
+});
+
+export const ApplyGuestChangeInput = GuestChangeInput.extend({
+  expectedTotal: Money.describe("The total from the preview, including VAT."),
+});
+
+export const GuestChangePreview = z.strictObject({
+  available: z.boolean(),
+  unavailableLines: z.array(z.number().int().nonnegative()),
+  current: Quote,
+  proposed: Quote.nullable(),
+  outcome: z.literal("APPLIES_NOW"),
+  deadline: z.iso.datetime(),
 });

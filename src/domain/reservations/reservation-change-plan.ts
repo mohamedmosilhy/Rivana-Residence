@@ -299,6 +299,7 @@ export type ChangeSummary = Readonly<{
   discountMinor: number | null;
   vatMinor: number | null;
   totalMinor: number | null;
+  contactFieldsChanged?: readonly string[];
 }>;
 
 export function summarizeReservation(

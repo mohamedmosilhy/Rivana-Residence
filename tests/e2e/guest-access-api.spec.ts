@@ -31,7 +31,11 @@ function request(
         },
         ...(body === undefined ? {} : { body: JSON.stringify(body) }),
       });
-      return { status: response.status, body: await response.json() };
+      return {
+        status: response.status,
+        body: await response.json(),
+        etag: response.headers.get("ETag"),
+      };
     },
     { path, ...options },
   );
@@ -41,7 +45,7 @@ function request(
 const token = (label: string) =>
   `${label.replace(/[^A-Za-z0-9_-]/g, "-")}${"x".repeat(43)}`.slice(0, 43);
 
-test("a guest reads and requests cancellation, and staff can block writes and close the request", async ({
+test("a guest changes a booking and requests cancellation, and staff can block writes and close the request", async ({
   page,
 }, testInfo) => {
   const key = `t11-${testInfo.project.name}-${testInfo.retry}`;
@@ -101,6 +105,7 @@ test("a guest reads and requests cancellation, and staff can block writes and cl
     expect(created.status, JSON.stringify(created.body)).toBe(201);
     reservationId = created.body.id as string;
     const reference = created.body.reference as string;
+    const totalMinor = created.body.price.totalMinor as number;
     // Make it a verified website booking with a manage link and a live session.
     await sql(`UPDATE "Guest" SET "phoneVerifiedAt" = now() WHERE phone = $1`, [
       phone,
@@ -129,7 +134,7 @@ test("a guest reads and requests cancellation, and staff can block writes and cl
         reference,
         status: "CONFIRMED",
         contact: { fullName: "Fictional Access Guest", phone },
-        allowedActions: ["REQUEST_CANCELLATION"],
+        allowedActions: ["REQUEST_CANCELLATION", "CHANGE_RESERVATION"],
       },
     });
     const mine = await request(page, "/api/v1/guest/reservations", {
@@ -140,17 +145,130 @@ test("a guest reads and requests cancellation, and staff can block writes and cl
       mine.body.items.map((item: { reference: string }) => item.reference),
     ).toEqual([reference]);
     expect(
-      (
-        await request(page, `/api/v1/guest/reservations/${reference}`, {
-          bearer: live,
-        })
-      ).status,
-    ).toBe(200);
+      await request(page, `/api/v1/guest/reservations/${reference}`, {
+        bearer: live,
+      }),
+    ).toMatchObject({
+      status: 200,
+      body: { allowedActions: ["REQUEST_CANCELLATION", "CHANGE_RESERVATION"] },
+    });
     // A session token is not a manage link.
     expect(
       (await request(page, "/api/v1/guest/reservation", { bearer: live }))
         .status,
     ).toBe(401);
+
+    // G5 and G6 over real HTTP, through each way a guest can access a booking.
+    const managePath = "/api/v1/guest/reservation";
+    const sessionPath = `/api/v1/guest/reservations/${reference}`;
+    const change = { guest: { specialRequests: "Fictional request" } };
+    const preview = await request(page, `${managePath}/change-preview`, {
+      method: "POST",
+      bearer: manage,
+      body: change,
+    });
+    expect(preview).toMatchObject({
+      status: 200,
+      etag: expect.stringMatching(/^"v[0-9]+"$/),
+      body: {
+        available: true,
+        current: {
+          total: { amountMinor: totalMinor, currency: "USD" },
+          accommodation: { amountMinor: 4000 },
+        },
+        proposed: {
+          total: { amountMinor: totalMinor, currency: "USD" },
+          accommodation: { amountMinor: 4000 },
+        },
+        outcome: "APPLIES_NOW",
+      },
+    });
+    const confirmed = {
+      ...change,
+      expectedTotal: preview.body.proposed.total as {
+        amountMinor: number;
+        currency: "USD";
+      },
+    };
+    expect(
+      await request(page, `${managePath}/changes`, {
+        method: "POST",
+        bearer: manage,
+        body: confirmed,
+      }),
+    ).toMatchObject({ status: 428, body: { code: "PRECONDITION_REQUIRED" } });
+    expect(
+      await request(page, `${managePath}/changes`, {
+        method: "POST",
+        bearer: manage,
+        ifMatch: preview.etag!,
+        body: {
+          ...confirmed,
+          expectedTotal: { amountMinor: totalMinor - 1, currency: "USD" },
+        },
+      }),
+    ).toMatchObject({
+      status: 409,
+      body: {
+        code: "PRICE_CHANGED",
+        context: {
+          quote: { preview: { proposed: { total: confirmed.expectedTotal } } },
+        },
+      },
+    });
+    const applied = await request(page, `${managePath}/changes`, {
+      method: "POST",
+      bearer: manage,
+      ifMatch: preview.etag!,
+      body: confirmed,
+    });
+    expect(applied).toMatchObject({
+      status: 200,
+      body: {
+        contact: { specialRequests: "Fictional request" },
+        allowedActions: ["REQUEST_CANCELLATION", "CHANGE_RESERVATION"],
+      },
+    });
+    expect(applied.etag).not.toBe(preview.etag);
+    const sessionChange = { guest: { fullName: "Fictional Updated Guest" } };
+    const sessionPreview = await request(
+      page,
+      `${sessionPath}/change-preview`,
+      {
+        method: "POST",
+        bearer: live,
+        body: sessionChange,
+      },
+    );
+    expect(sessionPreview).toMatchObject({ status: 200, etag: applied.etag });
+    const sessionConfirm = {
+      ...sessionChange,
+      expectedTotal: confirmed.expectedTotal,
+    };
+    expect(
+      await request(page, `${sessionPath}/changes`, {
+        method: "POST",
+        bearer: live,
+        ifMatch: preview.etag!,
+        body: sessionConfirm,
+      }),
+    ).toMatchObject({ status: 412, body: { code: "STALE_VERSION" } });
+    expect(
+      await request(page, `${sessionPath}/changes`, {
+        method: "POST",
+        bearer: live,
+        ifMatch: sessionPreview.etag!,
+        body: sessionConfirm,
+      }),
+    ).toMatchObject({
+      status: 200,
+      body: {
+        contact: {
+          fullName: "Fictional Updated Guest",
+          specialRequests: "Fictional request",
+        },
+      },
+    });
 
     const submitted = await request(
       page,
@@ -264,6 +382,9 @@ test("a guest reads and requests cancellation, and staff can block writes and cl
         reservationId,
       ]);
       await sql('DELETE FROM "AuditEvent" WHERE "entityId" = $1', [
+        reservationId,
+      ]);
+      await sql('DELETE FROM "ReservationChange" WHERE "reservationId" = $1', [
         reservationId,
       ]);
       await sql('DELETE FROM "Reservation" WHERE id = $1', [reservationId]);

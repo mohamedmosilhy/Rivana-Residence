@@ -41,6 +41,9 @@ export const WHATSAPP_VARIABLE_KEYS = [
   "refundAmount",
   "reason",
   "feedbackLink",
+  "previousCheckIn",
+  "previousCheckOut",
+  "previousTotal",
 ] as const;
 export type WhatsAppVariableKey = (typeof WHATSAPP_VARIABLE_KEYS)[number];
 
@@ -108,7 +111,12 @@ export const WHATSAPP_PURPOSE_VARIABLES: Readonly<
   FEEDBACK_REQUEST: ["guestFirstName", "branchName", "feedbackLink"],
   MARKETING: ["guestFirstName", "branchName"],
   TEST: WHATSAPP_VARIABLE_KEYS,
-  RESERVATION_MODIFIED: STAY,
+  RESERVATION_MODIFIED: [
+    ...STAY,
+    "previousCheckIn",
+    "previousCheckOut",
+    "previousTotal",
+  ],
   CHANGE_REQUEST_RECEIVED: CASE,
   CHANGE_REQUEST_APPROVED: STAY,
   CHANGE_REQUEST_REJECTED: [...CASE, "reason"],

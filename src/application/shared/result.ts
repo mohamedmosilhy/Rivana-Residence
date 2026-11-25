@@ -37,6 +37,7 @@ export type ApplicationErrorCode =
   | "IDEMPOTENCY_KEY_REUSED"
   | "PRICE_CHANGED"
   | "INVALID_TRANSITION"
+  | "CHANGE_NOT_ALLOWED"
   | "CANCELLATION_WINDOW_CLOSED"
   | "CANCELLATION_REQUEST_EXISTS"
   | "STALE_VERSION"
@@ -53,6 +54,7 @@ type StandardApplicationErrorCode = Exclude<
   | "PRICE_CHANGED"
   | "BRANCH_NOT_BOOKABLE"
   | "INVALID_TRANSITION"
+  | "CHANGE_NOT_ALLOWED"
   | "CANCELLATION_WINDOW_CLOSED"
   | "STALE_VERSION"
   | "PMS_UPDATE_STALE"
@@ -84,7 +86,7 @@ export type InventoryUnavailableError = Readonly<{
   message: string;
   context: Readonly<{
     firstUnavailableNight: string;
-    roomTypeId: string;
+    roomTypeId?: string;
   }>;
   fieldErrors?: never;
 }>;
@@ -141,6 +143,17 @@ type CancellationWindowClosedError = Readonly<{
   }>;
   fieldErrors?: never;
 }>;
+export type ChangeNotAllowedError = Readonly<{
+  code: "CHANGE_NOT_ALLOWED";
+  message: string;
+  context: Readonly<{
+    reason: "DEADLINE_PASSED" | "REQUEST_OPEN" | "PHONE_BLOCKED" | "STATUS";
+    deadline?: string | null;
+    branch?: CancellationWindowClosedError["context"]["branch"];
+  }>;
+  fieldErrors?: never;
+}>;
+
 /** An `If-Match` version that no longer matches (412). */
 export type StaleVersionError = Readonly<{
   code: "STALE_VERSION";
@@ -159,6 +172,7 @@ export type PmsUpdateStaleError = Readonly<{
 export type ApplicationError =
   | StandardApplicationError
   | InvalidTransitionError
+  | ChangeNotAllowedError
   | CancellationWindowClosedError
   | StaleVersionError
   | PmsUpdateStaleError

@@ -26,21 +26,16 @@ const GuestInput = z
   })
   .strict();
 
+export const BookingLineInput = z.strictObject({
+  roomSlug: z.string().min(1).max(120),
+  occupancy: Occupancy,
+});
+
 export const WebsiteReservationRequest = z
   .object({
     branchSlug: z.string().min(1).max(80),
     stay: Stay,
-    lines: z
-      .array(
-        z
-          .object({
-            roomSlug: z.string().min(1).max(120),
-            occupancy: Occupancy,
-          })
-          .strict(),
-      )
-      .min(1)
-      .max(5),
+    lines: z.array(BookingLineInput).min(1).max(5),
     services: z.array(ServiceInput),
     couponCode: z.string().max(64).optional(),
     guest: GuestInput,

@@ -260,6 +260,11 @@ export type StayReplacement = Readonly<{
     | readonly Omit<StoredReservationLine, "stay" | "consumesInventory">[]
     | null;
   snapshot: StoredReservationSnapshot;
+  guestContact?: Pick<
+    ReservationContactPatch,
+    "fullName" | "email" | "specialRequests"
+  >;
+  manageAccess?: Readonly<{ hash: string | null; expiresAt: Date | null }>;
   /** True when the booking was already entered in the hotel system (Q-84). */
   flagPmsUpdate: boolean;
   at: Date;
@@ -269,7 +274,7 @@ export type ReservationChangeInsert = Readonly<{
   branchId: string;
   reservationId: string;
   kind: "STAY" | "CANCEL";
-  actorType: "STAFF";
+  actorType: "STAFF" | "GUEST";
   actorId: string;
   before: ChangeSummary;
   after: ChangeSummary;
@@ -360,6 +365,12 @@ export interface ReservationRepository {
   replaceStay(input: StayReplacement): Promise<StoredReservation>;
   /** Transaction only. Appends the history row; `seq` is the reservation's new `changeSeq`. */
   appendChange(input: ReservationChangeInsert): Promise<void>;
+  /** Newest guest changes strictly after the cutoff. Call with the reservation row locked. */
+  recentGuestChanges(
+    reservationId: string,
+    cutoff: Date,
+    limit: number,
+  ): Promise<readonly Date[]>;
   /**
    * Transaction only, after `lockById`. Sets `CANCELLED`, clears
    * `consumesInventory` on every unit, and bumps `version` (R-6).

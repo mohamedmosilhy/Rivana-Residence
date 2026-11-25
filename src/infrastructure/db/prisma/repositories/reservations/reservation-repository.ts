@@ -411,6 +411,21 @@ export class PrismaReservationRepository implements ReservationRepository {
       data: {
         checkIn,
         checkOut,
+        ...(input.guestContact?.fullName === undefined
+          ? {}
+          : { guestName: input.guestContact.fullName }),
+        ...(input.guestContact?.email === undefined
+          ? {}
+          : { guestEmail: input.guestContact.email }),
+        ...(input.guestContact?.specialRequests === undefined
+          ? {}
+          : { specialRequests: input.guestContact.specialRequests }),
+        ...(input.manageAccess
+          ? {
+              manageTokenHash: input.manageAccess.hash,
+              manageTokenExpiresAt: input.manageAccess.expiresAt,
+            }
+          : {}),
         accommodationMinor: snapshot.accommodationMinor,
         servicesMinor: snapshot.servicesMinor,
         subtotalMinor: snapshot.subtotalMinor,
@@ -438,6 +453,16 @@ export class PrismaReservationRepository implements ReservationRepository {
     const stored = await this.findById(branchId, reservationId);
     if (!stored) throw new Error("Reservation aggregate was not persisted.");
     return stored;
+  }
+
+  async recentGuestChanges(reservationId: string, cutoff: Date, limit: number) {
+    const changes = await this.client.reservationChange.findMany({
+      where: { reservationId, actorType: "GUEST", createdAt: { gt: cutoff } },
+      orderBy: [{ createdAt: "desc" }, { seq: "desc" }],
+      take: limit,
+      select: { createdAt: true },
+    });
+    return changes.map(({ createdAt }) => createdAt);
   }
 
   async appendChange(input: ReservationChangeInsert) {

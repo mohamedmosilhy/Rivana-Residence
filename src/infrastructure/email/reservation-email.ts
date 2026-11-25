@@ -27,6 +27,8 @@ export function renderReservationEmail(
     "reservation.manage-link": "Your reservation manage link",
     "reservation.payment-not-completed": "Your payment was not completed",
     "reservation.staff-alert": "New confirmed website reservation",
+    "reservation.change-staff-alert": "A guest changed a reservation",
+    "reservation.email-changed": "Your reservation email address was changed",
     "cancellation-request.received": "We received your cancellation request",
     "cancellation-request.approved": "Your cancellation request was approved",
     "cancellation-request.rejected": "Your cancellation request was declined",
@@ -38,6 +40,20 @@ export function renderReservationEmail(
     "payment.auto-refunded": "Your payment is being refunded",
     "payment.staff-alert": "A late payment was refunded automatically",
   }[kind];
+  if (kind === "reservation.email-changed") {
+    const contact = [vars.hotelPhone, vars.hotelEmail]
+      .filter(Boolean)
+      .join(" or ");
+    const lines = [
+      heading,
+      `If you did not make this change, contact ${vars.branchName}${contact ? ` at ${contact}` : ""}.`,
+    ];
+    return {
+      subject: heading,
+      text: lines.join("\n\n"),
+      html: lines.map((line) => `<p>${escapeHtml(line)}</p>`).join("\n"),
+    };
+  }
   const lines = [heading, `${vars.branchName} · ${vars.reference}`];
   if (kind === "reservation.staff-alert")
     lines.push("Please enter this booking in the hotel system.");
@@ -84,6 +100,15 @@ export function renderReservationEmail(
   else if (kind === "reservation.payment-not-completed")
     lines.push("Your booking is no longer held.");
   else {
+    if (kind === "reservation.change-staff-alert")
+      lines.push(
+        "Please review the change and update the hotel system if needed.",
+      );
+    if (vars.previousCheckIn && vars.previousCheckOut)
+      lines.push(
+        `Previous stay: ${vars.previousCheckIn} to ${vars.previousCheckOut}`,
+      );
+    if (vars.previousTotal) lines.push(`Previous total: ${vars.previousTotal}`);
     if (vars.checkIn && vars.checkOut)
       lines.push(`Stay: ${vars.checkIn} to ${vars.checkOut}`);
     if (vars.total) lines.push(`Total: ${vars.total}`);
@@ -92,6 +117,7 @@ export function renderReservationEmail(
   const html = lines.map((line) => `<p>${escapeHtml(line)}</p>`);
   if (
     kind !== "reservation.staff-alert" &&
+    kind !== "reservation.change-staff-alert" &&
     kind !== "request.staff-alert" &&
     kind !== "payment.staff-alert" &&
     kind !== "refund.staff-alert" &&

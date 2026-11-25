@@ -18,36 +18,20 @@ import { REQUEST_REASON_MAX } from "@/domain/reservations";
 import {
   guestCancellationEligibility,
   guestPhoneBlocked,
-  guestReservationNotFound,
-  guestTokenHash,
-  invalidLink,
-  invalidSession,
-  manageTokenMatches,
-  reservationForSession,
-  sessionPhone,
-  unlinkedReservationPhone,
   type SessionDependencies,
 } from "./guest-reservation-reads";
+import {
+  locateGuestReservation,
+  lockBookingGuest,
+  lockGuestBooking,
+  type GuestReservationAccess,
+} from "./guest-reservation-write-access";
 import type {
   CancellationRequestStore,
   GuestCancellationRequest,
   ReservationRepository,
   ReservationUnitOfWork,
-  StoredReservation,
 } from "./ports";
-
-type Access =
-  | Readonly<{ kind: "MANAGE_TOKEN"; token: string | null }>
-  | Readonly<{
-      kind: "GUEST_SESSION";
-      token: string | null;
-      reference: unknown;
-    }>;
-
-type LocatedReservation = Readonly<{
-  reservation: StoredReservation;
-  tokenHash: string;
-}>;
 
 export type RequestCancellationContext = Readonly<{
   reservations: Pick<ReservationRepository, "lockById">;
@@ -74,38 +58,12 @@ export class RequestCancellation {
       }>,
   ) {}
 
-  private async locate(access: Access): Promise<Result<LocatedReservation>> {
-    const tokenHash = guestTokenHash(this.deps.crypto, access.token);
-    if (tokenHash === null)
-      return access.kind === "MANAGE_TOKEN" ? invalidLink() : invalidSession();
-    if (access.kind === "MANAGE_TOKEN") {
-      const record = await this.deps.reader.findByManageTokenHash(tokenHash);
-      if (
-        !record ||
-        !manageTokenMatches(record.stored, tokenHash, this.deps.clock.now())
-      )
-        return invalidLink();
-      return success({ reservation: record.stored, tokenHash });
-    }
-
-    const phone = await sessionPhone(this.deps, tokenHash);
-    if (!phone.ok) return phone;
-    const record = await reservationForSession(
-      this.deps.reader,
-      phone.value,
-      access.reference,
-    );
-    if (!record.ok) return record;
-    return success({ reservation: record.value.stored, tokenHash });
-  }
-
   async execute(
-    access: Access,
+    access: GuestReservationAccess,
     input: Readonly<{ reason?: string | undefined }>,
   ): Promise<Result<GuestCancellationRequest>> {
-    const found = await this.locate(access);
+    const found = await locateGuestReservation(this.deps, access);
     if (!found.ok) return found;
-    const { reservation, tokenHash } = found.value;
     const reason = input.reason?.trim() || null;
     if (
       reason &&
@@ -119,56 +77,16 @@ export class RequestCancellation {
       ]);
 
     return this.deps.unitOfWork.run(async (context) => {
-      // Blocking and contact changes follow guest before reservation lock order.
-      const unlinkedPhone = unlinkedReservationPhone(reservation);
-      if (unlinkedPhone) {
-        // A phone block must wait even if a profile for this number is
-        // created after we look it up. Blocking takes this same lock first.
-        const phoneLock = await context.verifications.lockPhone(unlinkedPhone);
-        if (!phoneLock.ok) return phoneLock;
-      }
-      const guest =
-        reservation.guestId !== null
-          ? await context.guests.lockById(reservation.guestId)
-          : unlinkedPhone
-            ? await context.guests.lockByPhone(unlinkedPhone)
-            : success(null);
+      const guest = await lockBookingGuest(context, found.value.record.stored);
       if (!guest.ok) return guest;
-      const locked = await context.reservations.lockById(
-        reservation.branchId,
-        reservation.id,
+      const locked = await lockGuestBooking(
+        context,
+        found.value,
+        guest.value,
+        this.deps.clock,
       );
       if (!locked.ok) return locked;
-      const current = locked.value;
-      const now = this.deps.clock.now();
-
-      if (access.kind === "MANAGE_TOKEN") {
-        if (
-          !current ||
-          !manageTokenMatches(current, tokenHash, now) ||
-          current.guestId !== reservation.guestId ||
-          (current.guestId === null &&
-            current.contact.phone !== reservation.contact.phone)
-        )
-          return invalidLink();
-      } else {
-        const phone = await sessionPhone(
-          {
-            guests: context.guests,
-            verifications: context.verifications,
-            clock: { now: () => now },
-          },
-          tokenHash,
-        );
-        if (!phone.ok) return phone;
-        if (
-          !current ||
-          !guest.value ||
-          current.guestId !== guest.value.id ||
-          guest.value.phone !== phone.value.value
-        )
-          return guestReservationNotFound();
-      }
+      const { current, now } = locked.value;
 
       const branch = await context.branches.findRowById(current.branchId);
       if (!branch) throw new Error("The reservation has no branch.");

@@ -60,6 +60,9 @@ import {
   GuestQuery,
   GuestReservation,
   GuestReservationList,
+  GuestChangeInput,
+  GuestChangePreview,
+  ApplyGuestChangeInput,
 } from "./guests";
 import {
   Block,
@@ -141,6 +144,18 @@ export type ApiRoute = Readonly<{
   /** Problem codes this endpoint can return. */
   errors: readonly string[];
 }>;
+
+const guestChangeErrors = [
+  "NOT_FOUND",
+  "CHANGE_NOT_ALLOWED",
+  "MALFORMED_JSON",
+  "PAYLOAD_TOO_LARGE",
+  "UNSUPPORTED_MEDIA_TYPE",
+  "VALIDATION",
+  "RATE_LIMITED",
+  "SERVICE_UNAVAILABLE",
+  "TRY_AGAIN",
+] as const;
 
 const cancellationRequestErrors = [
   "PHONE_BLOCKED",
@@ -1436,6 +1451,96 @@ export const API_ROUTES: readonly ApiRoute[] = [
       "UNSUPPORTED_MEDIA_TYPE",
       "VALIDATION",
       "TRY_AGAIN",
+    ],
+  },
+  {
+    method: "post",
+    path: "/api/v1/guest/reservation/change-preview",
+    operationId: "previewGuestChangeWithManageToken",
+    summary: "API-G5. Preview a pay at hotel booking change.",
+    tag: "Guests",
+    security: "guest",
+
+    request: GuestChangeInput,
+    responses: {
+      200: {
+        description:
+          "The current and proposed quote. This request makes no changes.",
+        schema: GuestChangePreview,
+        headers: { ETag: 'Reservation version formatted as "v<version>".' },
+      },
+    },
+    errors: ["UNAUTHENTICATED", ...guestChangeErrors],
+  },
+  {
+    method: "post",
+    path: "/api/v1/guest/reservation/changes",
+    operationId: "applyGuestChangeWithManageToken",
+    summary:
+      "API-G6. Apply a pay at hotel booking change and recheck availability and price.",
+    tag: "Guests",
+    security: "guest",
+    headers: ifMatch,
+    request: ApplyGuestChangeInput,
+    responses: {
+      200: {
+        description: "The changed reservation.",
+        schema: GuestReservation,
+        headers: { ETag: 'Reservation version formatted as "v<version>".' },
+      },
+    },
+    errors: [
+      "UNAUTHENTICATED",
+      ...guestChangeErrors,
+      "INVENTORY_UNAVAILABLE",
+      "PRICE_CHANGED",
+      "STALE_VERSION",
+      "PRECONDITION_REQUIRED",
+    ],
+  },
+  {
+    method: "post",
+    path: "/api/v1/guest/reservations/{reference}/change-preview",
+    operationId: "previewGuestChangeWithGuestSession",
+    summary: "API-G5. Preview a pay at hotel booking change.",
+    tag: "Guests",
+    security: "guest",
+
+    request: GuestChangeInput,
+    responses: {
+      200: {
+        description:
+          "The current and proposed quote. This request makes no changes.",
+        schema: GuestChangePreview,
+        headers: { ETag: 'Reservation version formatted as "v<version>".' },
+      },
+    },
+    errors: ["PHONE_NOT_VERIFIED", ...guestChangeErrors],
+  },
+  {
+    method: "post",
+    path: "/api/v1/guest/reservations/{reference}/changes",
+    operationId: "applyGuestChangeWithGuestSession",
+    summary:
+      "API-G6. Apply a pay at hotel booking change and recheck availability and price.",
+    tag: "Guests",
+    security: "guest",
+    headers: ifMatch,
+    request: ApplyGuestChangeInput,
+    responses: {
+      200: {
+        description: "The changed reservation.",
+        schema: GuestReservation,
+        headers: { ETag: 'Reservation version formatted as "v<version>".' },
+      },
+    },
+    errors: [
+      "PHONE_NOT_VERIFIED",
+      ...guestChangeErrors,
+      "INVENTORY_UNAVAILABLE",
+      "PRICE_CHANGED",
+      "STALE_VERSION",
+      "PRECONDITION_REQUIRED",
     ],
   },
   {

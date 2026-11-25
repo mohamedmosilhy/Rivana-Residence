@@ -1982,6 +1982,9 @@ describe("messages for the new kinds", () => {
         checkIn: "2031-04-10",
         checkOut: "2031-04-13",
         total: "USD 345.00",
+        previousCheckIn: "2031-04-10",
+        previousCheckOut: "2031-04-14",
+        previousTotal: "USD 460.00",
       });
     expect(JSON.stringify(queued)).not.toMatch(/manage|token/i);
   });

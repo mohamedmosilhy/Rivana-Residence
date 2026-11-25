@@ -20,6 +20,9 @@ import {
   GuestDetail,
   GuestList,
   GuestReservation,
+  GuestChangeInput,
+  GuestChangePreview,
+  ApplyGuestChangeInput,
   GuestReservationList,
 } from "./guests";
 import {
@@ -184,6 +187,9 @@ const COMPONENTS: Readonly<Record<string, z.ZodType>> = {
   GuestDetail,
   GuestReservationList,
   GuestReservation,
+  GuestChangeInput,
+  GuestChangePreview,
+  ApplyGuestChangeInput,
   CreateCancellationRequest,
   CancellationRequest,
   CancellationApprovalRequest,

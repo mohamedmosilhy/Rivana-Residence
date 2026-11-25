@@ -104,6 +104,10 @@ export const PROBLEMS: Readonly<Record<ProblemCode, ProblemDefinition>> = {
     status: 409,
     title: "This reservation cannot change that way",
   },
+  CHANGE_NOT_ALLOWED: {
+    status: 403,
+    title: "This booking cannot be changed online",
+  },
   CANCELLATION_WINDOW_CLOSED: {
     status: 409,
     title: "The cancellation request window has closed",

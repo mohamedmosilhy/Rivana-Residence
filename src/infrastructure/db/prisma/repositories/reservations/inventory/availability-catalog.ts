@@ -27,7 +27,14 @@ export class PrismaAvailabilityCatalog implements AvailabilityCatalog {
         branchId,
         ...(scope === "PUBLISHED" ? { status: "PUBLISHED" as const } : {}),
       },
-      select: { id: true, name: true, maxAdults: true, maxChildren: true },
+      select: {
+        id: true,
+        slug: true,
+        accommodationType: true,
+        name: true,
+        maxAdults: true,
+        maxChildren: true,
+      },
       orderBy: [{ sortOrder: "asc" }, { id: "asc" }],
     });
   }

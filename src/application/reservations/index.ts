@@ -78,6 +78,12 @@ export {
   type RetryRefundContext,
 } from "./retry-refund";
 export {
+  ApplyGuestChange,
+  PreviewGuestChange,
+  type GuestChangeContext,
+} from "./guest-reservation-changes";
+export type { GuestReservationAccess } from "./guest-reservation-write-access";
+export {
   RequestCancellation,
   type RequestCancellationContext,
 } from "./request-cancellation";
@@ -128,3 +134,5 @@ export {
   type SyncCheckpointContext,
   type SyncStatusView,
 } from "./branch-sync";
+
+export type { GuestChangePreview } from "./guest-change-preview";

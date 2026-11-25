@@ -113,6 +113,11 @@ export class QueueReservationMessages {
       booking.totalMinor !== null
     )
       payload.total = `USD ${(booking.totalMinor / 100).toFixed(2)}`;
+    if (event.kind === "reservation.modified" && event.previous) {
+      payload.previousCheckIn = event.previous.checkIn;
+      payload.previousCheckOut = event.previous.checkOut;
+      payload.previousTotal = money(event.previous.totalMinor);
+    }
     if (event.kind === "reservation.cancelled") payload.reason = event.reason;
     if ("manageToken" in event && event.manageToken) {
       const url = new URL("/reservations/manage", this.appUrl);
@@ -138,6 +143,31 @@ export class QueueReservationMessages {
         ...(held ? { status: "HELD" } : {}),
       });
     };
+    if (event.kind === "reservation.email-changed") {
+      add("EMAIL", event.kind, event.previousEmail, {
+        reference: "",
+        branchName: booking.branchName,
+        ...(event.hotelPhone ? { hotelPhone: event.hotelPhone } : {}),
+        ...(event.hotelEmail ? { hotelEmail: event.hotelEmail } : {}),
+      });
+      await this.store.append(messages);
+      return;
+    }
+    if (event.kind === "reservation.change-staff-alert") {
+      add("EMAIL", event.kind, booking.branchEmail ?? "", {
+        ...summary,
+        checkIn: booking.checkIn,
+        checkOut: booking.checkOut,
+        previousCheckIn: event.previous.checkIn,
+        previousCheckOut: event.previous.checkOut,
+        previousTotal: money(event.previous.totalMinor),
+        ...(booking.totalMinor === null
+          ? {}
+          : { total: money(booking.totalMinor) }),
+      });
+      await this.store.append(messages);
+      return;
+    }
     if (event.kind === "request.staff-alert") {
       // An absent inbox is visible as a failed outbox row, as for new bookings.
       add("EMAIL", event.kind, booking.branchEmail ?? "", summary);
@@ -154,7 +184,10 @@ export class QueueReservationMessages {
       await this.store.append(messages);
       return;
     }
-    if (booking.guestEmail)
+    if (
+      booking.guestEmail &&
+      !(event.kind === "reservation.manage-link" && event.whatsappOnly)
+    )
       add("EMAIL", event.kind, booking.guestEmail, payload);
     if (booking.guestPhone)
       add("WHATSAPP", event.kind, booking.guestPhone, payload);

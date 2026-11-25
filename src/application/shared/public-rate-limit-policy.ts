@@ -59,10 +59,22 @@ export const GUEST_REQUEST_RATE_LIMIT = {
   rule: { maxFailures: 10, windowMs: 3_600_000, lockMs: 3_600_000 },
 } as const;
 
+/** Guest changes share each client bucket across both access paths (Decision 8). */
+export const GUEST_CHANGE_PREVIEW_RATE_LIMIT = {
+  name: "guest-change-preview",
+  rule: { maxFailures: 30, windowMs: 600_000, lockMs: 600_000 },
+} as const;
+export const GUEST_CHANGE_RATE_LIMIT = {
+  name: "guest-change",
+  rule: { maxFailures: 10, windowMs: 3_600_000, lockMs: 3_600_000 },
+} as const;
+
 /** Every limiter namespace on the shared store; cleanup prunes each one. */
 export const PUBLIC_RATE_LIMITS = [
   GUEST_READ_RATE_LIMIT,
   GUEST_REQUEST_RATE_LIMIT,
+  GUEST_CHANGE_PREVIEW_RATE_LIMIT,
+  GUEST_CHANGE_RATE_LIMIT,
   BOOKING_CREATE_RATE_LIMIT,
   AVAILABILITY_RATE_LIMIT,
   QUOTE_RATE_LIMIT,

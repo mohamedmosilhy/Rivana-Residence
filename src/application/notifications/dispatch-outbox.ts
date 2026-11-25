@@ -34,6 +34,11 @@ const variables = z.strictObject({
   checkIn: z.string().optional(),
   checkOut: z.string().optional(),
   total: z.string().optional(),
+  previousCheckIn: z.string().optional(),
+  previousCheckOut: z.string().optional(),
+  previousTotal: z.string().optional(),
+  hotelPhone: z.string().optional(),
+  hotelEmail: z.string().optional(),
   reason: z.string().optional(),
   holdExpiresAt: z.iso.datetime().optional(),
   refundAmount: z.string().optional(),
@@ -52,6 +57,8 @@ const kinds = z.enum([
   "reservation.manage-link",
   "reservation.payment-not-completed",
   "reservation.staff-alert",
+  "reservation.change-staff-alert",
+  "reservation.email-changed",
   "cancellation-request.received",
   "cancellation-request.approved",
   "cancellation-request.rejected",
@@ -103,6 +110,8 @@ export class DispatchOutbox {
     }
     if (
       kind.data === "reservation.staff-alert" ||
+      kind.data === "reservation.change-staff-alert" ||
+      kind.data === "reservation.email-changed" ||
       kind.data === "request.staff-alert" ||
       kind.data === "payment.staff-alert" ||
       kind.data === "refund.staff-alert" ||

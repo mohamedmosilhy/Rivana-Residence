@@ -149,7 +149,7 @@ Guest request APIs, receipts, branch alerts, and staff closure are implemented (
 - **FR-CXL-6** The guest receives email and WhatsApp messages when the request is received and decided, and when the refund completes.
 - **FR-CXL-7** Every request, decision, closure, and refund is audited. Staff unpaid cancellation, no-show, and check-in close an open request in the same transaction (Q-96).
 
-## FR-GCHG Guest booking changes — Planned (engine M8-T9, guest API M9-T10 and T11, UI M10-T8b and M11)
+## FR-GCHG Guest booking changes — Pay-at-hotel API implemented in M9-T10. Paid changes and screens planned (M9-T11, M10-T8b, M11)
 
 - **FR-GCHG-1** From the manage link or "My reservations", a guest may change the dates, the units and listings (same branch, at most 5 units), the adults and children per unit, the services (add, remove, number of cars, flight details), their name, email, and special requests. The phone, branch, payment method, and coupon cannot be changed online; an existing coupon is kept (Q-83).
 - **FR-GCHG-2** The guest first sees a preview: availability, old and new totals with VAT, and what changed. The change is applied only when the guest confirms that exact total (`409 PRICE_CHANGED` otherwise) (Q-83).

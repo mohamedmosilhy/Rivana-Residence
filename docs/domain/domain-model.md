@@ -248,7 +248,7 @@ Domain services (pure M6-T2 rules accepted 2026-11-08; the reservation state mac
 - `ReservationStateMachine`: allowed transitions plus preconditions (pure, given "today" in the branch zone). M8 transitions implemented in `src/domain/reservations/state-machine.ts` (M8-T2); payment transitions arrive in M9.
 - `QuoteCalculator`: total composition (pure, ADR 027).
 - `CancellationDeadline`: 24 hours before the branch check-in time on the arrival date (pure, CX-1). Also the guest change deadline (GC-2).
-- `ReservationChangePlan` *(planned M8-T9)*: compares the current reservation with a requested change (dates, lines, occupancy, services, contact), lists the changed nights and services, and checks GC-1 for guests (pure; the use case supplies prices and inventory under locks).
+- `ReservationChangePlan` *(implemented M8-T9, shared with M9-T10)*: compares dates, lines, occupancy, and services. The guest use case checks the contact patch and eligibility. Preview reads availability and prices, and apply repeats those reads under the locks.
 
 ### Inventory
 
@@ -352,7 +352,7 @@ Operations (planned)
 
 **Operations (planned).**
 
-- Public: `ListBranches`, `ListBookableRoomTypes`, `SearchAvailability`, `QuoteBooking`, `RequestPhoneVerification`, `ConfirmPhoneVerification`, `CreateWebsiteReservation`, `ProcessPaymentCallback`, `ListGuestReservations`, `GetGuestReservation`, `RequestCancellation`, planned `PreviewGuestChange` and `ApplyGuestChange` (M9-T10, T11), `RecordSiteEvent` (M10-T0a).
+- Public: `ListBranches`, `ListBookableRoomTypes`, `SearchAvailability`, `QuoteBooking`, `RequestPhoneVerification`, `ConfirmPhoneVerification`, `CreateWebsiteReservation`, `ProcessPaymentCallback`, `ListGuestReservations`, `GetGuestReservation`, `RequestCancellation`, `PreviewGuestChange` and `ApplyGuestChange` for pay at hotel (M9-T10, paid changes follow in T11), `RecordSiteEvent` (M10-T0a).
 - Staff: `ListReservations`, `GetReservation`, `CreateStaffReservation`, `RecordExternalReservation`, `MarkEnteredInHotelSystem`, `CancelReservation`, `ListCancellationRequests`, `DecideCancellationRequest`, `RetryRefund`, `ManageServices`, `ManageCoupons`, `ManageCommercialSettings`, `PreviewBroadcastAudience`, `SendBroadcast`, `ModifyReservationStay` (widened to `ModifyReservation`: stay and services, M8-T9), `MarkChangeEnteredInHotelSystem`, `ListChangeRequests` and `DecideChangeRequest` (M9-T11), `UpdateReservationGuest`, `AssignPhysicalRoom`, `CheckIn`, `CheckOut`, `MarkNoShow`, `ResendManageLink`, `GetAvailabilityGrid`, `CreateBlock`, `CancelBlock`, `ManagePhysicalRooms`, `ManageRates`, `GetSyncStatus`, `RecordSyncCheckpoint`, `SearchGuests`, `GetGuest`, `BlockGuestPhone`, `UnblockGuestPhone`, `GetReports`, `GetWebsiteReport` (M12-T4b), `ListAuditEvents`, `ManageBranches`, `AssignStaffBranches`.
 
 Every command and sensitive query authorizes itself, with branch scope for operations data, not only in menus or route layouts.
