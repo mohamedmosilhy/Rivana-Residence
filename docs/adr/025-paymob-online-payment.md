@@ -35,7 +35,7 @@ Option 3.
 
 - Approving a cancellation request for a paid booking (Manager of the branch or Admin, ADR 024), or a staff cancellation of a paid booking (Q-62), creates a refund through Paymob's refund API for the captured amount. The reservation becomes `CANCELLED` when Paymob confirms the refund (synchronously or by callback). A failed refund leaves the reservation `CONFIRMED` with the request in `REFUND_FAILED`, visible to staff with a retry action.
 - Rivana does not calculate processing fees. Whether Paymob deducts a fee is Paymob's policy; the guest-facing wording needs client approval (Q-30).
-- Partial refunds are not offered in v1. Price changes on prepaid bookings are settled at the hotel desk (Q-66).
+- M9 settles booking change price differences at the hotel desk (Q-66). The owner approved online settlement, including partial refunds, for approved guest changes in M15-T4d (Q-98). The detailed design is due at M15 open.
 
 **Ports and data**
 

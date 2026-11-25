@@ -1008,7 +1008,7 @@ Definition of done is [the brief's §23](../source/prompt.md), the roadmap's per
 | [M12](./milestones/m12-manager-admin.md) Manager and admin tools | Pricing, services, coupons, VAT, reports, branches, staff assignment, audit viewer; business insights and the website funnel report (2026-11-17) | FR-PR/SVC/CPN/TAX (UI), FR-RPT, FR-ANL-5, FR-BR, FR-IAM-2, FR-AUD-2 | none | S40–S43, S46, S47, A4 | M8 (M9 for payment figures; M10 for website figures) |
 | [M13](./milestones/m13-whatsapp-marketing.md) WhatsApp broadcasts and feedback | Consented marketing broadcasts with coupon codes; feedback request after recorded check-out | FR-MKT-1…6 | `marketing` | S60–S62 | M8, M10; Q-58, Q-59; templates entered by the Admin (Q-67) |
 | [M14](./milestones/m14-hardening.md) Security, regression, E2E hardening | Release candidate for the whole product | all NFRs | — | OpenAPI review | M10, M11, M12, M13 |
-| [M15](./milestones/m15-joint-launch.md) Joint launch and handover | Go-live with Phase 12.3–12.5; training; online booking per branch | Phase 12 | production migration | — | M14; Phase 12.1–12.2 |
+| [M15](./milestones/m15-joint-launch.md) Joint launch and handover | Go-live with Phase 12.3–12.5, staff training, online booking per branch, and online payments and partial refunds for approved guest changes (M15-T4d) | Phase 12, FR-GCHG-5, Q-98 | production migration | Confirm settlement contracts at M15 open | M14; Phase 12.1–12.2 |
 
 ### What changed from the earlier plan
 
@@ -1023,6 +1023,7 @@ Definition of done is [the brief's §23](../source/prompt.md), the roadmap's per
 | — | M13 WhatsApp broadcasts and feedback |
 | M11 hardening, M12 launch | M14 hardening, M15 launch |
 | — | Added 2026-11-17 (Q-82…Q-90): transfer car count (M8-T3b), shared change engine (M8-T9, T9b), guest changes and change requests (M9-T10, T11), analytics backend and beacon (M10-T0a, T0b, T10), change booking UI (M10-T8b), website report and insights (M12-T4, T4b) |
+| Hotel desk settles price differences on approved guest changes | Added 2026-11-25 (Q-98). Online payment for increases and partial refunds for decreases are planned for M15-T4d, before online booking is enabled at launch. |
 
 ---
 

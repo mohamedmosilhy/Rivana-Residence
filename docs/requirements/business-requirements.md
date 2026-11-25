@@ -84,7 +84,7 @@ The hotel also runs its own operational system (PMS). It is not connected to Riv
 
 ## Out of scope (candidates for later approval)
 
-- Payment providers other than Paymob, deposits, partial refunds, and payment links for staff bookings (Q-37, Q-66).
+- Deposits, payment links for staff bookings, and partial refunds outside the approved guest change flow (Q-37, Q-98).
 - Currency conversion or approximate prices in other currencies (Q-46: US dollars only).
 - Customer accounts with passwords or profile pages, and loyalty offers (PDF §6). Verified phone profiles cover verification, history, and blocking (Q-27).
 - SMS verification (WhatsApp only, Q-28).
