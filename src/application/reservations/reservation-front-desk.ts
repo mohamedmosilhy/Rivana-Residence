@@ -1,13 +1,16 @@
 import type { StaffPrincipal } from "@/application/auth";
 import { InventoryGuard } from "@/application/inventory";
 import { localDateAt } from "@/domain/shared/zoned-time";
-import { ReservationStateMachine } from "@/domain/reservations";
+import {
+  refundBlocksArrival,
+  ReservationStateMachine,
+} from "@/domain/reservations";
 import { manageTokenExpiry } from "./manage-token";
 import {
   closeCancellationRequest,
   type CloseCancellationRequestContext,
 } from "./close-cancellation-request";
-import type { ReservationUnitOfWork } from "./ports";
+import type { CancellationRequestStore, ReservationUnitOfWork } from "./ports";
 import type { ReservationStorageContext } from "./storage-context";
 import {
   failure,
@@ -121,7 +124,13 @@ const actions = {
 } as const;
 
 export type FrontDeskTransitionContext = ReservationStorageContext &
-  CloseCancellationRequestContext;
+  CloseCancellationRequestContext &
+  Readonly<{
+    cancellationRequests: Pick<
+      CancellationRequestStore,
+      "closeOpen" | "findActive"
+    >;
+  }>;
 
 export class RecordFrontDeskTransition {
   constructor(
@@ -166,6 +175,21 @@ export class RecordFrontDeskTransition {
           current.status,
           "This action is unavailable for the current stay.",
         );
+      if (this.action !== "CHECK_OUT") {
+        const active = await context.cancellationRequests.findActive(
+          current.id,
+        );
+        if (
+          refundBlocksArrival({
+            paymentStatus: current.paymentStatus,
+            activeRequestStatus: active?.status ?? null,
+          })
+        )
+          return invalidTransition(
+            current.status,
+            "A cancellation refund is in progress for this reservation. Wait until it finishes or fails.",
+          );
+      }
       const checkoutShortened =
         next.stay.checkOut.compare(current.stay.checkOut) < 0;
       const tokenCutoff = manageTokenExpiry(next.stay.checkOut);

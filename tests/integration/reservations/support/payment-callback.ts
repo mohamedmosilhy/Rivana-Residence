@@ -10,6 +10,20 @@ import type {
   TransactionLookup,
 } from "@/application/payments";
 import {
+  CancelPaidReservation,
+  CancelReservation,
+  DecideCancellationRequest,
+  ListCancellationRequests,
+  ListReservationPayments,
+  RetryRefund,
+  type CancelPaidReservationContext,
+  type CancelReservationContext,
+  type DecideCancellationContext,
+  type RetryRefundContext,
+  CompleteRefund,
+  RefundDispatcher,
+  type CompleteRefundContext,
+  type SendRefundContext,
   ExpirePaymentHolds,
   ProcessPaymentCallback,
   ReconcilePayments,
@@ -22,7 +36,16 @@ import { PrismaPaymentSweepStore } from "@/infrastructure/db/prisma/repositories
 import type { PrismaClient } from "@/generated/prisma/client";
 import { NodeBookingCrypto } from "@/infrastructure/crypto/booking-crypto";
 import { PrismaAuditLog } from "@/infrastructure/db/prisma/repositories/audit/audit-log";
-import { PrismaBookingPaymentStore } from "@/infrastructure/db/prisma/repositories/reservations/booking-payment-store";
+import {
+  PrismaCancellationRequestReader,
+  PrismaCancellationRequestStore,
+} from "@/infrastructure/db/prisma/repositories/reservations/cancellation-request-store";
+import {
+  PrismaBookingPaymentStore,
+  PrismaPaymentReader,
+} from "@/infrastructure/db/prisma/repositories/reservations/booking-payment-store";
+import { PrismaStaffReservationReader } from "@/infrastructure/db/prisma/repositories/reservations/staff-reservation-reader";
+import { cancelReservationContext } from "@/composition/reservations";
 import { PrismaCouponRedemptionStore } from "@/infrastructure/db/prisma/repositories/reservations/commercial/coupon-redemption-repository";
 import { PrismaInventoryLock } from "@/infrastructure/db/prisma/repositories/reservations/inventory/inventory-lock";
 import { PrismaInventoryReader } from "@/infrastructure/db/prisma/repositories/reservations/inventory/inventory-reader";
@@ -67,6 +90,37 @@ export function paymentCallback(client: PrismaClient, options: Options = {}) {
         providerRefundId: "refund-1",
       })),
   );
+  const complete = new CompleteRefund({
+    unitOfWork: new PrismaReservationUnitOfWork<CompleteRefundContext>(
+      client,
+      (transaction) => ({
+        ...storageOf(transaction, options.audit),
+        payments: new PrismaBookingPaymentStore(transaction),
+        cancellationRequests: new PrismaCancellationRequestStore(transaction),
+        redemptions: new PrismaCouponRedemptionStore(transaction),
+        messages: new QueueReservationMessages(
+          new PrismaReservationMessageStore(transaction),
+          ids,
+          clock,
+          "https://hotel.example",
+        ),
+      }),
+    ),
+    reads: { payments: new PrismaBookingPaymentStore(client) },
+    ids,
+    clock,
+  });
+  const send = new RefundDispatcher({
+    gateway: { refund },
+    unitOfWork: new PrismaReservationUnitOfWork<SendRefundContext>(
+      client,
+      (transaction) => ({
+        payments: new PrismaBookingPaymentStore(transaction),
+      }),
+    ),
+    complete,
+    clock,
+  });
   const useCase = new ProcessPaymentCallback({
     unitOfWork: new PrismaReservationUnitOfWork<ProcessPaymentCallbackContext>(
       client,
@@ -90,6 +144,7 @@ export function paymentCallback(client: PrismaClient, options: Options = {}) {
             "https://hotel.example",
           ),
           crypto: new NodeBookingCrypto(),
+          cancellationRequests: new PrismaCancellationRequestStore(transaction),
         };
       },
     ),
@@ -106,12 +161,13 @@ export function paymentCallback(client: PrismaClient, options: Options = {}) {
           }
         : new PrismaReservationRepository(client),
     },
-    gateway: { verifyCallback: (input) => fake.verifyCallback(input), refund },
+    gateway: { verifyCallback: (input) => fake.verifyCallback(input) },
+    refunds: { complete, send },
     provider: PROVIDER,
     clock,
     ids,
   });
-  return { useCase, refund };
+  return { useCase, refund, complete, send, fake };
 }
 
 type Payment = Readonly<{ id: string; amountMinor: number }>;
@@ -153,7 +209,8 @@ export function paymentJobs(client: PrismaClient, options: JobOptions = {}) {
   const getTransaction = vi.fn(
     options.getTransaction ?? (async () => "NOT_FOUND" as const),
   );
-  const { useCase, refund } = paymentCallback(client, {
+  const { useCase, refund, send } = paymentCallback(client, {
+    ...(options.audit ? { audit: options.audit } : {}),
     now: clock.now,
     ...(options.refund ? { refund: options.refund } : {}),
   });
@@ -191,9 +248,10 @@ export function paymentJobs(client: PrismaClient, options: JobOptions = {}) {
     ),
     sweep,
     callback: useCase,
+    refunds: send,
     ...(options.noGateway
       ? {}
-      : { gateway: { getTransaction, refund }, provider: PROVIDER }),
+      : { gateway: { getTransaction }, provider: PROVIDER }),
     clock,
   });
   return { expire, reconcile, getTransaction, refund };
@@ -213,4 +271,88 @@ function storageOf(
     inventoryReader: new PrismaInventoryReader(transaction, consumption),
     audit: audit ? audit(log) : log,
   };
+}
+
+/**
+ * The staff refund commands (src/composition/reservations.ts) on an
+ * independent client, sharing one refund mock with the callback wiring.
+ */
+export function refundCommands(client: PrismaClient, options: Options = {}) {
+  const base = paymentCallback(client, options);
+  const clock = { now: options.now ?? (() => NOW) };
+  const ids = new Cuid2IdGenerator();
+  const messages = (transaction: DatabaseClient) =>
+    new QueueReservationMessages(
+      new PrismaReservationMessageStore(transaction),
+      ids,
+      clock,
+      "https://hotel.example",
+    );
+  const storage = (transaction: DatabaseClient) =>
+    storageOf(transaction, options.audit);
+  const reads = new PrismaStaffReservationReader(client);
+  const decide = new DecideCancellationRequest({
+    unitOfWork: new PrismaReservationUnitOfWork<DecideCancellationContext>(
+      client,
+      (transaction) => ({
+        ...storage(transaction),
+        cancellationRequests: new PrismaCancellationRequestStore(transaction),
+        payments: new PrismaBookingPaymentStore(transaction),
+        redemptions: new PrismaCouponRedemptionStore(transaction),
+        messages: messages(transaction),
+      }),
+    ),
+    reader: new PrismaCancellationRequestReader(client),
+    refunds: base.send,
+    ids,
+    clock,
+  });
+  const retry = new RetryRefund({
+    unitOfWork: new PrismaReservationUnitOfWork<RetryRefundContext>(
+      client,
+      (transaction) => ({
+        ...storage(transaction),
+        payments: new PrismaBookingPaymentStore(transaction),
+        cancellationRequests: new PrismaCancellationRequestStore(transaction),
+      }),
+    ),
+    reads: { payments: new PrismaBookingPaymentStore(client) },
+    refunds: base.send,
+    clock,
+  });
+  const cancel = new CancelReservation({
+    unitOfWork: new PrismaReservationUnitOfWork<CancelReservationContext>(
+      client,
+      (transaction) => ({
+        ...cancelReservationContext(transaction),
+        audit: storage(transaction).audit,
+      }),
+    ),
+    paid: new CancelPaidReservation({
+      unitOfWork: new PrismaReservationUnitOfWork<CancelPaidReservationContext>(
+        client,
+        (transaction) => ({
+          ...storage(transaction),
+          cancellationRequests: new PrismaCancellationRequestStore(transaction),
+          payments: new PrismaBookingPaymentStore(transaction),
+        }),
+      ),
+      refunds: base.send,
+      ids,
+      clock,
+    }),
+    reads,
+    ids,
+    clock,
+  });
+  const queries = {
+    requests: new ListCancellationRequests(
+      new PrismaCancellationRequestReader(client),
+    ),
+    payments: new ListReservationPayments({
+      reads,
+      payments: new PrismaPaymentReader(client),
+    }),
+  };
+  return { ...base, decide, retry, cancel, queries };
 }

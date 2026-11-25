@@ -1,4 +1,4 @@
-import type { StaffPrincipal } from "@/application/auth";
+import { branchScope, type StaffPrincipal } from "@/application/auth";
 import type { CouponRedemptionStore } from "@/application/coupons";
 import type { QueueReservationMessages } from "@/application/notifications";
 import type { Clock, IdGenerator } from "@/application/shared/providers";
@@ -11,16 +11,15 @@ import {
   success,
 } from "@/application/shared/result";
 import { auditEvent } from "@/domain/audit";
-import {
-  ReservationStateMachine,
-  summarizeReservation,
-} from "@/domain/reservations";
+import { ReservationStateMachine } from "@/domain/reservations";
 import { localDateAt } from "@/domain/shared/zoned-time";
 
 import {
   closeCancellationRequest,
   type CloseCancellationRequestContext,
 } from "./close-cancellation-request";
+import type { CancelPaidReservation } from "./cancel-paid-reservation";
+import { finishCancellation } from "./finish-cancellation";
 import type { ReservationUnitOfWork } from "./ports";
 import {
   findStaffReservation,
@@ -60,6 +59,8 @@ const REASON_TEXT: Readonly<Record<CancellationReason, string>> = {
 
 type Dependencies = Readonly<{
   unitOfWork: ReservationUnitOfWork<CancelReservationContext>;
+  /** The paid path: a refund first, then the cancellation (M9-T8). */
+  paid: Pick<CancelPaidReservation, "execute">;
   reads: Pick<StaffReservationReader, "findVisible">;
   ids: IdGenerator;
   clock: Clock;
@@ -80,7 +81,14 @@ export class CancelReservation {
     id: string,
     expectedVersion: number | null,
     input: CancelReservationInput,
-  ): Promise<Result<{ reservation: StaffReservationView; replayed: boolean }>> {
+  ): Promise<
+    Result<{
+      reservation: StaffReservationView;
+      replayed: boolean;
+      /** True when a refund was started: the cancellation completes later. */
+      accepted: boolean;
+    }>
+  > {
     const found = await findStaffReservation(
       this.deps.reads,
       staff,
@@ -96,6 +104,35 @@ export class CancelReservation {
       return invalid("Check the note.", [
         { path: "note", message: "Use plain text of at most 500 characters." },
       ]);
+    // A cancelled booking replays below, whatever its payment shows.
+    if (row.paymentStatus === "PAID" && row.status !== "CANCELLED") {
+      const started = await this.deps.paid.execute(
+        principal,
+        row,
+        expectedVersion,
+        {
+          reason: input.reason,
+          note,
+          guestText: input.notifyGuest ? REASON_TEXT[input.reason] : null,
+        },
+      );
+      if (!started.ok) return started;
+      const after = await this.deps.reads.findVisible(
+        id,
+        branchScope(principal),
+      );
+      if (!after)
+        return failure("NOT_FOUND", "This reservation was not found.");
+      return success({
+        reservation: staffReservationView(
+          after,
+          principal,
+          this.deps.clock.now(),
+        ),
+        replayed: false,
+        accepted: true,
+      });
+    }
     const result = await this.deps.unitOfWork.run(async (context) => {
       const locked = await context.reservations.lockById(row.branchId, id);
       if (!locked.ok) return locked;
@@ -126,12 +163,12 @@ export class CancelReservation {
         );
       // A booking already in the hotel system is now out of date there: the
       // cancellation is a change like any other (Q-84), numbered and flagged.
-      const flagPmsUpdate = current.pmsEnteredAt !== null;
-      const stored = await context.reservations.markCancelled(
-        current.branchId,
-        id,
+      const { stored, flagPmsUpdate } = await finishCancellation(
+        context,
+        current,
+        principal,
+        this.deps.ids,
         now,
-        flagPmsUpdate,
       );
       await closeCancellationRequest(
         context,
@@ -140,22 +177,6 @@ export class CancelReservation {
         principal.id,
         now,
       );
-      if (flagPmsUpdate)
-        await context.reservations.appendChange({
-          id: this.deps.ids.next(),
-          branchId: current.branchId,
-          reservationId: id,
-          kind: "CANCEL",
-          actorType: "STAFF",
-          actorId: principal.id,
-          before: summarizeReservation(current),
-          after: summarizeReservation(stored),
-          oldTotalMinor: current.snapshot?.totalMinor ?? null,
-          newTotalMinor: current.snapshot?.totalMinor ?? null,
-          override: null,
-          at: now,
-        });
-      await context.redemptions.release(id, now);
       await context.audit.append(
         auditEvent({
           occurredAt: now,
@@ -192,6 +213,7 @@ export class CancelReservation {
         result.value.at,
       ),
       replayed: result.value.replayed,
+      accepted: false,
     });
   }
 }

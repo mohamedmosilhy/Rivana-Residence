@@ -8,6 +8,8 @@ import type {
   MessageKind,
 } from "./ports";
 
+const money = (minor: number) => `USD ${(minor / 100).toFixed(2)}`;
+
 export class QueueReservationMessages {
   constructor(
     private readonly store: ReservationMessageStore,
@@ -57,7 +59,8 @@ export class QueueReservationMessages {
     )
       return;
     if (
-      event.kind === "reservation.cancelled" &&
+      (event.kind === "reservation.cancelled" ||
+        event.kind === "payment.refunded") &&
       booking.status !== "CANCELLED"
     )
       return;
@@ -87,9 +90,19 @@ export class QueueReservationMessages {
       payload.holdExpiresAt = event.holdExpiresAt.toISOString();
     } else if (
       event.kind === "payment.auto-refunded" ||
-      event.kind === "payment.staff-alert"
+      event.kind === "payment.staff-alert" ||
+      event.kind === "payment.refunded" ||
+      event.kind === "refund.staff-alert" ||
+      event.kind === "refund.moved-on-alert"
     ) {
-      payload.refundAmount = `USD ${(event.refundMinor / 100).toFixed(2)}`;
+      payload.refundAmount = money(event.refundMinor);
+    } else if (event.kind === "payment.duplicate-alert") {
+      payload.chargedAmount = money(event.amountMinor);
+    } else if (event.kind === "cancellation-request.approved") {
+      if (event.refundMinor !== undefined)
+        payload.refundAmount = money(event.refundMinor);
+    } else if (event.kind === "cancellation-request.rejected") {
+      payload.reason = event.reason;
     } else if (event.kind !== "reservation.manage-link") {
       payload.checkIn = booking.checkIn;
       payload.checkOut = booking.checkOut;
@@ -131,7 +144,12 @@ export class QueueReservationMessages {
       await this.store.append(messages);
       return;
     }
-    if (event.kind === "payment.staff-alert") {
+    if (
+      event.kind === "payment.staff-alert" ||
+      event.kind === "refund.staff-alert" ||
+      event.kind === "refund.moved-on-alert" ||
+      event.kind === "payment.duplicate-alert"
+    ) {
       add("EMAIL", event.kind, booking.branchEmail ?? "", payload);
       await this.store.append(messages);
       return;

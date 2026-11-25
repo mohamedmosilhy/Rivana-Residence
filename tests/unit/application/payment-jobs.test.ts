@@ -26,6 +26,7 @@ const sweepOf = (overrides: Partial<PaymentSweepStore> = {}) =>
     findOverdueHolds: none,
     findStaleInitiated: none,
     findUnsentRefunds: none,
+    findSentRefunds: none,
     findHeldCleanup: none,
     ...overrides,
   }) satisfies PaymentSweepStore;
@@ -106,12 +107,13 @@ describe("ReconcilePayments", () => {
   };
   const build = (
     sweep: Partial<PaymentSweepStore>,
-    gateway: { getTransaction: never; refund: never },
+    gateway: { getTransaction: never },
   ) =>
     new ReconcilePayments({
       unitOfWork: unitOfWork<ReconcilePaymentsContext>({}),
       sweep: sweepOf(sweep),
       callback: { applyVerifiedEvent: vi.fn(async () => success(undefined)) },
+      refunds: { send: vi.fn(async () => true) },
       gateway,
       provider: "test-gateway",
       clock,
@@ -123,6 +125,7 @@ describe("ReconcilePayments", () => {
       unitOfWork: unitOfWork<ReconcilePaymentsContext>({}),
       sweep: sweepOf({ findStaleInitiated }),
       callback: { applyVerifiedEvent: vi.fn() },
+      refunds: { send: vi.fn() },
       clock,
     }).run();
     expect(summary.gatewayReady).toBe(false);
@@ -139,7 +142,7 @@ describe("ReconcilePayments", () => {
         findUnsentRefunds,
         findHeldCleanup,
       },
-      { getTransaction: getTransaction as never, refund: vi.fn() as never },
+      { getTransaction: getTransaction as never },
     ).run();
     expect(summary).toMatchObject({ gatewayReady: true, failed: 4 });
     expect(findUnsentRefunds).toHaveBeenCalledWith(
@@ -157,10 +160,8 @@ describe("ReconcilePayments", () => {
       unitOfWork: unitOfWork<ReconcilePaymentsContext>({}),
       sweep: sweepOf({ findStaleInitiated: async () => [payment, payment] }),
       callback: { applyVerifiedEvent: vi.fn() },
-      gateway: {
-        getTransaction: getTransaction as never,
-        refund: vi.fn() as never,
-      },
+      refunds: { send: vi.fn() },
+      gateway: { getTransaction: getTransaction as never },
       provider: "test-gateway",
       clock,
       gatewayTimeoutMs: 5,
@@ -180,7 +181,7 @@ describe("ReconcilePayments", () => {
       .mockResolvedValueOnce(stuck)
       .mockResolvedValueOnce([fresh]);
     const getTransaction = vi.fn(async () => "NOT_FOUND" as const);
-    const refund = vi.fn(async () => ({ status: "PENDING" as const }));
+    const send = vi.fn(async () => true);
     const context = {
       reservations: { lockById: async () => success({}) },
       payments: { markRefundRequested: vi.fn(async () => {}) },
@@ -189,20 +190,20 @@ describe("ReconcilePayments", () => {
       unitOfWork: unitOfWork<ReconcilePaymentsContext>(context as never),
       sweep: sweepOf({ findUnsentRefunds }),
       callback: { applyVerifiedEvent: vi.fn() },
-      gateway: {
-        getTransaction: getTransaction as never,
-        refund: refund as never,
-      },
+      refunds: { send },
+      gateway: { getTransaction: getTransaction as never },
       provider: "test-gateway",
       clock,
     }).run();
     // The 50 stuck refunds have no transaction id and stay pending; the fresh one is sent.
     expect(summary).toMatchObject({ refundsSent: 1, pending: 50 });
-    expect(refund).toHaveBeenCalledTimes(1);
-    expect(context.payments.markRefundRequested).toHaveBeenCalledWith(
-      "fresh",
-      NOW,
-      undefined,
+    expect(send).toHaveBeenCalledTimes(1);
+    expect(send).toHaveBeenCalledWith(
+      expect.objectContaining({
+        paymentId: "fresh",
+        providerTransactionId: "tx-1",
+        idempotencyKey: "fresh:refund:1",
+      }),
       1,
     );
   });

@@ -87,8 +87,9 @@ export const WHATSAPP_PURPOSE_VARIABLES: Readonly<
     "manageLink",
   ],
   CANCELLATION_RECEIVED: REQUEST_SUMMARY,
-  CANCELLATION_APPROVED: [...CASE, "refundAmount"],
-  CANCELLATION_REJECTED: [...CASE, "reason"],
+  // Decision messages carry no manage link: the raw token exists only at booking time.
+  CANCELLATION_APPROVED: [...REQUEST_SUMMARY, "refundAmount"],
+  CANCELLATION_REJECTED: [...REQUEST_SUMMARY, "reason"],
   REFUND_COMPLETED: [
     "guestFirstName",
     "reference",

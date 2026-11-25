@@ -21,6 +21,15 @@ import {
 } from "./branches";
 import { AvailabilityQuery, AvailabilityResponse } from "./availability";
 import { SyncCheckpointRequest, SyncQuery, SyncStatus } from "./branch-sync";
+import {
+  CancellationApprovalRequest,
+  CancellationDecision,
+  CancellationRejectionRequest,
+  CancellationRequestList,
+  PaymentList,
+  RefundRetryAccepted,
+  StaffCancellationRequestQuery,
+} from "./cancellation-requests";
 import { PaymentCallbackAck } from "./payments";
 import { QuoteRequest, QuoteResponse } from "./quotes";
 import {
@@ -209,6 +218,16 @@ const changeResponse = (description: string) => ({
     headers: { ETag: 'New reservation version formatted as "v<version>".' },
   },
 });
+const decisionErrors = [
+  ...staffReadErrors,
+  "CROSS_SITE_REQUEST",
+  "MALFORMED_JSON",
+  "PAYLOAD_TOO_LARGE",
+  "UNSUPPORTED_MEDIA_TYPE",
+  "VALIDATION",
+  "INVALID_TRANSITION",
+  "TRY_AGAIN",
+];
 
 export const API_ROUTES: readonly ApiRoute[] = [
   {
@@ -454,13 +473,111 @@ export const API_ROUTES: readonly ApiRoute[] = [
     path: staffReservationPath + "/{id}/cancellation",
     operationId: "cancelStaffReservation",
     summary:
-      "API-S9. Cancel an unpaid reservation, freeing its units and coupon redemption. Repeating it returns the cancelled reservation. Paid cancellation arrives in M9.",
+      'API-S9. Cancel a reservation. Unpaid (`reservations:cancel`): cancelled at once, freeing its units and coupon redemption; repeating it returns the cancelled reservation. Paid (`reservations:cancel-paid`, Manager and Admin only): records an approved staff request and starts a full refund; the reservation is cancelled only when the gateway confirms the refund (202). The guest hears "cancelled and refunded" only when `notifyGuest` is true and only after the refund succeeded.',
     tag: "Reservations",
     security: "staff",
     headers: ifMatch,
     request: CancelReservationRequest,
-    responses: changeResponse("The cancelled reservation."),
+    responses: {
+      ...changeResponse("The cancelled reservation."),
+      202: {
+        description:
+          "Paid reservation: the refund was started. The reservation is still confirmed and shows paymentStatus REFUND_PENDING (or the final state when the gateway answered at once).",
+        schema: StaffReservationDetail,
+        headers: { ETag: 'New reservation version formatted as "v<version>".' },
+      },
+    },
     errors: changeErrors,
+  },
+  {
+    method: "get",
+    path: "/api/v1/staff/cancellation-requests",
+    operationId: "listCancellationRequests",
+    summary:
+      "API-S17. The cancellation request queue of the authorized branches (`cancellations:decide`), newest first.",
+    tag: "Cancellations",
+    security: "staff",
+    query: StaffCancellationRequestQuery,
+    responses: {
+      200: {
+        description: "Request page.",
+        schema: CancellationRequestList,
+      },
+    },
+    errors: [...staffReadErrors, "INVALID_QUERY"],
+  },
+  {
+    method: "post",
+    path: "/api/v1/staff/cancellation-requests/{id}/approval",
+    operationId: "approveCancellationRequest",
+    summary:
+      "API-S18. Approve an OPEN request (`cancellations:decide`, Manager of the branch or Admin). Unpaid: the reservation is cancelled at once (200). Paid: a full refund is started and the reservation is cancelled only when the gateway confirms it (202). A request that is not OPEN returns 409 INVALID_TRANSITION.",
+    tag: "Cancellations",
+    security: "staff",
+    request: CancellationApprovalRequest,
+    requestOptional: true,
+    responses: {
+      200: {
+        description: "The request, completed.",
+        schema: CancellationDecision,
+      },
+      202: {
+        description: "The refund was started.",
+        schema: CancellationDecision,
+      },
+    },
+    errors: decisionErrors,
+  },
+  {
+    method: "post",
+    path: "/api/v1/staff/cancellation-requests/{id}/rejection",
+    operationId: "rejectCancellationRequest",
+    summary:
+      "API-S19. Reject an OPEN request with a reason that is sent to the guest. The reservation stays confirmed.",
+    tag: "Cancellations",
+    security: "staff",
+    request: CancellationRejectionRequest,
+    responses: {
+      200: {
+        description: "The rejected request.",
+        schema: CancellationDecision,
+      },
+    },
+    errors: decisionErrors,
+  },
+  {
+    method: "get",
+    path: "/api/v1/staff/reservations/{id}/payments",
+    operationId: "listReservationPayments",
+    summary:
+      "API-S44. The payments of a reservation with status and refund progress. No card data and no provider payload.",
+    tag: "Cancellations",
+    security: "staff",
+    responses: {
+      200: { description: "Payments, oldest first.", schema: PaymentList },
+    },
+    errors: staffReadErrors,
+  },
+  {
+    method: "post",
+    path: "/api/v1/staff/payments/{id}/refund-retry",
+    operationId: "retryRefund",
+    summary:
+      "API-S45. Start a new refund attempt for a payment whose last refund failed (`cancellations:decide`). Any other payment state returns 409 INVALID_TRANSITION.",
+    tag: "Cancellations",
+    security: "staff",
+    responses: {
+      202: {
+        description: "The new attempt was started.",
+        schema: RefundRetryAccepted,
+      },
+    },
+    errors: [
+      ...staffReadErrors,
+      "CROSS_SITE_REQUEST",
+      "INVALID_TRANSITION",
+      "TRY_AGAIN",
+    ],
   },
   {
     method: "post",

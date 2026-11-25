@@ -173,12 +173,19 @@ type GuestMessageKind =
   | "reservation.manage-link"
   | "reservation.payment-not-completed"
   | "cancellation-request.received"
+  | "cancellation-request.approved"
+  | "cancellation-request.rejected"
+  | "payment.refunded"
   | "payment.auto-refunded";
-export type MessageKind =
-  | GuestMessageKind
+/** Staff messages go to the branch inbox by email only, never to a guest. */
+export type StaffMessageKind =
   | "reservation.staff-alert"
   | "request.staff-alert"
-  | "payment.staff-alert";
+  | "payment.staff-alert"
+  | "refund.staff-alert"
+  | "payment.duplicate-alert"
+  | "refund.moved-on-alert";
+export type MessageKind = GuestMessageKind | StaffMessageKind;
 export type MessageChannel = "EMAIL" | "WHATSAPP";
 export type MessageVariables = {
   reference: string;
@@ -191,6 +198,8 @@ export type MessageVariables = {
   manageLink?: string;
   holdExpiresAt?: string;
   refundAmount?: string;
+  /** A charged amount (the double payment alert). */
+  chargedAmount?: string;
 };
 
 export type MessageSnapshot = {
@@ -245,6 +254,13 @@ export type ReservationMessageEvent =
   | { kind: "reservation.manage-link"; manageToken: string }
   | { kind: "reservation.payment-not-completed"; holdExpiresAt: Date }
   | { kind: "cancellation-request.received" }
+  /** `refundMinor` is set when the approval starts a refund. */
+  | { kind: "cancellation-request.approved"; refundMinor?: number }
+  | { kind: "cancellation-request.rejected"; reason: string }
+  | { kind: "payment.refunded"; refundMinor: number }
+  | { kind: "refund.staff-alert"; refundMinor: number }
+  | { kind: "payment.duplicate-alert"; amountMinor: number }
+  | { kind: "refund.moved-on-alert"; refundMinor: number }
   | { kind: "request.staff-alert" }
   | { kind: "payment.auto-refunded"; refundMinor: number }
   | { kind: "payment.staff-alert"; refundMinor: number };

@@ -24,13 +24,17 @@ import {
   endBookingPaymentHold,
   expireListingPaymentHolds,
 } from "./booking-payment-holds";
+import type { CompleteRefund } from "./complete-refund";
 import { manageTokenExpiry } from "./manage-token";
 import type {
   BookingCrypto,
+  CancellationRequestStore,
   ReservationRepository,
   ReservationUnitOfWork,
   StoredReservation,
 } from "./ports";
+import { refundAttemptKey } from "./refund-key";
+import type { RefundDispatcher, RefundRequest } from "./send-refund";
 import type { ReservationStorageContext } from "./storage-context";
 
 export type ProcessPaymentCallbackContext = ReservationStorageContext &
@@ -45,6 +49,10 @@ export type ProcessPaymentCallbackContext = ReservationStorageContext &
       "enqueue" | "discardHeld" | "heldMessages" | "releaseHeld"
     >;
     crypto: Pick<BookingCrypto, "generateToken" | "sha256">;
+    cancellationRequests: Pick<
+      CancellationRequestStore,
+      "findActive" | "transition"
+    >;
   }>;
 
 type Dependencies = Readonly<{
@@ -55,19 +63,17 @@ type Dependencies = Readonly<{
     reservations: Pick<ReservationRepository, "findById">;
   }>;
   /** Absent when the deployment has no gateway: every callback is then refused. */
-  gateway?: Pick<PaymentGateway, "verifyCallback" | "refund">;
+  gateway?: Pick<PaymentGateway, "verifyCallback">;
+  /** Finishes refund results (callbacks and lookups). Absent: they are recorded and ignored. */
+  refunds?: Readonly<{
+    complete: Pick<CompleteRefund, "applyLocked">;
+    send: Pick<RefundDispatcher, "send">;
+  }>;
   provider?: string;
   clock: Clock;
   ids: IdGenerator;
 }>;
 
-type RefundRequest = Readonly<{
-  paymentId: string;
-  providerTransactionId: string;
-  amountMinor: number;
-  currency: string;
-  idempotencyKey: string;
-}>;
 type Applied = Readonly<{
   result: PaymentEventResult;
   refund?: RefundRequest;
@@ -77,9 +83,7 @@ type Applied = Readonly<{
 }>;
 type Outcome = Readonly<{ redo: true }> | (Readonly<{ redo: false }> & Applied);
 
-/** The key that addresses one refund attempt. Later refund tasks reuse it. */
-export const refundAttemptKey = (paymentId: string, attempt: number) =>
-  `${paymentId}:refund:${attempt}`;
+export { refundAttemptKey };
 
 const REJECTED = () =>
   failure("WEBHOOK_SIGNATURE_INVALID", "The callback could not be verified.");
@@ -132,9 +136,7 @@ export class ProcessPaymentCallback {
       return this.recordOnly(event, null, "IGNORED_UNKNOWN");
     if (!matchesPayment(payment, event))
       return this.recordOnly(event, payment.id, "IGNORED_MISMATCH");
-    // Refund results are applied by the refund task. Record them and answer.
-    if (event.kind === "REFUND")
-      return this.recordOnly(event, payment.id, "IGNORED_STATE");
+    if (event.kind === "REFUND") return this.applyRefundEvent(event, payment);
 
     const reservation = await reads.reservations.findById(
       payment.branchId,
@@ -155,8 +157,47 @@ export class ProcessPaymentCallback {
     if (!outcome.ok) return outcome;
     const applied = outcome.value as Extract<Outcome, { redo: false }>;
     if (applied.refund && applied.refundAttempt !== undefined)
-      await this.requestRefund(applied.refund, applied.refundAttempt);
+      await this.deps.refunds?.send.send(applied.refund, applied.refundAttempt);
     return success(undefined);
+  }
+
+  /**
+   * A verified refund result. Under the reservation lock it goes to
+   * `CompleteRefund`, which acts only for the current attempt; an older
+   * attempt's answer is recorded as ignored and acknowledged.
+   */
+  private applyRefundEvent(
+    event: Extract<PaymentGatewayEvent, { kind: "REFUND" }>,
+    payment: CallbackPayment,
+  ): Promise<Result<void>> {
+    const { refunds } = this.deps;
+    if (!refunds) return this.recordOnly(event, payment.id, "IGNORED_STATE");
+    return this.deps.unitOfWork.run<void>(async (context) => {
+      const locked = await context.reservations.lockById(
+        payment.branchId,
+        payment.reservationId,
+      );
+      if (!locked.ok) return locked;
+      if (!locked.value) throw new Error("A payment has no reservation.");
+      if (
+        (await context.payments.findEventResult(event.providerEventId)) ===
+        "APPLIED"
+      )
+        return success(undefined);
+      const done = await refunds.complete.applyLocked(context, locked.value, {
+        paymentId: payment.id,
+        attemptKey: event.refundAttemptKey,
+        outcome: event.outcome === "REFUND_SUCCEEDED" ? "SUCCEEDED" : "FAILED",
+      });
+      if (!done.ok) return done;
+      await this.record(
+        context,
+        event,
+        payment.id,
+        done.value.applied ? "APPLIED" : "IGNORED_STATE",
+      );
+      return success(undefined);
+    });
   }
 
   private recordOnly(
@@ -283,11 +324,10 @@ export class ProcessPaymentCallback {
     listingsLocked: boolean,
   ): Promise<Result<Applied>> {
     const now = this.deps.clock.now();
-    if (
-      (await context.payments.findEventResult(event.providerEventId)) ===
-      "APPLIED"
-    )
-      return success({ result: "APPLIED" });
+    const earlier = await context.payments.findEventResult(
+      event.providerEventId,
+    );
+    if (earlier === "APPLIED") return success({ result: "APPLIED" });
     const payment = await context.payments.findPayment(event.paymentId);
     if (!payment) throw new Error("The payment disappeared.");
     const done = async (applied: Applied): Promise<Result<Applied>> => {
@@ -325,7 +365,38 @@ export class ProcessPaymentCallback {
       paymentStatus: payment.status,
       unitsFree,
     });
-    if (decision === "IGNORE_DUPLICATE") return ignored();
+    if (decision === "IGNORE_DUPLICATE") {
+      // A second success with another transaction id may be a double charge.
+      // The first sight of that event alerts the branch; a retry does not.
+      if (
+        earlier === null &&
+        event.providerTransactionId &&
+        payment.providerTransactionId &&
+        event.providerTransactionId !== payment.providerTransactionId
+      ) {
+        await context.messages.enqueue(reservation.branchId, reservation.id, {
+          kind: "payment.duplicate-alert",
+          amountMinor: payment.amountMinor,
+        });
+        await context.audit.append(
+          auditEvent({
+            occurredAt: now,
+            actorType: "SYSTEM",
+            actorId: null,
+            action: "payment.double-charge-suspected",
+            entityType: "Payment",
+            entityId: payment.id,
+            branchId: reservation.branchId,
+            reason: null,
+            changes: {
+              reservationId: reservation.id,
+              amountMinor: payment.amountMinor,
+            },
+          }),
+        );
+      }
+      return ignored();
+    }
     const from = payment.status as "INITIATED" | "EXPIRED" | "FAILED";
     const transactionId =
       event.providerTransactionId ?? payment.providerTransactionId ?? undefined;
@@ -499,27 +570,6 @@ export class ProcessPaymentCallback {
       } catch {
         return false;
       }
-    });
-  }
-
-  /** After commit. A thrown or ambiguous call leaves `refundRequestedAt` null for the sweep. */
-  private async requestRefund(request: RefundRequest, attempt: number) {
-    const { gateway, unitOfWork, clock } = this.deps;
-    if (!gateway) return;
-    let sent: Awaited<ReturnType<PaymentGateway["refund"]>>;
-    try {
-      sent = await gateway.refund(request);
-    } catch {
-      return;
-    }
-    await unitOfWork.run(async (context) => {
-      await context.payments.markRefundRequested(
-        request.paymentId,
-        clock.now(),
-        sent.providerRefundId,
-        attempt,
-      );
-      return success(undefined);
     });
   }
 }

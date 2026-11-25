@@ -17,9 +17,10 @@ export const POST = staffRoute(
         body,
       ),
       {
-        ok: ({ reservation }) => {
+        ok: ({ reservation, accepted }) => {
           setBranch(reservation.branchId);
-          return json(200, staffReservation(reservation), {
+          // 202: a refund was started; the booking is cancelled when it completes.
+          return json(accepted ? 202 : 200, staffReservation(reservation), {
             ETag: `"v${reservation.version}"`,
           });
         },

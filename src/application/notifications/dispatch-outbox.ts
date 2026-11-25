@@ -21,6 +21,9 @@ const purposes = {
   "reservation.manage-link": "MANAGE_LINK",
   "reservation.payment-not-completed": "PAYMENT_NOT_COMPLETED",
   "cancellation-request.received": "CANCELLATION_RECEIVED",
+  "cancellation-request.approved": "CANCELLATION_APPROVED",
+  "cancellation-request.rejected": "CANCELLATION_REJECTED",
+  "payment.refunded": "REFUND_COMPLETED",
   // Q-63: the late success wording of the refund message shares its template.
   "payment.auto-refunded": "REFUND_COMPLETED",
 } as const;
@@ -34,6 +37,7 @@ const variables = z.strictObject({
   reason: z.string().optional(),
   holdExpiresAt: z.iso.datetime().optional(),
   refundAmount: z.string().optional(),
+  chargedAmount: z.string().optional(),
   // Not `z.httpUrl()`: it needs a dotted domain, so it would refuse the
   // `localhost` and IP `APP_URL` that development and staging use.
   manageLink: z.url({ protocol: /^https?$/ }).optional(),
@@ -49,9 +53,15 @@ const kinds = z.enum([
   "reservation.payment-not-completed",
   "reservation.staff-alert",
   "cancellation-request.received",
+  "cancellation-request.approved",
+  "cancellation-request.rejected",
+  "payment.refunded",
   "request.staff-alert",
   "payment.auto-refunded",
   "payment.staff-alert",
+  "refund.staff-alert",
+  "payment.duplicate-alert",
+  "refund.moved-on-alert",
 ]);
 export class DispatchOutbox {
   constructor(
@@ -94,7 +104,10 @@ export class DispatchOutbox {
     if (
       kind.data === "reservation.staff-alert" ||
       kind.data === "request.staff-alert" ||
-      kind.data === "payment.staff-alert"
+      kind.data === "payment.staff-alert" ||
+      kind.data === "refund.staff-alert" ||
+      kind.data === "payment.duplicate-alert" ||
+      kind.data === "refund.moved-on-alert"
     )
       return invalid;
     let phone: PhoneNumber;

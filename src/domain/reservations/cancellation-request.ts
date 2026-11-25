@@ -228,3 +228,26 @@ export function closedReasonForStaffAction(
       ]);
   }
 }
+
+/**
+ * M9-T8 review: while a cancellation refund is on its way to the guest, the
+ * guest cannot also arrive. Check in and no show wait until the refund
+ * finishes (the booking is then cancelled) or fails (staff decide). A failed
+ * refund does not block, so the front desk is never stuck.
+ */
+export function refundBlocksArrival(input: {
+  paymentStatus: ReservationPaymentStatus;
+  activeRequestStatus: CancellationRequestStatus | null;
+}): boolean {
+  if (!RESERVATION_PAYMENT_STATUSES.includes(input.paymentStatus))
+    throw new DomainValidationError("The payment status is invalid.", [
+      { path: "paymentStatus", message: "Supply a supported payment status." },
+    ]);
+  if (input.activeRequestStatus !== null)
+    assertRequestStatus(input.activeRequestStatus, "activeRequestStatus");
+  return (
+    input.paymentStatus === "REFUND_PENDING" ||
+    input.activeRequestStatus === "APPROVED" ||
+    input.activeRequestStatus === "REFUND_PENDING"
+  );
+}

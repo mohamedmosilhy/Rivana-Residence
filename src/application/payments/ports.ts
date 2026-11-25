@@ -151,12 +151,26 @@ export interface PaymentCallbackStore {
   /**
    * Stamps the refund call. When `expectedAttempt` is given, only that attempt
    * is stamped, so a late result for an older attempt cannot mark a newer one.
+   * The update is conditional (status, unstamped, attempt), so it may run
+   * without the reservation lock, as the refund dispatcher does after commit.
    */
   markRefundRequested(
     id: string,
     at: Date,
     providerRefundId: string | undefined,
     expectedAttempt?: number,
+  ): Promise<void>;
+  /** The `SUCCEEDED` payment of a reservation (at most one: a refund moves it on). */
+  findPaidPayment(reservationId: string): Promise<CallbackPayment | null>;
+  /**
+   * `REFUND_PENDING` becomes `REFUNDED` or `REFUND_FAILED`. Only a pending
+   * payment changes; the caller has already matched the attempt.
+   */
+  completeRefund(
+    id: string,
+    outcome: "REFUNDED" | "REFUND_FAILED",
+    at: Date,
+    providerRefundId?: string,
   ): Promise<void>;
   /** Fills a missing gateway transaction id on a `REFUND_PENDING` payment (reconciliation). */
   setProviderTransactionId(
@@ -207,6 +221,13 @@ export interface PaymentSweepStore {
     limit: number,
     exclude: readonly string[],
   ): Promise<readonly SweepPayment[]>;
+  /** `REFUND_PENDING` payments whose refund call was stamped as sent before `sentBefore`. */
+  findSentRefunds(
+    provider: string,
+    sentBefore: Date,
+    limit: number,
+    exclude: readonly string[],
+  ): Promise<readonly SweepPayment[]>;
   /** Payments `EXPIRED` or `FAILED` past `expiresAt` whose reservation is `PAYMENT_FAILED` and still has held messages. */
   findHeldCleanup(
     provider: string,
@@ -214,4 +235,22 @@ export interface PaymentSweepStore {
     limit: number,
     exclude: readonly string[],
   ): Promise<readonly SweepPayment[]>;
+}
+
+/** One payment as staff see it (S44). No card data and no provider payload. */
+export type PaymentView = Readonly<{
+  id: string;
+  status: PaymentStatus;
+  provider: string;
+  amountMinor: number;
+  currency: string;
+  providerTransactionId: string | null;
+  refundAttempt: number;
+  refundRequestedAt: Date | null;
+  refundedAt: Date | null;
+  createdAt: Date;
+}>;
+
+export interface PaymentReader {
+  listForReservation(reservationId: string): Promise<readonly PaymentView[]>;
 }

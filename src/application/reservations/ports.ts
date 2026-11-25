@@ -30,7 +30,83 @@ export type GuestCancellationRequest = Readonly<{
   decisionReason: string | null;
 }>;
 
+/** A request as the staff decision and refund steps see it. */
+export type CancellationRequestRecord = Readonly<{
+  id: string;
+  reservationId: string;
+  branchId: string;
+  requestedBy: "GUEST" | "STAFF";
+  status: CancellationRequestStatus;
+  /** Guest facing text. For a staff cancellation it is set only when the guest is to be told. */
+  decisionReason: string | null;
+  decidedById: string | null;
+  createdAt: Date;
+}>;
+
+export type CancellationRequestListItem = Readonly<{
+  id: string;
+  branchId: string;
+  reservationId: string;
+  reference: string;
+  checkIn: string;
+  requestedBy: "GUEST" | "STAFF";
+  status: CancellationRequestStatus;
+  paymentMethod: PaymentMethod;
+  paymentStatus: ReservationPaymentStatus;
+  totalMinor: number | null;
+  guestReason: string | null;
+  decisionReason: string | null;
+  createdAt: string;
+}>;
+
+export interface CancellationRequestReader {
+  list(
+    scope: "ALL" | readonly string[],
+    query: Readonly<{
+      branchId?: string | undefined;
+      status?: CancellationRequestStatus | undefined;
+      page: number;
+      pageSize: number;
+    }>,
+  ): Promise<{
+    items: readonly CancellationRequestListItem[];
+    total: number;
+    page: number;
+    pageSize: number;
+  }>;
+  /** Unlocked read that picks the reservation to lock. */
+  findById(id: string): Promise<CancellationRequestRecord | null>;
+}
+
 export interface CancellationRequestStore {
+  /** Read under the reservation lock. */
+  findById(id: string): Promise<CancellationRequestRecord | null>;
+  /** The request still in play for a reservation (`OPEN`, `APPROVED`, `REFUND_PENDING`, `REFUND_FAILED`). */
+  findActive(reservationId: string): Promise<CancellationRequestRecord | null>;
+  /**
+   * Moves a request from `from` to `to`. False when it was not in `from`.
+   * `decidedById` and `decisionReason` are written when given (a decision).
+   */
+  transition(
+    input: Readonly<{
+      id: string;
+      from: CancellationRequestStatus;
+      to: CancellationRequestStatus;
+      at: Date;
+      decidedById?: string;
+      decisionReason?: string | null;
+    }>,
+  ): Promise<boolean>;
+  /** A staff cancellation of a paid booking: already `APPROVED` (spec 0006 D-E). */
+  createApproved(
+    input: Readonly<{
+      id: string;
+      reservationId: string;
+      staffId: string;
+      decisionReason: string | null;
+      at: Date;
+    }>,
+  ): Promise<CancellationRequestRecord>;
   /** Prefer an active request, otherwise return the latest finished request. */
   findCurrent(reservationId: string): Promise<GuestCancellationRequest | null>;
   /** Writers hold the reservation row lock. */

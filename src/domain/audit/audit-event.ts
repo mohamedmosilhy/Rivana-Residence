@@ -177,6 +177,39 @@ export type AuditChanges = {
     refundMinor: number;
     refundAttempt: number;
   }>;
+  /** A refund was sent for (or queued for) one attempt (M9-T8). */
+  "payment.refund-requested": Readonly<{
+    reservationId: string;
+    refundMinor: number;
+    refundAttempt: number;
+    requestId: string | null;
+    trigger: "DECISION" | "STAFF_CANCELLATION" | "RETRY";
+  }>;
+  "payment.refunded": Readonly<{
+    reservationId: string;
+    refundAttempt: number;
+    requestId: string | null;
+  }>;
+  "payment.refund-failed": AuditChanges["payment.refunded"];
+  /** A second verified success with another transaction id: a possible double charge. */
+  "payment.double-charge-suspected": Readonly<{
+    reservationId: string;
+    amountMinor: number;
+  }>;
+  "cancellation-request.approved": Readonly<{
+    reservationId: string;
+    requestedBy: "GUEST" | "STAFF";
+    plan: "CANCEL_NOW" | "REFUND_FIRST";
+    noteProvided: boolean;
+    /** The staff reason code of a staff cancellation of a paid booking. */
+    cancelReason?: string;
+  }>;
+  "cancellation-request.rejected": Readonly<{ reservationId: string }>;
+  "cancellation-request.completed": Readonly<{
+    reservationId: string;
+    /** False when the booking had moved on and kept its status. */
+    cancelled: boolean;
+  }>;
   "reservation.staff-created": Readonly<{
     reference: string;
     source: "STAFF" | "EXTERNAL";
@@ -214,6 +247,10 @@ export type AuditChanges = {
     /** Set when the booking was already in the hotel system: the cancellation is a pending change (Q-84). */
     flagPmsUpdate: boolean;
     changeSeq: number | null;
+    /** Set when a refund finished the cancellation (M9-T8). */
+    refunded?: boolean;
+    /** The request whose approval audit carries the staff reason code. */
+    requestId?: string;
   }>;
   "reservation.pms-update-entered": Readonly<{
     reference: string;

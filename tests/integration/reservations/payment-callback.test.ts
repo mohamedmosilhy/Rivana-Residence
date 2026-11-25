@@ -259,7 +259,7 @@ describe("payment callback (AC-1, AC-2, AC-3, AC-5)", () => {
     ).toHaveLength(3);
   });
 
-  it("records a refund result and leaves it for the refund task", async () => {
+  it("records a refund result for an attempt that was never started as ignored", async () => {
     const payment = await book();
     const event = callbackEvent(payment, {
       kind: "REFUND",

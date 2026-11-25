@@ -89,6 +89,26 @@ export class PrismaPaymentSweepStore implements PaymentSweepStore {
     return rows.map(toSweepPayment);
   }
 
+  async findSentRefunds(
+    provider: string,
+    sentBefore: Date,
+    limit: number,
+    exclude: readonly string[],
+  ) {
+    const rows = await this.client.payment.findMany({
+      where: {
+        provider,
+        status: "REFUND_PENDING",
+        refundRequestedAt: { not: null, lte: sentBefore },
+        id: { notIn: [...exclude] },
+      },
+      orderBy: [{ refundRequestedAt: "asc" }, { id: "asc" }],
+      take: limit,
+      select,
+    });
+    return rows.map(toSweepPayment);
+  }
+
   async findHeldCleanup(
     provider: string,
     at: Date,

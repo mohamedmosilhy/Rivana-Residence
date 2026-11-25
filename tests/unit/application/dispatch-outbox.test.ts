@@ -130,4 +130,35 @@ describe("DispatchOutbox payment refund messages (M9-T5)", () => {
     ]);
     expect(whatsapp.whatsapp.send).not.toHaveBeenCalled();
   });
+
+  it.each([
+    ["cancellation-request.approved", "CANCELLATION_APPROVED"],
+    ["cancellation-request.rejected", "CANCELLATION_REJECTED"],
+    ["payment.refunded", "REFUND_COMPLETED"],
+  ])("sends %s by WhatsApp with the %s purpose", async (kind, purpose) => {
+    const { outcomes, whatsapp } = await dispatch(
+      kind,
+      "WHATSAPP",
+      "+12025550101",
+    );
+    expect(outcomes).toMatchObject([{ status: "SENT" }]);
+    expect(whatsapp.send).toHaveBeenCalledWith(
+      expect.objectContaining({ purpose }),
+    );
+  });
+
+  it.each([
+    "refund.staff-alert",
+    "payment.duplicate-alert",
+    "refund.moved-on-alert",
+  ])("keeps %s email only", async (kind) => {
+    expect(
+      (await dispatch(kind, "EMAIL", "hotel@example.test")).outcomes,
+    ).toMatchObject([{ status: "SENT" }]);
+    const whatsapp = await dispatch(kind, "WHATSAPP", "+12025550101");
+    expect(whatsapp.outcomes).toEqual([
+      { status: "FAILED", lastError: "INVALID_MESSAGE" },
+    ]);
+    expect(whatsapp.whatsapp.send).not.toHaveBeenCalled();
+  });
 });

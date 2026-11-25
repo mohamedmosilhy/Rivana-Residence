@@ -11,7 +11,8 @@ import { success, type Result } from "@/application/shared/result";
 import { matchesPayment } from "@/domain/payments";
 
 import type { ProcessPaymentCallback } from "./process-payment-callback";
-import { refundAttemptKey } from "./process-payment-callback";
+import type { RefundDispatcher } from "./send-refund";
+import { refundAttemptKey } from "./refund-key";
 import type { ReservationUnitOfWork, StoredReservation } from "./ports";
 import type { ReservationStorageContext } from "./storage-context";
 import { sweepInPages } from "./sweep-pages";
@@ -41,6 +42,8 @@ export type ReconcilePaymentsSummary = Readonly<{
 
 /** Items read per page. A step reads up to `SWEEP_PAGES` pages per run. */
 export const RECONCILE_BATCH = 50;
+/** A refund sent this long ago without an answer is looked up at the gateway. */
+export const SENT_REFUND_LOOKUP_AFTER_MS = 10 * 60_000;
 /** A refund that stayed unsent this long is sent by the sweep (the server stopped after the commit). */
 export const UNSENT_REFUND_AFTER_MS = 2 * 60_000;
 /**
@@ -55,7 +58,7 @@ export const HELD_FALLBACK_MS = 24 * 60 * 60_000;
 /** One gateway call may not hold a run longer than this. A timeout counts as a failure and is retried next run. */
 export const GATEWAY_TIMEOUT_MS = 15_000;
 
-type Gateway = Pick<PaymentGateway, "getTransaction" | "refund">;
+type Gateway = Pick<PaymentGateway, "getTransaction">;
 type Lookup = PaymentGatewayEvent | "NOT_FOUND";
 type Counts = {
   answered: number;
@@ -78,7 +81,9 @@ type Counts = {
  *    gateway reports no success after the grace period (a reported success is
  *    applied instead), or 24 hours after the hold ended.
  *
- * Refund result lookups for sent refunds belong to the refund task (M9-T8).
+ * 4. A refund that was sent more than 10 minutes ago and never answered is
+ *    looked up with `getTransaction`; a refund answer goes through the same
+ *    callback code (event record, attempt key check, `CompleteRefund`).
  */
 export class ReconcilePayments {
   constructor(
@@ -86,6 +91,8 @@ export class ReconcilePayments {
       unitOfWork: ReservationUnitOfWork<ReconcilePaymentsContext>;
       sweep: PaymentSweepStore;
       callback: Pick<ProcessPaymentCallback, "applyVerifiedEvent">;
+      /** Sends a refund attempt and finishes the gateway's immediate answer. */
+      refunds: Pick<RefundDispatcher, "send">;
       /** Absent when the deployment has no gateway. */
       gateway?: Gateway;
       provider?: string;
@@ -106,6 +113,7 @@ export class ReconcilePayments {
     if (!gateway || !provider) return { gatewayReady: false, ...counts };
     await this.recoverStaleSessions(gateway, provider, counts);
     await this.sendUnsentRefunds(gateway, provider, counts);
+    await this.recoverSentRefunds(gateway, provider, counts);
     await this.cleanHeldMessages(gateway, provider, counts);
     return { gatewayReady: true, ...counts };
   }
@@ -162,6 +170,49 @@ export class ReconcilePayments {
     );
   }
 
+  private recoverSentRefunds(
+    gateway: Gateway,
+    provider: string,
+    counts: Counts,
+  ) {
+    const { sweep, callback, clock } = this.deps;
+    const sentBefore = new Date(
+      clock.now().getTime() - SENT_REFUND_LOOKUP_AFTER_MS,
+    );
+    return sweepInPages(
+      RECONCILE_BATCH,
+      (exclude) =>
+        sweep.findSentRefunds(provider, sentBefore, RECONCILE_BATCH, exclude),
+      async (payment) => {
+        try {
+          const found = await this.lookup(gateway, payment);
+          // Only a refund answer for this payment counts. A transaction answer
+          // means the refund is still in progress at the gateway.
+          if (
+            found === "NOT_FOUND" ||
+            found.kind !== "REFUND" ||
+            found.paymentId !== payment.id
+          ) {
+            counts.pending += 1;
+            return;
+          }
+          const applied = await callback.applyVerifiedEvent(found);
+          if (!applied.ok) counts.failed += 1;
+          // An answer about an earlier attempt is recorded and ignored: this
+          // attempt is still waiting, so the item stays pending.
+          else if (
+            found.refundAttemptKey !==
+            refundAttemptKey(payment.id, payment.refundAttempt)
+          )
+            counts.pending += 1;
+          else counts.answered += 1;
+        } catch {
+          counts.failed += 1;
+        }
+      },
+    );
+  }
+
   private sendUnsentRefunds(
     gateway: Gateway,
     provider: string,
@@ -183,9 +234,10 @@ export class ReconcilePayments {
             counts.pending += 1;
             return;
           }
-          // The same key as the first request: a refund sent twice stays one refund.
-          const sent = await this.timed(
-            gateway.refund({
+          // The same key as the first request: a refund sent twice stays one
+          // refund. The dispatcher stamps the attempt and finishes an answer.
+          const sent = await this.deps.refunds.send(
+            {
               paymentId: payment.id,
               providerTransactionId: transactionId,
               amountMinor: payment.amountMinor,
@@ -194,17 +246,10 @@ export class ReconcilePayments {
                 payment.id,
                 payment.refundAttempt,
               ),
-            }),
+            },
+            payment.refundAttempt,
           );
-          const stamped = await this.lockedWrite(payment, (context) =>
-            context.payments.markRefundRequested(
-              payment.id,
-              this.deps.clock.now(),
-              sent.providerRefundId,
-              payment.refundAttempt,
-            ),
-          );
-          if (stamped) counts.refundsSent += 1;
+          if (sent) counts.refundsSent += 1;
           else counts.failed += 1;
         } catch {
           // A thrown or timed out call leaves `refundRequestedAt` null for the next run.

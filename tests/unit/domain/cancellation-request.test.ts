@@ -9,6 +9,7 @@ import {
   isActiveRequest,
   parseRejectionReason,
   planApproval,
+  refundBlocksArrival,
 } from "@/domain/reservations";
 import { DomainValidationError } from "@/domain/shared/domain-error";
 import {
@@ -252,5 +253,39 @@ describe("Q-96: closing an open request", () => {
     expect(() => closedReasonForStaffAction("CHECK_OUT" as never)).toThrow(
       DomainValidationError,
     );
+  });
+});
+
+describe("refundBlocksArrival (M9-T8 review)", () => {
+  it.each([
+    ["REFUND_PENDING", null, true],
+    ["PAID", "APPROVED", true],
+    ["PAID", "REFUND_PENDING", true],
+    ["PAID", "REFUND_FAILED", false],
+    ["PAID", "OPEN", false],
+    ["PAID", null, false],
+    ["NOT_REQUIRED", null, false],
+  ] as const)(
+    "payment %s with request %s blocks: %s",
+    (paymentStatus, activeRequestStatus, blocks) => {
+      expect(refundBlocksArrival({ paymentStatus, activeRequestStatus })).toBe(
+        blocks,
+      );
+    },
+  );
+
+  it("refuses unknown values", () => {
+    expect(() =>
+      refundBlocksArrival({
+        paymentStatus: "SOMETHING" as never,
+        activeRequestStatus: null,
+      }),
+    ).toThrow();
+    expect(() =>
+      refundBlocksArrival({
+        paymentStatus: "PAID",
+        activeRequestStatus: "SOMETHING" as never,
+      }),
+    ).toThrow();
   });
 });

@@ -1182,6 +1182,11 @@ describe("re-reads after the locks and atomic cancellation (safeguards 1 to 3)",
     });
     const created = await book(room.id, { couponCode: "welcome" });
     const failing = new CancelReservation({
+      paid: {
+        execute: async () => {
+          throw new Error("unpaid path only");
+        },
+      },
       unitOfWork: new PrismaReservationUnitOfWork<CancelReservationContext>(
         client,
         (transaction) => ({

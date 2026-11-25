@@ -3,6 +3,7 @@ import "server-only";
 import type {
   BookingPaymentStore,
   PaymentCallbackStore,
+  PaymentReader,
 } from "@/application/payments";
 import type { DatabaseClient } from "@/infrastructure/db/prisma/transaction";
 
@@ -79,6 +80,34 @@ export class PrismaBookingPaymentStore
     if (!row) return null;
     const { reservation, ...payment } = row;
     return { ...payment, branchId: reservation.branchId };
+  }
+
+  async findPaidPayment(reservationId: string) {
+    const row = await this.client.payment.findFirst({
+      where: { reservationId, status: "SUCCEEDED" },
+      orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+      select: { id: true },
+    });
+    return row ? this.findPayment(row.id) : null;
+  }
+
+  async completeRefund(
+    id: string,
+    outcome: "REFUNDED" | "REFUND_FAILED",
+    at: Date,
+    providerRefundId?: string,
+  ) {
+    await this.client.payment.updateMany({
+      where: { id, status: "REFUND_PENDING" },
+      data: {
+        status: outcome,
+        updatedAt: at,
+        ...(outcome === "REFUNDED"
+          ? { refundedAt: at, lastError: null }
+          : { lastError: "REFUND_FAILED" }),
+        ...(providerRefundId ? { refundProviderId: providerRefundId } : {}),
+      },
+    });
   }
 
   async findEventResult(providerEventId: string) {
@@ -172,6 +201,30 @@ export class PrismaBookingPaymentStore
         refundRequestedAt: at,
         updatedAt: at,
         ...(providerRefundId ? { refundProviderId: providerRefundId } : {}),
+      },
+    });
+  }
+}
+
+/** Staff read of a reservation's payments (S44). No provider payload is stored or returned. */
+export class PrismaPaymentReader implements PaymentReader {
+  constructor(private readonly client: DatabaseClient) {}
+
+  listForReservation(reservationId: string) {
+    return this.client.payment.findMany({
+      where: { reservationId },
+      orderBy: [{ createdAt: "asc" }, { id: "asc" }],
+      select: {
+        id: true,
+        status: true,
+        provider: true,
+        amountMinor: true,
+        currency: true,
+        providerTransactionId: true,
+        refundAttempt: true,
+        refundRequestedAt: true,
+        refundedAt: true,
+        createdAt: true,
       },
     });
   }

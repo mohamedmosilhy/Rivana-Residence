@@ -28,6 +28,12 @@ export function renderReservationEmail(
     "reservation.payment-not-completed": "Your payment was not completed",
     "reservation.staff-alert": "New confirmed website reservation",
     "cancellation-request.received": "We received your cancellation request",
+    "cancellation-request.approved": "Your cancellation request was approved",
+    "cancellation-request.rejected": "Your cancellation request was declined",
+    "payment.refunded": "Your reservation is cancelled and refunded",
+    "refund.staff-alert": "A refund failed and needs attention",
+    "payment.duplicate-alert": "A possible double payment needs attention",
+    "refund.moved-on-alert": "A refund was paid for a booking that moved on",
     "request.staff-alert": "New reservation cancellation request",
     "payment.auto-refunded": "Your payment is being refunded",
     "payment.staff-alert": "A late payment was refunded automatically",
@@ -37,6 +43,33 @@ export function renderReservationEmail(
     lines.push("Please enter this booking in the hotel system.");
   else if (kind === "cancellation-request.received")
     lines.push("Submitting a request does not cancel your reservation.");
+  else if (kind === "cancellation-request.approved")
+    lines.push(
+      vars.refundAmount
+        ? `Your reservation stays active until the refund of ${vars.refundAmount} is confirmed. We will message you then.`
+        : "Your reservation is cancelled.",
+    );
+  else if (kind === "cancellation-request.rejected")
+    lines.push(
+      "Your reservation is not cancelled.",
+      ...(vars.reason ? [`Reason: ${vars.reason}`] : []),
+    );
+  else if (kind === "payment.refunded")
+    lines.push(
+      `Your reservation is cancelled. We refunded ${vars.refundAmount ?? "the full amount"} to your original payment method.`,
+    );
+  else if (kind === "refund.staff-alert")
+    lines.push(
+      `The refund of ${vars.refundAmount ?? "this booking"} was refused by the payment gateway. Check the booking, then retry the refund from the payments of this reservation.`,
+    );
+  else if (kind === "refund.moved-on-alert")
+    lines.push(
+      `A cancellation refund of ${vars.refundAmount ?? "this booking"} was completed after the guest was already checked in or marked as a no-show. The booking was not cancelled. Review it and recover the money if needed.`,
+    );
+  else if (kind === "payment.duplicate-alert")
+    lines.push(
+      `The payment gateway reported a second successful payment of ${vars.chargedAmount ?? "the booking amount"}. Check the gateway and refund the guest if the guest was charged twice.`,
+    );
   else if (kind === "request.staff-alert")
     lines.push("Please review the cancellation request for this reservation.");
   else if (kind === "payment.auto-refunded")
@@ -61,6 +94,9 @@ export function renderReservationEmail(
     kind !== "reservation.staff-alert" &&
     kind !== "request.staff-alert" &&
     kind !== "payment.staff-alert" &&
+    kind !== "refund.staff-alert" &&
+    kind !== "payment.duplicate-alert" &&
+    kind !== "refund.moved-on-alert" &&
     vars.manageLink
   ) {
     lines.push(`Manage your reservation: ${vars.manageLink}`);

@@ -73,3 +73,37 @@ it("explains an automatic refund to the guest and to the hotel", () => {
   expect(staff.text).toContain("already sold");
   expect(staff.text + staff.html).not.toContain("secret");
 });
+
+it("words the decision and refund messages without a manage link", () => {
+  const withRefund = {
+    ...vars,
+    refundAmount: "USD 345.00",
+    chargedAmount: "USD 345.00",
+  };
+  const approved = renderReservationEmail(
+    "cancellation-request.approved",
+    withRefund,
+  );
+  expect(approved.text).toContain("USD 345.00");
+  expect(approved.text).toContain("stays active until the refund");
+  expect(
+    renderReservationEmail("cancellation-request.approved", vars).text,
+  ).toContain("is cancelled");
+  const rejected = renderReservationEmail("cancellation-request.rejected", {
+    ...vars,
+    reason: "Group booking",
+  });
+  expect(rejected.text).toContain("not cancelled");
+  expect(rejected.text).toContain("Group booking");
+  expect(renderReservationEmail("payment.refunded", withRefund).text).toContain(
+    "USD 345.00",
+  );
+  for (const kind of [
+    "refund.staff-alert",
+    "payment.duplicate-alert",
+  ] as const) {
+    const staff = renderReservationEmail(kind, withRefund);
+    expect(staff.text).toContain("USD 345.00");
+    expect(staff.text + staff.html).not.toContain("Manage your reservation");
+  }
+});

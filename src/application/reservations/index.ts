@@ -2,6 +2,9 @@
 export type {
   ReservationUnitOfWork,
   CancellationRequestStore,
+  CancellationRequestReader,
+  CancellationRequestRecord,
+  CancellationRequestListItem,
   GuestCancellationRequest,
   ReservationRepository,
   ReservationInsert,
@@ -57,6 +60,23 @@ export {
   type CancelReservationInput,
   type CancellationReason,
 } from "./cancel-reservation";
+export {
+  DecideCancellationRequest,
+  ListCancellationRequests,
+  type DecideCancellationContext,
+  type DecisionResult,
+} from "./decide-cancellation-request";
+export { CompleteRefund, type CompleteRefundContext } from "./complete-refund";
+export { RefundDispatcher, type SendRefundContext } from "./send-refund";
+export {
+  CancelPaidReservation,
+  type CancelPaidReservationContext,
+} from "./cancel-paid-reservation";
+export {
+  RetryRefund,
+  ListReservationPayments,
+  type RetryRefundContext,
+} from "./retry-refund";
 export {
   RequestCancellation,
   type RequestCancellationContext,

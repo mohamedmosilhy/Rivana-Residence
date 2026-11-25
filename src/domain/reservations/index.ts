@@ -16,6 +16,7 @@ export {
   REQUEST_REASON_MAX,
   canTransitionCancellationRequest,
   isActiveRequest,
+  refundBlocksArrival,
   canRequestCancellation,
   canGuestChange,
   decideChangeApplication,

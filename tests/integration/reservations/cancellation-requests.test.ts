@@ -846,6 +846,11 @@ describe("Staff closure (AC-15 and Q-96)", () => {
       (await requestCancellation({ client, clock }).execute(access, {})).ok,
     ).toBe(true);
     const failing = new CancelReservation({
+      paid: {
+        execute: async () => {
+          throw new Error("unpaid path only");
+        },
+      },
       reads: new PrismaStaffReservationReader(client),
       clock,
       ids: new Cuid2IdGenerator(),
@@ -938,6 +943,11 @@ describe("Concurrent cancellation requests (20 rounds per race)", () => {
           const staff =
             action === "cancel"
               ? new CancelReservation({
+                  paid: {
+                    execute: async () => {
+                      throw new Error("unpaid path only");
+                    },
+                  },
                   clock: staffClock,
                   reads,
                   ids: new Cuid2IdGenerator(),

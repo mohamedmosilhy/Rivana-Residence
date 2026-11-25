@@ -1001,7 +1001,7 @@
     "/api/v1/staff/reservations/{id}/cancellation": {
       "post": {
         "operationId": "cancelStaffReservation",
-        "summary": "API-S9. Cancel an unpaid reservation, freeing its units and coupon redemption. Repeating it returns the cancelled reservation. Paid cancellation arrives in M9.",
+        "summary": "API-S9. Cancel a reservation. Unpaid (`reservations:cancel`): cancelled at once, freeing its units and coupon redemption; repeating it returns the cancelled reservation. Paid (`reservations:cancel-paid`, Manager and Admin only): records an approved staff request and starts a full refund; the reservation is cancelled only when the gateway confirms the refund (202). The guest hears \"cancelled and refunded\" only when `notifyGuest` is true and only after the refund succeeded.",
         "tags": [
           "Reservations"
         ],
@@ -1059,8 +1059,325 @@
               }
             }
           },
+          "202": {
+            "description": "Paid reservation: the refund was started. The reservation is still confirmed and shows paymentStatus REFUND_PENDING (or the final state when the gateway answered at once).",
+            "headers": {
+              "ETag": {
+                "description": "New reservation version formatted as \"v<version>\".",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StaffReservationDetail"
+                }
+              }
+            }
+          },
           "default": {
             "description": "Problem details. Codes: INTERNAL, UNAUTHENTICATED, FORBIDDEN, NOT_FOUND, CROSS_SITE_REQUEST, MALFORMED_JSON, PAYLOAD_TOO_LARGE, UNSUPPORTED_MEDIA_TYPE, VALIDATION, PRECONDITION_REQUIRED, STALE_VERSION, INVALID_TRANSITION, TRY_AGAIN.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/staff/cancellation-requests": {
+      "get": {
+        "operationId": "listCancellationRequests",
+        "summary": "API-S17. The cancellation request queue of the authorized branches (`cancellations:decide`), newest first.",
+        "tags": [
+          "Cancellations"
+        ],
+        "security": [
+          {
+            "staffSession": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "branchId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 32
+            }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "OPEN",
+                "APPROVED",
+                "REJECTED",
+                "REFUND_PENDING",
+                "REFUND_FAILED",
+                "COMPLETED",
+                "CLOSED"
+              ]
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "default": "1",
+              "type": "string",
+              "pattern": "^[1-9]\\d*$"
+            }
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "default": "25",
+              "type": "string",
+              "pattern": "^[1-9]\\d*$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Request page.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CancellationRequestList"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Problem details. Codes: INTERNAL, UNAUTHENTICATED, FORBIDDEN, NOT_FOUND, INVALID_QUERY.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/staff/cancellation-requests/{id}/approval": {
+      "post": {
+        "operationId": "approveCancellationRequest",
+        "summary": "API-S18. Approve an OPEN request (`cancellations:decide`, Manager of the branch or Admin). Unpaid: the reservation is cancelled at once (200). Paid: a full refund is started and the reservation is cancelled only when the gateway confirms it (202). A request that is not OPEN returns 409 INVALID_TRANSITION.",
+        "tags": [
+          "Cancellations"
+        ],
+        "security": [
+          {
+            "staffSession": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CancellationApprovalRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The request, completed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CancellationDecision"
+                }
+              }
+            }
+          },
+          "202": {
+            "description": "The refund was started.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CancellationDecision"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Problem details. Codes: INTERNAL, UNAUTHENTICATED, FORBIDDEN, NOT_FOUND, CROSS_SITE_REQUEST, MALFORMED_JSON, PAYLOAD_TOO_LARGE, UNSUPPORTED_MEDIA_TYPE, VALIDATION, INVALID_TRANSITION, TRY_AGAIN.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/staff/cancellation-requests/{id}/rejection": {
+      "post": {
+        "operationId": "rejectCancellationRequest",
+        "summary": "API-S19. Reject an OPEN request with a reason that is sent to the guest. The reservation stays confirmed.",
+        "tags": [
+          "Cancellations"
+        ],
+        "security": [
+          {
+            "staffSession": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CancellationRejectionRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The rejected request.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CancellationDecision"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Problem details. Codes: INTERNAL, UNAUTHENTICATED, FORBIDDEN, NOT_FOUND, CROSS_SITE_REQUEST, MALFORMED_JSON, PAYLOAD_TOO_LARGE, UNSUPPORTED_MEDIA_TYPE, VALIDATION, INVALID_TRANSITION, TRY_AGAIN.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/staff/reservations/{id}/payments": {
+      "get": {
+        "operationId": "listReservationPayments",
+        "summary": "API-S44. The payments of a reservation with status and refund progress. No card data and no provider payload.",
+        "tags": [
+          "Cancellations"
+        ],
+        "security": [
+          {
+            "staffSession": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Payments, oldest first.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaymentList"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Problem details. Codes: INTERNAL, UNAUTHENTICATED, FORBIDDEN, NOT_FOUND.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/staff/payments/{id}/refund-retry": {
+      "post": {
+        "operationId": "retryRefund",
+        "summary": "API-S45. Start a new refund attempt for a payment whose last refund failed (`cancellations:decide`). Any other payment state returns 409 INVALID_TRANSITION.",
+        "tags": [
+          "Cancellations"
+        ],
+        "security": [
+          {
+            "staffSession": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": "The new attempt was started.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefundRetryAccepted"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Problem details. Codes: INTERNAL, UNAUTHENTICATED, FORBIDDEN, NOT_FOUND, CROSS_SITE_REQUEST, INVALID_TRANSITION, TRY_AGAIN.",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -9181,6 +9498,325 @@
           "status",
           "createdAt",
           "decisionReason"
+        ],
+        "additionalProperties": false
+      },
+      "CancellationApprovalRequest": {
+        "type": "object",
+        "properties": {
+          "note": {
+            "type": "string",
+            "maxLength": 500
+          }
+        },
+        "additionalProperties": false
+      },
+      "CancellationRejectionRequest": {
+        "type": "object",
+        "properties": {
+          "reason": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 500
+          }
+        },
+        "required": [
+          "reason"
+        ],
+        "additionalProperties": false
+      },
+      "CancellationRequestList": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 32
+                },
+                "branchId": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 32
+                },
+                "reservationId": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 32
+                },
+                "reference": {
+                  "type": "string"
+                },
+                "checkIn": {
+                  "type": "string",
+                  "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                },
+                "requestedBy": {
+                  "type": "string",
+                  "enum": [
+                    "GUEST",
+                    "STAFF"
+                  ]
+                },
+                "status": {
+                  "type": "string",
+                  "enum": [
+                    "OPEN",
+                    "APPROVED",
+                    "REJECTED",
+                    "REFUND_PENDING",
+                    "REFUND_FAILED",
+                    "COMPLETED",
+                    "CLOSED"
+                  ]
+                },
+                "paymentMethod": {
+                  "type": "string",
+                  "enum": [
+                    "PAY_AT_HOTEL",
+                    "ONLINE"
+                  ]
+                },
+                "paymentStatus": {
+                  "type": "string",
+                  "enum": [
+                    "NOT_REQUIRED",
+                    "AWAITING",
+                    "PAID",
+                    "FAILED",
+                    "REFUND_PENDING",
+                    "REFUNDED"
+                  ]
+                },
+                "totalMinor": {
+                  "anyOf": [
+                    {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "guestReason": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "decisionReason": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "createdAt": {
+                  "type": "string",
+                  "format": "date-time",
+                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+                }
+              },
+              "required": [
+                "id",
+                "branchId",
+                "reservationId",
+                "reference",
+                "checkIn",
+                "requestedBy",
+                "status",
+                "paymentMethod",
+                "paymentStatus",
+                "totalMinor",
+                "guestReason",
+                "decisionReason",
+                "createdAt"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "page": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "pageSize": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "total": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          }
+        },
+        "required": [
+          "items",
+          "page",
+          "pageSize",
+          "total"
+        ],
+        "additionalProperties": false
+      },
+      "CancellationDecision": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 32
+          },
+          "reservationId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 32
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "OPEN",
+              "APPROVED",
+              "REJECTED",
+              "REFUND_PENDING",
+              "REFUND_FAILED",
+              "COMPLETED",
+              "CLOSED"
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "reservationId",
+          "status"
+        ],
+        "additionalProperties": false
+      },
+      "PaymentList": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 32
+                },
+                "status": {
+                  "type": "string",
+                  "enum": [
+                    "INITIATED",
+                    "SUCCEEDED",
+                    "EXPIRED",
+                    "FAILED",
+                    "REFUND_PENDING",
+                    "REFUNDED",
+                    "REFUND_FAILED"
+                  ]
+                },
+                "amountMinor": {
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991
+                },
+                "currency": {
+                  "type": "string",
+                  "minLength": 3,
+                  "maxLength": 3
+                },
+                "providerTransactionId": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "refundAttempt": {
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991
+                },
+                "refundRequestedAt": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "format": "date-time",
+                      "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "refundedAt": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "format": "date-time",
+                      "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "createdAt": {
+                  "type": "string",
+                  "format": "date-time",
+                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+                }
+              },
+              "required": [
+                "id",
+                "status",
+                "amountMinor",
+                "currency",
+                "providerTransactionId",
+                "refundAttempt",
+                "refundRequestedAt",
+                "refundedAt",
+                "createdAt"
+              ],
+              "additionalProperties": false
+            }
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "additionalProperties": false
+      },
+      "RefundRetryAccepted": {
+        "type": "object",
+        "properties": {
+          "paymentId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 32
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "INITIATED",
+              "SUCCEEDED",
+              "EXPIRED",
+              "FAILED",
+              "REFUND_PENDING",
+              "REFUNDED",
+              "REFUND_FAILED"
+            ]
+          }
+        },
+        "required": [
+          "paymentId",
+          "status"
         ],
         "additionalProperties": false
       }

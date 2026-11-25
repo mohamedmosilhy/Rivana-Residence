@@ -6,6 +6,14 @@ import {
 } from "./phone-verifications";
 import { Coupon, CouponInput, CouponPatch, CouponList } from "./coupons";
 import {
+  CancellationApprovalRequest,
+  CancellationDecision,
+  CancellationRejectionRequest,
+  CancellationRequestList,
+  PaymentList,
+  RefundRetryAccepted,
+} from "./cancellation-requests";
+import {
   BlockGuestRequest,
   CancellationRequest,
   CreateCancellationRequest,
@@ -178,6 +186,12 @@ const COMPONENTS: Readonly<Record<string, z.ZodType>> = {
   GuestReservation,
   CreateCancellationRequest,
   CancellationRequest,
+  CancellationApprovalRequest,
+  CancellationRejectionRequest,
+  CancellationRequestList,
+  CancellationDecision,
+  PaymentList,
+  RefundRetryAccepted,
 };
 
 function componentSchemas() {
