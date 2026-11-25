@@ -62,7 +62,7 @@ export type GuestReservationSummary = Readonly<{
   createdAt: Date;
 }>;
 
-/** Unlocked reads that start from a token or a verified phone, never from a branch. */
+/** Unlocked reads that start from a token, a verified phone or a verified email, never from a branch. */
 export interface GuestReservationReader {
   findByManageTokenHash(
     tokenHash: string,
@@ -73,6 +73,37 @@ export interface GuestReservationReader {
     phone: PhoneNumber,
     reference: ReservationReference,
   ): Promise<GuestReservationRecord | null>;
+  /** Bookings whose contact email is this normalized email, newest first (ADR 031). */
+  listForEmail(email: string): Promise<readonly GuestReservationSummary[]>;
+  findForEmail(
+    email: string,
+    reference: ReservationReference,
+  ): Promise<GuestReservationRecord | null>;
+}
+
+/**
+ * Who a guest session token proves (ADR 031). A WhatsApp session proves the
+ * phone. An email session proves only the email; its phone is the one typed
+ * at P9, used for the block check and never to find bookings.
+ */
+export type GuestSessionIdentity =
+  | Readonly<{ channel: "WHATSAPP"; phone: PhoneNumber }>
+  | Readonly<{ channel: "EMAIL"; phone: PhoneNumber; email: string }>;
+
+export function sessionGrant(
+  identity: GuestSessionIdentity,
+): GuestContactGrant {
+  return identity.channel === "EMAIL"
+    ? { kind: "EMAIL_SESSION", email: identity.email }
+    : { kind: "GUEST_SESSION", phone: identity.phone };
+}
+
+export function sameSession(a: GuestSessionIdentity, b: GuestSessionIdentity) {
+  return (
+    a.channel === b.channel &&
+    a.phone.equals(b.phone) &&
+    (a.channel !== "EMAIL" || (b.channel === "EMAIL" && a.email === b.email))
+  );
 }
 
 export function guestReservationView(
@@ -89,6 +120,7 @@ export function guestReservationView(
     reservation.id,
     ownerPhone === null ? null : PhoneNumber.parse(ownerPhone),
     false,
+    reservation.contact.email,
   );
   const { deadline, eligibility } = guestCancellationEligibility(
     reservation,
@@ -242,13 +274,13 @@ export type SessionDependencies = Dependencies &
   }>;
 
 /**
- * The verified phone behind a guest session token. A blocked phone is refused
- * only after the token is known, so the 403 reveals nothing to a stranger.
+ * Who a guest session token proves. A blocked phone is refused only after the
+ * token is known, so the 403 reveals nothing to a stranger.
  */
-export async function sessionPhone(
+export async function sessionIdentity(
   deps: Pick<SessionDependencies, "clock" | "guests" | "verifications">,
   tokenHash: string | null,
-): Promise<Result<PhoneNumber>> {
+): Promise<Result<GuestSessionIdentity>> {
   if (tokenHash === null) return invalidSession();
   const record = await deps.verifications.findByTokenHash(tokenHash);
   if (!record) return invalidSession();
@@ -268,9 +300,15 @@ export async function sessionPhone(
     phone,
     deps.clock.now(),
     Boolean(guest?.blockedAt),
-    // No expected email: this is a phone session, so an email token is refused.
+    // An email session is the email its own token proved.
+    record.email,
   );
-  if (checked.valid) return success(phone);
+  if (checked.valid)
+    return success(
+      checked.channel === "EMAIL" && record.email !== null
+        ? { channel: "EMAIL", phone, email: record.email }
+        : { channel: "WHATSAPP", phone },
+    );
   return checked.code === "PHONE_BLOCKED"
     ? guestPhoneBlocked()
     : invalidSession();
@@ -284,7 +322,7 @@ export const guestReservationNotFound = () =>
 
 export async function reservationForSession(
   reader: GuestReservationReader,
-  phone: PhoneNumber,
+  identity: GuestSessionIdentity,
   rawReference: unknown,
 ): Promise<Result<GuestReservationRecord>> {
   let reference: ReservationReference;
@@ -295,7 +333,10 @@ export async function reservationForSession(
       return guestReservationNotFound();
     throw error;
   }
-  const record = await reader.findForPhone(phone, reference);
+  const record =
+    identity.channel === "EMAIL"
+      ? await reader.findForEmail(identity.email, reference)
+      : await reader.findForPhone(identity.phone, reference);
   return record ? success(record) : guestReservationNotFound();
 }
 
@@ -304,18 +345,22 @@ export class ListGuestReservations {
   constructor(private readonly deps: SessionDependencies) {}
 
   async execute(token: string | null) {
-    const phone = await sessionPhone(
+    const identity = await sessionIdentity(
       this.deps,
       guestTokenHash(this.deps.crypto, token),
     );
-    if (!phone.ok) return phone;
+    if (!identity.ok) return identity;
+    const session = identity.value;
     return success({
-      items: await this.deps.reader.listForPhone(phone.value),
+      items:
+        session.channel === "EMAIL"
+          ? await this.deps.reader.listForEmail(session.email)
+          : await this.deps.reader.listForPhone(session.phone),
     });
   }
 }
 
-/** G4. A reference that is not this phone's is the same `404` as one that does not exist. */
+/** G4. A reference that is not this session's is the same `404` as one that does not exist. */
 export class ViewGuestSessionReservation {
   constructor(private readonly deps: SessionDependencies) {}
 
@@ -324,26 +369,23 @@ export class ViewGuestSessionReservation {
     rawReference: unknown,
   ): Promise<Result<GuestReservationView>> {
     const tokenHash = guestTokenHash(this.deps.crypto, token);
-    const phone = await sessionPhone(this.deps, tokenHash);
-    if (!phone.ok) return phone;
+    const identity = await sessionIdentity(this.deps, tokenHash);
+    if (!identity.ok) return identity;
     const record = await reservationForSession(
       this.deps.reader,
-      phone.value,
+      identity.value,
       rawReference,
     );
     // The snapshot opens after the first session check. A block can revoke
     // the token before that snapshot loads contact and request details.
-    const currentPhone = await sessionPhone(this.deps, tokenHash);
-    if (!currentPhone.ok) return currentPhone;
-    if (!currentPhone.value.equals(phone.value)) return invalidSession();
+    const current = await sessionIdentity(this.deps, tokenHash);
+    if (!current.ok) return current;
+    if (!sameSession(current.value, identity.value)) return invalidSession();
     if (!record.ok) return record;
     return success(
       guestReservationView(
         record.value,
-        {
-          kind: "GUEST_SESSION",
-          phone: phone.value,
-        },
+        sessionGrant(identity.value),
         this.deps.clock.now(),
       ),
     );

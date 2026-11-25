@@ -46,9 +46,29 @@ export class PrismaGuestReservationReader implements GuestReservationReader {
     });
   }
 
-  async listForPhone(phone: PhoneNumber) {
+  listForPhone(phone: PhoneNumber) {
+    return this.summaries({
+      guest: { phone: phone.value },
+      ...NOT_EMAIL_VERIFIED,
+    });
+  }
+
+  /**
+   * An email session sees every booking whose contact email is the proven
+   * email, whatever channel verified it, and never matches by phone (ADR 031,
+   * owner decision 2026-11-26). Emails are stored normalized on every write.
+   */
+  findForEmail(email: string, reference: ReservationReference) {
+    return this.load({ reference: reference.value, guestEmail: email });
+  }
+
+  listForEmail(email: string) {
+    return this.summaries({ guestEmail: email });
+  }
+
+  private async summaries(where: Prisma.ReservationWhereInput) {
     const rows = await this.client.reservation.findMany({
-      where: { guest: { phone: phone.value }, ...NOT_EMAIL_VERIFIED },
+      where,
       orderBy: [{ createdAt: "desc" }, { id: "asc" }],
       take: SUMMARY_LIMIT,
       select: {

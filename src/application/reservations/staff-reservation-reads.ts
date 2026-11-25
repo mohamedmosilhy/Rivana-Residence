@@ -213,6 +213,12 @@ export function staffReservationView(
     externalChannel: row.externalChannel,
     paymentMethod: row.paymentMethod,
     paymentStatus: row.paymentStatus,
+    // How a website booking was verified (ADR 031). A null on a website
+    // booking was written during a deploy by a release that knew only WhatsApp.
+    verificationChannel:
+      row.source === "WEBSITE" ? (row.verificationChannel ?? "WHATSAPP") : null,
+    // The proven email is guest data, shown only with the contact.
+    verifiedEmail: showGuest ? row.verifiedEmail : null,
     contact: showGuest ? row.contact : null,
     internalNotes: showGuest ? row.internalNotes : null,
     couponCode: row.couponCode,

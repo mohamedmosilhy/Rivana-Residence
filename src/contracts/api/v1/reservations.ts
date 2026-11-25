@@ -307,6 +307,18 @@ export const StaffReservationDetail = ListItem.omit({
     .nullable(),
   internalNotes: z.string().nullable(),
   couponCode: z.string().nullable(),
+  verificationChannel: z
+    .enum(["WHATSAPP", "EMAIL"])
+    .nullable()
+    .describe(
+      "How a website booking was verified (ADR 031). EMAIL means the phone was not verified for this booking. Null for staff and external bookings.",
+    ),
+  verifiedEmail: z
+    .string()
+    .nullable()
+    .describe(
+      "EMAIL bookings only: the email the code proved, which contact edits never change. Null without guests:read.",
+    ),
   price: z
     .strictObject({
       currency: z.literal("USD"),

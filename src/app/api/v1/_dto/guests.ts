@@ -30,6 +30,7 @@ export function guestDetail(view: GuestView): z.infer<typeof GuestDetail> {
     email: guest.email,
     verified: guest.phoneVerifiedAt !== null,
     phoneVerifiedAt: iso(guest.phoneVerifiedAt),
+    emailVerifiedAt: iso(guest.emailVerifiedAt),
     marketingOptInAt: iso(guest.marketingOptInAt),
     marketingOptOutAt: iso(guest.marketingOptOutAt),
     blocked: guest.blockedAt !== null,

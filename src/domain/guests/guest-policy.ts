@@ -110,12 +110,20 @@ export function websiteBookingProfile(
 export type GuestContactGrant =
   | Readonly<{ kind: "NONE" }>
   | Readonly<{ kind: "MANAGE_TOKEN"; reservationId: string }>
-  | Readonly<{ kind: "GUEST_SESSION"; phone: PhoneNumber }>;
+  | Readonly<{ kind: "GUEST_SESSION"; phone: PhoneNumber }>
+  /** A session from an email code: the normalized email it proved (ADR 031). */
+  | Readonly<{ kind: "EMAIL_SESSION"; email: string }>;
+/**
+ * `phone` is the owning profile's phone; `contactEmail` is the booking's
+ * normalized contact email. An email session matches only that email, never
+ * the phone (ADR 031).
+ */
 export function canReadReservationContact(
   grant: GuestContactGrant,
   reservationId: string,
   phone: PhoneNumber | null,
   blocked: boolean,
+  contactEmail: string | null = null,
 ): boolean {
   if (!reservationId || typeof blocked !== "boolean")
     policyInputError("access");
@@ -126,6 +134,13 @@ export function canReadReservationContact(
       return grant.reservationId === reservationId;
     case "GUEST_SESSION":
       return !blocked && phone !== null && grant.phone.equals(phone);
+    case "EMAIL_SESSION":
+      return (
+        !blocked &&
+        typeof grant.email === "string" &&
+        grant.email.length > 0 &&
+        contactEmail === grant.email
+      );
     default:
       return false;
   }

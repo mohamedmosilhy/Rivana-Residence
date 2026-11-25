@@ -109,6 +109,7 @@ function map(row: Row): StoredReservation {
     paymentStatus: row.paymentStatus,
     privacyNoticeVersion: row.privacyNoticeVersion,
     verificationChannel: row.verificationChannel,
+    verifiedEmail: row.verifiedEmail,
     manageTokenHash: row.manageTokenHash,
     manageTokenExpiresAt: row.manageTokenExpiresAt,
     idempotencyKeyHash: row.idempotencyKeyHash,

@@ -62,6 +62,12 @@ export const GuestDetail = z.strictObject({
   email: z.string().nullable(),
   verified: z.boolean(),
   phoneVerifiedAt: z.iso.datetime().nullable(),
+  emailVerifiedAt: z.iso
+    .datetime()
+    .nullable()
+    .describe(
+      "When an email code proved the profile's current email (ADR 031); cleared when the email changes.",
+    ),
   marketingOptInAt: z.iso.datetime().nullable(),
   marketingOptOutAt: z.iso.datetime().nullable(),
   blocked: z.boolean(),

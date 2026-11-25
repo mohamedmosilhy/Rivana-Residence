@@ -157,6 +157,37 @@ test("a guest changes a booking and requests cancellation, and staff can block w
       (await request(page, "/api/v1/guest/reservation", { bearer: live }))
         .status,
     ).toBe(401);
+    // M9-T12b (ADR 031): a session from an email code, typed with another
+    // phone, finds the booking through its contact email alone.
+    const byEmail = token(`email-session-${key}`);
+    await sql(
+      `INSERT INTO "PhoneVerification"
+         (id, phone, purpose, channel, email, "codeHash", attempts, "expiresAt", "verifiedAt", "tokenHash", "tokenExpiresAt", "clientKey")
+       VALUES ($1, $2, 'GUEST_SESSION', 'EMAIL', 'access@example.test', repeat('0', 64), 1, now() + interval '10 minutes', now(),
+               encode(sha256(convert_to($3, 'UTF8')), 'hex'), now() + interval '30 minutes', 'e2e')`,
+      [
+        `pve-${key}`.slice(0, 32),
+        testInfo.project.name === "desktop-chromium"
+          ? "+12025550195"
+          : "+12025550196",
+        byEmail,
+      ],
+    );
+    const viaEmail = await request(page, "/api/v1/guest/reservations", {
+      bearer: byEmail,
+    });
+    expect(viaEmail.status).toBe(200);
+    expect(
+      viaEmail.body.items.map((item: { reference: string }) => item.reference),
+    ).toContain(reference);
+    expect(
+      await request(page, `/api/v1/guest/reservations/${reference}`, {
+        bearer: byEmail,
+      }),
+    ).toMatchObject({
+      status: 200,
+      body: { contact: { email: "access@example.test", phone } },
+    });
 
     // G5 and G6 over real HTTP, through each way a guest can access a booking.
     const managePath = "/api/v1/guest/reservation";
@@ -394,6 +425,9 @@ test("a guest changes a booking and requests cancellation, and staff can block w
       [phone],
     );
     await sql('DELETE FROM "PhoneVerification" WHERE phone = $1', [phone]);
+    await sql('DELETE FROM "PhoneVerification" WHERE id = $1', [
+      `pve-${key}`.slice(0, 32),
+    ]);
     await sql('DELETE FROM "PhysicalRoom" WHERE id = $1', [key]);
     await sql('DELETE FROM "Guest" WHERE phone = $1', [phone]);
   }

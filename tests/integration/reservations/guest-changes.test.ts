@@ -92,12 +92,14 @@ async function book(units = 1, options: { email?: string } = {}) {
   };
 }
 
-async function guestSession(phone: string, reference: string) {
+async function guestSession(phone: string, reference: string, email?: string) {
   const token = crypto.generateToken();
   await client.phoneVerification.create({
     data: {
       id: new Cuid2IdGenerator().next(),
       purpose: "GUEST_SESSION",
+      // An email session proves this email only (ADR 031).
+      ...(email ? { channel: "EMAIL", email } : {}),
       phone,
       codeHash: "0".repeat(64),
       expiresAt: new Date(NOW.getTime() + 600_000),
@@ -1080,6 +1082,145 @@ describe("Concurrent guest changes (C-16)", () => {
       ).toBe(0);
     }
   }, 90_000);
+});
+
+// T-VCH-6 (M9-T12b, ADR 031): G5 and G6 through a session from an email code.
+describe("Guest changes through an email session", () => {
+  const email = "amina@example.test";
+
+  it("previews and applies through the email, never the phone, and an email change ends access", async () => {
+    // A WhatsApp booking whose contact email the session proved, from another phone.
+    const { row } = await book();
+    const session = await guestSession(phoneOf(12), row.reference, email);
+    const preview = await changes().preview.execute(
+      session,
+      success({ stay: longer }),
+    );
+    expect(preview).toMatchObject({ ok: true });
+    const applied = await changes().apply.execute(
+      session,
+      row.version,
+      success({ ...nameChange, expectedTotal: money(TOTAL_MINOR) }),
+    );
+    expect(applied).toMatchObject({ ok: true, value: { kind: "APPLIED" } });
+
+    const current = await client.reservation.findUniqueOrThrow({
+      where: { id: row.id },
+    });
+    const moved = await changes().apply.execute(
+      session,
+      current.version,
+      success({
+        guest: { email: "new@example.test" },
+        expectedTotal: money(TOTAL_MINOR),
+      }),
+    );
+    // The answer no longer discloses contact or offers actions: the booking
+    // has just left this session.
+    expect(moved).toMatchObject({
+      ok: true,
+      value: {
+        kind: "APPLIED",
+        reservation: { contact: null, allowedActions: [] },
+      },
+    });
+    expect(
+      await client.reservation.findUniqueOrThrow({ where: { id: row.id } }),
+    ).toMatchObject({ guestEmail: "new@example.test" });
+    // The booking no longer carries the proven email: it is a foreign booking now.
+    expect(
+      await changes().preview.execute(session, success({ stay: longer })),
+    ).toMatchObject({ ok: false, error: { code: "NOT_FOUND" } });
+
+    // A session for another email never reaches it, whatever the phone.
+    const stranger = await guestSession(
+      phoneOf(11),
+      row.reference,
+      "stranger@example.test",
+    );
+    expect(
+      await changes().preview.execute(stranger, success({ stay: longer })),
+    ).toMatchObject({ ok: false, error: { code: "NOT_FOUND" } });
+  });
+
+  it("rechecks the email under the booking lock against a staff email change, both orders, 20 rounds", async () => {
+    for (let round = 0; round < 20; round++) {
+      if (round > 0) await resetDatabase(client);
+      const { row } = await book();
+      const session = await guestSession(phoneOf(12), row.reference, email);
+      const input = success({
+        ...nameChange,
+        expectedTotal: money(TOTAL_MINOR),
+      });
+      if (round % 2 === 0) {
+        // The email change holds the booking lock first (a locked SQL update
+        // standing in for S5): the session's recheck must refuse.
+        await withIndependentClients(2, async ([a, b]) => {
+          const opened = deferred();
+          const release = deferred();
+          const staff = a!.$transaction(async (tx) => {
+            await tx.$queryRaw`SELECT id FROM "Reservation" WHERE id = ${row.id} FOR UPDATE`;
+            await tx.reservation.update({
+              where: { id: row.id },
+              data: { guestEmail: "desk@example.test" },
+            });
+            opened.resolve();
+            await release.promise;
+          });
+          await Promise.race([opened.promise, staff]);
+          const edit = changes(b!).apply.execute(session, row.version, input);
+          try {
+            await waitForLockWaiters(client, 1);
+          } finally {
+            release.resolve();
+          }
+          await staff;
+          expect(await edit).toMatchObject({
+            ok: false,
+            error: { code: "NOT_FOUND" },
+          });
+        });
+        expect(
+          await client.reservationChange.count({
+            where: { reservationId: row.id },
+          }),
+        ).toBe(0);
+      } else {
+        // G6 holds the booking lock: the email change waits until it commits.
+        await withIndependentClients(2, async ([a, b]) => {
+          const pause = pausedAudit();
+          const edit = applyWithContext(a!, (context) => ({
+            ...context,
+            audit: pause.audit(context.audit),
+          })).execute(session, row.version, input);
+          await Promise.race([
+            pause.reached,
+            edit.then(() => {
+              throw new Error("The change finished without a lock.");
+            }),
+          ]);
+          // A Prisma query runs only once it is awaited or chained: start it now.
+          const staff = b!
+            .$executeRaw`UPDATE "Reservation" SET "guestEmail" = 'desk@example.test' WHERE id = ${row.id}`.then(
+            (count) => count,
+          );
+          try {
+            await waitForLockWaiters(client, 1);
+          } finally {
+            pause.release();
+          }
+          expect(await edit).toMatchObject({ ok: true });
+          expect(await staff).toBe(1);
+        });
+        expect(
+          await client.reservation.findUniqueOrThrow({ where: { id: row.id } }),
+        ).toMatchObject({
+          guestName: "Updated Guest",
+          guestEmail: "desk@example.test",
+        });
+      }
+    }
+  }, 120_000);
 });
 
 describe("Guest change HTTP contracts (AC-11)", () => {

@@ -244,6 +244,8 @@ export type StoredReservation = Readonly<
     externalChannel: string | null;
     /** Null on staff and external bookings, and on website bookings written before ADR 031 (read as WHATSAPP). */
     verificationChannel: VerificationChannel | null;
+    /** EMAIL bookings only: the email the code proved (read only). */
+    verifiedEmail: string | null;
     branchTimeZone: string;
     contact: Omit<GuestContact, "phone"> & { readonly phone: string | null };
     lines: readonly StoredReservationLine[];

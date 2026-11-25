@@ -290,13 +290,23 @@ describe("P9 email channel through production wiring", () => {
     expect(await refused.json()).toMatchObject({ code: "PHONE_BLOCKED" });
   });
 
-  it("refuses an email guest session until M9-T12b", async () => {
+  it("sends an email guest session code through production wiring, behind the same switch (M9-T12b)", async () => {
+    expect((await requestEmailCode({ purpose: "GUEST_SESSION" })).status).toBe(
+      503,
+    );
     await putSettings({ emailVerificationEnabled: true });
     const response = await requestEmailCode({ purpose: "GUEST_SESSION" });
-    expect(response.status).toBe(422);
-    expect((await response.json()).fieldErrors.channel).toEqual([
-      "Use WhatsApp to open your bookings.",
-    ]);
+    expect(response.status).toBe(201);
+    const { verificationId } = await response.json();
+    expect(outbox().deliveries.at(-1)).toMatchObject({
+      id: verificationId,
+      to: email,
+    });
+    expect(
+      await client.phoneVerification.findUniqueOrThrow({
+        where: { id: verificationId },
+      }),
+    ).toMatchObject({ purpose: "GUEST_SESSION", channel: "EMAIL", email });
   });
 });
 

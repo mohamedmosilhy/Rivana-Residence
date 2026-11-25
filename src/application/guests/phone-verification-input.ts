@@ -19,9 +19,6 @@ const requestInput = z
     website: z.string().max(32_768).optional(),
   })
   .strict();
-/** Until M9-T12b, a guest session can be opened only with a WhatsApp code. */
-export const EMAIL_SESSION_NOT_AVAILABLE =
-  "Use WhatsApp to open your bookings.";
 export function parseVerificationRequest(input: unknown) {
   const parsed = requestInput.safeParse(input);
   if (!parsed.success)
@@ -39,10 +36,6 @@ export function parseVerificationRequest(input: unknown) {
   if (channel === "EMAIL" && parsed.data.email === undefined)
     return invalid("Check the verification details.", [
       { path: "email", message: "Enter the email address for the code." },
-    ]);
-  if (channel === "EMAIL" && parsed.data.purpose === "GUEST_SESSION")
-    return invalid("Check the verification details.", [
-      { path: "channel", message: EMAIL_SESSION_NOT_AVAILABLE },
     ]);
   let email: string | null = null;
   if (channel === "EMAIL")

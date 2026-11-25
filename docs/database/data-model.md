@@ -326,7 +326,7 @@ model Reservation {
   checkOut             DateTime          @db.Date
   guestId              String?           @db.VarChar(32)   // → Guest RESTRICT; required for WEBSITE (CHECK)
   guestName            String            @db.VarChar(120)
-  guestEmail           String?           @db.VarChar(320)   // required for WEBSITE (app rule)
+  guestEmail           String?           @db.VarChar(320)   // required for WEBSITE (app rule); always lowercase: every write goes through parseGuestContact, and the email guest session (M9-T12b) matches it exactly, so a mixed-case row would fail closed
   guestPhone           String?           @db.VarChar(32)
   guestCountry         String?           @db.VarChar(2)
   specialRequests      String?           @db.VarChar(1000)

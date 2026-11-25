@@ -290,4 +290,30 @@ describe("T-PHONE and T-VAL guest values", () => {
       ),
     ).toBe(false);
   });
+  it("an email session reads contact only for the booking's own email, never by phone (ADR 031)", () => {
+    const phone = PhoneNumber.parse("+12025550101");
+    const grant = {
+      kind: "EMAIL_SESSION",
+      email: "amina@example.test",
+    } as const;
+    const read = (email: string | null, blocked = false) =>
+      canReadReservationContact(grant, "booking", phone, blocked, email);
+    expect(read("amina@example.test")).toBe(true);
+    expect(read("other@example.test")).toBe(false);
+    expect(read(null)).toBe(false);
+    expect(read("amina@example.test", true)).toBe(false);
+    // The owning phone alone never grants it.
+    expect(canReadReservationContact(grant, "booking", phone, false)).toBe(
+      false,
+    );
+    expect(
+      canReadReservationContact(
+        { kind: "EMAIL_SESSION", email: "" },
+        "booking",
+        phone,
+        false,
+        "",
+      ),
+    ).toBe(false);
+  });
 });

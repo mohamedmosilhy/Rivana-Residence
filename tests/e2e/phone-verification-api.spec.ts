@@ -52,7 +52,6 @@ test("public verification by email refuses bad input and unavailable email deliv
   for (const data of [
     base,
     { ...base, email: "not-an-email" },
-    { ...base, email: "guest@example.test", purpose: "GUEST_SESSION" },
     { phone: base.phone, purpose: "BOOKING", email: "guest@example.test" },
   ])
     expect(
@@ -65,6 +64,13 @@ test("public verification by email refuses bad input and unavailable email deliv
   expect(await missing.json()).toMatchObject({ code: "EMAIL_NOT_CONFIGURED" });
   expect(missing.headers()["cache-control"]).toBe("no-store");
   expect(missing.headers()["retry-after"]).toBeUndefined();
+  // M9-T12b: a guest session by email is a valid request, refused here only
+  // because this server has no email delivery.
+  const session = await request.post("/api/v1/phone-verifications", {
+    data: { ...base, email: "guest@example.test", purpose: "GUEST_SESSION" },
+  });
+  expect(session.status()).toBe(503);
+  expect(await session.json()).toMatchObject({ code: "EMAIL_NOT_CONFIGURED" });
   await request.dispose();
 });
 test("public confirmation of an email code needs its channel and address binding", async ({

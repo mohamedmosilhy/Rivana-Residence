@@ -122,6 +122,17 @@ async function book(
     bookingBody(phone, token, {
       stay: { checkIn: date(offset), checkOut: date(offset + 3) },
       expectedTotal: { amountMinor: TOTAL_MINOR, currency: "USD" },
+      // An email token books only with the email it proved.
+      ...(options.email
+        ? {
+            guest: {
+              fullName: GUEST_NAME,
+              email: options.email,
+              phone,
+              country: "EG",
+            },
+          }
+        : {}),
     }),
     `guest-access-${bookings}-key`,
   );
@@ -564,13 +575,180 @@ describe("phone sessions and email verified bookings", () => {
     // The guest who booked by email still has the manage link.
     expect((await guestCall(g1, claimed.manageToken)).status).toBe(200);
   });
+});
 
-  it("refuses an email session token until M9-T12b", async () => {
-    await book(phoneOf(1), { email: "amina@example.test" });
-    const token = await session(phoneOf(1), { email: "amina@example.test" });
-    expect(await problemOf(await guestCall(g3, token))).toMatchObject({
-      status: 401,
-      code: "PHONE_NOT_VERIFIED",
+// T-VCH-6 (M9-T12b, ADR 031): a session from an email code sees the bookings
+// whose contact email is the proven email, whatever verified them, and never
+// matches by the typed phone.
+describe("guest sessions by email", () => {
+  const email = "amina@example.test";
+  const sorted = (values: string[]) => [...values].sort();
+
+  it("lists and opens every booking with that contact email, never by phone", async () => {
+    const whatsApp = await book(phoneOf(1));
+    const byEmail = await book(phoneOf(2), { email });
+    const desk = await book(phoneOf(3));
+    // A booking staff entered at the desk with this email.
+    await client.reservation.update({
+      where: { reference: desk.reference },
+      data: { source: "STAFF", verificationChannel: null },
+    });
+    // The typed phone's own booking under another email stays out.
+    const samePhone = await book(phoneOf(4));
+    await client.reservation.update({
+      where: { reference: samePhone.reference },
+      data: { guestEmail: "other@example.test" },
+    });
+    const token = await session(phoneOf(4), { email });
+
+    const list = GuestReservationList.parse(
+      await (await guestCall(g3, token)).json(),
+    );
+    expect(sorted(list.items.map((item) => item.reference))).toEqual(
+      sorted([whatsApp.reference, byEmail.reference, desk.reference]),
+    );
+
+    const detail = GuestReservation.parse(
+      await (
+        await guestCall(g4, token, { reference: whatsApp.reference })
+      ).json(),
+    );
+    expect(detail.contact).toMatchObject({ email, phone: phoneOf(1) });
+    expect(detail.allowedActions).toContain("REQUEST_CANCELLATION");
+
+    const notFound = await problemOf(
+      await guestCall(g4, token, { reference: "RR-00000000" }),
+    );
+    expect(notFound).toMatchObject({ status: 404, code: "NOT_FOUND" });
+    expect(
+      await problemOf(
+        await guestCall(g4, token, { reference: samePhone.reference }),
+      ),
+    ).toEqual(notFound);
+
+    // Staff move one booking to another email: it leaves the session at once.
+    await client.reservation.update({
+      where: { reference: whatsApp.reference },
+      data: { guestEmail: "moved@example.test" },
+    });
+    const after = GuestReservationList.parse(
+      await (await guestCall(g3, token)).json(),
+    );
+    expect(after.items.map((item) => item.reference)).not.toContain(
+      whatsApp.reference,
+    );
+    expect(
+      await problemOf(
+        await guestCall(g4, token, { reference: whatsApp.reference }),
+      ),
+    ).toEqual(notFound);
+  });
+
+  it("answers one 401 for bad email tokens, 403 for a blocked typed phone, and a block revokes the session", async () => {
+    await book(phoneOf(1), { email });
+    const unknown = await problemOf(
+      await guestCall(g3, randomBytes(32).toString("base64url")),
+    );
+    expect(unknown).toMatchObject({ status: 401, code: "PHONE_NOT_VERIFIED" });
+    for (const token of [
+      await session(phoneOf(5), { email, expired: true }),
+      await session(phoneOf(5), { email, purpose: "BOOKING" }),
+    ])
+      expect(await problemOf(await guestCall(g3, token))).toEqual(unknown);
+
+    // The typed phone has a profile of its own.
+    const typed = await book(phoneOf(6));
+    await client.reservation.update({
+      where: { reference: typed.reference },
+      data: { guestEmail: "typed@example.test" },
+    });
+    const live = await session(phoneOf(6), { email });
+    expect((await guestCall(g3, live)).status).toBe(200);
+    expect(
+      (
+        await staffCall(block, `/${await guestId(phoneOf(6))}/block`, {
+          method: "POST",
+          id: await guestId(phoneOf(6)),
+          body: { reason: "Chargeback" },
+        })
+      ).status,
+    ).toBe(200);
+    expect(await problemOf(await guestCall(g3, live))).toEqual(unknown);
+
+    // A token that somehow outlived the block still meets the 403.
+    const outlived = await session(phoneOf(6), { email });
+    expect(await problemOf(await guestCall(g3, outlived))).toMatchObject({
+      status: 403,
+      code: "PHONE_BLOCKED",
+    });
+  });
+
+  it("requests a cancellation through the session and audits how the guest got in", async () => {
+    const booked = await book(phoneOf(1), { email });
+    const token = await session(phoneOf(7), { email });
+    const created = await guestCall(g4Request, token, {
+      method: "POST",
+      reference: booked.reference,
+      body: { reason: "Plans changed" },
+    });
+    expect(created.status).toBe(201);
+    CancellationRequest.parse(await created.json());
+    const audit = await client.auditEvent.findFirstOrThrow({
+      where: { action: "cancellation-request.created" },
+    });
+    expect(audit.changes).toMatchObject({
+      access: "GUEST_SESSION",
+      sessionChannel: "EMAIL",
+    });
+  });
+
+  it("lets the session read a blocked owner's booking but refuses its writes", async () => {
+    const booked = await book(phoneOf(1));
+    const owner = await guestId(phoneOf(1));
+    expect(
+      (
+        await staffCall(block, `/${owner}/block`, {
+          method: "POST",
+          id: owner,
+          body: { reason: "Chargeback" },
+        })
+      ).status,
+    ).toBe(200);
+    // The typed phone is not blocked; the booking's owner is.
+    const token = await session(phoneOf(8), { email });
+    const listed = GuestReservationList.parse(
+      await (await guestCall(g3, token)).json(),
+    );
+    expect(listed.items.map((item) => item.reference)).toEqual([
+      booked.reference,
+    ]);
+    const refused = await problemOf(
+      await guestCall(g4Request, token, {
+        method: "POST",
+        reference: booked.reference,
+      }),
+    );
+    expect(refused).toMatchObject({ status: 403, code: "PHONE_BLOCKED" });
+    expect(await client.cancellationRequest.count()).toBe(0);
+  });
+
+  it("shows staff when a profile's email was proven (S51)", async () => {
+    await book(phoneOf(1));
+    await book(phoneOf(2), { email: "proven@example.test" });
+    const detail = async (phone: string) => {
+      const id = await guestId(phone);
+      return GuestDetail.parse(
+        await (await staffCall(getGuest, `/${id}`, { id })).json(),
+      );
+    };
+    expect(await detail(phoneOf(1))).toMatchObject({
+      verified: true,
+      emailVerifiedAt: null,
+    });
+    expect(await detail(phoneOf(2))).toMatchObject({
+      verified: false,
+      phoneVerifiedAt: null,
+      emailVerifiedAt: NOW.toISOString(),
     });
   });
 });

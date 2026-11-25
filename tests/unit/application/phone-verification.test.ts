@@ -361,6 +361,30 @@ describe("verification by email", () => {
       error: { code: "VERIFICATION_EXPIRED" },
     });
   });
+  it("opens a guest session by email: the code is bound to its purpose and confirms (M9-T12b)", async () => {
+    const result = await byEmail({ purpose: "GUEST_SESSION" });
+    expect(result.ok).toBe(true);
+    expect(emailSender.send).toHaveBeenCalledTimes(1);
+    const row = rows.get("verification-1")!;
+    expect(row).toMatchObject({
+      purpose: "GUEST_SESSION",
+      channel: "EMAIL",
+      email,
+    });
+    expect(row.codeHash).toBe(
+      crypto.codeHash(
+        {
+          id: row.id,
+          phone,
+          purpose: "GUEST_SESSION",
+          channel: "EMAIL",
+          email,
+        },
+        "000123",
+      ),
+    );
+    expect(await confirm()).toMatchObject({ ok: true });
+  });
   it("keeps WhatsApp as the default channel with no email stored", async () => {
     expect((await request()).ok).toBe(true);
     expect(rows.get("verification-1")).toMatchObject({
@@ -388,7 +412,6 @@ describe("verification by email", () => {
     [{ channel: "EMAIL", email: "not-an-email" }, "email"],
     [{ email }, "email"],
     [{ channel: "WHATSAPP", email }, "email"],
-    [{ channel: "EMAIL", email, purpose: "GUEST_SESSION" }, "channel"],
     [{ channel: "SMS", email }, "channel"],
   ])("refuses %j before any write", async (extra, path) => {
     const result = await request({ phone, purpose: "BOOKING", ...extra });

@@ -257,6 +257,40 @@ describe("Paid change requests (AC-12, AC-15, AC-16, T-GCHG-9 through 12)", () =
     });
   });
 
+  it("opens a request through an email session and records the session channel (M9-T12b)", async () => {
+    const f = await book();
+    const token = crypto.generateToken();
+    await client.phoneVerification.create({
+      data: {
+        id: ids.next(),
+        purpose: "GUEST_SESSION",
+        // An email session from another phone, for the booking's contact email.
+        phone: phoneOf(28),
+        channel: "EMAIL",
+        email: "amina@example.test",
+        codeHash: "0".repeat(64),
+        verifiedAt: NOW,
+        expiresAt: new Date(+NOW + 600_000),
+        tokenHash: crypto.sha256(token),
+        tokenExpiresAt: new Date(+NOW + 1_800_000),
+        clientKey: "test",
+      },
+    });
+    const result = await changes().apply.execute(
+      { kind: "GUEST_SESSION", token, reference: f.row.reference },
+      f.row.version,
+      success(longerChange),
+    );
+    expect(result).toMatchObject({ ok: true, value: { kind: "REQUESTED" } });
+    expect(
+      (
+        await client.auditEvent.findFirstOrThrow({
+          where: { action: "change-request.created" },
+        })
+      ).changes,
+    ).toMatchObject({ access: "GUEST_SESSION", sessionChannel: "EMAIL" });
+  });
+
   it("opens one request, alerts the branch once, protects contact values, and writes no booking or inventory changes", async () => {
     const f = await book();
     const input = {

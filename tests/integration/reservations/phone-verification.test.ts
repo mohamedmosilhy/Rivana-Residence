@@ -340,6 +340,37 @@ describe("verification transactions on PostgreSQL", () => {
   });
 });
 
+// T-VCH-6 (M9-T12b, ADR 031): "see my bookings" by email.
+describe("guest session codes by email on PostgreSQL", () => {
+  it("emails the session code after commit and confirms it into a session token bound to the email", async () => {
+    const email = "guest@example.test";
+    const requested = await requester().execute(
+      { phone, purpose: "GUEST_SESSION", channel: "EMAIL", email },
+      "hashed-client",
+    );
+    expect(requested.ok).toBe(true);
+    if (!requested.ok) return;
+    const verificationId = requested.value.verificationId;
+    expect(emailed).toEqual([{ id: verificationId, to: email, code }]);
+    expect(sent).toBe(0);
+    const confirmed = await confirm(verificationId);
+    expect(confirmed).toMatchObject({ ok: true });
+    if (!confirmed.ok) return;
+    const row = await client.phoneVerification.findUniqueOrThrow({
+      where: { id: verificationId },
+    });
+    expect(row).toMatchObject({
+      purpose: "GUEST_SESSION",
+      channel: "EMAIL",
+      email,
+      phone,
+      tokenHash: crypto.tokenHash(confirmed.value.token),
+    });
+    // Confirming opened a session only; it proves nothing about the phone.
+    expect(await client.guest.findUnique({ where: { phone } })).toBeNull();
+  });
+});
+
 describe("P9 and P10 HTTP contract", () => {
   it("returns setup failure without a verification row", async () => {
     const response = await requestRoute.POST(

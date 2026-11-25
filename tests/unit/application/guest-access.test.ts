@@ -158,6 +158,8 @@ describe("guest reads refuse an impossible token before any lookup", () => {
       findByManageTokenHash: vi.fn(async () => null),
       listForPhone: vi.fn(async () => []),
       findForPhone: vi.fn(async () => null),
+      listForEmail: vi.fn(async () => []),
+      findForEmail: vi.fn(async () => null),
     };
     const verifications = { findByTokenHash: vi.fn(async () => null) };
     const guests = { findByPhone: vi.fn(async () => null) };
@@ -198,6 +200,8 @@ describe("guest reads refuse an impossible token before any lookup", () => {
       });
     expect(p.reader.listForPhone).not.toHaveBeenCalled();
     expect(p.reader.findForPhone).not.toHaveBeenCalled();
+    expect(p.reader.listForEmail).not.toHaveBeenCalled();
+    expect(p.reader.findForEmail).not.toHaveBeenCalled();
   });
 
   it("refuses a blocked phone with a live token, without reading reservations", async () => {
@@ -232,6 +236,59 @@ describe("guest reads refuse an impossible token before any lookup", () => {
         ok: false,
         error: { code: "PHONE_BLOCKED" },
       });
+    expect(p.reader.listForPhone).not.toHaveBeenCalled();
+    expect(p.reader.findForPhone).not.toHaveBeenCalled();
+    expect(p.reader.listForEmail).not.toHaveBeenCalled();
+    expect(p.reader.findForEmail).not.toHaveBeenCalled();
+  });
+});
+
+describe("an email guest session (ADR 031, M9-T12b)", () => {
+  function emailSessionPorts() {
+    const reader = {
+      findByManageTokenHash: vi.fn(async () => null),
+      listForPhone: vi.fn(async () => []),
+      findForPhone: vi.fn(async () => null),
+      listForEmail: vi.fn(async () => []),
+      findForEmail: vi.fn(async () => null),
+    };
+    const verifications = {
+      findByTokenHash: vi.fn(async () => ({
+        id: "v1",
+        phone: "+12025550101",
+        purpose: "GUEST_SESSION",
+        channel: "EMAIL",
+        email: "amina@example.test",
+        codeHash: "0".repeat(64),
+        attempts: 1,
+        expiresAt: new Date("2031-03-01T10:10:00Z"),
+        verifiedAt: new Date("2031-03-01T09:59:00Z"),
+        tokenHash: "A".repeat(43),
+        tokenExpiresAt: new Date("2031-03-01T10:30:00Z"),
+        consumedAt: null,
+        clientKey: "client",
+        createdAt: new Date("2031-03-01T09:58:00Z"),
+      })),
+    };
+    const guests = { findByPhone: vi.fn(async () => null) };
+    const crypto = { sha256: vi.fn((value: string) => value) };
+    const clock = { now: () => new Date("2031-03-01T10:00:00Z") };
+    return { reader, verifications, guests, crypto, clock };
+  }
+
+  it("lists and opens bookings by the proven email, never by the typed phone", async () => {
+    const p = emailSessionPorts();
+    expect(
+      await new ListGuestReservations(p as never).execute("A".repeat(43)),
+    ).toEqual({ ok: true, value: { items: [] } });
+    expect(p.reader.listForEmail).toHaveBeenCalledWith("amina@example.test");
+    expect(
+      await new ViewGuestSessionReservation(p as never).execute(
+        "A".repeat(43),
+        "RR-00000000",
+      ),
+    ).toMatchObject({ ok: false, error: { code: "NOT_FOUND" } });
+    expect(p.reader.findForEmail).toHaveBeenCalledTimes(1);
     expect(p.reader.listForPhone).not.toHaveBeenCalled();
     expect(p.reader.findForPhone).not.toHaveBeenCalled();
   });

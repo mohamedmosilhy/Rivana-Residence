@@ -4565,7 +4565,7 @@
             ]
           },
           "channel": {
-            "description": "How to send the code. Defaults to WHATSAPP. EMAIL proves the email only; the phone stays unverified (ADR 031). EMAIL with GUEST_SESSION is refused until M9-T12b.",
+            "description": "How to send the code. Defaults to WHATSAPP. EMAIL proves the email only; the phone stays unverified (ADR 031). EMAIL with GUEST_SESSION opens a session that finds bookings by their contact email.",
             "type": "string",
             "enum": [
               "WHATSAPP",
@@ -6682,6 +6682,28 @@
               "null"
             ]
           },
+          "verificationChannel": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "WHATSAPP",
+                  "EMAIL"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "How a website booking was verified (ADR 031). EMAIL means the phone was not verified for this booking. Null for staff and external bookings."
+          },
+          "verifiedEmail": {
+            "description": "EMAIL bookings only: the email the code proved, which contact edits never change. Null without guests:read.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
           "price": {
             "anyOf": [
               {
@@ -7039,6 +7061,8 @@
           "guest",
           "internalNotes",
           "couponCode",
+          "verificationChannel",
+          "verifiedEmail",
           "price",
           "lines",
           "historySummary",
@@ -9533,6 +9557,19 @@
               }
             ]
           },
+          "emailVerifiedAt": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time",
+                "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "When an email code proved the profile's current email (ADR 031); cleared when the email changes."
+          },
           "marketingOptInAt": {
             "anyOf": [
               {
@@ -9711,6 +9748,7 @@
           "email",
           "verified",
           "phoneVerifiedAt",
+          "emailVerifiedAt",
           "marketingOptInAt",
           "marketingOptOutAt",
           "blocked",

@@ -38,7 +38,8 @@ import {
 } from "./guest-reservation-write-access";
 import {
   guestReservationView,
-  sessionPhone,
+  sessionGrant,
+  sessionIdentity,
   type GuestReservationRecord,
   type SessionDependencies,
 } from "./guest-reservation-reads";
@@ -308,7 +309,7 @@ export class PreviewGuestChange {
     if (!submitted.ok) return submitted;
     const { record, tokenHash } = found.value;
     if (access.kind === "GUEST_SESSION") {
-      const session = await sessionPhone(this.deps, tokenHash);
+      const session = await sessionIdentity(this.deps, tokenHash);
       if (!session.ok) return guestAccessError(session.error);
     }
 
@@ -380,7 +381,7 @@ export class ApplyGuestChange {
   ) {
     const found = await locateGuestReservation(this.deps, access);
     if (!found.ok) return guestAccessError(found.error);
-    const { record, phone } = found.value;
+    const { record, session } = found.value;
     const { stored } = record;
     if (expectedVersion === null)
       return failure("PRECONDITION_REQUIRED", "Send an If-Match header.");
@@ -619,6 +620,7 @@ export class ApplyGuestChange {
                 changes: {
                   reservationId: current.id,
                   access: access.kind,
+                  ...(session ? { sessionChannel: session.channel } : {}),
                   previewTotalMinor: request.previewTotalMinor,
                 },
               }),
@@ -661,8 +663,8 @@ export class ApplyGuestChange {
                   listings.map((listing) => [listing.id, listing.name]),
                 ),
               },
-              phone
-                ? { kind: "GUEST_SESSION", phone }
+              session
+                ? sessionGrant(session)
                 : { kind: "MANAGE_TOKEN", reservationId: reservation.id },
               now,
             ),

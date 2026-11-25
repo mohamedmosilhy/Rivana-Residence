@@ -2,6 +2,7 @@ import type {
   CancellationClosedReason,
   PaymentMethod,
   SyncCheckpointKind,
+  VerificationChannel,
 } from "@/domain/shared/types";
 
 // Append-only history of sensitive changes (FR-AUD-1). `changes` carries only
@@ -265,6 +266,8 @@ export type AuditChanges = {
   "cancellation-request.created": Readonly<{
     reservationId: string;
     access: "MANAGE_TOKEN" | "GUEST_SESSION";
+    /** How a guest session was proven (ADR 031); absent for the manage link. */
+    sessionChannel?: VerificationChannel;
     actorIdentity: "RESERVATION_LINK" | "GUEST_PROFILE";
     reasonProvided: boolean;
   }>;
@@ -275,6 +278,7 @@ export type AuditChanges = {
   "change-request.created": Readonly<{
     reservationId: string;
     access: "MANAGE_TOKEN" | "GUEST_SESSION";
+    sessionChannel?: VerificationChannel;
     previewTotalMinor: number;
   }>;
   "change-request.approved": Readonly<{

@@ -163,6 +163,9 @@ export class RequestCancellation {
           changes: {
             reservationId: current.id,
             access: access.kind,
+            ...(found.value.session
+              ? { sessionChannel: found.value.session.channel }
+              : {}),
             actorIdentity:
               current.guestId === null ? "RESERVATION_LINK" : "GUEST_PROFILE",
             reasonProvided: reason !== null,

@@ -12,7 +12,7 @@ export const PhoneVerificationRequest = z
       .enum(["WHATSAPP", "EMAIL"])
       .optional()
       .describe(
-        "How to send the code. Defaults to WHATSAPP. EMAIL proves the email only; the phone stays unverified (ADR 031). EMAIL with GUEST_SESSION is refused until M9-T12b.",
+        "How to send the code. Defaults to WHATSAPP. EMAIL proves the email only; the phone stays unverified (ADR 031). EMAIL with GUEST_SESSION opens a session that finds bookings by their contact email.",
       ),
     email: z
       .string()

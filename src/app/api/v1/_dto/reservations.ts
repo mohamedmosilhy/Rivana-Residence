@@ -81,6 +81,8 @@ export function staffReservation(
     guest: row.contact,
     internalNotes: row.internalNotes,
     couponCode: row.couponCode,
+    verificationChannel: row.verificationChannel,
+    verifiedEmail: row.verifiedEmail,
     price: price
       ? {
           currency: "USD",

@@ -557,6 +557,75 @@ describe("staff reservation REST and PostgreSQL", () => {
     }
   });
 
+  it("S2 shows how a website booking was verified and the proven email only with guests:read (M9-T12b)", async () => {
+    const room = await seedBookable(client, { units: 4 });
+    const website = async (phone: string, key: string, email?: string) => {
+      const created = await websiteBooking(client).execute(
+        bookingBody(
+          phone,
+          await issueToken(client, phone, email ? { email } : {}),
+        ),
+        key,
+      );
+      if (!created.ok) throw new Error(JSON.stringify(created.error));
+      return (
+        await client.reservation.findUniqueOrThrow({
+          where: { reference: created.value.reference },
+        })
+      ).id;
+    };
+    const whatsApp = await website(phoneOf(31), "verified-whatsapp");
+    const byEmail = await website(
+      phoneOf(32),
+      "verified-email",
+      "amina@example.test",
+    );
+    // Written during a deploy by a release that knew only WhatsApp.
+    const legacy = await website(phoneOf(33), "verified-legacy");
+    await client.reservation.update({
+      where: { id: legacy },
+      data: { verificationChannel: null },
+    });
+    const desk = StaffReservationDetail.parse(
+      await (await send(create, base, staffBody(room.id))).json(),
+    );
+    const view = async (id: string, staff = "admin") =>
+      StaffReservationDetail.parse(
+        await (await read(detail, `${base}/${id}`, staff, id)).json(),
+      );
+    expect(await view(whatsApp)).toMatchObject({
+      verificationChannel: "WHATSAPP",
+      verifiedEmail: null,
+    });
+    expect(await view(byEmail)).toMatchObject({
+      verificationChannel: "EMAIL",
+      verifiedEmail: "amina@example.test",
+    });
+    expect(await view(legacy)).toMatchObject({
+      verificationChannel: "WHATSAPP",
+    });
+    expect(await view(desk.id)).toMatchObject({
+      verificationChannel: null,
+      verifiedEmail: null,
+    });
+    const roleHasCapability = staffCapabilities.roleHasCapability;
+    const mock = vi
+      .spyOn(staffCapabilities, "roleHasCapability")
+      .mockImplementation(
+        (role, capability) =>
+          capability !== "guests:read" && roleHasCapability(role, capability),
+      );
+    try {
+      expect(await view(byEmail, "reception")).toMatchObject({
+        verificationChannel: "EMAIL",
+        verifiedEmail: null,
+        guest: null,
+      });
+    } finally {
+      mock.mockRestore();
+    }
+  });
+
   it("reads S1, S2 and S15 with half-open filters, version and branch privacy", async () => {
     const room = await seedBookable(client);
     await seedBranch(client, { id: otherBranch, slug: "other" });

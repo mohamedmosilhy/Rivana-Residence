@@ -5,7 +5,6 @@ import type {
 } from "@/application/guests";
 import type { Clock } from "@/application/shared/providers";
 import { success, type Result } from "@/application/shared/result";
-import type { PhoneNumber } from "@/domain/guests";
 import {
   guestReservationNotFound,
   guestTokenHash,
@@ -13,9 +12,10 @@ import {
   invalidSession,
   manageTokenMatches,
   reservationForSession,
-  sessionPhone,
+  sessionIdentity,
   unlinkedReservationPhone,
   type GuestReservationRecord,
+  type GuestSessionIdentity,
   type SessionDependencies,
 } from "./guest-reservation-reads";
 import type { ReservationRepository, StoredReservation } from "./ports";
@@ -31,7 +31,8 @@ export type GuestReservationAccess =
 type LocatedReservation = Readonly<{
   access: GuestReservationAccess;
   record: GuestReservationRecord;
-  phone: PhoneNumber | null;
+  /** Null for the manage link. */
+  session: GuestSessionIdentity | null;
   tokenHash: string;
 }>;
 
@@ -49,14 +50,14 @@ export async function locateGuestReservation(
       !manageTokenMatches(record.stored, tokenHash, deps.clock.now())
     )
       return invalidLink();
-    return success({ access, record, tokenHash, phone: null });
+    return success({ access, record, tokenHash, session: null });
   }
 
-  const phone = await sessionPhone(deps, tokenHash);
-  if (!phone.ok) return phone;
+  const session = await sessionIdentity(deps, tokenHash);
+  if (!session.ok) return session;
   const record = await reservationForSession(
     deps.reader,
-    phone.value,
+    session.value,
     access.reference,
   );
   if (!record.ok) return record;
@@ -64,7 +65,7 @@ export async function locateGuestReservation(
     access,
     record: record.value,
     tokenHash,
-    phone: phone.value,
+    session: session.value,
   });
 }
 
@@ -127,7 +128,7 @@ export async function lockGuestBooking(
     )
       return invalidLink();
   } else {
-    const phone = await sessionPhone(
+    const session = await sessionIdentity(
       {
         guests: context.guests,
         verifications: context.verifications,
@@ -135,12 +136,23 @@ export async function lockGuestBooking(
       },
       tokenHash,
     );
-    if (!phone.ok) return phone;
-    if (
+    if (!session.ok) return session;
+    const identity = session.value;
+    if (identity.channel === "EMAIL") {
+      // An email session acts only while the booking still carries the email
+      // it proved, checked under the reservation lock (ADR 031). A staff or
+      // guest email change that committed first makes it a foreign booking.
+      if (
+        !current ||
+        current.guestId !== reservation.guestId ||
+        current.contact.email !== identity.email
+      )
+        return guestReservationNotFound();
+    } else if (
       !current ||
       !guest ||
       current.guestId !== guest.id ||
-      guest.phone !== phone.value.value ||
+      guest.phone !== identity.phone.value ||
       // A phone session never acts on a booking verified by email (Decision 9).
       current.verificationChannel === "EMAIL"
     )
