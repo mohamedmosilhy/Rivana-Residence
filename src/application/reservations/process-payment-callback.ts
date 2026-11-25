@@ -24,11 +24,10 @@ import {
   endBookingPaymentHold,
   expireListingPaymentHolds,
 } from "./booking-payment-holds";
-import type { CompleteRefund } from "./complete-refund";
+import type { CompleteRefund, CompleteRefundContext } from "./complete-refund";
 import { manageTokenExpiry } from "./manage-token";
 import type {
   BookingCrypto,
-  CancellationRequestStore,
   ReservationRepository,
   ReservationUnitOfWork,
   StoredReservation,
@@ -49,10 +48,7 @@ export type ProcessPaymentCallbackContext = ReservationStorageContext &
       "enqueue" | "discardHeld" | "heldMessages" | "releaseHeld"
     >;
     crypto: Pick<BookingCrypto, "generateToken" | "sha256">;
-    cancellationRequests: Pick<
-      CancellationRequestStore,
-      "findActive" | "transition"
-    >;
+    cancellationRequests: CompleteRefundContext["cancellationRequests"];
   }>;
 
 type Dependencies = Readonly<{

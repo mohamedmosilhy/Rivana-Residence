@@ -111,6 +111,8 @@ export default defineConfig({
       CONTACT_OUTBOX_DIR: "/tmp/rivana-e2e-outbox",
       BETTER_AUTH_SECRET: "e2e-only-secret-0123456789abcdefghijklmnop",
       PHONE_VERIFICATION_SECRET: E2E_PHONE_VERIFICATION_SECRET,
+      // API fixtures can simulate separate clients on this loopback-only server.
+      AUTH_TRUST_PROXY_HEADERS: "true",
       ...(e2eDatabaseUrl ? { DATABASE_URL: e2eDatabaseUrl } : {}),
     },
   },

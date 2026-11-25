@@ -15,6 +15,8 @@ const recordSelect = {
   requestedBy: true,
   status: true,
   decisionReason: true,
+  cancelReason: true,
+  notifyGuest: true,
   decidedById: true,
   createdAt: true,
   reservation: { select: { branchId: true } },
@@ -26,6 +28,8 @@ type RecordRow = {
   requestedBy: "GUEST" | "STAFF";
   status: CancellationRequestRecord["status"];
   decisionReason: string | null;
+  cancelReason: string | null;
+  notifyGuest: boolean | null;
   decidedById: string | null;
   createdAt: Date;
   reservation: { branchId: string };
@@ -109,6 +113,24 @@ export class PrismaCancellationRequestStore
     return row ? toRecord(row) : null;
   }
 
+  async findLegacyCancelReason(id: string) {
+    const event = await this.client.auditEvent.findFirst({
+      where: {
+        entityType: "CancellationRequest",
+        entityId: id,
+        action: "cancellation-request.approved",
+      },
+      orderBy: [{ occurredAt: "desc" }, { id: "desc" }],
+      select: { changes: true },
+    });
+    const changes = event?.changes;
+    if (!changes || typeof changes !== "object" || Array.isArray(changes))
+      return null;
+    return typeof changes.cancelReason === "string"
+      ? changes.cancelReason
+      : null;
+  }
+
   async transition(
     input: Parameters<CancellationRequestStore["transition"]>[0],
   ) {
@@ -140,7 +162,9 @@ export class PrismaCancellationRequestStore
         status: "APPROVED",
         decidedById: input.staffId,
         decidedAt: input.at,
-        decisionReason: input.decisionReason,
+        cancelReason: input.cancelReason,
+        notifyGuest: input.notifyGuest,
+        decisionReason: input.legacyDecisionReason,
         createdAt: input.at,
       },
     });

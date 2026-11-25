@@ -1,3 +1,4 @@
+import { ChangeRequestDto } from "./change-requests";
 import { z } from "zod";
 
 import { isoDate, Money, Occupancy, Stay } from "./primitives";
@@ -179,6 +180,7 @@ export const GuestReservation = z.strictObject({
     .nullable(),
   cancellationDeadline: z.iso.datetime().nullable(),
   cancellationRequest: CancellationRequest.nullable(),
+  changeRequest: ChangeRequestDto.nullable(),
   allowedActions: z
     .array(z.string())
     .describe("Eligible actions: REQUEST_CANCELLATION and CHANGE_RESERVATION."),
@@ -207,6 +209,6 @@ export const GuestChangePreview = z.strictObject({
   unavailableLines: z.array(z.number().int().nonnegative()),
   current: Quote,
   proposed: Quote.nullable(),
-  outcome: z.literal("APPLIES_NOW"),
+  outcome: z.enum(["APPLIES_NOW", "NEEDS_APPROVAL"]),
   deadline: z.iso.datetime(),
 });

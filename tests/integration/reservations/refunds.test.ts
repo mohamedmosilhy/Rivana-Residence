@@ -487,6 +487,73 @@ describe("S18 approval of a paid booking and CompleteRefund", () => {
 });
 
 describe("S9 paid staff cancellation (Q-62, AC-8)", () => {
+  it.each([true, false])(
+    "preserves the staff reason and notifyGuest=%s across old and new releases",
+    async (notifyGuest) => {
+      const { reservationId } = await confirmed({ paid: true, request: false });
+      const commands = refundCommands(client, { refund: async () => pending });
+      const booking = await client.reservation.findUniqueOrThrow({
+        where: { id: reservationId },
+      });
+      expect(
+        (
+          await commands.cancel.execute(
+            manager,
+            reservationId,
+            booking.version,
+            {
+              reason: "CROSS_SYSTEM_CONFLICT",
+              notifyGuest,
+            },
+          )
+        ).ok,
+      ).toBe(true);
+      const request = await client.cancellationRequest.findFirstOrThrow({
+        where: { reservationId },
+      });
+      expect(request).toMatchObject({
+        status: "REFUND_PENDING",
+        cancelReason: "CROSS_SYSTEM_CONFLICT",
+        notifyGuest,
+        // A previous release or rollback uses this field to decide whether to send.
+        decisionReason: notifyGuest ? "The room is no longer available" : null,
+      });
+      // Model a previous release still creating requests after the backfill.
+      await client.cancellationRequest.update({
+        where: { id: request.id },
+        data: {
+          cancelReason: null,
+          notifyGuest: null,
+        },
+      });
+      const payment = await client.payment.findFirstOrThrow({
+        where: { reservationId },
+      });
+      expect(
+        await commands.complete.execute({
+          paymentId: payment.id,
+          attemptKey: `${payment.id}:refund:1`,
+          outcome: "SUCCEEDED",
+        }),
+      ).toMatchObject({ ok: true, value: { applied: true } });
+      expect(
+        await client.auditEvent.findFirst({
+          where: { entityId: reservationId, action: "reservation.cancelled" },
+        }),
+      ).toMatchObject({
+        changes: {
+          reason: "CROSS_SYSTEM_CONFLICT",
+          guestNotified: notifyGuest,
+        },
+      });
+      expect(
+        await client.notificationOutbox.count({
+          where: { reservationId, kind: "payment.refunded" },
+        }),
+      ).toBe(notifyGuest ? 2 : 0);
+    },
+  );
+
   it("lets a manager cancel with a refund and tells the guest only when asked", async () => {
     for (const notifyGuest of [false, true]) {
       await reset();

@@ -19,6 +19,9 @@ import {
   RefundDispatcher,
   type SendRefundContext,
   DecideCancellationRequest,
+  DecideChangeRequest,
+  ListChangeRequests,
+  type ChangeRequestDecisionContext,
   type DecideCancellationContext,
   ListCancellationRequests,
   RetryRefund,
@@ -80,6 +83,10 @@ import {
 import { PrismaCouponRepository } from "@/infrastructure/db/prisma/repositories/reservations/commercial/coupon-repository";
 import { PrismaCommercialSettingsRepository } from "@/infrastructure/db/prisma/repositories/reservations/commercial/commercial-settings-repository";
 import { PrismaServiceOfferingRepository } from "@/infrastructure/db/prisma/repositories/reservations/commercial/service-repository";
+import {
+  PrismaChangeRequestStore,
+  PrismaChangeRequestReader,
+} from "@/infrastructure/db/prisma/repositories/reservations/change-request-store";
 import { PrismaStaffReservationReader } from "@/infrastructure/db/prisma/repositories/reservations/staff-reservation-reader";
 import type { DatabaseClient } from "@/infrastructure/db/prisma/transaction";
 import {
@@ -115,6 +122,20 @@ export function modifyReservationContext(
   };
 }
 
+/** Transaction-bound reads and writes for S57 and S58. */
+export function changeRequestDecisionContext(
+  transaction: DatabaseClient,
+): ChangeRequestDecisionContext {
+  return {
+    ...modifyReservationContext(transaction),
+    branches: new PrismaBranchRepository(transaction),
+    verifications: new PrismaPhoneVerificationRepository(transaction),
+    changeRequests: new PrismaChangeRequestStore(transaction),
+    cancellationRequests: new PrismaCancellationRequestStore(transaction),
+    payments: new PrismaBookingPaymentStore(transaction),
+  };
+}
+
 /** The transaction-bound ports of S9. */
 export function cancelReservationContext(
   transaction: DatabaseClient,
@@ -132,6 +153,7 @@ export function frontDeskTransitionContext(
   return {
     ...storageContext(transaction),
     cancellationRequests: new PrismaCancellationRequestStore(transaction),
+    changeRequests: new PrismaChangeRequestStore(transaction),
   };
 }
 
@@ -448,6 +470,7 @@ export function staffReservationCommands(
             client,
             (transaction) => ({
               ...storageContext(transaction),
+              changeRequests: new PrismaChangeRequestStore(transaction),
               cancellationRequests: new PrismaCancellationRequestStore(
                 transaction,
               ),
@@ -460,6 +483,17 @@ export function staffReservationCommands(
       }),
       reads,
       ids: deps.ids,
+      clock,
+    }),
+    decideChange: new DecideChangeRequest({
+      unitOfWork: new PrismaReservationUnitOfWork(
+        client,
+        changeRequestDecisionContext,
+      ),
+      reader: new PrismaChangeRequestReader(client),
+      reservations: new PrismaReservationRepository(client),
+      ids: deps.ids,
+      crypto: deps.crypto,
       clock,
     }),
     decideCancellation: new DecideCancellationRequest({
@@ -527,6 +561,9 @@ export function staffReservationQueries(
     history: new GetReservationHistory(
       reader,
       new PrismaReservationHistoryReader(client),
+    ),
+    changeRequests: new ListChangeRequests(
+      new PrismaChangeRequestReader(client),
     ),
     cancellationRequests: new ListCancellationRequests(
       new PrismaCancellationRequestReader(client),

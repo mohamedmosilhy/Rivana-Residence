@@ -39,7 +39,11 @@ Record exact commands and counts in the review package. If a gate cannot run, sa
 
 The owner selected Node **26.13.0 LTS** for the Mac, CI, and hosting. On macOS with npm **11.20.0**, clean `npm ci --no-audit` and `npm run check` passed (format, lint, typecheck, **67 unit files / 1,373 tests**, production build). The full PostgreSQL integration suite passed **29 files / 391 tests**; full Chromium E2E passed **175 tests**, with **30 intentionally skipped**. Independent review by `gpt-6-astra` approved with zero findings. The [runtime report](../delivery/reports/node-26-runtime-alignment.md) records exact commands, unchanged development audit findings, and the nonfatal upstream Tailwind loader deprecation under Node 26. Those Tailwind and media tracing warnings were subsequently resolved in M6-T10. These results do not replace the historical task acceptance evidence below or claim remote Linux CI has run.
 
-## Latest accepted task results (2026-11-25, M9-T10)
+## Latest accepted task results (2026-11-25, M9-T11)
+
+`npm run check` passed format, lint, typecheck, 2,477 unit and contract tests in 113 files, and the production build. The three PostgreSQL shards passed 1,035 tests in 64 files. Five isolated concurrency cases passed 20 rounds each. Chromium passed 216 tests with 33 intentional skips and exercised G5, G6, S56, S57, and S58 in the running app. Prisma reported no schema drift. The client scan found none of six server markers in 33 chunks. GPT-6.2 Astra approved the recheck after all four findings were fixed. [Task log](../delivery/reports/m9-payments-and-cancellations.md#task-log) · [Independent review](../reviews/2026-11-25-m9-t11.md)
+
+## Previous accepted task results (2026-11-25, M9-T10)
 
 `npm run check` passed format, lint, typecheck, 2,468 unit and contract tests in 113 files, and the production build. The three PostgreSQL shards passed 1,016 tests in 63 files. Four isolated races each passed 20 rounds with observed lock waits. Chromium passed 214 tests with 33 intentional skips and exercised both guest access paths for G5 and G6. The client scan found none of six server markers in 33 chunks. GPT-6.2 Astra approved the recheck after all three findings were fixed. [Task log](../delivery/reports/m9-payments-and-cancellations.md#task-log) · [Independent review](../reviews/2026-11-25-m9-t10.md)
 

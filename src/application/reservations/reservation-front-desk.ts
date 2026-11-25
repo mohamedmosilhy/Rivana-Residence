@@ -7,8 +7,8 @@ import {
 } from "@/domain/reservations";
 import { manageTokenExpiry } from "./manage-token";
 import {
-  closeCancellationRequest,
-  type CloseCancellationRequestContext,
+  closeGuestRequests,
+  type CloseGuestRequestsContext,
 } from "./close-cancellation-request";
 import type { CancellationRequestStore, ReservationUnitOfWork } from "./ports";
 import type { ReservationStorageContext } from "./storage-context";
@@ -124,7 +124,7 @@ const actions = {
 } as const;
 
 export type FrontDeskTransitionContext = ReservationStorageContext &
-  CloseCancellationRequestContext &
+  CloseGuestRequestsContext &
   Readonly<{
     cancellationRequests: Pick<
       CancellationRequestStore,
@@ -206,7 +206,7 @@ export class RecordFrontDeskTransition {
         at,
       );
       if (this.action !== "CHECK_OUT")
-        await closeCancellationRequest(
+        await closeGuestRequests(
           context,
           stored,
           this.action,

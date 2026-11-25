@@ -17,6 +17,7 @@ import {
   type DeadlineBranch,
 } from "@/domain/reservations";
 import { DomainValidationError } from "@/domain/shared/domain-error";
+import type { GuestChangeRequest } from "./change-request-ports";
 import type {
   BookingCrypto,
   GuestCancellationRequest,
@@ -46,6 +47,9 @@ export type GuestReservationRecord = Readonly<{
   phoneBlocked: boolean;
   cancellationTiming: DeadlineBranch;
   currentCancellationRequest: GuestCancellationRequest | null;
+  cancellationRequestActive: boolean;
+  currentChangeRequest: GuestChangeRequest | null;
+  paidTotalMinor: number | null;
 }>;
 export type GuestReservationSummary = Readonly<{
   reference: string;
@@ -92,6 +96,10 @@ export function guestReservationView(
     record.currentCancellationRequest,
     record.phoneBlocked,
     now,
+    {
+      changeRequestOpen: record.currentChangeRequest?.status === "OPEN",
+      cancellationRequestActive: record.cancellationRequestActive,
+    },
   );
   return {
     reference: reservation.reference.value,
@@ -119,12 +127,14 @@ export function guestReservationView(
     currentCancellationRequest: showContact
       ? record.currentCancellationRequest
       : null,
+    currentChangeRequest: showContact ? record.currentChangeRequest : null,
     allowedActions:
       showContact && eligibility.allowed
         ? ([
             "REQUEST_CANCELLATION",
-            ...(reservation.paymentMethod === "PAY_AT_HOTEL" &&
-            reservation.snapshot
+            ...(reservation.snapshot &&
+            (reservation.paymentMethod === "PAY_AT_HOTEL" ||
+              record.paidTotalMinor !== null)
               ? (["CHANGE_RESERVATION"] as const)
               : []),
           ] as const)
@@ -154,12 +164,14 @@ export function guestCancellationEligibility(
   request: GuestCancellationRequest | null,
   phoneBlocked: boolean,
   now: Date,
+  requests: { changeRequestOpen: boolean; cancellationRequestActive: boolean },
 ) {
   const deadline = CancellationDeadline.for(branch, reservation.stay.checkIn);
   const eligibility = canRequestCancellation({
     reservationStatus: reservation.status,
     paymentStatus: reservation.paymentStatus,
     requestStatuses: request ? [request.status] : [],
+    ...requests,
     phoneBlocked,
     deadline,
     now,

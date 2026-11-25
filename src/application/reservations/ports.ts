@@ -37,8 +37,9 @@ export type CancellationRequestRecord = Readonly<{
   branchId: string;
   requestedBy: "GUEST" | "STAFF";
   status: CancellationRequestStatus;
-  /** Guest facing text. For a staff cancellation it is set only when the guest is to be told. */
   decisionReason: string | null;
+  cancelReason: string | null;
+  notifyGuest: boolean | null;
   decidedById: string | null;
   createdAt: Date;
 }>;
@@ -83,6 +84,8 @@ export interface CancellationRequestStore {
   findById(id: string): Promise<CancellationRequestRecord | null>;
   /** The request still in play for a reservation (`OPEN`, `APPROVED`, `REFUND_PENDING`, `REFUND_FAILED`). */
   findActive(reservationId: string): Promise<CancellationRequestRecord | null>;
+  /** The old S9 stored its reason code in the approval audit. */
+  findLegacyCancelReason(id: string): Promise<string | null>;
   /**
    * Moves a request from `from` to `to`. False when it was not in `from`.
    * `decidedById` and `decisionReason` are written when given (a decision).
@@ -103,7 +106,9 @@ export interface CancellationRequestStore {
       id: string;
       reservationId: string;
       staffId: string;
-      decisionReason: string | null;
+      cancelReason: string;
+      notifyGuest: boolean;
+      legacyDecisionReason: string | null;
       at: Date;
     }>,
   ): Promise<CancellationRequestRecord>;
@@ -276,6 +281,7 @@ export type ReservationChangeInsert = Readonly<{
   kind: "STAY" | "CANCEL";
   actorType: "STAFF" | "GUEST";
   actorId: string;
+  changeRequestId?: string;
   before: ChangeSummary;
   after: ChangeSummary;
   oldTotalMinor: number | null;

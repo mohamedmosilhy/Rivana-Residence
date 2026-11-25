@@ -457,7 +457,11 @@ export class PrismaReservationRepository implements ReservationRepository {
 
   async recentGuestChanges(reservationId: string, cutoff: Date, limit: number) {
     const changes = await this.client.reservationChange.findMany({
-      where: { reservationId, actorType: "GUEST", createdAt: { gt: cutoff } },
+      where: {
+        reservationId,
+        OR: [{ actorType: "GUEST" }, { changeRequestId: { not: null } }],
+        createdAt: { gt: cutoff },
+      },
       orderBy: [{ createdAt: "desc" }, { seq: "desc" }],
       take: limit,
       select: { createdAt: true },
@@ -479,6 +483,7 @@ export class PrismaReservationRepository implements ReservationRepository {
         kind: input.kind,
         actorType: input.actorType,
         actorId: input.actorId,
+        changeRequestId: input.changeRequestId ?? null,
         before: input.before,
         after: input.after,
         oldTotalMinor: input.oldTotalMinor,

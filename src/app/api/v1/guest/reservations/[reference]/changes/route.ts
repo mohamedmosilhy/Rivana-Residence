@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { guestReservation } from "@/app/api/v1/_dto/guests";
+import { changeRequest, guestReservation } from "@/app/api/v1/_dto/guests";
 import {
   bearerToken,
   ifMatchVersion,
@@ -34,8 +34,13 @@ export const POST = publicRoute(
           : failure("VALIDATION", "Check the change.", checked.fieldErrors),
       ),
       {
-        ok: ({ version, reservation }) =>
-          json(200, guestReservation(reservation), { ETag: `"v${version}"` }),
+        ok: (result) => {
+          const headers = { ETag: `"v${result.version}"` };
+          if (result.kind === "REQUESTED")
+            return json(202, changeRequest(result.request), headers);
+          const { reservation } = result;
+          return json(200, guestReservation(reservation), headers);
+        },
       },
     );
   },

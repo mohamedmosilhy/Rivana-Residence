@@ -1,8 +1,10 @@
+import type { ChangeRequestDto } from "@/contracts/api/v1/change-requests";
 import type { z } from "zod";
 
 import type { GuestListItem, GuestView } from "@/application/guests";
 import type {
   GuestCancellationRequest,
+  GuestChangeRequest,
   GuestReservationSummary as GuestReservationSummaryRow,
   GuestReservationView,
 } from "@/application/reservations";
@@ -74,6 +76,12 @@ export function cancellationRequest(
   };
 }
 
+export function changeRequest(
+  row: GuestChangeRequest,
+): z.infer<typeof ChangeRequestDto> {
+  return { ...row, createdAt: row.createdAt.toISOString() };
+}
+
 export function guestReservation(
   view: GuestReservationView,
 ): z.infer<typeof GuestReservation> {
@@ -118,6 +126,8 @@ export function guestReservation(
     cancellationRequest:
       view.currentCancellationRequest &&
       cancellationRequest(view.currentCancellationRequest),
+    changeRequest:
+      view.currentChangeRequest && changeRequest(view.currentChangeRequest),
     allowedActions: [...view.allowedActions],
     createdAt: view.createdAt.toISOString(),
   };

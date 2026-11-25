@@ -1,3 +1,7 @@
+import {
+  CANCELLATION_REASONS,
+  type CancellationReason,
+} from "./cancel-reservation";
 import type { CouponRedemptionStore } from "@/application/coupons";
 import type { QueueReservationMessages } from "@/application/notifications";
 import type { PaymentCallbackStore } from "@/application/payments";
@@ -35,7 +39,7 @@ export type CompleteRefundContext = ReservationStorageContext &
     payments: Pick<PaymentCallbackStore, "findPayment" | "completeRefund">;
     cancellationRequests: Pick<
       CancellationRequestStore,
-      "findActive" | "transition"
+      "findActive" | "transition" | "findLegacyCancelReason"
     >;
     redemptions: Pick<CouponRedemptionStore, "release">;
     messages: Pick<QueueReservationMessages, "enqueue">;
@@ -217,26 +221,36 @@ export class CompleteRefund {
         now,
       );
       cancelled = true;
+      const requestedByGuest = waiting.requestedBy === "GUEST";
+      const staffReason = requestedByGuest
+        ? null
+        : (waiting.cancelReason ??
+          (await context.cancellationRequests.findLegacyCancelReason(
+            waiting.id,
+          )));
+      const reason: CancellationReason = requestedByGuest
+        ? "GUEST_REQUEST"
+        : (CANCELLATION_REASONS.find((value) => value === staffReason) ??
+          "OTHER");
+      const notifyGuest =
+        requestedByGuest ||
+        (waiting.notifyGuest ?? waiting.decisionReason !== null);
       await record(
         "reservation.cancelled",
         { entityType: "Reservation", entityId: reservation.id },
         {
           reference: reservation.reference.value,
-          // A staff cancellation's own reason code is on its approval audit,
-          // linked by `requestId` (no column stores it until T11's migration).
-          reason: waiting.requestedBy === "GUEST" ? "GUEST_REQUEST" : "OTHER",
+          reason,
           noteProvided: false,
           couponReleased: reservation.couponId !== null,
-          guestNotified:
-            waiting.requestedBy === "GUEST" || waiting.decisionReason !== null,
+          guestNotified: notifyGuest,
           flagPmsUpdate,
           changeSeq: flagPmsUpdate ? stored.changeSeq : null,
           refunded: true,
           requestId: waiting.id,
         },
       );
-      // A staff cancellation tells the guest only when staff chose to (reason stored).
-      if (waiting.requestedBy === "GUEST" || waiting.decisionReason !== null)
+      if (notifyGuest)
         await context.messages.enqueue(reservation.branchId, reservation.id, {
           kind: "payment.refunded",
           refundMinor: payment.amountMinor,

@@ -8,6 +8,8 @@ import {
 import type { PhoneNumber } from "@/domain/guests";
 import type { ReservationReference } from "@/domain/reservations";
 import { Prisma, type PrismaClient } from "@/generated/prisma/client";
+import { PrismaBookingPaymentStore } from "../booking-payment-store";
+import { PrismaChangeRequestStore } from "../change-request-store";
 import { PrismaCancellationRequestStore } from "../cancellation-request-store";
 import { PrismaReservationRepository } from "../reservation-repository";
 import { PrismaGuestRepository } from "./guest-repository";
@@ -97,9 +99,22 @@ export class PrismaGuestReservationReader implements GuestReservationReader {
         const guest = phone
           ? await new PrismaGuestRepository(transaction).findByPhone(phone)
           : key.guest;
-        const cancellationRequest = await new PrismaCancellationRequestStore(
+        const cancellations = new PrismaCancellationRequestStore(transaction);
+        const cancellationRequest = await cancellations.findCurrent(
+          reservation.id,
+        );
+        const cancellationRequestActive =
+          (await cancellations.findActive(reservation.id)) !== null;
+        const changeRequest = await new PrismaChangeRequestStore(
           transaction,
         ).findCurrent(reservation.id);
+        const paidPayment =
+          reservation.paymentMethod === "ONLINE" &&
+          reservation.paymentStatus === "PAID"
+            ? await new PrismaBookingPaymentStore(transaction).findPaidPayment(
+                reservation.id,
+              )
+            : null;
         const rooms = await transaction.room.findMany({
           where: {
             id: {
@@ -115,6 +130,9 @@ export class PrismaGuestReservationReader implements GuestReservationReader {
           branch: contact,
           cancellationTiming: { timeZone, checkInTime },
           currentCancellationRequest: cancellationRequest,
+          cancellationRequestActive,
+          currentChangeRequest: changeRequest,
+          paidTotalMinor: paidPayment?.amountMinor ?? null,
           phoneBlocked: Boolean(guest?.blockedAt),
           roomNames: Object.fromEntries(
             rooms.map((room) => [room.id, room.name]),

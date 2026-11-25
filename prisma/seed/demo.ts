@@ -795,6 +795,12 @@ export async function seedDemoReservations(
           ],
         ],
         ["MANAGE_LINK", ["reference", "manageLink"]],
+        ["CHANGE_REQUEST_RECEIVED", ["guestFirstName", "reference"]],
+        [
+          "CHANGE_REQUEST_APPROVED",
+          ["reference", "checkIn", "checkOut", "total"],
+        ],
+        ["CHANGE_REQUEST_REJECTED", ["reference", "reason"]],
       ] as const
     ).entries()) {
       await tx.whatsAppTemplate.upsert({

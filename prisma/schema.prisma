@@ -151,6 +151,7 @@ model User {
   syncCheckpoints          BranchSyncCheckpoint[]
 
   decidedCancellationRequests CancellationRequest[]
+  decidedChangeRequests       ChangeRequest[]
 }
 
 // Better Auth 1.7 core tables. Field names follow the library schema; the app
@@ -830,6 +831,13 @@ enum CancellationClosedReason {
   CHECKED_IN
 }
 
+enum ChangeRequestStatus {
+  OPEN
+  APPROVED
+  REJECTED
+  CLOSED
+}
+
 enum NightRateSource {
   BASE
   PERIOD
@@ -919,6 +927,7 @@ model Reservation {
   changes               ReservationChange[]
   payments              Payment[]
   cancellationRequests  CancellationRequest[]
+  changeRequests        ChangeRequest[]
 
   @@unique([id, branchId]) // composite-FK target for ReservationRoom
   @@unique([branchId, externalReference])
@@ -980,6 +989,8 @@ model CancellationRequest {
   decidedById    String?                   @db.VarChar(32)
   decidedAt      DateTime?                 @db.Timestamptz(3)
   decisionReason String?                   @db.VarChar(500)
+  cancelReason   String?                   @db.VarChar(32)
+  notifyGuest    Boolean?
   closedReason   CancellationClosedReason?
   createdAt      DateTime                  @default(now()) @db.Timestamptz(3)
   updatedAt      DateTime                  @updatedAt @db.Timestamptz(3)
@@ -991,25 +1002,53 @@ model CancellationRequest {
   @@index([reservationId])
 }
 
+model ChangeRequest {
+  id                 String                    @id @db.VarChar(32)
+  reservationId      String                    @db.VarChar(32)
+  reservationVersion Int
+  status             ChangeRequestStatus       @default(OPEN)
+  requested          Json
+  requestedSummary   Json
+  oldTotalMinor      Int
+  previewTotalMinor  Int
+  paidTotalMinor     Int
+  lastConflict       String?                   @db.VarChar(60)
+  decidedById        String?                   @db.VarChar(32)
+  decidedAt          DateTime?                 @db.Timestamptz(3)
+  decisionReason     String?                   @db.VarChar(500)
+  closedReason       CancellationClosedReason?
+  createdAt          DateTime                  @default(now()) @db.Timestamptz(3)
+  updatedAt          DateTime                  @updatedAt @db.Timestamptz(3)
+  reservation        Reservation               @relation(fields: [reservationId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  decidedBy          User?                     @relation(fields: [decidedById], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  change             ReservationChange?
+
+  // One OPEN row per reservation and decision consistency are enforced in SQL.
+  @@index([status, createdAt])
+  @@index([reservationId, createdAt])
+}
+
 // Append-only change history (M8-T9). Summaries hold no personal values.
 // SQL checks (seq, override all-or-none) live in the reservation_changes migration.
 model ReservationChange {
-  id                String      @id @db.VarChar(32)
-  reservationId     String      @db.VarChar(32)
-  branchId          String      @db.VarChar(32)
+  id                String         @id @db.VarChar(32)
+  reservationId     String         @db.VarChar(32)
+  branchId          String         @db.VarChar(32)
   seq               Int // 1, 2, … per reservation; matches Reservation.changeSeq after the write
-  kind              String      @db.VarChar(24) // STAY or CANCEL (T9); SERVICES arrives with T9b
-  actorType         String      @db.VarChar(16)
-  actorId           String?     @db.VarChar(32)
+  kind              String         @db.VarChar(24) // STAY or CANCEL (T9); SERVICES arrives with T9b
+  actorType         String         @db.VarChar(16)
+  actorId           String?        @db.VarChar(32)
   before            Json
   after             Json
   oldTotalMinor     Int?
   newTotalMinor     Int?
   overrideFromMinor Int? // re-quoted total before a staff override
   overrideToMinor   Int? // total the staff member set
-  overrideReason    String?     @db.VarChar(500)
-  createdAt         DateTime    @default(now()) @db.Timestamptz(3)
-  reservation       Reservation @relation(fields: [reservationId, branchId], references: [id, branchId], onDelete: Restrict, onUpdate: Restrict)
+  overrideReason    String?        @db.VarChar(500)
+  changeRequestId   String?        @unique @db.VarChar(32)
+  createdAt         DateTime       @default(now()) @db.Timestamptz(3)
+  reservation       Reservation    @relation(fields: [reservationId, branchId], references: [id, branchId], onDelete: Restrict, onUpdate: Restrict)
+  changeRequest     ChangeRequest? @relation(fields: [changeRequestId], references: [id], onDelete: Restrict, onUpdate: Restrict)
 
   @@unique([reservationId, seq])
   @@index([branchId, createdAt])

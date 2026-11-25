@@ -1,3 +1,4 @@
+import { ChangeRequestDto, StaffChangeRequestList } from "./change-requests";
 import {
   PhoneVerificationRequest,
   PhoneVerificationConfirmation,
@@ -195,6 +196,8 @@ const COMPONENTS: Readonly<Record<string, z.ZodType>> = {
   CancellationApprovalRequest,
   CancellationRejectionRequest,
   CancellationRequestList,
+  ChangeRequestDto,
+  StaffChangeRequestList,
   CancellationDecision,
   PaymentList,
   RefundRetryAccepted,

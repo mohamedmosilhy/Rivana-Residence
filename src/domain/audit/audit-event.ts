@@ -233,6 +233,7 @@ export type AuditChanges = {
     overrideToMinor: number | null;
     flagPmsUpdate: boolean;
     guestNotified: boolean;
+    changeRequestId?: string;
   }>;
   "reservation.cancelled": Readonly<{
     reference: string;
@@ -249,7 +250,7 @@ export type AuditChanges = {
     changeSeq: number | null;
     /** Set when a refund finished the cancellation (M9-T8). */
     refunded?: boolean;
-    /** The request whose approval audit carries the staff reason code. */
+    /** The request that started the refund. */
     requestId?: string;
   }>;
   "reservation.pms-update-entered": Readonly<{
@@ -264,6 +265,22 @@ export type AuditChanges = {
     reasonProvided: boolean;
   }>;
   "cancellation-request.closed": Readonly<{
+    reservationId: string;
+    closedReason: CancellationClosedReason;
+  }>;
+  "change-request.created": Readonly<{
+    reservationId: string;
+    access: "MANAGE_TOKEN" | "GUEST_SESSION";
+    previewTotalMinor: number;
+  }>;
+  "change-request.approved": Readonly<{
+    reservationId: string;
+    noteProvided: boolean;
+    paidTotalMinor: number;
+    newTotalMinor: number;
+  }>;
+  "change-request.rejected": Readonly<{ reservationId: string }>;
+  "change-request.closed": Readonly<{
     reservationId: string;
     closedReason: CancellationClosedReason;
   }>;
@@ -361,6 +378,7 @@ export type AuditEvent<A extends AuditAction = AuditAction> = Readonly<{
     | "WhatsAppTemplate"
     | "Reservation"
     | "CancellationRequest"
+    | "ChangeRequest"
     | "Payment"
     | "SyncCheckpoint"
     | "Guest";

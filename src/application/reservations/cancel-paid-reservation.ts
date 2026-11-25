@@ -12,20 +12,24 @@ import { auditEvent } from "@/domain/audit";
 import { planApproval } from "@/domain/reservations";
 
 import {
-  closeCancellationRequest,
-  type CloseCancellationRequestContext,
+  closeGuestRequests,
+  type CloseGuestRequestsContext,
 } from "./close-cancellation-request";
 import type {
   CancellationRequestStore,
   ReservationUnitOfWork,
   StoredReservation,
 } from "./ports";
+import {
+  CANCELLATION_REASON_TEXT,
+  type CancellationReason,
+} from "./cancel-reservation";
 import { refundAttemptKey } from "./refund-key";
 import type { RefundDispatcher, RefundRequest } from "./send-refund";
 import type { ReservationStorageContext } from "./storage-context";
 
 export type CancelPaidReservationContext = ReservationStorageContext &
-  CloseCancellationRequestContext &
+  CloseGuestRequestsContext &
   Readonly<{
     cancellationRequests: Pick<
       CancellationRequestStore,
@@ -40,8 +44,7 @@ type Plan = Readonly<{ request: RefundRequest | null; attempt: number }>;
  * S9 for a paid booking (Q-62: Manager and Admin only). It records an already
  * approved staff request and starts the same refund the guest path uses
  * (spec 0006 D-E). The booking is cancelled only when the gateway confirms the
- * refund. `notifyGuest` is kept as the guest facing text of the request: the
- * guest hears "cancelled and refunded" only when staff chose to tell them, and
+ * refund. The guest hears "cancelled and refunded" when staff chose to tell them, and
  * only once the refund succeeded.
  */
 export class CancelPaidReservation {
@@ -59,10 +62,9 @@ export class CancelPaidReservation {
     row: StoredReservation,
     expectedVersion: number | null,
     input: Readonly<{
-      reason: string;
+      reason: CancellationReason;
       note: string | null;
-      /** Guest facing wording, or null when the guest is not to be told. */
-      guestText: string | null;
+      notifyGuest: boolean;
     }>,
   ): Promise<Result<void>> {
     // The capability that separates a Manager from a Receptionist (AC-8).
@@ -99,15 +101,7 @@ export class CancelPaidReservation {
       const active = await context.cancellationRequests.findActive(current.id);
       const now = this.deps.clock.now();
       // A guest request that is still open is superseded by this staff action (Q-96).
-      if (active?.status === "OPEN")
-        await closeCancellationRequest(
-          context,
-          current,
-          "CANCEL",
-          principal.id,
-          now,
-        );
-      else if (active)
+      if (active && active.status !== "OPEN")
         return invalidTransition(
           current.status,
           "A cancellation for this reservation is already in progress.",
@@ -118,12 +112,18 @@ export class CancelPaidReservation {
           current.status,
           "No successful payment was found to refund.",
         );
+      await closeGuestRequests(context, current, "CANCEL", principal.id, now);
       const requestId = this.deps.ids.next();
       await context.cancellationRequests.createApproved({
         id: requestId,
         reservationId: current.id,
         staffId: principal.id,
-        decisionReason: input.guestText,
+        cancelReason: input.reason,
+        notifyGuest: input.notifyGuest,
+        // The previous release can still finish the refund during deployment.
+        legacyDecisionReason: input.notifyGuest
+          ? CANCELLATION_REASON_TEXT[input.reason]
+          : null,
         at: now,
       });
       await context.cancellationRequests.transition({

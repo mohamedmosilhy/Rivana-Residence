@@ -27,6 +27,8 @@ import {
 import { PrismaGuestDirectoryReader } from "@/infrastructure/db/prisma/repositories/reservations/guests/guest-directory-reader";
 import { PrismaGuestReservationReader } from "@/infrastructure/db/prisma/repositories/reservations/guests/guest-reservation-reader";
 import { PrismaReservationRepository } from "@/infrastructure/db/prisma/repositories/reservations/reservation-repository";
+import { PrismaBookingPaymentStore } from "@/infrastructure/db/prisma/repositories/reservations/booking-payment-store";
+import { PrismaChangeRequestStore } from "@/infrastructure/db/prisma/repositories/reservations/change-request-store";
 import { PrismaCancellationRequestStore } from "@/infrastructure/db/prisma/repositories/reservations/cancellation-request-store";
 import { PrismaBranchRepository } from "@/infrastructure/db/prisma/repositories/branches/branch-repository";
 import { reservationMessageWriter } from "@/composition/reservation-jobs";
@@ -154,6 +156,7 @@ export function requestCancellationContext(
     verifications: new PrismaPhoneVerificationRepository(transaction),
     branches: new PrismaBranchRepository(transaction),
     cancellationRequests: new PrismaCancellationRequestStore(transaction),
+    changeRequests: new PrismaChangeRequestStore(transaction),
     audit: new PrismaAuditLog(transaction),
     messages: reservationMessageWriter(transaction),
   };
@@ -215,6 +218,9 @@ export function guestChangeContext(
   return {
     ...requestCancellationContext(transaction),
     ...guestChangeReaders(transaction),
+    cancellationRequests: new PrismaCancellationRequestStore(transaction),
+    changeRequests: new PrismaChangeRequestStore(transaction),
+    payments: new PrismaBookingPaymentStore(transaction),
     reservations: new PrismaReservationRepository(transaction),
     guests: new PrismaGuestRepository(transaction),
     consumption: new PrismaReservationConsumptionReader(transaction),

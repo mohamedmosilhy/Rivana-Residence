@@ -265,6 +265,9 @@ describe("guestReservationView contact rule (R-8)", () => {
       phoneBlocked: false,
       cancellationTiming: { timeZone: "Africa/Cairo", checkInTime: null },
       currentCancellationRequest: null,
+      cancellationRequestActive: false,
+      currentChangeRequest: null,
+      paidTotalMinor: null,
     }) as never;
   const now = new Date("2031-03-01T10:00:00Z");
   const session = (phone: string) => ({

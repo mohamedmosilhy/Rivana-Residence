@@ -32,11 +32,17 @@ export function renderReservationEmail(
     "cancellation-request.received": "We received your cancellation request",
     "cancellation-request.approved": "Your cancellation request was approved",
     "cancellation-request.rejected": "Your cancellation request was declined",
+    "change-request.received": "We received your booking change request",
+    "change-request.approved": "Your booking change request was approved",
+    "change-request.rejected": "Your booking change request was declined",
     "payment.refunded": "Your reservation is cancelled and refunded",
     "refund.staff-alert": "A refund failed and needs attention",
     "payment.duplicate-alert": "A possible double payment needs attention",
     "refund.moved-on-alert": "A refund was paid for a booking that moved on",
-    "request.staff-alert": "New reservation cancellation request",
+    "request.staff-alert":
+      vars.requestKind === "CHANGE"
+        ? "New reservation change request"
+        : "New reservation cancellation request",
     "payment.auto-refunded": "Your payment is being refunded",
     "payment.staff-alert": "A late payment was refunded automatically",
   }[kind];
@@ -70,6 +76,15 @@ export function renderReservationEmail(
       "Your reservation is not cancelled.",
       ...(vars.reason ? [`Reason: ${vars.reason}`] : []),
     );
+  else if (kind === "change-request.received")
+    lines.push(
+      "Your reservation stays as booked until the hotel approves the request.",
+    );
+  else if (kind === "change-request.rejected")
+    lines.push(
+      "Your reservation stays as booked.",
+      ...(vars.reason ? [`Reason: ${vars.reason}`] : []),
+    );
   else if (kind === "payment.refunded")
     lines.push(
       `Your reservation is cancelled. We refunded ${vars.refundAmount ?? "the full amount"} to your original payment method.`,
@@ -87,7 +102,11 @@ export function renderReservationEmail(
       `The payment gateway reported a second successful payment of ${vars.chargedAmount ?? "the booking amount"}. Check the gateway and refund the guest if the guest was charged twice.`,
     );
   else if (kind === "request.staff-alert")
-    lines.push("Please review the cancellation request for this reservation.");
+    lines.push(
+      vars.requestKind === "CHANGE"
+        ? "Please review the change request for this reservation."
+        : "Please review the cancellation request for this reservation.",
+    );
   else if (kind === "payment.auto-refunded")
     lines.push(
       "Your payment arrived after the room was released and the room was no longer available.",
@@ -112,6 +131,10 @@ export function renderReservationEmail(
     if (vars.checkIn && vars.checkOut)
       lines.push(`Stay: ${vars.checkIn} to ${vars.checkOut}`);
     if (vars.total) lines.push(`Total: ${vars.total}`);
+    if (kind === "change-request.approved")
+      lines.push(
+        "The hotel will settle any difference with you at the front desk.",
+      );
     if (vars.reason) lines.push(`Reason: ${vars.reason}`);
   }
   const html = lines.map((line) => `<p>${escapeHtml(line)}</p>`);

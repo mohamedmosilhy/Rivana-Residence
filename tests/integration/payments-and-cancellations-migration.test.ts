@@ -9,6 +9,7 @@ import { insertStorage, reservationData } from "./support/reservation-storage";
 import { testDatabaseUrl } from "./support/test-database";
 
 const migration = "20261123120000_payments_and_cancellations";
+const changeMigration = "20261125120000_change_requests";
 
 it("M9-T1 upgrades populated M8, preserves reservations and enforces the renamed hold constraint without Prisma drift", async () => {
   const url = new URL(testDatabaseUrl().url);
@@ -107,7 +108,102 @@ it("M9-T1 upgrades populated M8, preserves reservations and enforces the renamed
       );
 
       // Test T1 at its point in history, then compare the current schemas.
-      for (const name of migrations.filter((name) => name > migration))
+      for (const name of migrations.filter(
+        (name) => name > migration && name < changeMigration,
+      ))
+        await apply(name);
+      const at = "2026-11-22T12:20:00Z";
+      for (const [id, decisionReason, cancelReason] of [
+        ["legacy-tell", "Cancelled by the hotel", "CROSS_SYSTEM_CONFLICT"],
+        ["legacy-silent", null, "INVALID_DETAILS"],
+        ["legacy-missing-audit", null, null],
+      ]) {
+        await insertStorage(db, "CancellationRequest", {
+          id,
+          reservationId: "legacy",
+          requestedBy: "STAFF",
+          status: "REFUND_PENDING",
+          decisionReason,
+          updatedAt: at,
+        });
+        if (cancelReason)
+          await insertStorage(db, "AuditEvent", {
+            id: `audit-${id}`,
+            action: "cancellation-request.approved",
+            entityId: id,
+            entityType: "CancellationRequest",
+            actorType: "STAFF",
+            changes: JSON.stringify({ cancelReason }),
+          });
+      }
+      await apply(changeMigration);
+      expect(
+        (
+          await db.query(
+            'SELECT id, "cancelReason", "notifyGuest", status FROM "CancellationRequest" ORDER BY id',
+          )
+        ).rows,
+      ).toEqual([
+        {
+          id: "legacy-missing-audit",
+          cancelReason: "OTHER",
+          notifyGuest: false,
+          status: "REFUND_PENDING",
+        },
+        {
+          id: "legacy-silent",
+          cancelReason: "INVALID_DETAILS",
+          notifyGuest: false,
+          status: "REFUND_PENDING",
+        },
+        {
+          id: "legacy-tell",
+          cancelReason: "CROSS_SYSTEM_CONFLICT",
+          notifyGuest: true,
+          status: "REFUND_PENDING",
+        },
+      ]);
+      const request = {
+        id: "change1",
+        reservationId: "legacy",
+        reservationVersion: 1,
+        requested: "{}",
+        requestedSummary: "{}",
+        oldTotalMinor: 115,
+        paidTotalMinor: 115,
+        previewTotalMinor: 230,
+        updatedAt: at,
+      };
+      await insertStorage(db, "ChangeRequest", request);
+      await expect(
+        insertStorage(db, "ChangeRequest", { ...request, id: "change2" }),
+      ).rejects.toMatchObject({
+        code: "23505",
+        constraint: "ChangeRequest_one_open",
+      });
+      await expect(
+        insertStorage(db, "ChangeRequest", {
+          ...request,
+          id: "change2",
+          reservationId: "hotel",
+          previewTotalMinor: 115,
+        }),
+      ).rejects.toMatchObject({
+        code: "23514",
+        constraint: "ChangeRequest_totals_check",
+      });
+      await expect(
+        insertStorage(db, "ChangeRequest", {
+          ...request,
+          id: "change2",
+          reservationId: "hotel",
+          status: "CLOSED",
+        }),
+      ).rejects.toMatchObject({
+        code: "23514",
+        constraint: "ChangeRequest_decision_check",
+      });
+      for (const name of migrations.filter((name) => name > changeMigration))
         await apply(name);
       expect(
         execFileSync(

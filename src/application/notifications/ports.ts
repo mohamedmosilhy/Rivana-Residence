@@ -176,6 +176,9 @@ type GuestMessageKind =
   | "cancellation-request.received"
   | "cancellation-request.approved"
   | "cancellation-request.rejected"
+  | "change-request.received"
+  | "change-request.approved"
+  | "change-request.rejected"
   | "payment.refunded"
   | "payment.auto-refunded";
 /** Staff messages go to the branch inbox by email only, never to a guest. */
@@ -202,6 +205,7 @@ export type MessageVariables = {
   hotelPhone?: string;
   hotelEmail?: string;
   reason?: string;
+  requestKind?: "CHANGE";
   manageLink?: string;
   holdExpiresAt?: string;
   refundAmount?: string;
@@ -280,11 +284,14 @@ export type ReservationMessageEvent =
   /** `refundMinor` is set when the approval starts a refund. */
   | { kind: "cancellation-request.approved"; refundMinor?: number }
   | { kind: "cancellation-request.rejected"; reason: string }
+  | { kind: "change-request.received" }
+  | { kind: "change-request.approved" }
+  | { kind: "change-request.rejected"; reason: string }
   | { kind: "payment.refunded"; refundMinor: number }
   | { kind: "refund.staff-alert"; refundMinor: number }
   | { kind: "payment.duplicate-alert"; amountMinor: number }
   | { kind: "refund.moved-on-alert"; refundMinor: number }
-  | { kind: "request.staff-alert" }
+  | { kind: "request.staff-alert"; requestKind?: "CHANGE" }
   | { kind: "payment.auto-refunded"; refundMinor: number }
   | { kind: "payment.staff-alert"; refundMinor: number };
 

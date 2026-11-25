@@ -1,5 +1,6 @@
 import type { CatalogRoomType } from "@/application/inventory";
 import { displayQuote, type QuoteView } from "@/application/quotes";
+import { decideChangeApplication } from "@/domain/reservations";
 import type { Occupancy } from "@/domain/shared/occupancy";
 import type { StayRange } from "@/domain/shared/stay-range";
 import type {
@@ -31,6 +32,7 @@ export function guestChangePreview(
   listings: ReadonlyMap<string, GuestChangeListing>,
   deadline: string,
   unavailableLines: readonly number[],
+  paidTotalMinor: number | null,
 ) {
   function quote(
     stay: StayRange,
@@ -80,7 +82,16 @@ export function guestChangePreview(
     unavailableLines: [...unavailableLines],
     current: quote(reservation.stay, storedLines, current),
     proposed: next ? quote(next.stay, next.lines, next.snapshot) : null,
-    outcome: "APPLIES_NOW" as const,
+    outcome:
+      next &&
+      paidTotalMinor !== null &&
+      decideChangeApplication({
+        paymentMethod: reservation.paymentMethod,
+        paidTotalMinor,
+        newTotalMinor: next.snapshot.totalMinor,
+      }) === "REQUEST_APPROVAL"
+        ? ("NEEDS_APPROVAL" as const)
+        : ("APPLIES_NOW" as const),
     deadline,
   };
 }

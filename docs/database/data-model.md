@@ -30,7 +30,7 @@ The implemented schema is `prisma/schema.prisma` (9 migrations; M4 added `…_st
 | Commercial | `ServiceOffering`, `Coupon`, `CouponBranch`, `CommercialSettings` | Implemented (M7-T3): service price units and child pricing, positive USD amounts, case-insensitive coupon uniqueness and value/window/limit checks, branch joins, singleton VAT 0–10000 basis points inserted at 1500; service and VAT management APIs are implemented (T4), coupon management APIs are implemented (T5); quote composition remains T6 |
 | Reservations | `Reservation`, `ReservationRoom`, `ReservationNight`, `ReservationService`, `CouponRedemption`, `ReservationChange`, `BranchSyncCheckpoint` | Storage, domain rules, and consumption reader implemented in M8-T1 to T3. Website creation implemented in M8-T7b. Staff and external creation plus scoped reads implemented in M8-T8, which adds nullable `Reservation.externalChannel`. M8-T9 migration `reservation_changes` adds `Reservation.changeSeq`, `Reservation.pmsUpdatePendingSince` (CHECK: only after hotel-system entry) and the append-only `ReservationChange` table (unique `(reservationId, seq)`, composite FK on branch, override amounts and reason all-or-none); S6, S9 and S55 use this state. Migration `reservation_change_cancel` adds the `CANCEL` kind (a cancellation of a booking already in the hotel system is a numbered change) and a check on `actorType`. Migration `service_occupancy_effective_date` adds a nullable date on per-person, per-night service rows to preserve consumed charges after an occupancy change. |
 | Payments and cancellations | `Payment`, `PaymentEvent`, `CancellationRequest` | Storage implemented in M9-T1. Hosted checkout and booking hold expiry implemented in M9-T4. Guest cancellation requests are planned for M9-T7. |
-| Guest change requests | `ChangeRequest` | Planned (M9-T11, Q-85) |
+| Guest change requests | `ChangeRequest` | Implemented (M9-T11, Q-85) |
 | Reservation changes | `ReservationChange`; columns `Reservation.changeSeq`, `Reservation.pmsUpdatePendingSince` (the clearing user and time are in the S55 audit event) | Implemented (M8-T9, Q-83, Q-84) |
 | Transfer cars | `ServicePriceUnit.PER_VEHICLE`, `ServiceOffering.maxVehicles`, `ReservationService.vehicles` | Implemented (M8-T3b, Q-82): migrations `20261117120000_transfer_vehicle_unit` (enum value, on its own so the next migration can use it) and `20261117120100_transfer_vehicles` (columns, backfill of 3 cars per transfer offering and 1 car per stored transfer line, checks `ServiceOffering_vehicles_check`, `ServiceOffering_vehicle_unit_check`, `ReservationService_vehicles_check`, `ReservationService_vehicle_unit_check`) |
 | Website analytics | `SiteEvent`, `SiteDailyTotal`, `AnalyticsSalt` | Planned (M10-T0a, T0b; ADR 029, Q-86, Q-87) |
@@ -209,7 +209,7 @@ No existing column is renamed or dropped in these milestones.
 
 ### New tables (implemented and planned sketch)
 
-M4 branch, assignment, and audit tables, M6 inventory and rate tables, and M7-T3 `ServiceOffering`, `Coupon`, `CouponBranch`, and `CommercialSettings` are implemented in `prisma/schema.prisma`. M8-T1 implements the eleven reservation, redemption, guest, verification, messaging, and sync storage tables; their application workflows remain planned. M9-T1 adds payment, payment event, and cancellation request storage. Change requests and marketing storage are planned for M9-T11 and M13. The commercial migration adds all foreign keys with `ON UPDATE RESTRICT`; deleting a coupon cascades to its branch joins, while branch and staff references restrict deletion. Coupon branch-list consistency (`allBranches` versus joins) is enforced by the domain and management use case (M7-T5), with coupon and join changes committed alongside audit in one transaction; the database has no trigger for it. Coupon edits lock the parent before reading or replacing branch joins. Scoped list results hydrate coupon and branch data in one statement snapshot.
+M4 branch, assignment, and audit tables, M6 inventory and rate tables, and M7-T3 `ServiceOffering`, `Coupon`, `CouponBranch`, and `CommercialSettings` are implemented in `prisma/schema.prisma`. M8-T1 implements the eleven reservation, redemption, guest, verification, messaging, and sync storage tables; their application workflows remain planned. M9-T1 adds payment, payment event, and cancellation request storage. M9-T11 adds change requests, links approved requests to reservation history, and adds the staff cancellation reason and notification choice. Marketing storage follows in M13. The commercial migration adds all foreign keys with `ON UPDATE RESTRICT`; deleting a coupon cascades to its branch joins, while branch and staff references restrict deletion. Coupon branch-list consistency (`allBranches` versus joins) is enforced by the domain and management use case (M7-T5), with coupon and join changes committed alongside audit in one transaction; the database has no trigger for it. Coupon edits lock the parent before reading or replacing branch joins. Scoped list results hydrate coupon and branch data in one statement snapshot.
 
 ```prisma
 enum BranchStatus       { ACTIVE INACTIVE }
@@ -582,38 +582,66 @@ model CancellationRequest {
   decidedAt      DateTime?                 @db.Timestamptz(3)
   decisionReason String?                   @db.VarChar(500)
   closedReason   CancellationClosedReason?
+  cancelReason   String?                   @db.VarChar(32)
+  notifyGuest    Boolean?
   createdAt / updatedAt
   // partial unique index: one OPEN request per reservation
   @@index([status, createdAt])
   @@index([reservationId])
 }
 
-model ReservationChange {              // planned M8-T9 (Q-83, Q-84): one row per applied change
-  id               String   @id @db.VarChar(32)
-  reservationId    String   @db.VarChar(32)   // → Reservation CASCADE
-  actorKind        String   @db.VarChar(10)   // GUEST | STAFF
-  actorUserId      String?  @db.VarChar(32)   // staff only
-  changeRequestId  String?  @db.VarChar(32)   // when applied by approving a request (M9-T11)
-  before / after   Json                       // stay, lines, occupancy, services (with vehicles), never personal values
-  totalBeforeMinor Int
-  totalAfterMinor  Int
-  createdAt        DateTime @default(now()) @db.Timestamptz(3)
-  @@index([reservationId, createdAt])
-}
-// Reservation gains pmsUpdatePendingSince, pmsUpdatedAt, pmsUpdatedById (planned M8-T9): set when a change is applied
-// to a reservation whose pmsEnteredAt is set; cleared by "mark change entered in hotel system".
+// Each applied change stores a summary without personal values. An approval can link to one change request.
+model ReservationChange {
+  id                String         @id @db.VarChar(32)
+  reservationId     String         @db.VarChar(32)
+  branchId          String         @db.VarChar(32)
+  seq               Int // 1, 2, … per reservation; matches Reservation.changeSeq after the write
+  kind              String         @db.VarChar(24) // STAY or CANCEL (T9); SERVICES arrives with T9b
+  actorType         String         @db.VarChar(16)
+  actorId           String?        @db.VarChar(32)
+  before            Json
+  after             Json
+  oldTotalMinor     Int?
+  newTotalMinor     Int?
+  overrideFromMinor Int? // re-quoted total before a staff override
+  overrideToMinor   Int? // total the staff member set
+  overrideReason    String?        @db.VarChar(500)
+  changeRequestId   String?        @unique @db.VarChar(32)
+  createdAt         DateTime       @default(now()) @db.Timestamptz(3)
+  reservation       Reservation    @relation(fields: [reservationId, branchId], references: [id, branchId], onDelete: Restrict, onUpdate: Restrict)
+  changeRequest     ChangeRequest? @relation(fields: [changeRequestId], references: [id], onDelete: Restrict, onUpdate: Restrict)
 
-model ChangeRequest {                  // planned M9-T11 (Q-85): paid bookings whose total would change
-  id              String   @id @db.VarChar(32)
-  reservationId   String   @db.VarChar(32)
-  status          String   @db.VarChar(10)    // OPEN | APPROVED | REJECTED
-  requested       Json                        // the requested change, as previewed
-  previewTotalMinor Int
-  lastConflict    String?  @db.VarChar(60)    // error code of a failed approval re-check
-  decidedById / decidedAt / decisionReason
-  createdAt / updatedAt
-  // one OPEN request of either kind (cancellation or change) per reservation: enforced in the transaction under the reservation row lock
+  @@unique([reservationId, seq])
+  @@index([branchId, createdAt])
+}
+// An applied change on a reservation already entered in the hotel system
+// sets pmsUpdatePendingSince. S55 clears it when staff enter the latest change.
+
+// One open change request per reservation is enforced by a partial unique index.
+model ChangeRequest {
+  id                 String                    @id @db.VarChar(32)
+  reservationId      String                    @db.VarChar(32)
+  reservationVersion Int
+  status             ChangeRequestStatus       @default(OPEN)
+  requested          Json
+  requestedSummary   Json
+  oldTotalMinor      Int
+  previewTotalMinor  Int
+  paidTotalMinor     Int
+  lastConflict       String?                   @db.VarChar(60)
+  decidedById        String?                   @db.VarChar(32)
+  decidedAt          DateTime?                 @db.Timestamptz(3)
+  decisionReason     String?                   @db.VarChar(500)
+  closedReason       CancellationClosedReason?
+  createdAt          DateTime                  @default(now()) @db.Timestamptz(3)
+  updatedAt          DateTime                  @updatedAt @db.Timestamptz(3)
+  reservation        Reservation               @relation(fields: [reservationId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  decidedBy          User?                     @relation(fields: [decidedById], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  change             ReservationChange?
+
+  // One OPEN row per reservation and decision consistency are enforced in SQL.
   @@index([status, createdAt])
+  @@index([reservationId, createdAt])
 }
 
 model SiteEvent {                      // planned M10-T0a (ADR 029): no personal data; deleted after 90 days (Q-87)

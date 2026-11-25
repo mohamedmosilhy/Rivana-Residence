@@ -1,4 +1,9 @@
 import {
+  ChangeRequestDto,
+  StaffChangeRequestList,
+  StaffChangeRequestQuery,
+} from "./change-requests";
+import {
   Coupon,
   CouponInput,
   CouponPatch,
@@ -191,6 +196,16 @@ const staffWriteErrors = [
   "MISSING_IDEMPOTENCY_KEY",
   "IDEMPOTENCY_KEY_REUSED",
   "INVENTORY_UNAVAILABLE",
+  "TRY_AGAIN",
+];
+const changeRequestDecisionErrors = [
+  ...staffReadErrors,
+  "CROSS_SITE_REQUEST",
+  "MALFORMED_JSON",
+  "PAYLOAD_TOO_LARGE",
+  "UNSUPPORTED_MEDIA_TYPE",
+  "VALIDATION",
+  "INVALID_TRANSITION",
   "TRY_AGAIN",
 ];
 const staffWriteResponses = {
@@ -503,6 +518,61 @@ export const API_ROUTES: readonly ApiRoute[] = [
       },
     },
     errors: changeErrors,
+  },
+  {
+    method: "get",
+    path: "/api/v1/staff/change-requests",
+    operationId: "listChangeRequests",
+    summary:
+      "API-S56. List change requests for authorized branches, newest first.",
+    tag: "Cancellations",
+    security: "staff",
+    query: StaffChangeRequestQuery,
+    responses: {
+      200: {
+        description: "Change request page.",
+        schema: StaffChangeRequestList,
+      },
+    },
+    errors: [...staffReadErrors, "INVALID_QUERY"],
+  },
+  {
+    method: "post",
+    path: "/api/v1/staff/change-requests/{id}/approval",
+    operationId: "approveChangeRequest",
+    summary:
+      "API-S57. Recheck availability and the guest's accepted price, then apply the requested change.",
+    tag: "Cancellations",
+    security: "staff",
+    request: CancellationApprovalRequest,
+    requestOptional: true,
+    responses: {
+      200: {
+        description: "The changed reservation.",
+        schema: StaffReservationDetail,
+        headers: { ETag: 'Reservation version formatted as "v<version>".' },
+      },
+    },
+    errors: [
+      ...changeRequestDecisionErrors,
+      "INVENTORY_UNAVAILABLE",
+      "PRICE_CHANGED",
+      "CONFLICT",
+      "SERVICE_UNAVAILABLE",
+    ],
+  },
+  {
+    method: "post",
+    path: "/api/v1/staff/change-requests/{id}/rejection",
+    operationId: "rejectChangeRequest",
+    summary: "API-S58. Reject a change request and tell the guest why.",
+    tag: "Cancellations",
+    security: "staff",
+    request: CancellationRejectionRequest,
+    responses: {
+      200: { description: "The rejected request.", schema: ChangeRequestDto },
+    },
+    errors: changeRequestDecisionErrors,
   },
   {
     method: "get",
@@ -1457,7 +1527,7 @@ export const API_ROUTES: readonly ApiRoute[] = [
     method: "post",
     path: "/api/v1/guest/reservation/change-preview",
     operationId: "previewGuestChangeWithManageToken",
-    summary: "API-G5. Preview a pay at hotel booking change.",
+    summary: "API-G5. Preview a guest booking change.",
     tag: "Guests",
     security: "guest",
 
@@ -1477,7 +1547,7 @@ export const API_ROUTES: readonly ApiRoute[] = [
     path: "/api/v1/guest/reservation/changes",
     operationId: "applyGuestChangeWithManageToken",
     summary:
-      "API-G6. Apply a pay at hotel booking change and recheck availability and price.",
+      "API-G6. Apply a guest change or request approval after rechecking availability and price.",
     tag: "Guests",
     security: "guest",
     headers: ifMatch,
@@ -1486,6 +1556,12 @@ export const API_ROUTES: readonly ApiRoute[] = [
       200: {
         description: "The changed reservation.",
         schema: GuestReservation,
+        headers: { ETag: 'Reservation version formatted as "v<version>".' },
+      },
+      202: {
+        description:
+          "An open request for a paid booking. The booking version has not changed.",
+        schema: ChangeRequestDto,
         headers: { ETag: 'Reservation version formatted as "v<version>".' },
       },
     },
@@ -1502,7 +1578,7 @@ export const API_ROUTES: readonly ApiRoute[] = [
     method: "post",
     path: "/api/v1/guest/reservations/{reference}/change-preview",
     operationId: "previewGuestChangeWithGuestSession",
-    summary: "API-G5. Preview a pay at hotel booking change.",
+    summary: "API-G5. Preview a guest booking change.",
     tag: "Guests",
     security: "guest",
 
@@ -1522,7 +1598,7 @@ export const API_ROUTES: readonly ApiRoute[] = [
     path: "/api/v1/guest/reservations/{reference}/changes",
     operationId: "applyGuestChangeWithGuestSession",
     summary:
-      "API-G6. Apply a pay at hotel booking change and recheck availability and price.",
+      "API-G6. Apply a guest change or request approval after rechecking availability and price.",
     tag: "Guests",
     security: "guest",
     headers: ifMatch,
@@ -1531,6 +1607,12 @@ export const API_ROUTES: readonly ApiRoute[] = [
       200: {
         description: "The changed reservation.",
         schema: GuestReservation,
+        headers: { ETag: 'Reservation version formatted as "v<version>".' },
+      },
+      202: {
+        description:
+          "An open request for a paid booking. The booking version has not changed.",
+        schema: ChangeRequestDto,
         headers: { ETag: 'Reservation version formatted as "v<version>".' },
       },
     },

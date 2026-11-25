@@ -1,3 +1,4 @@
+import type { PaymentCallbackStore } from "@/application/payments";
 import type { BranchRepository } from "@/application/branches";
 import {
   InventoryGuard,
@@ -16,11 +17,11 @@ import {
   type Result,
 } from "@/application/shared/result";
 import { auditEvent } from "@/domain/audit";
-import { parseGuestContact, PhoneNumber } from "@/domain/guests";
+import { parseGuestContact } from "@/domain/guests";
 import {
   CancellationDeadline,
   canGuestChange,
-  summarizeReservation,
+  decideChangeApplication,
 } from "@/domain/reservations";
 import { parseRequestedServices } from "@/domain/services";
 import { DomainValidationError } from "@/domain/shared/domain-error";
@@ -45,18 +46,24 @@ import {
   guestChangePreview,
   type GuestChangeListing,
 } from "./guest-change-preview";
-import { manageTokenExpiry } from "./manage-token";
+import {
+  applyBookingChange,
+  type ChangeContactPatch,
+} from "./apply-booking-change";
+import type {
+  ChangeRequestStore,
+  GuestChangeRequest,
+  RequestedGuestChange,
+} from "./change-request-ports";
 import type { ModifyReservationContext } from "./modify-reservation";
 import type {
   BookingCrypto,
   CancellationRequestStore,
-  ReservationContactPatch,
   ReservationUnitOfWork,
   StoredReservation,
 } from "./ports";
 import type { RequestCancellationContext } from "./request-cancellation";
 import {
-  materializeChangedLines,
   quoteReservationChange,
   type AvailableReservationChange,
   type ChangeQuoteReaders,
@@ -78,7 +85,12 @@ export type GuestChangeContext = Omit<ModifyReservationContext, "catalog"> &
   PreviewReaders &
   Pick<RequestCancellationContext, "verifications"> & {
     branches: Pick<BranchRepository, "findRowById">;
-    cancellationRequests: Pick<CancellationRequestStore, "findCurrent">;
+    cancellationRequests: Pick<
+      CancellationRequestStore,
+      "findCurrent" | "findActive"
+    >;
+    changeRequests: ChangeRequestStore;
+    payments: Pick<PaymentCallbackStore, "findPaidPayment">;
   };
 
 export type GuestChangeInput = Readonly<{
@@ -101,10 +113,6 @@ export type GuestChangeInput = Readonly<{
 export type ApplyGuestChangeInput = GuestChangeInput & {
   expectedTotal: { currency: "USD"; amountMinor: number };
 };
-type ContactPatch = Pick<
-  ReservationContactPatch,
-  "fullName" | "email" | "specialRequests"
->;
 type PreviewDependencies = SessionDependencies & { readers: PreviewReaders };
 type ApplyDependencies = SessionDependencies & {
   catalog: ChangeCatalog;
@@ -151,8 +159,7 @@ function checkEligibility(
 ) {
   const { stored, cancellationTiming, currentCancellationRequest } = record;
   if (record.phoneBlocked) return changeNotAllowed("PHONE_BLOCKED");
-  if (stored.paymentMethod !== "PAY_AT_HOTEL" || !stored.snapshot)
-    return changeNotAllowed("STATUS");
+  if (!stored.snapshot) return changeNotAllowed("STATUS");
   const currentDeadline = CancellationDeadline.for(
     cancellationTiming,
     stored.stay.checkIn,
@@ -171,6 +178,8 @@ function checkEligibility(
     requestStatuses: currentCancellationRequest
       ? [currentCancellationRequest.status]
       : [],
+    changeRequestOpen: record.currentChangeRequest?.status === "OPEN",
+    cancellationRequestActive: record.cancellationRequestActive,
     phoneBlocked: record.phoneBlocked,
     now,
     currentDeadline,
@@ -192,6 +201,8 @@ function checkEligibility(
         });
     }
   }
+  if (stored.paymentMethod === "ONLINE" && record.paidTotalMinor === null)
+    return changeNotAllowed("STATUS");
   // Only changed dates use the public horizon. An existing long staff stay can
   // still receive a contact correction without altering the dates.
   if (
@@ -236,7 +247,7 @@ function resolveLines(
 function guestContactPatch(
   current: StoredReservation,
   input: GuestChangeInput,
-): ContactPatch {
+): ChangeContactPatch {
   const { guest } = input;
   if (!guest) return {};
   try {
@@ -342,6 +353,7 @@ export class PreviewGuestChange {
           new Map(listings.map((listing) => [listing.id, listing])),
           deadline,
           result.value.available ? [] : result.value.unavailableLines,
+          record.paidTotalMinor,
         ),
       });
     } catch (error) {
@@ -350,54 +362,13 @@ export class PreviewGuestChange {
   }
 }
 
-function replacementLink(
-  current: StoredReservation,
-  contact: ContactPatch,
-  stay: StayRange,
-  now: Date,
-  crypto: BookingCrypto,
-) {
-  const previousEmail =
-    contact.email !== undefined ? current.contact.email : null;
-  if (previousEmail !== null) {
-    try {
-      PhoneNumber.parse(current.contact.phone);
-    } catch (error) {
-      if (!(error instanceof DomainValidationError)) throw error;
-      return {
-        previousEmail,
-        token: null,
-        manageAccess: { hash: null, expiresAt: null },
-      };
+type AppliedGuestChange =
+  | {
+      kind: "APPLIED";
+      version: number;
+      reservation: ReturnType<typeof guestReservationView>;
     }
-    const token = crypto.generateToken();
-    return {
-      previousEmail,
-      token,
-      manageAccess: {
-        hash: crypto.sha256(token),
-        expiresAt: manageTokenExpiry(stay.checkOut),
-      },
-    };
-  }
-
-  // Update expiry on an existing, still valid link after a checkout date change.
-  if (
-    current.stay.checkOut.compare(stay.checkOut) !== 0 &&
-    current.manageTokenHash !== null &&
-    current.manageTokenExpiresAt !== null &&
-    current.manageTokenExpiresAt > now
-  )
-    return {
-      previousEmail,
-      token: null,
-      manageAccess: {
-        hash: current.manageTokenHash,
-        expiresAt: manageTokenExpiry(stay.checkOut),
-      },
-    };
-  return { previousEmail, token: null, manageAccess: undefined };
-}
+  | { kind: "REQUESTED"; version: number; request: GuestChangeRequest };
 
 export class ApplyGuestChange {
   constructor(private readonly deps: ApplyDependencies) {}
@@ -421,17 +392,24 @@ export class ApplyGuestChange {
       const stay = requestedStay(stored, input);
       const checked = checkEligibility(record, stay, this.deps.clock.now());
       if (!checked.ok) return checked;
-      const units = resolveLines(
-        input.lines
-          ? await this.deps.catalog.listRoomTypes(stored.branchId, "ALL")
-          : [],
-        stored,
-        input,
-      );
-      if (!units.ok) return units;
-      const lockSet = new Set(
-        [...stored.lines, ...units.value].map((line) => line.roomTypeId),
-      );
+      // Use the expected total only to choose the lock path. The server
+      // rechecks both totals under the booking lock before writing anything.
+      const requestOnly =
+        record.paidTotalMinor !== null &&
+        input.expectedTotal.amountMinor !== record.paidTotalMinor;
+      const lockSet = new Set<string>();
+      if (!requestOnly) {
+        const units = resolveLines(
+          input.lines
+            ? await this.deps.catalog.listRoomTypes(stored.branchId, "ALL")
+            : [],
+          stored,
+          input,
+        );
+        if (!units.ok) return units;
+        for (const line of [...stored.lines, ...units.value])
+          lockSet.add(line.roomTypeId);
+      }
       const services =
         input.services === undefined
           ? null
@@ -461,6 +439,11 @@ export class ApplyGuestChange {
             return staleVersion(current.version);
           const branch = await context.branches.findRowById(current.branchId);
           if (!branch) throw new Error("The reservation has no branch.");
+          const paidPayment =
+            current.paymentMethod === "ONLINE" &&
+            current.paymentStatus === "PAID"
+              ? await context.payments.findPaidPayment(current.id)
+              : null;
           const accessRecord = {
             ...record,
             stored: current,
@@ -474,6 +457,13 @@ export class ApplyGuestChange {
             phoneBlocked: Boolean(guest?.blockedAt),
             currentCancellationRequest:
               await context.cancellationRequests.findCurrent(current.id),
+            cancellationRequestActive:
+              (await context.cancellationRequests.findActive(current.id)) !==
+              null,
+            currentChangeRequest: await context.changeRequests.findCurrent(
+              current.id,
+            ),
+            paidTotalMinor: paidPayment?.amountMinor ?? null,
           };
           const eligibility = checkEligibility(accessRecord, stay, now);
           if (!eligibility.ok) return eligibility;
@@ -499,6 +489,7 @@ export class ApplyGuestChange {
           const resolved = resolveLines(listings, current, input);
           if (!resolved.ok) return resolved;
           if (
+            !requestOnly &&
             ![...current.lines, ...resolved.value].every((line) =>
               lockSet.has(line.roomTypeId),
             )
@@ -529,7 +520,7 @@ export class ApplyGuestChange {
                 },
               },
             } as const;
-          const { snapshot, plan } = quote.value;
+          const { snapshot } = quote.value;
           if (snapshot.totalMinor !== input.expectedTotal.amountMinor)
             return priceChanged({
               totalMinor: snapshot.totalMinor,
@@ -540,125 +531,136 @@ export class ApplyGuestChange {
                 new Map(listings.map((listing) => [listing.id, listing])),
                 eligibility.value.deadline,
                 [],
+                accessRecord.paidTotalMinor,
               ),
             });
-          const lines = plan.structureChanged
-            ? await materializeChangedLines(
-                context,
-                current,
-                stay,
-                quote.value,
-                this.deps.ids,
-              )
-            : null;
           return success({
             accessRecord,
             current,
             now,
-            snapshot,
-            plan,
+            quote: quote.value,
+            oldTotalMinor: eligibility.value.current.totalMinor,
             contact,
-            contactFields,
-            lines,
-            roomNames: Object.fromEntries(
-              listings.map((listing) => [listing.id, listing.name]),
-            ),
-            link: replacementLink(
-              current,
-              contact,
-              stay,
-              now,
-              this.deps.crypto,
-            ),
+            listings,
           });
         },
         validate: success,
-        mutate: async (context, state) => {
-          const {
+        mutate: async (
+          context,
+          {
             current,
             now,
-            snapshot,
-            plan,
+            quote,
+            oldTotalMinor,
             contact,
-            contactFields,
-            lines,
-            link,
             accessRecord,
-            roomNames,
-          } = state;
-          const reservation = await context.reservations.replaceStay({
-            branchId: current.branchId,
-            reservationId: current.id,
+            listings,
+          },
+        ): Promise<Result<AppliedGuestChange>> => {
+          const { paidTotalMinor } = accessRecord;
+          if (
+            paidTotalMinor !== null &&
+            decideChangeApplication({
+              paymentMethod: current.paymentMethod,
+              paidTotalMinor,
+              newTotalMinor: quote.snapshot.totalMinor,
+            }) === "REQUEST_APPROVAL"
+          ) {
+            const requested: RequestedGuestChange = {
+              checkIn: stay.checkIn.value,
+              checkOut: stay.checkOut.value,
+              lines: quote.plan.lines.map(({ roomTypeId, occupancy }) => ({
+                roomTypeId,
+                adults: occupancy.adults,
+                children: occupancy.children,
+              })),
+              ...(services
+                ? {
+                    services: services.value.map(
+                      ({ kind, vehicles, details }) => ({
+                        kind,
+                        ...(vehicles !== undefined ? { vehicles } : {}),
+                        ...(details !== undefined ? { details } : {}),
+                      }),
+                    ),
+                  }
+                : {}),
+              contact,
+            };
+            const request = await context.changeRequests.create({
+              id: this.deps.ids.next(),
+              reservationId: current.id,
+              reservationVersion: current.version,
+              requested,
+              requestedSummary: {
+                checkIn: requested.checkIn,
+                checkOut: requested.checkOut,
+                units: requested.lines,
+                services: quote.snapshot.serviceLines.map(
+                  ({ kind, vehicles }) => ({ kind, vehicles }),
+                ),
+                contactFieldsChanged: Object.keys(contact),
+              },
+              oldTotalMinor,
+              paidTotalMinor,
+              previewTotalMinor: quote.snapshot.totalMinor,
+              at: now,
+            });
+            await context.audit.append(
+              auditEvent({
+                occurredAt: now,
+                actorType: "GUEST",
+                actorId: current.guestId ?? current.id,
+                action: "change-request.created",
+                entityType: "ChangeRequest",
+                entityId: request.id,
+                branchId: current.branchId,
+                reason: null,
+                changes: {
+                  reservationId: current.id,
+                  access: access.kind,
+                  previewTotalMinor: request.previewTotalMinor,
+                },
+              }),
+            );
+            await context.messages.enqueue(current.branchId, current.id, {
+              kind: "change-request.received",
+            });
+            await context.messages.enqueue(current.branchId, current.id, {
+              kind: "request.staff-alert",
+              requestKind: "CHANGE",
+            });
+            return success({
+              kind: "REQUESTED",
+              request,
+              version: current.version,
+            });
+          }
+          if (requestOnly)
+            return failure(
+              "TRY_AGAIN",
+              "The payment changed. Preview the change again.",
+            );
+          const reservation = await applyBookingChange(context, this.deps, {
+            current,
             stay,
-            lines,
-            snapshot,
-            guestContact: contact,
-            ...(link.manageAccess ? { manageAccess: link.manageAccess } : {}),
-            flagPmsUpdate: current.pmsEnteredAt !== null,
-            at: now,
+            quote,
+            contact,
+            branch: accessRecord.branch,
+            now,
+            actor: { type: "GUEST", id: current.guestId ?? current.id },
           });
-          const before = summarizeReservation(current);
-          const after = {
-            ...summarizeReservation(
-              reservation,
-              plan.services.flatMap((service) =>
-                !service.added && service.detailsChanged ? [service.kind] : [],
-              ),
-            ),
-            contactFieldsChanged: contactFields,
-          };
-          await context.reservations.appendChange({
-            id: this.deps.ids.next(),
-            branchId: current.branchId,
-            reservationId: current.id,
-            kind: "STAY",
-            actorType: "GUEST",
-            actorId: current.guestId ?? current.id,
-            before,
-            after,
-            oldTotalMinor: before.totalMinor,
-            newTotalMinor: after.totalMinor,
-            override: null,
-            at: now,
-          });
-          await context.messages.enqueue(current.branchId, current.id, {
-            kind: "reservation.modified",
-            notifyGuest: true,
-            previous: {
-              checkIn: before.checkIn,
-              checkOut: before.checkOut,
-              totalMinor: before.totalMinor ?? 0,
-            },
-          });
-          await context.messages.enqueue(current.branchId, current.id, {
-            kind: "reservation.change-staff-alert",
-            previous: {
-              checkIn: before.checkIn,
-              checkOut: before.checkOut,
-              totalMinor: before.totalMinor ?? 0,
-            },
-          });
-          if (link.previousEmail !== null) {
-            await context.messages.enqueue(current.branchId, current.id, {
-              kind: "reservation.email-changed",
-              previousEmail: link.previousEmail,
-              hotelPhone: accessRecord.branch.phone,
-              hotelEmail: accessRecord.branch.email,
-            });
-          }
-          if (link.token !== null) {
-            await context.messages.enqueue(current.branchId, current.id, {
-              kind: "reservation.manage-link",
-              manageToken: link.token,
-              whatsappOnly: true,
-            });
-          }
           return success({
+            kind: "APPLIED",
             version: reservation.version,
-            before,
-            after,
             reservation: guestReservationView(
-              { ...accessRecord, stored: reservation, roomNames },
+              {
+                ...accessRecord,
+                stored: reservation,
+                roomNames: Object.fromEntries(
+                  listings.map((listing) => [listing.id, listing.name]),
+                ),
+              },
               phone
                 ? { kind: "GUEST_SESSION", phone }
                 : { kind: "MANAGE_TOKEN", reservationId: reservation.id },
@@ -666,33 +668,8 @@ export class ApplyGuestChange {
             ),
           });
         },
-        audit: async (context, { current, now }, result) => {
-          await context.audit.append(
-            auditEvent({
-              occurredAt: now,
-              actorType: "GUEST",
-              actorId: current.guestId ?? current.id,
-              action: "reservation.stay-modified",
-              entityType: "Reservation",
-              entityId: current.id,
-              branchId: current.branchId,
-              reason: null,
-              changes: {
-                reference: current.reference.value,
-                changeSeq: current.changeSeq + 1,
-                before: result.before,
-                after: result.after,
-                oldTotalMinor: result.before.totalMinor,
-                newTotalMinor: result.after.totalMinor,
-                priceOverridden: false,
-                overrideFromMinor: null,
-                overrideToMinor: null,
-                flagPmsUpdate: current.pmsEnteredAt !== null,
-                guestNotified: true,
-              },
-            }),
-          );
-        },
+        // The shared apply step and the request creation record their own audit rows.
+        audit: async () => {},
       });
     } catch (error) {
       return domainFailure(error);

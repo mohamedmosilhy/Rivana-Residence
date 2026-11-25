@@ -45,7 +45,10 @@ import {
   PrismaPaymentReader,
 } from "@/infrastructure/db/prisma/repositories/reservations/booking-payment-store";
 import { PrismaStaffReservationReader } from "@/infrastructure/db/prisma/repositories/reservations/staff-reservation-reader";
-import { cancelReservationContext } from "@/composition/reservations";
+import {
+  cancelReservationContext,
+  frontDeskTransitionContext,
+} from "@/composition/reservations";
 import { PrismaCouponRedemptionStore } from "@/infrastructure/db/prisma/repositories/reservations/commercial/coupon-redemption-repository";
 import { PrismaInventoryLock } from "@/infrastructure/db/prisma/repositories/reservations/inventory/inventory-lock";
 import { PrismaInventoryReader } from "@/infrastructure/db/prisma/repositories/reservations/inventory/inventory-reader";
@@ -332,8 +335,9 @@ export function refundCommands(client: PrismaClient, options: Options = {}) {
       unitOfWork: new PrismaReservationUnitOfWork<CancelPaidReservationContext>(
         client,
         (transaction) => ({
-          ...storage(transaction),
+          ...frontDeskTransitionContext(transaction),
           cancellationRequests: new PrismaCancellationRequestStore(transaction),
+          audit: storage(transaction).audit,
           payments: new PrismaBookingPaymentStore(transaction),
         }),
       ),

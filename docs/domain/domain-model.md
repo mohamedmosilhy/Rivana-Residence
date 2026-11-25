@@ -166,11 +166,11 @@ Better Auth owns user, account, session, and verification records. Rivana adds a
 - `CommercialSettings` (`vatRateBasisPoints`, never null, seeded at 1500). Rules TX-1…5.
 - `QuoteCalculator` (pure): accommodation + services − discount = taxable; VAT half-up once; total.
 
-### Payments and cancellation requests (planned, ADRs 024–025)
+### Payments, cancellation and change requests (implemented, ADRs 024–025)
 
-- `Payment` (reservation, provider adapter name, provider ids, amount, currency, status `INITIATED|SUCCEEDED|FAILED|REFUND_PENDING|REFUNDED|REFUND_FAILED`) and `PaymentEvent` (verified callbacks, unique per provider transaction). Rules PY-1…8.
-- `CancellationRequest` (reservation, reason, status `OPEN|APPROVED|REJECTED|REFUND_PENDING|REFUND_FAILED|COMPLETED`, decided by and at, decision reason). Rules CX-1…7.
-- `ChangeRequest` *(planned M9-T11, Q-85)* (reservation, requested change, previewed total, status `OPEN|APPROVED|REJECTED`, decided by and at, decision reason, last conflict). At most one open request of either kind per reservation. Rules GC-4, GC-5.
+- `Payment` stores the reservation, provider adapter and IDs, captured or requested amount, currency, lifecycle and refund attempt. `PaymentEvent` records verified events by unique provider event ID. Rules PY-1…8.
+- `CancellationRequest` (reservation, reason, status `OPEN|APPROVED|REJECTED|REFUND_PENDING|REFUND_FAILED|COMPLETED|CLOSED`, staff decision, closure reason, and the paid staff cancellation reason and notification choice). Rules CX-1…7.
+- `ChangeRequest` (M9-T11, Q-85) stores the reservation and version, the requested change, the captured, old and previewed totals, and the status `OPEN|APPROVED|REJECTED|CLOSED`. It also records the decision, closure reason, and last approval conflict. The reservation lock enforces one open request across changes and cancellations. Rules GC-4 and GC-5.
 
 ### Website analytics (planned, ADR 029)
 

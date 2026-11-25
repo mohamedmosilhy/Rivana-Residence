@@ -101,15 +101,22 @@ export class QueueReservationMessages {
     } else if (event.kind === "cancellation-request.approved") {
       if (event.refundMinor !== undefined)
         payload.refundAmount = money(event.refundMinor);
-    } else if (event.kind === "cancellation-request.rejected") {
+    } else if (
+      event.kind === "cancellation-request.rejected" ||
+      event.kind === "change-request.rejected"
+    ) {
       payload.reason = event.reason;
-    } else if (event.kind !== "reservation.manage-link") {
+    } else if (
+      event.kind !== "reservation.manage-link" &&
+      event.kind !== "change-request.received"
+    ) {
       payload.checkIn = booking.checkIn;
       payload.checkOut = booking.checkOut;
     }
     if (
       (event.kind === "reservation.confirmed" ||
-        event.kind === "reservation.modified") &&
+        event.kind === "reservation.modified" ||
+        event.kind === "change-request.approved") &&
       booking.totalMinor !== null
     )
       payload.total = `USD ${(booking.totalMinor / 100).toFixed(2)}`;
@@ -170,7 +177,10 @@ export class QueueReservationMessages {
     }
     if (event.kind === "request.staff-alert") {
       // An absent inbox is visible as a failed outbox row, as for new bookings.
-      add("EMAIL", event.kind, booking.branchEmail ?? "", summary);
+      add("EMAIL", event.kind, booking.branchEmail ?? "", {
+        ...summary,
+        ...(event.requestKind ? { requestKind: event.requestKind } : {}),
+      });
       await this.store.append(messages);
       return;
     }

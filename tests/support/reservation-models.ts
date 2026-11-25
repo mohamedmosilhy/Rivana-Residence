@@ -20,6 +20,7 @@ export const RESERVATION_MODELS = [
   "Payment",
   "PaymentEvent",
   "CancellationRequest",
+  "ChangeRequest",
   "Guest",
   "PhoneVerification",
   "WhatsAppSettings",

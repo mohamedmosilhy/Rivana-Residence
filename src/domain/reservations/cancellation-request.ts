@@ -84,6 +84,8 @@ type RequestFacts = {
   paymentStatus: ReservationPaymentStatus;
   /** Statuses of every cancellation and change request of the reservation. */
   requestStatuses: readonly CancellationRequestStatus[];
+  changeRequestOpen?: boolean | undefined;
+  cancellationRequestActive?: boolean | undefined;
   phoneBlocked: boolean;
   now: Date;
 };
@@ -97,7 +99,10 @@ function checkRequestFacts(input: RequestFacts): GuestRequestDecision {
     throw new DomainValidationError("The request input is invalid.", [
       { path: "input", message: "Supply a payment status and a phone flag." },
     ]);
-  const active = input.requestStatuses.some(isActiveRequest);
+  const active =
+    input.changeRequestOpen ||
+    input.cancellationRequestActive ||
+    input.requestStatuses.some(isActiveRequest);
   // Q-75: a blocked phone cannot start requests or changes.
   if (input.phoneBlocked) return { allowed: false, code: "PHONE_BLOCKED" };
   if (input.reservationStatus !== "CONFIRMED")

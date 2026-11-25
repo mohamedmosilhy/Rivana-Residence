@@ -72,6 +72,7 @@ const AUDIT_ENTITY_LABELS = [
   "WhatsAppTemplate",
   "Reservation",
   "CancellationRequest",
+  "ChangeRequest",
   "Payment",
   "Guest",
 ];

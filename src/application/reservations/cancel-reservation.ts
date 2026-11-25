@@ -15,8 +15,8 @@ import { ReservationStateMachine } from "@/domain/reservations";
 import { localDateAt } from "@/domain/shared/zoned-time";
 
 import {
-  closeCancellationRequest,
-  type CloseCancellationRequestContext,
+  closeGuestRequests,
+  type CloseGuestRequestsContext,
 } from "./close-cancellation-request";
 import type { CancelPaidReservation } from "./cancel-paid-reservation";
 import { finishCancellation } from "./finish-cancellation";
@@ -30,7 +30,7 @@ import {
 import type { ReservationStorageContext } from "./storage-context";
 
 export type CancelReservationContext = ReservationStorageContext &
-  CloseCancellationRequestContext &
+  CloseGuestRequestsContext &
   Readonly<{
     redemptions: Pick<CouponRedemptionStore, "release">;
     messages: Pick<QueueReservationMessages, "enqueue">;
@@ -50,7 +50,9 @@ export type CancelReservationInput = Readonly<{
 }>;
 
 // Guest facing text per reason. The staff note is internal and never sent.
-const REASON_TEXT: Readonly<Record<CancellationReason, string>> = {
+export const CANCELLATION_REASON_TEXT: Readonly<
+  Record<CancellationReason, string>
+> = {
   GUEST_REQUEST: "Cancelled at your request",
   CROSS_SYSTEM_CONFLICT: "The room is no longer available",
   INVALID_DETAILS: "The booking details could not be confirmed",
@@ -113,7 +115,7 @@ export class CancelReservation {
         {
           reason: input.reason,
           note,
-          guestText: input.notifyGuest ? REASON_TEXT[input.reason] : null,
+          notifyGuest: input.notifyGuest,
         },
       );
       if (!started.ok) return started;
@@ -170,13 +172,7 @@ export class CancelReservation {
         this.deps.ids,
         now,
       );
-      await closeCancellationRequest(
-        context,
-        stored,
-        "CANCEL",
-        principal.id,
-        now,
-      );
+      await closeGuestRequests(context, stored, "CANCEL", principal.id, now);
       await context.audit.append(
         auditEvent({
           occurredAt: now,
@@ -201,7 +197,7 @@ export class CancelReservation {
       await context.messages.enqueue(current.branchId, id, {
         kind: "reservation.cancelled",
         notifyGuest: input.notifyGuest,
-        reason: REASON_TEXT[input.reason],
+        reason: CANCELLATION_REASON_TEXT[input.reason],
       });
       return success({ stored, replayed: false, at: now });
     });

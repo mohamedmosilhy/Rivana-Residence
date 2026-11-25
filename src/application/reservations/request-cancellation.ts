@@ -15,6 +15,7 @@ import {
 } from "@/application/shared/result";
 import { auditEvent } from "@/domain/audit";
 import { REQUEST_REASON_MAX } from "@/domain/reservations";
+import type { ChangeRequestStore } from "./change-request-ports";
 import {
   guestCancellationEligibility,
   guestPhoneBlocked,
@@ -41,10 +42,8 @@ export type RequestCancellationContext = Readonly<{
     "findByTokenHash" | "lockPhone"
   >;
   branches: Pick<BranchRepository, "findRowById">;
-  cancellationRequests: Pick<
-    CancellationRequestStore,
-    "findCurrent" | "create"
-  >;
+  cancellationRequests: Pick<CancellationRequestStore, "findActive" | "create">;
+  changeRequests: Pick<ChangeRequestStore, "findCurrent">;
   audit: AuditLog;
   messages: Pick<QueueReservationMessages, "enqueue">;
 }>;
@@ -90,15 +89,20 @@ export class RequestCancellation {
 
       const branch = await context.branches.findRowById(current.branchId);
       if (!branch) throw new Error("The reservation has no branch.");
-      const request = await context.cancellationRequests.findCurrent(
+      const cancellation = await context.cancellationRequests.findActive(
         current.id,
       );
+      const change = await context.changeRequests.findCurrent(current.id);
       const { deadline, eligibility } = guestCancellationEligibility(
         current,
         branch,
-        request,
+        null,
         Boolean(guest.value?.blockedAt),
         now,
+        {
+          changeRequestOpen: change?.status === "OPEN",
+          cancellationRequestActive: cancellation !== null,
+        },
       );
       if (!eligibility.allowed) {
         switch (eligibility.code) {

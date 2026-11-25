@@ -82,20 +82,20 @@ Every transition:
 
 ## Guest changes (Q-83…Q-85)
 
-**Implemented:** the staff change engine (M8-T9 and M8-T9b) and guest changes to confirmed, priced pay-at-hotel bookings (M9-T10). **Planned:** paid booking changes and approvals (M9-T11).
+**Implemented:** the staff change engine (M8-T9 and M8-T9b) and guest changes to confirmed, priced pay-at-hotel bookings (M9-T10). Paid booking changes and approvals are implemented in M9-T11.
 
 | Rule | Definition |
 | --- | --- |
 | GC-1 | A guest may change dates, units and listings (same branch, at most 5 units, Q-69), adults and children per unit, services (add, remove, number of cars, flight details), name, email, and special requests. Phone, branch, payment method, and coupon are not changeable online; an existing coupon is kept as in Q-76. |
-| GC-2 | Allowed only for `CONFIRMED` reservations, before the CX-1 deadline computed on both the current and the new arrival date, with no `OPEN` cancellation or change request, from the manage link or a guest session for the reservation's phone. A blocked phone cannot change (Q-75). |
-| GC-3 | A preview re-quotes under PR-11 without writing. Applying re-runs the quote inside the transaction, under the room-type locks for old and new listings, and requires the previewed total (`409 PRICE_CHANGED` otherwise) and the reservation version (`412` on mismatch). |
-| GC-4 | Pay at hotel: the change applies at once (ADR 024). Paid online: applies at once when the new total equals the paid total; otherwise an `OPEN` change request is stored with the requested change and holds no inventory (Q-85). |
-| GC-5 | A Manager of the branch or an Admin approves or rejects a change request with a reason, in the cancellation-request queue. Approval re-checks inventory and prices under the locks and applies the change, or fails with the conflict shown; the difference is settled at the desk (Q-66). |
+| GC-2 | Guests can submit changes to confirmed bookings before the CX-1 deadline for both arrivals, using a manage link or a guest session for that reservation. A blocked phone, an open change request, an active cancellation request, or a pending refund blocks submission (Q-75, Q-84). |
+| GC-3 | Preview re-quotes under PR-11 without writing. Submission requires the previewed total and version. A price mismatch returns `409 PRICE_CHANGED` and a version mismatch returns `412`. Immediate changes re-quote under the guest, listing and reservation locks. Submission that only creates an open request takes the guest and reservation locks. |
+| GC-4 | Pay-at-hotel changes apply at once (ADR 024). A change to a paid online booking applies immediately if the new total equals the amount captured. A different total creates one open request, with a guest receipt and one branch email. The request holds no additional inventory (Q-85, Q-97). |
+| GC-5 | A Manager of the branch or an Admin decides the request. Approval requires a confirmed, paid booking, the submitted version, and both scheduled arrivals still in the future. It checks prices and inventory under the locks. A conflict keeps the request open and records the error. Successful approvals link to the change history. M9 settles the difference at the desk (Q-66). |
 | GC-6 | Every applied change appends a change-history row (actor kind guest or staff, before and after totals and details), an audit event without personal values, outbox messages (`RESERVATION_MODIFIED`, and the staff alert), and, when `pmsEnteredAt` is set, a pending "changed, update hotel system" flag. |
 
-On pay-at-hotel changes, the preview returns a full quote and the booking version. Apply rechecks both arrival deadlines, access, inventory, and price under the locks. Replacing the booking email sends a minimal notice to the previous address and revokes the old manage link. A replacement goes only by WhatsApp to the existing phone when usable. The hotel handles recovery when the booking has no usable phone.
+The preview includes both totals and the booking version. Replacing the booking email on an applied change sends a minimal notice to the previous address and revokes the old manage link. A replacement goes only by WhatsApp to the existing phone when usable. The hotel handles recovery when the booking has no usable phone.
 
-Change request states: `OPEN → APPROVED` (applied) or `OPEN → REJECTED`; an approval whose re-check fails leaves the request `OPEN` with the conflict shown.
+Change request states are `OPEN → APPROVED`, `OPEN → REJECTED`, and `OPEN → CLOSED`. Check-in, no-show, and staff cancellation close an open request in the staff transaction. Paid staff cancellation closes it when the refund starts. A failed refund leaves it closed (Q-96).
 
 ## Payments (ADR 025)
 
@@ -107,7 +107,7 @@ Change request states: `OPEN → APPROVED` (applied) or `OPEN → REJECTED`; an 
 | PY-4 | Each provider transaction is processed once (unique event id); repeats are acknowledged and ignored. Implemented in M9-T5: a duplicate of an applied event changes nothing. |
 | PY-5 | A success after the hold expired is confirmed if every unit is still free under the room-type lock; otherwise it is refunded automatically, and the guest and staff are told (Q-63). Implemented in M9-T5. A late confirmation re-acquires the coupon use without a limit check, because the guest paid the stored price. |
 | PY-6 | Website, staff, and external booking creation expire overdue holds under the listing locks (implemented M9-T4). A job also expires holds every minute under the reservation lock only (implemented M9-T6). |
-| PY-7 | Refunds are full refunds of the captured amount through the gateway's API; Rivana does not calculate fees. Partial refunds are not offered (Q-66). |
+| PY-7 | M9 refunds the full captured amount for a paid cancellation through the gateway. Rivana does not calculate the gateway's fees. M9 settles differences from approved booking changes at the desk (Q-66). |
 | PY-8 | No card data is received or stored; secrets are server-only. |
 
 ## Reversals

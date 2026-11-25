@@ -398,3 +398,273 @@ test("a guest changes a booking and requests cancellation, and staff can block w
     await sql('DELETE FROM "Guest" WHERE phone = $1', [phone]);
   }
 });
+
+test("staff decide paid changes over HTTP and close a request at the desk", async ({
+  page,
+}, testInfo) => {
+  const suffix = testInfo.project.name === "desktop-chromium" ? "d" : "m";
+  const key = `paid-change-${suffix}-${testInfo.retry}`;
+  await page.setExtraHTTPHeaders({
+    "X-Forwarded-For": suffix === "d" ? "198.51.100.70" : "198.51.100.71",
+  });
+  const phone = suffix === "d" ? "+12025550171" : "+12025550172";
+  const manage = token(`manage-${key}`);
+  const session = token(`session-${key}`);
+  const branch = (
+    await sql(
+      `SELECT id,
+            to_char((now() AT TIME ZONE "timeZone")::date + 32, 'YYYY-MM-DD') AS arrival,
+            to_char((now() AT TIME ZONE "timeZone")::date + 33, 'YYYY-MM-DD') AS night2,
+            to_char((now() AT TIME ZONE "timeZone")::date + 34, 'YYYY-MM-DD') AS departure,
+            to_char((now() AT TIME ZONE "timeZone")::date + 35, 'YYYY-MM-DD') AS longer
+       FROM "Branch" WHERE slug = 'new-cairo'`,
+    )
+  ).rows[0];
+  await signInAs(page, accountsFor(testInfo.project.name).admin);
+  let reservationId: string | null = null;
+  try {
+    await sql(
+      `INSERT INTO "Room" (id, "branchId", name, slug, "shortDescription", description, "maxAdults", "sortOrder", status, "updatedAt")
+       VALUES ($1, $2, 'Paid change test room', $1, 'Fixture', '{"type":"doc","content":[]}', 2, $3, 'PUBLISHED', now())`,
+      [key, branch.id, suffix === "d" ? 9998 : 9999],
+    );
+    await sql(
+      'INSERT INTO "PhysicalRoom" (id, "branchId", "roomTypeId", label, "updatedAt") VALUES ($1, $2, $1, $1, now())',
+      [key, branch.id],
+    );
+    await sql(
+      'INSERT INTO "RoomBaseRate" ("roomTypeId", "amountMinor", "updatedAt") VALUES ($1, 2000, now())',
+      [key],
+    );
+    const created = await request(page, "/api/v1/staff/external-reservations", {
+      method: "POST",
+      key,
+      body: {
+        branchId: branch.id,
+        stay: { checkIn: branch.arrival, checkOut: branch.departure },
+        lines: [
+          {
+            roomTypeId: key,
+            occupancy: { adults: 1, children: 0 },
+            amounts: {
+              nights: [branch.arrival, branch.night2].map((night) => ({
+                night,
+                amountMinor: 2000,
+              })),
+            },
+          },
+        ],
+        guest: {
+          fullName: "Paid Test Guest",
+          email: "paid-change@example.test",
+          phone,
+        },
+        externalReference: key,
+      },
+    });
+    expect(created.status, JSON.stringify(created.body)).toBe(201);
+    reservationId = created.body.id as string;
+    const paid = created.body.price.totalMinor as number;
+    await sql(
+      `UPDATE "Reservation"
+          SET source = 'WEBSITE', "createdById" = NULL, "externalReference" = NULL, "externalChannel" = NULL,
+              "paymentMethod" = 'ONLINE', "paymentStatus" = 'PAID',
+              "manageTokenHash" = encode(sha256(convert_to($2, 'UTF8')), 'hex'),
+              "manageTokenExpiresAt" = now() + interval '40 days'
+        WHERE id = $1`,
+      [reservationId, manage],
+    );
+    await sql(
+      `INSERT INTO "Payment" (id, "reservationId", provider, "amountMinor", currency, status, "expiresAt", "updatedAt")
+       VALUES ($1, $2, 'e2e-fixture', $3, 'USD', 'SUCCEEDED', now(), now())`,
+      [key, reservationId, paid],
+    );
+    await sql(
+      `INSERT INTO "PhoneVerification"
+         (id, phone, purpose, "codeHash", "expiresAt", "verifiedAt", "tokenHash", "tokenExpiresAt", "clientKey")
+       VALUES ($1, $2, 'GUEST_SESSION', repeat('0', 64), now() + interval '10 minutes', now(),
+               encode(sha256(convert_to($3, 'UTF8')), 'hex'), now() + interval '30 minutes', 'e2e')`,
+      [key, phone, session],
+    );
+    const guest = "/api/v1/guest/reservation";
+    const mine = `/api/v1/guest/reservations/${created.body.reference}`;
+    const queue = "/api/v1/staff/change-requests";
+    const change = {
+      stay: { checkIn: branch.arrival, checkOut: branch.longer },
+    };
+    const submit = async (
+      path: string,
+      bearer: string,
+      input: typeof change,
+    ) => {
+      const preview = await request(page, `${path}/change-preview`, {
+        method: "POST",
+        bearer,
+        body: input,
+      });
+      expect(preview).toMatchObject({
+        status: 200,
+        body: { available: true, outcome: "NEEDS_APPROVAL" },
+      });
+      const applied = await request(page, `${path}/changes`, {
+        method: "POST",
+        bearer,
+        ifMatch: preview.etag!,
+        body: { ...input, expectedTotal: preview.body.proposed.total },
+      });
+      expect(applied).toMatchObject({
+        status: 202,
+        etag: preview.etag,
+        body: { status: "OPEN" },
+      });
+      return applied.body.id as string;
+    };
+    const sameTotal = await request(page, `${guest}/change-preview`, {
+      method: "POST",
+      bearer: manage,
+      body: { guest: { fullName: "Paid Guest Updated" } },
+    });
+    expect(sameTotal).toMatchObject({
+      status: 200,
+      body: {
+        outcome: "APPLIES_NOW",
+        proposed: { total: { amountMinor: paid } },
+      },
+    });
+    expect(
+      await request(page, `${guest}/changes`, {
+        method: "POST",
+        bearer: manage,
+        ifMatch: sameTotal.etag!,
+        body: {
+          guest: { fullName: "Paid Guest Updated" },
+          expectedTotal: sameTotal.body.proposed.total,
+        },
+      }),
+    ).toMatchObject({
+      status: 200,
+      body: { contact: { fullName: "Paid Guest Updated" } },
+    });
+    const first = await submit(guest, manage, change);
+    expect(
+      await request(page, `${queue}?branchId=${branch.id}&status=OPEN`),
+    ).toMatchObject({
+      status: 200,
+      body: {
+        items: expect.arrayContaining([
+          expect.objectContaining({
+            id: first,
+            paidTotalMinor: paid,
+            status: "OPEN",
+          }),
+        ]),
+      },
+    });
+    expect(
+      await request(page, `${queue}/${first}/rejection`, {
+        method: "POST",
+        body: { reason: "Please confirm again." },
+      }),
+    ).toMatchObject({
+      status: 200,
+      body: { status: "REJECTED", decisionReason: "Please confirm again." },
+    });
+    expect(await request(page, guest, { bearer: manage })).toMatchObject({
+      status: 200,
+      body: { changeRequest: { id: first, status: "REJECTED" } },
+    });
+    const second = await submit(mine, session, change);
+    expect(
+      await request(page, `${guest}/cancellation-requests`, {
+        method: "POST",
+        bearer: manage,
+      }),
+    ).toMatchObject({
+      status: 409,
+      body: { code: "CANCELLATION_REQUEST_EXISTS" },
+    });
+    const approved = await request(page, `${queue}/${second}/approval`, {
+      method: "POST",
+      body: {},
+    });
+    expect(approved).toMatchObject({
+      status: 200,
+      body: { stay: change.stay, paymentStatus: "PAID" },
+    });
+    expect(
+      await request(page, `${queue}/${second}/approval`, {
+        method: "POST",
+        body: {},
+      }),
+    ).toMatchObject({
+      status: 409,
+      body: { code: "INVALID_TRANSITION" },
+    });
+    expect(
+      (
+        await sql('SELECT status, "amountMinor" FROM "Payment" WHERE id = $1', [
+          key,
+        ])
+      ).rows,
+    ).toEqual([{ status: "SUCCEEDED", amountMinor: paid }]);
+    const third = await submit(guest, manage, {
+      stay: { checkIn: branch.arrival, checkOut: branch.night2 },
+    });
+    await sql(
+      'UPDATE "Reservation" SET "checkIn" = current_date - 1, "checkOut" = current_date + 2 WHERE id = $1',
+      [reservationId],
+    );
+    expect(
+      await request(
+        page,
+        `/api/v1/staff/reservations/${reservationId}/no-show`,
+        {
+          method: "POST",
+          ifMatch: approved.etag!,
+          body: {},
+        },
+      ),
+    ).toMatchObject({ status: 200, body: { status: "NO_SHOW" } });
+    expect(await request(page, guest, { bearer: manage })).toMatchObject({
+      status: 200,
+      body: {
+        changeRequest: { id: third, status: "CLOSED", closedReason: "NO_SHOW" },
+        allowedActions: [],
+      },
+    });
+    const alerts = await sql(
+      `SELECT count(*)::int AS number FROM "NotificationOutbox"
+       WHERE "reservationId" = $1 AND kind = 'request.staff-alert' AND channel = 'EMAIL'
+         AND payload->>'requestKind' = 'CHANGE'`,
+      [reservationId],
+    );
+    expect(alerts.rows).toEqual([{ number: 3 }]);
+  } finally {
+    if (reservationId) {
+      await sql(
+        `DELETE FROM "AuditEvent" WHERE "entityId" = $1 OR
+          ("entityType" = 'ChangeRequest' AND "entityId" IN
+             (SELECT id FROM "ChangeRequest" WHERE "reservationId" = $1))`,
+        [reservationId],
+      );
+      await sql('DELETE FROM "NotificationOutbox" WHERE "reservationId" = $1', [
+        reservationId,
+      ]);
+      await sql('DELETE FROM "ReservationChange" WHERE "reservationId" = $1', [
+        reservationId,
+      ]);
+      await sql('DELETE FROM "ChangeRequest" WHERE "reservationId" = $1', [
+        reservationId,
+      ]);
+      await sql('DELETE FROM "Payment" WHERE "reservationId" = $1', [
+        reservationId,
+      ]);
+      await sql('DELETE FROM "Reservation" WHERE id = $1', [reservationId]);
+    }
+    await sql('DELETE FROM "PhoneVerification" WHERE phone = $1', [phone]);
+    await sql('DELETE FROM "Guest" WHERE phone = $1', [phone]);
+    await sql('DELETE FROM "PhysicalRoom" WHERE id = $1', [key]);
+    await sql('DELETE FROM "RoomBaseRate" WHERE "roomTypeId" = $1', [key]);
+    await sql('DELETE FROM "Room" WHERE id = $1', [key]);
+  }
+});

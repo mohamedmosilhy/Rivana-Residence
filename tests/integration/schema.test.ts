@@ -48,6 +48,7 @@ describe("migration from an empty database", () => {
       "Payment",
       "PaymentEvent",
       "CancellationRequest",
+      "ChangeRequest",
       "Guest",
       "PhoneVerification",
       "WhatsAppSettings",

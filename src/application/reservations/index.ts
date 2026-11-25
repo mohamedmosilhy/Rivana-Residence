@@ -136,3 +136,19 @@ export {
 } from "./branch-sync";
 
 export type { GuestChangePreview } from "./guest-change-preview";
+
+export type {
+  ChangeRequestListItem,
+  ChangeRequestListQuery,
+  ChangeRequestReader,
+  ChangeRequestRecord,
+  ChangeRequestStore,
+  GuestChangeRequest,
+  RequestedGuestChange,
+} from "./change-request-ports";
+
+export {
+  DecideChangeRequest,
+  ListChangeRequests,
+  type ChangeRequestDecisionContext,
+} from "./decide-change-request";

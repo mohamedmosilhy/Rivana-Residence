@@ -160,9 +160,24 @@ describe("create only reservation seed", () => {
       notEnteredInHotelSystem: 0,
       oldestNotEnteredAt: null,
     });
-    expect(state.templates).toHaveLength(6);
+    expect(state.templates).toHaveLength(9);
     expect(state.templates).toEqual(
       expect.arrayContaining([
+        expect.objectContaining({
+          purpose: "CHANGE_REQUEST_RECEIVED",
+          active: false,
+          variables: ["guestFirstName", "reference"],
+        }),
+        expect.objectContaining({
+          purpose: "CHANGE_REQUEST_APPROVED",
+          active: false,
+          variables: ["reference", "checkIn", "checkOut", "total"],
+        }),
+        expect.objectContaining({
+          purpose: "CHANGE_REQUEST_REJECTED",
+          active: false,
+          variables: ["reference", "reason"],
+        }),
         expect.objectContaining({
           purpose: "RESERVATION_MODIFIED",
           active: false,
