@@ -29,7 +29,7 @@ State strategy:
 
 - **Search state** lives in the URL (query parameters), so pages are server-rendered from it. There is no global store.
 - **Form state** is local component state (`useState`), because the form submits to the REST API rather than to a Server Action. React Hook Form stays reserved for complex admin forms, per the existing convention.
-- **Server state**: Server Components fetch through use cases. Client components call the typed API client (`src/presentation/api-client`). The server is authoritative for availability and price, and the client never computes totals.
+- **Server state**: Server Components fetch through use cases. Client components call the typed API client (`src/presentation/api-client`, **implemented M10-T1**; no screen uses it yet). Amounts are shown with `formatMoney` from `src/presentation/format/money.ts`. The server is authoritative for availability and price, and the client never computes totals.
 - **Server state for prices**: every change to units, extras, or coupon re-quotes through API-P6; the review shows exactly the server quote, and `expectedTotal` is the quote's total.
 - **Payment return**: the manage token from the `201` response is kept in `sessionStorage` for the return page, which polls API-G1 and shows "Confirmed" only for `CONFIRMED`. The return URL's query string is never trusted.
 - **Double-submit protection**: one `Idempotency-Key` per review step (`crypto.randomUUID()`), kept across retries of the same submission; the button is disabled while in flight; the key is regenerated only when the request content changes.

@@ -10089,13 +10089,18 @@
                   "string",
                   "null"
                 ]
+              },
+              "timeZone": {
+                "type": "string",
+                "description": "The branch's IANA time zone, for showing times such as the cancellation deadline in branch local time."
               }
             },
             "required": [
               "name",
               "slug",
               "phone",
-              "email"
+              "email",
+              "timeZone"
             ],
             "additionalProperties": false
           },

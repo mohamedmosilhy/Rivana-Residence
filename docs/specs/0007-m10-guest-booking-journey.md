@@ -258,7 +258,7 @@ Relationships: `SiteEvent.branchId` N:1 `Branch` (optional); `SiteEvent.roomId` 
 | P11 `/api/v1/analytics/events` (new) | POST | `sessionId` (32 hex), `events[]` ≤ 20: `name` (`PAGE_VIEW` or `STEP_VIEW`), `path`, `branchSlug?`, `roomSlug?`, `step?`, `referrer?`, `utm?`; JSON or `text/plain` | `204` for every valid shape (also when dropped) | Public; no cookie, no CSRF token (beacon), same origin check; bucket `analytics` 120 per minute per client | `422` invalid shape, `429` with `Retry-After` |
 | P5, P6, P9, P10 (changed) | as today | optional header `Rivana-Analytics-Session` (32 hex; anything else ignored) | unchanged | unchanged | unchanged; the header never causes an error |
 | P7 (changed) | POST | optional `analyticsSessionId` (any value is accepted and documented as a string; stored only when it is 32 lowercase hex, tracking is on, and the request is eligible, so never under `Sec-GPC: 1` or `DNT: 1`; never part of the idempotency fingerprint) | unchanged | unchanged | unchanged (the field never causes an error) |
-| G1, G4 GET (changed) | GET | unchanged | adds `branch.timeZone` (IANA name) to `GuestReservation`; G3 summaries unchanged | unchanged | unchanged |
+| G1, G4 GET, G6 `200` (changed, implemented M10-T1) | GET, POST | unchanged | adds `branch.timeZone` (IANA name) to `GuestReservation`; G3 summaries unchanged | unchanged | unchanged |
 | `BookingProvider` port (changed, approved) | — | `getLaunchDescriptor({ branchSlug, listingSlug? })` | `BookingLaunchDescriptor` (unchanged shape) | server only | — |
 | P5, P6, P7, P9, P10, G1 to G6 | as built | as built | as built | as built | as built (consumed by the client) |
 
@@ -337,6 +337,20 @@ Relationships: `SiteEvent.branchId` N:1 `Branch` (optional); `SiteEvent.roomId` 
 - **Daily totals.** One UTC day at a time, in three scopes: `*` (the whole site, each session once), each branch (the session's events in that branch), and `''` (pages outside a branch). A session counts on the day it started; the job loads the neighbouring days. `CODE_REQUESTED` and `PHONE_VERIFIED` take the branch the session was last on.
 - **Dimensions** (`key`): `TOTAL` (`''`; `count` is page views), `FUNNEL_STEP` and `DROP_OFF` (step number), `VERIFY_ABANDONED` (`''`), `LANDING_PAGE` and `EXIT_PAGE` (path pattern; in a branch scope the first and last page in that branch), `REFERRER`, `UTM_SOURCE`, `UTM_MEDIUM`, `UTM_CAMPAIGN`, `DEVICE` (the session's value, applied to every scope it touched), `UNMET_DATE` (night) and `REFUSAL` (outcome), both counted on the day they happened with `count` as events, and `LISTING_VIEW`, `LISTING_QUOTE`, `LISTING_BOOKING` (listing id; `count` is events). `visitors` are that day's distinct hashes. A day with no events writes no row.
 - **Job.** `RollUpSiteEvents` rotates the salt, totals the last 2 finished days that hold events and every older day without totals, replaces each day in one transaction, then deletes raw events older than 90 days only for days that have the `*` `TOTAL` row. A failed day keeps its events, and the command exits with status 1. Advisory lock key `724003` stops overlapping runs. It runs whether or not collection is on.
+
+### Settled during M10-T1 (2026-11-26)
+
+Owner decisions at planning and acceptance:
+
+- **Client failures.** Besides `NETWORK`, the client reports `UNEXPECTED_RESPONSE` and `ABORTED`. It gives up after 30 seconds as `NETWORK` and never retries.
+- **Results.** A success carries the HTTP status, so a P7 replay (`200`) and a G6 approval request (`202`) are told apart. A problem also carries `status`, `detail`, and `requestId`.
+- **Visit id.** The client attaches it itself, and sets the P7 field over anything a caller passed.
+- **P11.** T1 owns the sending (beacon with a `fetch` fallback, queries and fragments cut, events the server would refuse dropped). T10 decides when to send and imports `analytics-events` directly, to keep public pages small.
+- **Time zone.** `branch.timeZone` is on every full guest reservation response: G1, G4 `GET`, and a G6 `200`.
+- **Risk** stayed Medium.
+- **Pricing fix, added at acceptance.** Staff creation, staff changes, guest changes, and paid change approval failed with `422` when a seasonal rate covered a night to price, because the stored rate record reached the strict resolver. Both callers now pass its five fields.
+
+For later screens: show a fallback for an unknown problem code (T4 to T8b), and preview again if a G5 answer has no `ETag` (T8b).
 
 ## Build plan
 

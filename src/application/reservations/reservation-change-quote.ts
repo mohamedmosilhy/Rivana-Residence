@@ -422,7 +422,16 @@ async function currentRates(
     const price = NightlyPriceResolver.resolve({
       stay: requested.stay,
       baseRate: rate?.baseRate?.amount ?? null,
-      periods: rate?.periods ?? [],
+      // The resolver is strict: pass its five fields, never the stored row.
+      periods: (rate?.periods ?? []).map(
+        ({ id, range, amount, active, label }) => ({
+          id,
+          range,
+          amount,
+          active,
+          label,
+        }),
+      ),
     });
     const byNight = new Map(
       price.nights.map((night) => [night.night.value, night]),

@@ -549,7 +549,16 @@ async function resolveAmounts(
       NightlyPriceResolver.resolve({
         stay: booking.stay,
         baseRate: rate?.baseRate?.amount ?? null,
-        periods: rate?.periods ?? [],
+        // The resolver is strict: pass its five fields, never the stored row.
+        periods: (rate?.periods ?? []).map(
+          ({ id, range, amount, active, label }) => ({
+            id,
+            range,
+            amount,
+            active,
+            label,
+          }),
+        ),
       }),
     ] as const;
   });

@@ -149,6 +149,27 @@ export async function seedBranch(
   });
 }
 
+/** A stored seasonal rate, as the rate screens save it. */
+export async function seasonalRate(
+  client: PrismaClient,
+  roomTypeId: string,
+  night: string,
+  amountMinor: number,
+  nights = 1,
+) {
+  const startDate = new Date(`${night}T00:00:00Z`);
+  return client.ratePeriod.create({
+    data: {
+      id: `season-${night}`,
+      roomTypeId,
+      startDate,
+      endDate: new Date(startDate.getTime() + nights * 86_400_000),
+      amountMinor,
+      label: "Spring",
+    },
+  });
+}
+
 /** A branch that takes online bookings, with one listing priced at 100.00 a night. */
 export async function seedBookable(
   client: PrismaClient,

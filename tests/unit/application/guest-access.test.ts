@@ -347,6 +347,18 @@ describe("guestReservationView contact rule (R-8)", () => {
     ).toBeNull();
   });
 
+  it("adds the branch time zone beside the contact fields (M10-T1)", () => {
+    expect(
+      guestReservationView(record(null), session("+12025550101"), now).branch,
+    ).toEqual({
+      name: "B",
+      slug: "b",
+      phone: null,
+      email: null,
+      timeZone: "Africa/Cairo",
+    });
+  });
+
   it("shows contact to the holder of that reservation's manage link only", () => {
     expect(
       guestReservationView(

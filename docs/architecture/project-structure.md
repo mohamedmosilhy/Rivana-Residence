@@ -34,6 +34,8 @@ M10-T0a added the analytics module: `src/domain/analytics/`, `src/application/an
 
 M10-T0b added server side steps and daily totals in the same folders, `src/composition/analytics-jobs.ts`, and `scripts/analytics.mts`.
 
+M10-T1 added the typed browser client `src/presentation/api-client/` (types only from other layers) and the money formatter `src/presentation/format/money.ts`, with tests in `tests/unit/api-client/`.
+
 ```text
 src/
   app/
@@ -80,7 +82,8 @@ src/
     admin/{reservations,cancellations,inventory,guests,sync}/                                  (M11)
     admin/{pricing,services,coupons,reports,branches,audit}/                                   (M12)
     admin/broadcasts/                                                                          (M13)
-    api-client/                          typed fetch wrappers over src/contracts              (M4)
+    api-client/                          typed fetch wrappers over src/contracts              (M10-T1, implemented)
+    format/                              shared display formatters (money)                    (M10-T1, implemented)
 scripts/  + openapi.mts, reservations.mts (outbox, expire-holds, reconcile-payments, expire-tokens)
 tests/
   unit/domain/{reservations,pricing,coupons,payments}/…, unit/architecture/ (+ new boundary tests)

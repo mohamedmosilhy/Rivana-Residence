@@ -133,6 +133,7 @@ test("a guest changes a booking and requests cancellation, and staff can block w
       body: {
         reference,
         status: "CONFIRMED",
+        branch: { timeZone: "Africa/Cairo" },
         contact: { fullName: "Fictional Access Guest", phone },
         allowedActions: ["REQUEST_CANCELLATION", "CHANGE_RESERVATION"],
       },
@@ -150,7 +151,10 @@ test("a guest changes a booking and requests cancellation, and staff can block w
       }),
     ).toMatchObject({
       status: 200,
-      body: { allowedActions: ["REQUEST_CANCELLATION", "CHANGE_RESERVATION"] },
+      body: {
+        branch: { timeZone: "Africa/Cairo" },
+        allowedActions: ["REQUEST_CANCELLATION", "CHANGE_RESERVATION"],
+      },
     });
     // A session token is not a manage link.
     expect(
@@ -577,7 +581,10 @@ test("staff decide paid changes over HTTP and close a request at the desk", asyn
       }),
     ).toMatchObject({
       status: 200,
-      body: { contact: { fullName: "Paid Guest Updated" } },
+      body: {
+        branch: { timeZone: expect.any(String) },
+        contact: { fullName: "Paid Guest Updated" },
+      },
     });
     const first = await submit(guest, manage, change);
     expect(

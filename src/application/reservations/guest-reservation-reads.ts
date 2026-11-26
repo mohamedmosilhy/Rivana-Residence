@@ -138,7 +138,9 @@ export function guestReservationView(
     status: reservation.status,
     paymentMethod: reservation.paymentMethod,
     paymentStatus: reservation.paymentStatus,
-    branch,
+    // Only the view carries the time zone. Refusals that name the hotel keep
+    // the contact fields alone.
+    branch: { ...branch, timeZone: record.cancellationTiming.timeZone },
     stay: reservation.stay,
     units: reservation.lines.map((line) => ({
       roomName: roomNames[line.roomTypeId] ?? null,

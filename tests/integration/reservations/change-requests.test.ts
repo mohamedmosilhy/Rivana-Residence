@@ -55,6 +55,7 @@ import {
   NOW,
   pausedAudit,
   phoneOf,
+  seasonalRate,
   seedBookable,
   waitForLockWaiters,
   websiteBooking,
@@ -504,6 +505,34 @@ describe("Paid change requests (AC-12, AC-15, AC-16, T-GCHG-9 through 12)", () =
         preview: { outcome: "APPLIES_NOW", proposed: { total: money(paid) } },
       },
     });
+  });
+
+  it("requests and approves a new night priced from a stored seasonal rate (S57)", async () => {
+    const f = await book();
+    await seasonalRate(client, f.listing.id, "2031-04-13", 12_000);
+    const total = 48_300;
+    const submitted = await changes().apply.execute(
+      f.access,
+      f.row.version,
+      success({ stay: changedStay, expectedTotal: money(total) }),
+    );
+    if (!submitted.ok || submitted.value.kind !== "REQUESTED")
+      throw new Error(`Expected a request: ${JSON.stringify(submitted)}`);
+    expect(
+      await commands().decideChange.approve(
+        manager,
+        submitted.value.request.id,
+        {},
+      ),
+    ).toMatchObject({
+      ok: true,
+      value: { snapshot: { totalMinor: total } },
+    });
+    expect(
+      await client.reservationNight.findFirstOrThrow({
+        where: { night: new Date("2031-04-13T00:00:00Z") },
+      }),
+    ).toMatchObject({ amountMinor: 12_000, rateSource: "PERIOD" });
   });
 
   it("records a lower price conflict without applying it, then lets staff reject with a guest reason", async () => {

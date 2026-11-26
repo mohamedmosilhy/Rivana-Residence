@@ -42,6 +42,7 @@ import {
   NOW,
   pausedAudit,
   phoneOf,
+  seasonalRate,
   seedBookable,
   seedBranch,
   TOTAL_MINOR,
@@ -354,6 +355,36 @@ describe("Guest preview and apply (AC-11, T-GCHG-1…8)", () => {
         success({ stay, expectedTotal: proposed.total }),
       ),
     ).toMatchObject({ ok: true, value: { version: row.version + 1 } });
+  });
+
+  it("previews and applies a new night priced from a stored seasonal rate (G5, G6)", async () => {
+    const { row, listing, access } = await book();
+    await seasonalRate(client, listing.id, "2031-04-13", 12_000);
+    const preview = await changes().preview.execute(
+      access,
+      success({ stay: longer }),
+    );
+    expect(preview).toMatchObject({
+      ok: true,
+      value: {
+        preview: {
+          available: true,
+          proposed: { accommodation: money(42_000), total: money(48_300) },
+        },
+      },
+    });
+    expect(
+      await changes().apply.execute(
+        access,
+        row.version,
+        success({ stay: longer, expectedTotal: money(48_300) }),
+      ),
+    ).toMatchObject({ ok: true, value: { kind: "APPLIED" } });
+    expect(
+      await client.reservationNight.findFirstOrThrow({
+        where: { night: new Date("2031-04-13T00:00:00Z") },
+      }),
+    ).toMatchObject({ amountMinor: 12_000, rateSource: "PERIOD" });
   });
 
   it("uses current service offerings only for additions and retains the stored transfer rates", async () => {

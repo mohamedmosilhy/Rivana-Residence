@@ -56,6 +56,10 @@ type CancellationRequestDto = { id: string; status: "OPEN" | "APPROVED" | "REJEC
 
 **Website visit id (implemented M10-T0b, ADR 029).** P5, P6, P9, and P10 read the optional header `Rivana-Analytics-Session` (32 hex), and P7 reads `analyticsSessionId` from its body. A missing or unusable value is ignored and changes no response. P7 never adds it to the replay fingerprint, keeps it only on an online booking until the payment resolves, and no response returns it. Recording happens after the response, only when collection is on and the request is eligible.
 
+**Guest reservation time zone (implemented M10-T1).** `GuestReservationDto.branch` is `{ name, slug, phone, email, timeZone }`, where `timeZone` is the branch's IANA name for showing times such as `cancellationDeadline` in branch local time. It is returned by G1, G4 `GET`, and a G6 `200`. G3 summaries and the `context.branch` of refusals are unchanged.
+
+**Typed browser client (implemented M10-T1).** `src/presentation/api-client` has one function for each of P5, P6, P7, P9, P10, P11, and G1 to G6, typed from `src/contracts` and not re-validated in the browser ([spec 0007](../specs/0007-m10-guest-booking-journey.md#settled-during-m10-t1-2026-11-26)). No screen uses it yet.
+
 ## Staff endpoints
 
 Authentication: staff session cookie. Authorization: listed capability **and** branch access. "Branch" is the reservation's or resource's branch. Lists require `branchId` unless the caller is Admin or the endpoint documents an implicit branch scope.

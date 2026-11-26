@@ -78,6 +78,18 @@ Transport-level errors produced by the HTTP layer before the use case runs:
 | `UNSUPPORTED_MEDIA_TYPE` | 415 |
 | `CROSS_SITE_REQUEST` | 403 |
 
+## Browser client codes
+
+**Implemented (M10-T1).** The typed client (`src/presentation/api-client`) returns the API's problem as received, with `retryAfter` from the header. It adds three codes of its own, which the server never sends:
+
+| Code | Meaning |
+| --- | --- |
+| `NETWORK` | No answer: offline, a dropped connection, or no full answer within 30 seconds |
+| `UNEXPECTED_RESPONSE` | An answer that is not the API's, such as a proxy error page, an unreadable body, or an undocumented status |
+| `ABORTED` | The caller cancelled the request |
+
+The client never retries. After any of the three on a write, the work may or may not have happened. Screens must handle a code they do not know.
+
 ## Rules
 
 - Public guest endpoints never reveal another phone's reservations: a reference that does not belong to the session's phone returns `404`.

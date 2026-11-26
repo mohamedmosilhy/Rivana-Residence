@@ -39,6 +39,7 @@ import {
   NOW,
   pausedAudit,
   phoneOf,
+  seasonalRate,
   seedBookable,
   waitForLockWaiters,
 } from "./support/website-booking";
@@ -293,6 +294,74 @@ describe("ModifyReservation (S6)", () => {
         await client.reservationNight.findMany({ orderBy: { night: "asc" } })
       ).map((night) => night.amountMinor),
     ).toEqual([10_000, 10_000, 10_000]);
+  });
+
+  it("prices a staff booking from a stored seasonal rate (S3, PR-11)", async () => {
+    const room = await seedBookable(client);
+    const season = await seasonalRate(client, room.id, "2031-04-11", 11_000);
+    const created = await book(room.id);
+    expect(
+      await client.reservationNight.findMany({ orderBy: { night: "asc" } }),
+    ).toMatchObject([
+      { amountMinor: 10_000, rateSource: "BASE", ratePeriodId: null },
+      {
+        amountMinor: 11_000,
+        rateSource: "PERIOD",
+        ratePeriodId: season.id,
+        label: "Spring",
+      },
+      { amountMinor: 10_000, rateSource: "BASE", ratePeriodId: null },
+    ]);
+    expect(
+      await client.reservation.findUniqueOrThrow({ where: { id: created.id } }),
+    ).toMatchObject({ totalMinor: 35_650 });
+  });
+
+  it("prices a new night from a stored seasonal rate on a stay change (S6, PR-11)", async () => {
+    const room = await seedBookable(client);
+    const created = await book(room.id);
+    const season = await seasonalRate(client, room.id, "2031-04-13", 12_000);
+    expect(
+      await commands().modify.execute(
+        admin,
+        created.id,
+        created.version,
+        modifyBody(room.id, FOUR_NIGHTS),
+      ),
+    ).toMatchObject({ ok: true });
+    expect(
+      await client.reservationNight.findFirstOrThrow({
+        where: { night: new Date("2031-04-13T00:00:00Z") },
+      }),
+    ).toMatchObject({
+      amountMinor: 12_000,
+      rateSource: "PERIOD",
+      ratePeriodId: season.id,
+      label: "Spring",
+    });
+  });
+
+  it("keeps the price of held nights when a later seasonal rate covers them (PR-11)", async () => {
+    const room = await seedBookable(client);
+    const created = await book(room.id);
+    // Added after the booking, over two held nights and the new one.
+    await seasonalRate(client, room.id, "2031-04-11", 12_000, 3);
+    expect(
+      await commands().modify.execute(
+        admin,
+        created.id,
+        created.version,
+        modifyBody(room.id, FOUR_NIGHTS),
+      ),
+    ).toMatchObject({ ok: true });
+    expect(
+      await client.reservationNight.findMany({ orderBy: { night: "asc" } }),
+    ).toMatchObject([
+      { amountMinor: 10_000, rateSource: "BASE" },
+      { amountMinor: 10_000, rateSource: "BASE" },
+      { amountMinor: 10_000, rateSource: "BASE" },
+      { amountMinor: 12_000, rateSource: "PERIOD" },
+    ]);
   });
 
   it("refuses a wrong accepted total, a stale version, a missing If-Match, an unavailable service, and a no-op", async () => {

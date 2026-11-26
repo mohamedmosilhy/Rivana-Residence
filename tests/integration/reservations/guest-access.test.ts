@@ -426,7 +426,7 @@ describe("G1 manage link (T-LKP-1…3)", () => {
     expect(view).toMatchObject({
       reference: mine.reference,
       status: "CONFIRMED",
-      branch: { slug: "new-cairo" },
+      branch: { slug: "new-cairo", timeZone: "Africa/Cairo" },
       contact: { fullName: GUEST_NAME, phone: mine.phone },
       price: { totalMinor: TOTAL_MINOR },
       cancellationDeadline: expect.any(String),
@@ -505,9 +505,10 @@ describe("G3 and G4 guest session (T-LKP-4)", () => {
       reference: mine.reference.toLowerCase(),
     });
     expect(own.status).toBe(200);
-    expect(GuestReservation.parse(await own.json()).reference).toBe(
-      mine.reference,
-    );
+    expect(GuestReservation.parse(await own.json())).toMatchObject({
+      reference: mine.reference,
+      branch: { timeZone: "Africa/Cairo" },
+    });
 
     // Someone else's reference looks exactly like one that does not exist.
     const foreign = await problemOf(

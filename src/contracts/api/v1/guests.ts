@@ -145,6 +145,11 @@ export const GuestReservation = z.strictObject({
     slug: z.string(),
     phone: z.string().nullable(),
     email: z.string().nullable(),
+    timeZone: z
+      .string()
+      .describe(
+        "The branch's IANA time zone, for showing times such as the cancellation deadline in branch local time.",
+      ),
   }),
   stay: z.strictObject({ checkIn: isoDate, checkOut: isoDate }),
   units: z.array(
