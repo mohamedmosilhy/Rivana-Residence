@@ -1,7 +1,7 @@
 # 0006. M9 online payments, cancellation and change requests, and email verification
 
 **Date**: 2026-11-22
-**Status**: In Progress (the owner approved the content, the cross check fixes, and the task breakdown on 2026-11-22; the status moves with the milestone)
+**Status**: Accepted (milestone accepted by the owner on 2026-11-26)
 
 ## Summary
 

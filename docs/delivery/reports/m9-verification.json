@@ -1,0 +1,790 @@
+{
+  "date": "2026-11-26",
+  "revision": "7a7753b",
+  "developmentCommand": "npm run dev -- --hostname 127.0.0.1 --port 3199",
+  "productionCommand": "npm run start -- --hostname 127.0.0.1 --port 3198",
+  "fixtures": "Disposable local PostgreSQL, demo branch with one active physical unit, generated verification tokens for browser booking calls, fictional guest and staff accounts, development fake adapters. Deadline fields were moved for expiry checks. Fake email issuance and code confirmation were exercised separately by the real Route Handlers with the fake outbox and PostgreSQL.",
+  "requests": {
+    "A3": "PATCH /api/v1/staff/branches/{branchId}",
+    "A9": "PUT /api/v1/staff/settings/verification",
+    "P6": "POST /api/v1/quotes",
+    "P7": "POST /api/v1/reservations",
+    "P8": "POST /api/v1/payments/callback",
+    "P9": "POST /api/v1/phone-verifications",
+    "P10": "POST /api/v1/phone-verifications/{verificationId}/confirmation",
+    "G2": "POST /api/v1/guest/reservation/cancellation-requests",
+    "G5": "POST /api/v1/guest/reservation/change-preview",
+    "G6": "POST /api/v1/guest/reservation/changes",
+    "S9": "POST /api/v1/staff/reservations/{reservationId}/cancellation",
+    "S18": "POST /api/v1/staff/cancellation-requests/{requestId}/approval",
+    "S19": "POST /api/v1/staff/cancellation-requests/{requestId}/rejection",
+    "S44": "GET /api/v1/staff/reservations/{reservationId}/payments",
+    "S45": "POST /api/v1/staff/payments/{paymentId}/refund-retry",
+    "S57": "POST /api/v1/staff/change-requests/{requestId}/approval",
+    "simulator": "GET /dev/fake-checkout/{paymentId}, POST /dev/fake-checkout/{paymentId}/submit",
+    "S13": "POST /api/v1/staff/reservations/{reservationId}/no-show"
+  },
+  "checkoutScreenshots": [
+    "screenshots/m9-fake-checkout-desktop.png",
+    "screenshots/m9-fake-checkout-mobile.png"
+  ],
+  "developmentObservations": [
+    {
+      "check": "public rollout guard",
+      "observation": {
+        "A3": 422,
+        "errors": {
+          "onlineBookingEnabled": [
+            "Online booking can't be turned on yet. The booking journey arrives in a later release."
+          ]
+        }
+      }
+    },
+    {
+      "check": "AC-14",
+      "observation": {
+        "A3": 200,
+        "P6WithSwitchOff": [
+          "PAY_AT_HOTEL"
+        ],
+        "P6WithSwitchOn": [
+          "PAY_AT_HOTEL",
+          "ONLINE"
+        ]
+      }
+    },
+    {
+      "check": "npm run reservations -- outbox",
+      "observation": {
+        "exit": 0,
+        "result": {
+          "sent": 4,
+          "failed": 0,
+          "retried": 0,
+          "stale": 0
+        }
+      }
+    },
+    {
+      "check": "checkout form",
+      "observation": {
+        "action": "Decline payment",
+        "result": "sent",
+        "feedback": "The payment endpoint accepted the simulated notification."
+      }
+    },
+    {
+      "check": "checkout form",
+      "observation": {
+        "action": "Pay successfully",
+        "result": "sent",
+        "feedback": "The payment endpoint accepted the simulated notification."
+      }
+    },
+    {
+      "check": "AC-1 and AC-4",
+      "observation": {
+        "P7": {
+          "status": "AWAITING_PAYMENT",
+          "hasCheckout": true,
+          "method": "ONLINE"
+        },
+        "before": [
+          {
+            "channel": "EMAIL",
+            "kind": "reservation.confirmed",
+            "status": "HELD",
+            "to_branch": false
+          },
+          {
+            "channel": "WHATSAPP",
+            "kind": "reservation.confirmed",
+            "status": "HELD",
+            "to_branch": false
+          },
+          {
+            "channel": "EMAIL",
+            "kind": "reservation.staff-alert",
+            "status": "HELD",
+            "to_branch": true
+          }
+        ],
+        "after": [
+          {
+            "channel": "EMAIL",
+            "kind": "reservation.confirmed",
+            "status": "PENDING",
+            "to_branch": false
+          },
+          {
+            "channel": "WHATSAPP",
+            "kind": "reservation.confirmed",
+            "status": "PENDING",
+            "to_branch": false
+          },
+          {
+            "channel": "EMAIL",
+            "kind": "reservation.staff-alert",
+            "status": "PENDING",
+            "to_branch": true
+          }
+        ],
+        "state": {
+          "status": "CONFIRMED",
+          "payment": "SUCCEEDED",
+          "attempt": 0,
+          "version": 2,
+          "totalMinor": 6900,
+          "hotel_flag": false,
+          "coupon": 0,
+          "history": 0,
+          "events": 2
+        }
+      }
+    },
+    {
+      "check": "checkout form",
+      "observation": {
+        "action": "Pay successfully",
+        "result": "sent",
+        "feedback": "The payment endpoint accepted the simulated notification."
+      }
+    },
+    {
+      "check": "AC-3",
+      "observation": {
+        "duplicateState": {
+          "status": "CONFIRMED",
+          "payment": "SUCCEEDED",
+          "attempt": 0,
+          "version": 2,
+          "totalMinor": 6900,
+          "hotel_flag": false,
+          "coupon": 0,
+          "history": 0,
+          "events": 2
+        }
+      }
+    },
+    {
+      "check": "AC-6 and AC-16",
+      "observation": {
+        "httpStatus": 201,
+        "request": "OPEN",
+        "duplicate": "409 CANCELLATION_REQUEST_EXISTS",
+        "branchAlert": [
+          {
+            "channel": "EMAIL",
+            "kind": "request.staff-alert",
+            "status": "PENDING",
+            "to_branch": true
+          }
+        ]
+      }
+    },
+    {
+      "check": "checkout form",
+      "observation": {
+        "action": "Fail pending refund",
+        "result": "sent",
+        "feedback": "The payment endpoint accepted the simulated notification."
+      }
+    },
+    {
+      "check": "AC-7 and AC-10 refund",
+      "observation": {
+        "approval": 202,
+        "pending": {
+          "status": "CONFIRMED",
+          "payment": "REFUND_PENDING",
+          "attempt": 1,
+          "version": 3,
+          "totalMinor": 6900,
+          "hotel_flag": false,
+          "coupon": 0,
+          "history": 0,
+          "events": 2
+        },
+        "staffPaymentStatus": "REFUND_FAILED",
+        "retry": 202,
+        "refunded": {
+          "status": "CANCELLED",
+          "payment": "REFUNDED",
+          "attempt": 2,
+          "version": 7,
+          "totalMinor": 6900,
+          "hotel_flag": false,
+          "coupon": 0,
+          "history": 0,
+          "events": 3
+        }
+      }
+    },
+    {
+      "check": "checkout form",
+      "observation": {
+        "action": "Pay successfully",
+        "result": "sent",
+        "feedback": "The payment endpoint accepted the simulated notification."
+      }
+    },
+    {
+      "check": "checkout form",
+      "observation": {
+        "action": "Complete pending refund",
+        "result": "sent",
+        "feedback": "The payment endpoint accepted the simulated notification."
+      }
+    },
+    {
+      "check": "AC-7 and AC-10 callback refund",
+      "observation": {
+        "final": {
+          "status": "CANCELLED",
+          "payment": "REFUNDED",
+          "attempt": 1,
+          "version": 5,
+          "totalMinor": 6900,
+          "hotel_flag": false,
+          "coupon": 0,
+          "history": 0,
+          "events": 2
+        }
+      }
+    },
+    {
+      "check": "npm run reservations -- expire-holds",
+      "observation": {
+        "exit": 0,
+        "result": {
+          "expired": 1,
+          "skipped": 0,
+          "failed": 0
+        }
+      }
+    },
+    {
+      "check": "npm run reservations -- outbox",
+      "observation": {
+        "exit": 0,
+        "result": {
+          "sent": 15,
+          "failed": 8,
+          "retried": 0,
+          "stale": 0
+        }
+      }
+    },
+    {
+      "check": "checkout form",
+      "observation": {
+        "action": "Close checkout",
+        "result": "sent",
+        "feedback": "The payment endpoint accepted the simulated notification."
+      }
+    },
+    {
+      "check": "checkout form",
+      "observation": {
+        "action": "Close checkout",
+        "result": "sent",
+        "feedback": "The payment endpoint accepted the simulated notification."
+      }
+    },
+    {
+      "check": "AC-4 abandonment and close",
+      "observation": {
+        "abandoned": {
+          "status": "PAYMENT_FAILED",
+          "payment": "EXPIRED",
+          "attempt": 0,
+          "version": 2,
+          "totalMinor": 6210,
+          "hotel_flag": false,
+          "coupon": 0,
+          "history": 0,
+          "events": 0
+        },
+        "messages": [
+          {
+            "channel": "EMAIL",
+            "kind": "reservation.confirmed",
+            "status": "HELD",
+            "to_branch": false
+          },
+          {
+            "channel": "WHATSAPP",
+            "kind": "reservation.confirmed",
+            "status": "HELD",
+            "to_branch": false
+          },
+          {
+            "channel": "EMAIL",
+            "kind": "reservation.payment-not-completed",
+            "status": "SENT",
+            "to_branch": false
+          },
+          {
+            "channel": "WHATSAPP",
+            "kind": "reservation.payment-not-completed",
+            "status": "SENT",
+            "to_branch": false
+          },
+          {
+            "channel": "EMAIL",
+            "kind": "reservation.staff-alert",
+            "status": "HELD",
+            "to_branch": true
+          }
+        ],
+        "closed": {
+          "status": "PAYMENT_FAILED",
+          "payment": "EXPIRED",
+          "attempt": 0,
+          "version": 2,
+          "totalMinor": 6900,
+          "hotel_flag": false,
+          "coupon": 0,
+          "history": 0,
+          "events": 1
+        }
+      }
+    },
+    {
+      "check": "checkout form",
+      "observation": {
+        "action": "Record success for later delivery",
+        "result": "scheduled",
+        "feedback": "Payment recorded. Use Deliver delayed success when you are ready."
+      }
+    },
+    {
+      "check": "checkout form",
+      "observation": {
+        "action": "Deliver delayed success",
+        "result": "sent",
+        "feedback": "The payment endpoint accepted the simulated notification."
+      }
+    },
+    {
+      "check": "AC-5 and AC-10 late success",
+      "observation": {
+        "late": {
+          "status": "PAYMENT_FAILED",
+          "payment": "REFUNDED",
+          "attempt": 1,
+          "version": 4,
+          "totalMinor": 6900,
+          "hotel_flag": false,
+          "coupon": 0,
+          "history": 0,
+          "events": 1
+        },
+        "rival": {
+          "status": "CONFIRMED",
+          "payment": null,
+          "attempt": null,
+          "version": 1,
+          "totalMinor": 6900,
+          "hotel_flag": false,
+          "coupon": 0,
+          "history": 0,
+          "events": 0
+        },
+        "messages": [
+          {
+            "channel": "EMAIL",
+            "kind": "payment.auto-refunded",
+            "status": "PENDING",
+            "to_branch": false
+          },
+          {
+            "channel": "WHATSAPP",
+            "kind": "payment.auto-refunded",
+            "status": "PENDING",
+            "to_branch": false
+          },
+          {
+            "channel": "EMAIL",
+            "kind": "payment.staff-alert",
+            "status": "PENDING",
+            "to_branch": true
+          },
+          {
+            "channel": "EMAIL",
+            "kind": "reservation.payment-not-completed",
+            "status": "PENDING",
+            "to_branch": false
+          },
+          {
+            "channel": "WHATSAPP",
+            "kind": "reservation.payment-not-completed",
+            "status": "PENDING",
+            "to_branch": false
+          }
+        ]
+      }
+    },
+    {
+      "check": "checkout form",
+      "observation": {
+        "action": "Record success without a callback",
+        "result": "dropped",
+        "feedback": "Payment recorded. Callback delivery was skipped."
+      }
+    },
+    {
+      "check": "AC-10 lost callback",
+      "observation": {
+        "productionJobExport": {
+          "gatewayReady": true,
+          "answered": 1,
+          "refundsSent": 0,
+          "heldDeleted": 0,
+          "pending": 0,
+          "failed": 0
+        },
+        "final": {
+          "status": "CONFIRMED",
+          "payment": "SUCCEEDED",
+          "attempt": 0,
+          "version": 2,
+          "totalMinor": 6900,
+          "hotel_flag": false,
+          "coupon": 0,
+          "history": 0,
+          "events": 1
+        }
+      }
+    },
+    {
+      "check": "AC-2 callback",
+      "observation": {
+        "rejected": "401 WEBHOOK_SIGNATURE_INVALID",
+        "verified": "200",
+        "ignored": [
+          {
+            "linked": true,
+            "result": "IGNORED_MISMATCH",
+            "amountMinor": 6900,
+            "currency": "EUR"
+          },
+          {
+            "linked": true,
+            "result": "IGNORED_MISMATCH",
+            "amountMinor": 6901,
+            "currency": "USD"
+          },
+          {
+            "linked": false,
+            "result": "IGNORED_UNKNOWN",
+            "amountMinor": 6900,
+            "currency": "USD"
+          }
+        ],
+        "retry": [
+          {
+            "linked": true,
+            "result": "APPLIED",
+            "amountMinor": 6900,
+            "currency": "USD"
+          },
+          {
+            "linked": true,
+            "result": "IGNORED_MISMATCH",
+            "amountMinor": 6900,
+            "currency": "EUR"
+          },
+          {
+            "linked": false,
+            "result": "IGNORED_UNKNOWN",
+            "amountMinor": 6900,
+            "currency": "USD"
+          }
+        ]
+      }
+    },
+    {
+      "check": "AC-11",
+      "observation": {
+        "preview": 200,
+        "apply": 200,
+        "after": {
+          "status": "CONFIRMED",
+          "payment": null,
+          "attempt": null,
+          "version": 2,
+          "totalMinor": 6900,
+          "hotel_flag": true,
+          "coupon": 0,
+          "history": 1,
+          "events": 0
+        },
+        "audit": [
+          {
+            "action": "reservation.created"
+          },
+          {
+            "action": "reservation.stay-modified"
+          }
+        ],
+        "outbox": [
+          {
+            "channel": "EMAIL",
+            "kind": "reservation.change-staff-alert",
+            "status": "PENDING",
+            "to_branch": true
+          },
+          {
+            "channel": "EMAIL",
+            "kind": "reservation.confirmed",
+            "status": "PENDING",
+            "to_branch": false
+          },
+          {
+            "channel": "WHATSAPP",
+            "kind": "reservation.confirmed",
+            "status": "PENDING",
+            "to_branch": false
+          },
+          {
+            "channel": "EMAIL",
+            "kind": "reservation.modified",
+            "status": "PENDING",
+            "to_branch": false
+          },
+          {
+            "channel": "WHATSAPP",
+            "kind": "reservation.modified",
+            "status": "PENDING",
+            "to_branch": false
+          },
+          {
+            "channel": "EMAIL",
+            "kind": "reservation.staff-alert",
+            "status": "PENDING",
+            "to_branch": true
+          }
+        ],
+        "stale": "412 STALE_VERSION"
+      }
+    },
+    {
+      "check": "checkout form",
+      "observation": {
+        "action": "Pay successfully",
+        "result": "sent",
+        "feedback": "The payment endpoint accepted the simulated notification."
+      }
+    },
+    {
+      "check": "AC-12 and AC-16",
+      "observation": {
+        "preview": "NEEDS_APPROVAL",
+        "request": 202,
+        "requestStatus": "OPEN",
+        "before": {
+          "status": "CONFIRMED",
+          "payment": "SUCCEEDED",
+          "attempt": 0,
+          "version": 2,
+          "totalMinor": 6900,
+          "hotel_flag": false,
+          "coupon": 0,
+          "history": 0,
+          "events": 1
+        },
+        "approval": 200,
+        "after": {
+          "status": "CONFIRMED",
+          "payment": "SUCCEEDED",
+          "attempt": 0,
+          "version": 3,
+          "totalMinor": 13800,
+          "hotel_flag": false,
+          "coupon": 0,
+          "history": 1,
+          "events": 1
+        },
+        "alerts": [
+          {
+            "channel": "EMAIL",
+            "kind": "request.staff-alert",
+            "status": "PENDING",
+            "to_branch": true
+          }
+        ]
+      }
+    },
+    {
+      "check": "AC-8",
+      "observation": {
+        "staffCancel": 403,
+        "code": "FORBIDDEN",
+        "state": {
+          "status": "CONFIRMED",
+          "payment": "SUCCEEDED",
+          "attempt": 0,
+          "version": 2,
+          "totalMinor": 6900,
+          "hotel_flag": false,
+          "coupon": 0,
+          "history": 0,
+          "events": 1
+        }
+      }
+    },
+    {
+      "check": "AC-7 rejection",
+      "observation": {
+        "reception": 403,
+        "foreignManager": 404,
+        "branchManager": 200,
+        "state": "CONFIRMED",
+        "reasonQueued": 2
+      }
+    },
+    {
+      "check": "AC-6 deadline",
+      "observation": {
+        "status": 409,
+        "code": "CANCELLATION_WINDOW_CLOSED",
+        "branchContactMatches": true
+      }
+    },
+    {
+      "check": "AC-15 no-show",
+      "observation": {
+        "action": 200,
+        "reservation": "NO_SHOW",
+        "closed": {
+          "status": "CLOSED",
+          "closedReason": "NO_SHOW",
+          "correct_actor": true,
+          "audit": 1
+        },
+        "decideAgain": {
+          "status": 409,
+          "code": "INVALID_TRANSITION"
+        }
+      }
+    },
+    {
+      "check": "AC-13 Q-100",
+      "observation": {
+        "payAtHotel": "ONLINE_PAYMENT_REQUIRED",
+        "newEmailCode": "EMAIL_NOT_CONFIGURED",
+        "existingTokenOnline": 201,
+        "db": {
+          "verificationChannel": "EMAIL",
+          "email_bound": true,
+          "phoneVerified": false
+        }
+      }
+    }
+  ],
+  "productionHttp": [
+    {
+      "A3": 422,
+      "errors": {
+        "onlinePaymentEnabled": [
+          "Configure a payment gateway before enabling online payment."
+        ]
+      }
+    },
+    {
+      "getSimulator": 404,
+      "postSimulator": 404
+    }
+  ],
+  "productionFakeRefusals": [
+    "PAYMENT_PROVIDER=fake exit 1: PAYMENT_PROVIDER=fake is not allowed in production.",
+    "EMAIL_PROVIDER=fake exit 1: EMAIL_PROVIDER=fake is not allowed in production.",
+    "WHATSAPP_PROVIDER=fake exit 1: WHATSAPP_PROVIDER=fake is not allowed in production."
+  ],
+  "clientBundle": {
+    "javascriptChunks": 37,
+    "markerHits": {
+      "PAYMENT_FAKE_SECRET": 0,
+      "x-fake-payment-signature": 0,
+      "rivana-dev-fake-payment-signing-only": 0,
+      "WHATSAPP_ACCESS_TOKEN": 0,
+      "graph.facebook.com": 0,
+      "SMTP_PASSWORD": 0,
+      "PHONE_VERIFICATION_SECRET": 0,
+      "EMAIL_PROVIDER": 0,
+      "refundAttemptKey": 0
+    }
+  },
+  "postgresSchema": {
+    "commands": [
+      "select to_regclass('\"Payment\"') as payment, to_regclass('\"PaymentEvent\"') as event, to_regclass('\"CancellationRequest\"') as cancellations, to_regclass('\"ChangeRequest\"') as changes, to_regclass('\"VerificationSettings\"') as verification_settings",
+      "select indexname from pg_indexes where indexname in ('Payment_one_initiated','CancellationRequest_one_open','ChangeRequest_one_open','PaymentEvent_providerEventId_key','Reservation_verifiedEmail_idx') order by indexname",
+      "select conname, convalidated from pg_constraint where conname in ('Reservation_email_online_check','Reservation_verified_email_check') order by conname",
+      "select count(*) AS applied from _prisma_migrations where finished_at is not null and rolled_back_at is null",
+      "select column_name from information_schema.columns where table_name='PaymentEvent' order by ordinal_position"
+    ],
+    "psqlOutput": [
+      "payment  |     event      |     cancellations     |     changes     | verification_settings  ",
+      "-----------+----------------+-----------------------+-----------------+------------------------",
+      " \"Payment\" | \"PaymentEvent\" | \"CancellationRequest\" | \"ChangeRequest\" | \"VerificationSettings\"",
+      "(1 row)",
+      "",
+      "            indexname             ",
+      "----------------------------------",
+      " CancellationRequest_one_open",
+      " ChangeRequest_one_open",
+      " PaymentEvent_providerEventId_key",
+      " Payment_one_initiated",
+      " Reservation_verifiedEmail_idx",
+      "(5 rows)",
+      "",
+      "             conname              | convalidated ",
+      "----------------------------------+--------------",
+      " Reservation_email_online_check   | f",
+      " Reservation_verified_email_check | t",
+      "(2 rows)",
+      "",
+      " applied ",
+      "---------",
+      "      19",
+      "(1 row)",
+      "",
+      "   column_name   ",
+      "-----------------",
+      " id",
+      " paymentId",
+      " providerEventId",
+      " kind",
+      " outcome",
+      " result",
+      " amountMinor",
+      " currency",
+      " receivedAt",
+      "(9 rows)"
+    ]
+  },
+  "callbackPayloadMarkerMatches": {
+    "paymentEventRows": 0,
+    "developmentServerLogLines": 0
+  },
+  "focusedPostgresHandlerCommand": "TEST_DATABASE_URL=\"$TEST_URL\" npm run test:integration -- tests/integration/reservations/{verification-settings,online-booking-route,payment-callback-route}.test.ts --reporter=verbose --silent=true",
+  "focusedPostgresHandlerPasses": [
+    "tests/integration/reservations/verification-settings.test.ts > API-A9 email verification switch (Q-99) > starts off, and only an Admin can read or change it",
+    "tests/integration/reservations/verification-settings.test.ts > API-A9 email verification switch (Q-99) > turns on and off with one audit event per real change",
+    "tests/integration/reservations/verification-settings.test.ts > API-A9 email verification switch (Q-99) > requires a payment gateway to enable email and lets an Admin turn it off without one (Q-100)",
+    "tests/integration/reservations/verification-settings.test.ts > API-A9 email verification switch (Q-99) > reads a missing settings row as off and restores it on save",
+    "tests/integration/reservations/verification-settings.test.ts > API-A9 email verification switch (Q-99) > refuses a malformed body",
+    "tests/integration/reservations/verification-settings.test.ts > P9 email channel through production wiring > refuses email codes while the switch is off and sends them once it is on",
+    "tests/integration/reservations/verification-settings.test.ts > P9 email channel through production wiring > answers the same for an email with and without history",
+    "tests/integration/reservations/verification-settings.test.ts > P9 email channel through production wiring > lets a guest finish online with an email code issued before an Admin turned email off (Q-99, Q-100)",
+    "tests/integration/reservations/verification-settings.test.ts > P9 email channel through production wiring > refuses an email code for a blocked phone, and a block cancels open email codes",
+    "tests/integration/reservations/verification-settings.test.ts > P9 email channel through production wiring > sends email guest session codes with the switch on even if payment is unavailable (Q-100)",
+    "tests/integration/reservations/verification-settings.test.ts > branch online booking guard with email (T-VCH-8) > counts email only when the branch can take online payment (Q-100)",
+    "tests/integration/reservations/online-booking-route.test.ts > exposes and enforces matching P6 and P7 payment methods (AC-1, AC-14)",
+    "tests/integration/reservations/online-booking-route.test.ts > requires online payment for email proof and accepts the same token when this branch takes it (AC-13, Q-100)",
+    "tests/integration/reservations/payment-callback-route.test.ts > verifies, applies and acknowledges a callback without a session or CSRF token (AC-1, AC-2)",
+    "tests/integration/reservations/payment-callback-route.test.ts > logs no guest contact, token or event identifier for a callback",
+    "tests/integration/reservations/payment-callback-route.test.ts > answers 401 with no detail for a bad signature, and 413 past 64 KB"
+  ]
+}

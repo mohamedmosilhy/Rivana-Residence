@@ -118,7 +118,7 @@ Each section states its status: **Implemented** (built and accepted in Phases 1â
 - **FR-RES-4** **Implemented (M8-T8).** Receptionist and above record reservations that exist in the hotel system (`EXTERNAL`), with the external reference and optional channel. A conflict with Rivana's inventory is reported clearly.
 - **FR-RES-5** Staff mark each website reservation as entered in the hotel system; until then it is flagged and its age is shown (Q-40).
 - **FR-RES-6** **Partly implemented (M8-T9).** Staff can change dates, units and occupancy, with re-quote, versioning and history. Staff modify guest details and notes, and modify dates, units, occupancy, or services (including the number of cars and the flight details) with an inventory re-check and an explicit re-quote (PR-11, Q-83). Total changes on prepaid bookings follow Q-66. Staff and guest changes use one change engine and one change history (FR-GCHG-6).
-- **FR-RES-7** **Partly implemented (M8-T9).** Staff can cancel unpaid reservations through S9. Staff cancel reservations with a reason. Receptionists cancel unpaid reservations; cancelling a paid one requires a Manager or Admin and refunds it (Q-62). Guests request cancellations (FR-CXL).
+- **FR-RES-7** **API implemented (M8-T9, M9-T8).** Staff can cancel unpaid and paid reservations through S9. Staff cancel reservations with a reason. Receptionists cancel unpaid reservations; cancelling a paid one requires a Manager or Admin and refunds it (Q-62). Guests request cancellations (FR-CXL).
 - **FR-RES-8** Staff assign a physical unit, check in, check out (early departure shortens the stay), and mark no-show, following [reservation-lifecycle.md](../domain/reservation-lifecycle.md).
 - **FR-RES-9** Creation is idempotent and conflict-safe (lifecycle "Idempotency"; ADR 016).
 - **FR-RES-10** References are unique, random, and human-friendly.
@@ -126,12 +126,12 @@ Each section states its status: **Implemented** (built and accepted in Phases 1â
 
 ## FR-PAY Online payment
 
-**Partly implemented.** M9-T4 delivered eligible choices, hosted checkout, and expiry during booking creation. M9-T5 delivered verified confirmation, late success handling and the automatic refund request, M9-T6 delivered scheduled expiry and reconciliation jobs, and M9-T8 covers refunds. Booking and staff screens are planned for M10â€“M11.
+**Backend implemented (M9).** The fake gateway supports hosted checkout, verified callbacks, refunds, expiry, and reconciliation. Guest and staff screens follow in M10 and M11. The launch gateway follows in M15.
 
 - **FR-PAY-1** Guests choose eligible methods for website bookings: online payment in full or pay at the hotel. Staff bookings are pay at hotel (Q-37).
 - **FR-PAY-2** Online payment uses the configured gateway's hosted checkout (ADR 030). No card data is entered on, sent to, or stored by Rivana.
 - **FR-PAY-3** While the guest pays, a 15 minute hold reserves the units (`AWAITING_PAYMENT`). Expiry or a definite checkout refusal releases the units and coupon redemption and sets the booking to `PAYMENT_FAILED`. An uncertain checkout result preserves the hold for retry.
-- **FR-PAY-4** Only a verified (HMAC-checked) server-to-server result with the expected amount and currency confirms a booking. The browser return never does.
+- **FR-PAY-4** Only a result verified by the gateway adapter with the expected amount and currency confirms a booking. The browser return never does.
 - **FR-PAY-5** A success that arrives after the hold expired confirms the booking if the units are still free, otherwise it is refunded automatically and staff are alerted (Q-63).
 - **FR-PAY-6** Refunds use the gateway's refund API for the captured amount. The gateway's policy determines fees (Q-38).
 - **FR-PAY-7** Staff see each reservation's payment and refund status, and can retry a failed refund.
@@ -139,14 +139,14 @@ Each section states its status: **Implemented** (built and accepted in Phases 1â
 
 ## FR-CXL Cancellation requests
 
-Guest request APIs, receipts, branch alerts, and staff closure are implemented (M9-T7). Staff decisions and refunds are planned for M9-T8. Guest and staff screens are planned for M10 and M11.
+Guest request APIs, receipts, branch alerts, staff closure, staff decisions, and refunds are implemented (M9-T7 and T8). Guest and staff screens are planned for M10 and M11.
 
 - **FR-CXL-1** A guest may request cancellation from the manage link or "My reservations" strictly before the deadline, which is 24 hours before the branch's check-in time on the arrival date. This applies to paid and pay-at-hotel bookings (Q-38).
 - **FR-CXL-2** At or after the deadline, or when there is no branch check-in time, the guest sees the branch's contact details.
 - **FR-CXL-3** The reservation stays `CONFIRMED` and keeps its inventory while the request is open. A second request is refused while a request is active or a payment refund is pending.
 - **FR-CXL-4** A Manager of the branch or an Admin approves or rejects with a reason (`cancellations:decide`).
 - **FR-CXL-5** Approval cancels an unpaid booking at once; for a paid booking it requests a gateway refund and cancels when the gateway confirms. Rejection keeps the booking `CONFIRMED`.
-- **FR-CXL-6** The guest receives email and WhatsApp messages when the request is received and decided, and when the refund completes.
+- **FR-CXL-6** The guest receives messages when the request is received and decided, and when the refund completes. Bookings verified by email receive guest messages by email only.
 - **FR-CXL-7** Every request, decision, closure, and refund is audited. Staff unpaid cancellation, no-show, and check-in close an open request in the same transaction (Q-96).
 
 ## FR-GCHG Guest booking changes â€” Guest API implemented in M9-T10 and M9-T11. Screens planned in M10-T8b and M11

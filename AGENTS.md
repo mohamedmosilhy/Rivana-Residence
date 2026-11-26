@@ -123,5 +123,7 @@ Claude Code loads the same skills from `.claude/skills/`. Project rules above ov
 
 <!-- Nested AGENTS.md files are listed here as they are created -->
 
+- [src/infrastructure/payments/AGENTS.md](src/infrastructure/payments/AGENTS.md): payment adapter contracts and fake gateway verification
+
 - [src/app/api/AGENTS.md](src/app/api/AGENTS.md): Route Handler rules for `/api/v1` (wrappers, thin handlers, contracts and OpenAPI)
 - [tests/integration/reservations/AGENTS.md](tests/integration/reservations/AGENTS.md): real PostgreSQL transaction and concurrency test conventions

@@ -280,7 +280,7 @@ Rules:
 - GV-4: Blocking and unblocking need `guests:block` (Manager, Admin) and a reason. They apply to all branches and are audited. Existing reservations are not changed automatically.
 - GV-5: Staff-created and external reservations link to the guest with the same normalized phone, or create an unverified profile. Staff entry never marks a phone verified.
 - GV-6: Guest data is never deleted automatically (Q-13).
-- GV-7 (planned, M9-T12, ADR 031): a verification may use the `EMAIL` channel. It proves the email, not the phone: the phone is stored as given with `phoneVerified = false`, per phone coupon limits are skipped for it, blocked phones are still refused, a guest session from email matches reservations by email only, and the GV-1 limits also apply per email.
+- GV-7 (implemented, M9-T12, ADR 031): a verification may use the `EMAIL` channel. It proves the email, not the phone: the phone is stored as given with `phoneVerified = false`, per phone coupon limits are skipped for it, blocked phones are still refused, a guest session from email matches reservations by email only, and the GV-1 limits also apply per email. An email booking requires online payment (Q-100).
 
 Consent versions (Q-73) are server constants, placeholders until the privacy and marketing wording is approved (Q-30, Q-58). `GUEST_CONSENT_VERSIONS` and the pure check `validateGuestConsent` are implemented in `src/domain/guests/consent-policy.ts` (M8-T2); storing the opt-in and auditing it remain M8-T7.
 

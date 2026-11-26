@@ -1,6 +1,6 @@
 # REST API conventions
 
-Status: **Implemented in M4** (2026-11-06): the shared HTTP layer (`src/app/api/v1/_http/`), the contracts (`src/contracts/api/v1/`), the generated OpenAPI document, and `GET /api/v1/health`. Reservation endpoints are **planned** and arrive with M6–M9. The build spec is [0001](../specs/0001-m4-backend-foundations.md). The other Route Handlers, `/admin/(protected)/media/upload` and `/media/[...key]`, predate `/api/v1` and keep their own shape.
+Status: **Implemented in M4** (2026-11-06): the shared HTTP layer (`src/app/api/v1/_http/`), the contracts (`src/contracts/api/v1/`), the generated OpenAPI document, and `GET /api/v1/health`. Reservation endpoints were implemented in M6 through M9. The build spec is [0001](../specs/0001-m4-backend-foundations.md). The other Route Handlers, `/admin/(protected)/media/upload` and `/media/[...key]`, predate `/api/v1` and keep their own shape.
 
 ## Shape
 
