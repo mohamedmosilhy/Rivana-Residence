@@ -64,7 +64,7 @@
             }
           },
           "default": {
-            "description": "Problem details. Codes: INTERNAL, MISSING_IDEMPOTENCY_KEY, MALFORMED_JSON, PAYLOAD_TOO_LARGE, UNSUPPORTED_MEDIA_TYPE, VALIDATION, IDEMPOTENCY_KEY_REUSED, PHONE_NOT_VERIFIED, PHONE_BLOCKED, NOT_FOUND, BRANCH_NOT_BOOKABLE, PAYMENT_METHOD_UNAVAILABLE, PAYMENT_UNAVAILABLE, INVENTORY_UNAVAILABLE, PRICE_CHANGED, COUPON_INVALID, SERVICE_UNAVAILABLE, BOOKING_LIMIT_REACHED, RATE_LIMITED, TRY_AGAIN.",
+            "description": "Problem details. Codes: INTERNAL, MISSING_IDEMPOTENCY_KEY, MALFORMED_JSON, PAYLOAD_TOO_LARGE, UNSUPPORTED_MEDIA_TYPE, VALIDATION, IDEMPOTENCY_KEY_REUSED, PHONE_NOT_VERIFIED, PHONE_BLOCKED, NOT_FOUND, BRANCH_NOT_BOOKABLE, PAYMENT_METHOD_UNAVAILABLE, ONLINE_PAYMENT_REQUIRED, PAYMENT_UNAVAILABLE, INVENTORY_UNAVAILABLE, PRICE_CHANGED, COUPON_INVALID, SERVICE_UNAVAILABLE, BOOKING_LIMIT_REACHED, RATE_LIMITED, TRY_AGAIN.",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -9116,6 +9116,10 @@
             "type": "boolean",
             "description": "Whether the server's email adapter can deliver."
           },
+          "onlinePaymentConfigured": {
+            "type": "boolean",
+            "description": "A payment gateway is configured. Bookings verified by email are paid online (Q-100)."
+          },
           "whatsAppConfigured": {
             "type": "boolean",
             "description": "WhatsApp configured per Q-71."
@@ -9141,6 +9145,7 @@
         "required": [
           "emailVerificationEnabled",
           "emailDeliveryConfigured",
+          "onlinePaymentConfigured",
           "whatsAppConfigured",
           "emailChannelReady",
           "updatedAt"
@@ -9152,7 +9157,7 @@
         "properties": {
           "emailVerificationEnabled": {
             "type": "boolean",
-            "description": "Offer verification codes by email. Turning it on is refused while email delivery is not configured. Turning it off stops new email codes; codes and tokens already issued may finish."
+            "description": "Offer verification codes by email. Turning it on is refused while email delivery or online payment is not configured (a booking verified by email is paid online, Q-100). Turning it off stops new email codes; codes and tokens already issued may finish."
           }
         },
         "required": [

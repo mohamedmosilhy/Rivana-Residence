@@ -1,4 +1,6 @@
+import { createHash, randomBytes } from "node:crypto";
 import { expect, test } from "@playwright/test";
+import { sql } from "./support/session";
 
 test.skip(
   !process.env.E2E_DATABASE_URL,
@@ -48,4 +50,40 @@ test("a booking needs an Idempotency-Key and a strict body", async ({
   });
   expect(priced.status()).toBe(422);
   expect(await priced.json()).toMatchObject({ code: "VALIDATION" });
+});
+
+test("a booking verified by email cannot pay at the hotel (Q-100)", async ({
+  request,
+}, testInfo) => {
+  test.skip(testInfo.project.name !== "desktop-chromium");
+  const token = randomBytes(32).toString("base64url");
+  const id = `q100-${token.slice(0, 10)}`;
+  const tokenHash = createHash("sha256").update(token).digest("hex");
+  await sql(
+    `INSERT INTO "PhoneVerification" (id, phone, purpose, channel, email, "codeHash", "expiresAt", "clientKey", "createdAt", "verifiedAt", "tokenHash", "tokenExpiresAt")
+     VALUES ($1, $2, 'BOOKING', 'EMAIL', $3, repeat('0', 64), now() + interval '10 minutes', 'e2e-hashed-client', now(), now(), $4, now() + interval '30 minutes')`,
+    [id, booking.guest.phone, booking.guest.email, tokenHash],
+  );
+  try {
+    const response = await request.post("/api/v1/reservations", {
+      headers: {
+        "Idempotency-Key": id,
+        "X-Forwarded-For": "198.51.100.82",
+      },
+      data: { ...booking, phoneVerificationToken: token },
+    });
+    expect(response.status()).toBe(409);
+    expect(await response.json()).toMatchObject({
+      code: "ONLINE_PAYMENT_REQUIRED",
+      status: 409,
+    });
+    expect(response.headers()["cache-control"]).toBe("no-store");
+    const { rows } = await sql(
+      'SELECT "consumedAt" FROM "PhoneVerification" WHERE id = $1',
+      [id],
+    );
+    expect(rows).toEqual([{ consumedAt: null }]);
+  } finally {
+    await sql('DELETE FROM "PhoneVerification" WHERE id = $1', [id]);
+  }
 });

@@ -12,11 +12,13 @@ import {
   issueToken,
   NOW,
   phoneOf,
+  rowCounts,
   seedBookable,
 } from "./support/website-booking";
 
 vi.stubEnv("PAYMENT_PROVIDER", "fake");
 vi.stubEnv("WHATSAPP_PROVIDER", "fake");
+vi.stubEnv("EMAIL_PROVIDER", "fake");
 vi.mock("next/cache", () => ({
   unstable_cache: (fn: unknown) => fn,
   updateTag: () => undefined,
@@ -138,5 +140,56 @@ it("exposes and enforces matching P6 and P7 payment methods (AC-1, AC-14)", asyn
     reference: response.reference,
     status: "AWAITING_PAYMENT",
     manageUrl: null,
+  });
+});
+
+it("requires online payment for email proof and accepts the same token when this branch takes it (AC-13, Q-100)", async () => {
+  await seedBookable(client);
+  await client.verificationSettings.update({
+    where: { id: "default" },
+    data: { emailEnabled: true },
+  });
+  const token = await issueToken(client, phone, {
+    email: "amina@example.test",
+  });
+  const booking = bookingBody(phone, token);
+  const atHotel = await send("reservations", booking);
+  expect(atHotel.status).toBe(409);
+  expect(await atHotel.json()).toMatchObject({
+    code: "ONLINE_PAYMENT_REQUIRED",
+  });
+
+  const online = { ...booking, paymentMethod: "ONLINE" };
+  const branchOff = await send("reservations", online);
+  expect(branchOff.status).toBe(409);
+  expect(await branchOff.json()).toMatchObject({
+    code: "BRANCH_NOT_BOOKABLE",
+    context: { reason: "VERIFICATION_NOT_CONFIGURED" },
+  });
+  expect(await rowCounts(client)).toMatchObject({
+    reservations: 0,
+    consumed: 0,
+  });
+  expect(await client.payment.count()).toBe(0);
+
+  await client.branch.update({
+    where: { id: TEST_BRANCH_ID },
+    data: { onlinePaymentEnabled: true },
+  });
+  const created = await send("reservations", online);
+  expect(created.status).toBe(201);
+  expect(await created.json()).toMatchObject({
+    status: "AWAITING_PAYMENT",
+    holdExpiresAt: new Date(NOW.getTime() + 15 * 60_000).toISOString(),
+    checkoutUrl: expect.stringContaining("/dev/fake-checkout/"),
+  });
+  expect(await rowCounts(client)).toMatchObject({
+    reservations: 1,
+    consumed: 1,
+  });
+  expect(await client.reservation.findFirstOrThrow()).toMatchObject({
+    verificationChannel: "EMAIL",
+    verifiedEmail: "amina@example.test",
+    paymentMethod: "ONLINE",
   });
 });

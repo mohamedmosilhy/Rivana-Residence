@@ -156,7 +156,7 @@ test.describe("WhatsApp screen", () => {
     }, branchId);
     expect(result.status).toBe(422);
     expect(result.body.fieldErrors.onlineBookingEnabled).toEqual([
-      "Online booking can't be turned on until WhatsApp or email is set up for verification codes.",
+      "Online booking can't be turned on until WhatsApp is set up, or email is set up and this branch takes online payment.",
     ]);
     const stored = await sql(
       'SELECT "onlineBookingEnabled" FROM "Branch" WHERE id = $1',

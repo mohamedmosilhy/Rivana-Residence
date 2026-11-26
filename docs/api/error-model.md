@@ -39,7 +39,7 @@ The application layer already returns `Result<T>` with `ApplicationErrorCode` (`
 | `INVALID_TRANSITION` | 409 | `context.status` (current). **Implemented (M8-T9)** |
 | `ROOM_ALREADY_ASSIGNED` | 409 | |
 | `ROOM_BLOCKED` | 409 | |
-| `BRANCH_NOT_BOOKABLE` | 409 | Branch inactive, online booking disabled, no verification channel ready, or check-in time missing; `context.reason` is `ONLINE_BOOKING_DISABLED`, `CHECK_IN_TIME_MISSING` or `VERIFICATION_NOT_CONFIGURED` (**implemented M8-T7b**; public inactive branch: 404 instead). **M9-T12a (ADR 031):** `VERIFICATION_NOT_CONFIGURED` replaced `WHATSAPP_NOT_CONFIGURED` and applies only when neither WhatsApp nor email codes are ready |
+| `BRANCH_NOT_BOOKABLE` | 409 | Online booking disabled, no usable verification channel, or check-in time missing. `context.reason` is `ONLINE_BOOKING_DISABLED`, `CHECK_IN_TIME_MISSING` or `VERIFICATION_NOT_CONFIGURED` (**implemented M8-T7b**; public inactive branch: 404 instead). **M9-T12c (ADR 031, Q-100).** `VERIFICATION_NOT_CONFIGURED` means the branch has no verification channel usable for the booking. Email requires online payment. A valid email booking token can finish online after email issuance is turned off |
 | `ROOM_TYPE_NOT_BOOKABLE` | 409 | Unpublished, no units, or unpriced nights |
 | `STALE_VERSION` | 412 | `context.currentVersion`. **Implemented (M8-T9)**: the `If-Match` version no longer matches |
 | `PRECONDITION_REQUIRED` | 428 | **Implemented (M8-T9)**: a reservation write sent no usable `If-Match` |
@@ -58,6 +58,7 @@ The application layer already returns `Result<T>` with `ApplicationErrorCode` (`
 | `SERVICE_UNAVAILABLE` | 409 | `context.kind`; the service is off at this branch. **Implemented (M7-T6).** |
 | `BOOKING_LIMIT_REACHED` | 429 | Per-phone cap on upcoming pay-at-hotel bookings or open payment holds (Q-60); `detail` asks the guest to contact the hotel |
 | `PAYMENT_METHOD_UNAVAILABLE` | 409 | **Implemented (M9-T4, CP-6).** P7 refuses online payment when the gateway is unavailable, the branch switch is off, or the total is zero. The retired `PAYMOB` value returns `422 VALIDATION`. |
+| `ONLINE_PAYMENT_REQUIRED` | 409 | **Implemented (M9-T12c, Q-100).** P7 received an email booking token with `PAY_AT_HOTEL`. The booking is refused and the token can be retried with `ONLINE`. |
 | `PAYMENT_UNAVAILABLE` | 503 | **Implemented (M9-T4).** Checkout could not be opened. A definite refusal sets the reservation to `PAYMENT_FAILED` and releases inventory and coupon use. An ambiguous outcome keeps the hold for retry with the same key and request body. |
 | `WEBHOOK_SIGNATURE_INVALID` | 401 | Payment callback failed the adapter's signature verification; body is minimal **Implemented (M9-T5).** Also returned when no gateway is configured. |
 | `CHANGE_NOT_ALLOWED` | 403 | **Implemented (M9-T10 and M9-T11).** `context.reason` is `DEADLINE_PASSED`, `REQUEST_OPEN`, `PHONE_BLOCKED`, or `STATUS`. A deadline refusal also includes `context.deadline` (UTC or null) and `context.branch` (`name`, `slug`, `phone`, `email`). |

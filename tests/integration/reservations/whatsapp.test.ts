@@ -665,7 +665,7 @@ describe("Branch online booking guard (FR-BR-3, Q-71)", () => {
     expect(
       (await notConfigured.json()).fieldErrors.onlineBookingEnabled,
     ).toEqual([
-      "Online booking can't be turned on until WhatsApp or email is set up for verification codes.",
+      "Online booking can't be turned on until WhatsApp is set up, or email is set up and this branch takes online payment.",
     ]);
 
     await configure();

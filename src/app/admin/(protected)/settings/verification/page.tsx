@@ -21,7 +21,9 @@ export default async function VerificationSettingsPage() {
   const settings = await readVerificationSettings();
   if (!settings.ok) throw new Error("Verification settings are unavailable.");
   const view = settings.value;
-  const anyReady = view.whatsAppConfigured || view.emailChannelReady;
+  const bookingChannelReady =
+    view.whatsAppConfigured ||
+    (view.emailChannelReady && view.onlinePaymentConfigured);
 
   return (
     <>
@@ -34,8 +36,9 @@ export default async function VerificationSettingsPage() {
         description={
           <p>
             Guests confirm a contact with a code before they book or open their
-            bookings. Codes go by WhatsApp, and by email when you allow it.
-            Online booking needs at least one of the two.
+            bookings. Codes go by WhatsApp, and by email when you allow it. A
+            booking verified by email must be paid online. Guests can use email
+            to book at branches that take online payment.
           </p>
         }
       />
@@ -54,6 +57,12 @@ export default async function VerificationSettingsPage() {
               {view.emailDeliveryConfigured ? "Set up" : "Not set up"}
             </Badge>
           </dd>
+          <dt>Online payment</dt>
+          <dd className="m-0">
+            <Badge tone={view.onlinePaymentConfigured ? "success" : "neutral"}>
+              {view.onlinePaymentConfigured ? "Set up" : "Not set up"}
+            </Badge>
+          </dd>
           <dt>Email codes</dt>
           <dd className="m-0">
             <Badge tone={view.emailChannelReady ? "success" : "neutral"}>
@@ -61,11 +70,11 @@ export default async function VerificationSettingsPage() {
             </Badge>
           </dd>
         </dl>
-        {anyReady ? null : (
+        {bookingChannelReady ? null : (
           <p>
-            <Badge tone="warning">No channel ready</Badge> Branches can&apos;t
-            take online bookings until WhatsApp is set up or email codes are
-            allowed.
+            <Badge tone="warning">No channel ready for bookings</Badge> Branches
+            can&apos;t take online bookings until WhatsApp is set up, or email
+            codes are allowed and the branch takes online payment.
           </p>
         )}
       </Panel>
@@ -79,6 +88,7 @@ export default async function VerificationSettingsPage() {
           action={saveVerificationSettingsAction}
           enabled={view.emailVerificationEnabled}
           deliveryConfigured={view.emailDeliveryConfigured}
+          paymentConfigured={view.onlinePaymentConfigured}
         />
       </Panel>
     </>

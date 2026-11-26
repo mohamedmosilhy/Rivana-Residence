@@ -220,7 +220,7 @@ export const branchSchema = branchFields.superRefine(crossFieldRules);
 // Turning online booking on (FR-BR-3, Q-71 amended by Q-93, Q-09). The branch use case checks
 // these in order; the last one stays until the booking journey ships (M10).
 export const ONLINE_BOOKING_NEEDS_VERIFICATION_MESSAGE =
-  "Online booking can't be turned on until WhatsApp or email is set up for verification codes.";
+  "Online booking can't be turned on until WhatsApp is set up, or email is set up and this branch takes online payment.";
 export const ONLINE_BOOKING_NEEDS_CHECK_IN_MESSAGE =
   "Add the branch's check-in time before turning on online booking.";
 export const ONLINE_BOOKING_NOT_READY_MESSAGE =

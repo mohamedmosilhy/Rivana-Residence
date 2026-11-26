@@ -1,4 +1,12 @@
-import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
+import {
+  afterAll,
+  afterEach,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+} from "vitest";
 
 import type { StaffPrincipal } from "@/application/auth";
 import type { FakeVerificationCodeEmail } from "@/infrastructure/email/verification-code-email";
@@ -9,16 +17,29 @@ import {
   resetDatabase,
   TEST_BRANCH_ID,
 } from "../support/database";
+import { bookingBody, NOW, seedBookable } from "./support/website-booking";
 
-// covers: Q-99 and AC-13 through production composition on real PostgreSQL:
+// covers: Q-99, Q-100 and AC-13 through production composition on real PostgreSQL:
 // API-A9, the P9 email channel and its readiness, P10, the branch switch,
 // and a staff block on email codes (T-VCH-1, T-VCH-5, T-VCH-8).
 const session = vi.hoisted(() => ({ staff: null as StaffPrincipal | null }));
+const providers = vi.hoisted(() => ({ payment: true }));
 vi.stubEnv(
   "PHONE_VERIFICATION_SECRET",
   "integration-phone-secret-0123456789abcdef",
 );
 vi.stubEnv("EMAIL_PROVIDER", "fake");
+vi.stubEnv("PAYMENT_PROVIDER", "fake");
+vi.mock("@/lib/env/server", async (original) => {
+  const env = await original<typeof import("@/lib/env/server")>();
+  return {
+    ...env,
+    getServerEnv: () => ({
+      ...env.getServerEnv(),
+      PAYMENT_PROVIDER: providers.payment ? "fake" : undefined,
+    }),
+  };
+});
 vi.mock("next/cache", () => ({
   unstable_cache:
     <T>(load: () => Promise<T>) =>
@@ -47,6 +68,7 @@ const confirmRoute = await import(
   "@/app/api/v1/phone-verifications/[verificationId]/confirmation/route"
 );
 const branchRoute = await import("@/app/api/v1/staff/branches/[id]/route");
+const reservationRoute = await import("@/app/api/v1/reservations/route");
 const { verificationCodeEmail } = await import(
   "@/composition/verification-channels"
 );
@@ -125,8 +147,10 @@ beforeEach(async () => {
   await resetDatabase(client);
   await createActor(client);
   session.staff = admin;
+  providers.payment = true;
   outbox().deliveries.length = 0;
 });
+afterEach(() => vi.useRealTimers());
 afterAll(() => client.$disconnect());
 
 describe("API-A9 email verification switch (Q-99)", () => {
@@ -136,6 +160,7 @@ describe("API-A9 email verification switch (Q-99)", () => {
     expect(await read.json()).toMatchObject({
       emailVerificationEnabled: false,
       emailDeliveryConfigured: true,
+      onlinePaymentConfigured: true,
       whatsAppConfigured: false,
       emailChannelReady: false,
     });
@@ -184,6 +209,37 @@ describe("API-A9 email verification switch (Q-99)", () => {
     expect(stored).toMatchObject({
       emailEnabled: false,
       updatedById: admin.id,
+    });
+  });
+
+  it("requires a payment gateway to enable email and lets an Admin turn it off without one (Q-100)", async () => {
+    providers.payment = false;
+    const refused = await putSettings({ emailVerificationEnabled: true });
+    expect(refused.status).toBe(422);
+    expect(await refused.json()).toMatchObject({
+      code: "VALIDATION",
+      fieldErrors: {
+        emailVerificationEnabled: [
+          "Email verification can't be turned on until online payment is set up: bookings verified by email are paid online.",
+        ],
+      },
+    });
+    expect(await (await readSettings()).json()).toMatchObject({
+      emailVerificationEnabled: false,
+      onlinePaymentConfigured: false,
+    });
+    expect(await audits()).toHaveLength(0);
+
+    providers.payment = true;
+    expect((await putSettings({ emailVerificationEnabled: true })).status).toBe(
+      200,
+    );
+    providers.payment = false;
+    const off = await putSettings({ emailVerificationEnabled: false });
+    expect(off.status).toBe(200);
+    expect(await off.json()).toMatchObject({
+      emailVerificationEnabled: false,
+      onlinePaymentConfigured: false,
     });
   });
 
@@ -265,6 +321,65 @@ describe("P9 email channel through production wiring", () => {
     expect(shape(await fresh.json())).toEqual(shape(await known.json()));
   });
 
+  it("lets a guest finish online with an email code issued before an Admin turned email off (Q-99, Q-100)", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(NOW);
+    await seedBookable(client);
+    expect((await putSettings({ emailVerificationEnabled: true })).status).toBe(
+      200,
+    );
+    const sent = await requestEmailCode();
+    expect(sent.status).toBe(201);
+    const { verificationId } = await sent.json();
+    const code = outbox().deliveries.at(-1)!.code;
+
+    const disabled = await putSettings({ emailVerificationEnabled: false });
+    expect(disabled.status).toBe(200);
+    expect(await disabled.json()).toMatchObject({
+      emailChannelReady: false,
+      whatsAppConfigured: false,
+    });
+    const blocked = await requestEmailCode();
+    expect(blocked.status).toBe(503);
+    expect(await blocked.json()).toMatchObject({
+      code: "EMAIL_NOT_CONFIGURED",
+    });
+    const confirmed = await confirmCode(verificationId, code);
+    expect(confirmed.status).toBe(200);
+    const { token } = await confirmed.json();
+
+    const bookOnline = () => {
+      const req = request(
+        "POST",
+        "/api/v1/reservations",
+        bookingBody(phone, token, {
+          paymentMethod: "ONLINE",
+          guest: { fullName: "Amina Hassan", email, phone, country: "EG" },
+        }),
+      );
+      req.headers.set("idempotency-key", "email-switch-off-booking");
+      return reservationRoute.POST(req, params());
+    };
+    expect((await bookOnline()).status).toBe(409);
+    expect(await client.reservation.count()).toBe(0);
+
+    await client.branch.update({
+      where: { id: TEST_BRANCH_ID },
+      data: { onlinePaymentEnabled: true },
+    });
+    const booked = await bookOnline();
+    expect(booked.status).toBe(201);
+    expect(await booked.json()).toMatchObject({
+      status: "AWAITING_PAYMENT",
+      checkoutUrl: expect.stringContaining("/dev/fake-checkout/"),
+    });
+    expect(await client.reservation.findFirstOrThrow()).toMatchObject({
+      paymentMethod: "ONLINE",
+      verificationChannel: "EMAIL",
+      verifiedEmail: email,
+    });
+  });
+
   it("refuses an email code for a blocked phone, and a block cancels open email codes", async () => {
     await putSettings({ emailVerificationEnabled: true });
     await client.guest.create({
@@ -290,11 +405,14 @@ describe("P9 email channel through production wiring", () => {
     expect(await refused.json()).toMatchObject({ code: "PHONE_BLOCKED" });
   });
 
-  it("sends an email guest session code through production wiring, behind the same switch (M9-T12b)", async () => {
+  it("sends email guest session codes with the switch on even if payment is unavailable (Q-100)", async () => {
     expect((await requestEmailCode({ purpose: "GUEST_SESSION" })).status).toBe(
       503,
     );
-    await putSettings({ emailVerificationEnabled: true });
+    expect((await putSettings({ emailVerificationEnabled: true })).status).toBe(
+      200,
+    );
+    providers.payment = false;
     const response = await requestEmailCode({ purpose: "GUEST_SESSION" });
     expect(response.status).toBe(201);
     const { verificationId } = await response.json();
@@ -311,27 +429,49 @@ describe("P9 email channel through production wiring", () => {
 });
 
 describe("branch online booking guard with email (T-VCH-8)", () => {
-  it("passes the verification check when email is ready and WhatsApp is not", async () => {
+  it("counts email only when the branch can take online payment (Q-100)", async () => {
     await client.branch.update({
       where: { id: TEST_BRANCH_ID },
       data: { checkInTime: "14:00" },
     });
-    const patch = () =>
+    const patch = (flags: Record<string, boolean> = {}) =>
       branchRoute.PATCH(
         request("PATCH", `/api/v1/staff/branches/${TEST_BRANCH_ID}`, {
           onlineBookingEnabled: true,
+          ...flags,
         }),
         params({ id: TEST_BRANCH_ID }),
       );
-    const none = await patch();
-    expect((await none.json()).fieldErrors.onlineBookingEnabled).toEqual([
-      "Online booking can't be turned on until WhatsApp or email is set up for verification codes.",
-    ]);
-    await putSettings({ emailVerificationEnabled: true });
-    const emailReady = await patch();
-    // Only the M10 refusal remains: the verification channel check passed.
-    expect((await emailReady.json()).fieldErrors.onlineBookingEnabled).toEqual([
+    const refusal = async (flags?: Record<string, boolean>) => {
+      const response = await patch(flags);
+      expect(response.status).toBe(422);
+      return (await response.json()).fieldErrors.onlineBookingEnabled;
+    };
+    const needsVerification = [
+      "Online booking can't be turned on until WhatsApp is set up, or email is set up and this branch takes online payment.",
+    ];
+    expect(await refusal({ onlinePaymentEnabled: true })).toEqual(
+      needsVerification,
+    );
+    expect((await putSettings({ emailVerificationEnabled: true })).status).toBe(
+      200,
+    );
+    expect(await refusal()).toEqual(needsVerification);
+    const journeyNotShipped = [
       "Online booking can't be turned on yet. The booking journey arrives in a later release.",
-    ]);
+    ];
+    expect(await refusal({ onlinePaymentEnabled: true })).toEqual(
+      journeyNotShipped,
+    );
+    await client.branch.update({
+      where: { id: TEST_BRANCH_ID },
+      data: { onlinePaymentEnabled: true },
+    });
+    expect(await refusal()).toEqual(journeyNotShipped);
+    expect(await refusal({ onlinePaymentEnabled: false })).toEqual(
+      needsVerification,
+    );
+    providers.payment = false;
+    expect(await refusal()).toEqual(needsVerification);
   });
 });

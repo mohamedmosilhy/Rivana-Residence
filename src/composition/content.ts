@@ -23,7 +23,7 @@ import { PrismaFacilityRepository } from "@/infrastructure/db/prisma/repositorie
 import { PrismaMediaRepository } from "@/infrastructure/db/prisma/repositories/media-repository";
 import { PrismaPageRepository } from "@/infrastructure/db/prisma/repositories/page-repository";
 import { PrismaRoomRepository } from "@/infrastructure/db/prisma/repositories/room-repository";
-import { anyVerificationChannelReady } from "@/application/guests";
+import { verificationUsableForBranchNow } from "@/application/guests";
 import { verificationChannelReadiness } from "@/composition/verification-channels";
 
 const clock = { now: () => new Date() };
@@ -86,8 +86,11 @@ export function manageBranches(
       },
     },
     verification: {
-      anyChannelReady: () =>
-        anyVerificationChannelReady(verificationChannelReadiness()),
+      usableForBranch: (onlinePaymentAvailable) =>
+        verificationUsableForBranchNow(
+          verificationChannelReadiness(),
+          onlinePaymentAvailable,
+        ),
     },
     paymentReady: isPaymentGatewayReady,
     clock,

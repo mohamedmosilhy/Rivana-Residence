@@ -50,7 +50,7 @@ Planned, reviewed, and accepted one task at a time ([agent-workflow.md](../../en
 | M10-T1 | Typed API client on the contracts (`src/presentation/api-client/`) | Medium | M9 | client unit tests | Not started |
 | M10-T2 | Search and results page | Medium | T1 | AC 1, 9 | Not started |
 | M10-T3 | Selection basket with server-computed subtotal | Medium | T2 | AC 2 | Not started |
-| M10-T4 | Guest details and verification step (WhatsApp or email channel, ADR 031) | Medium | T3 | AC 9 | Not started |
+| M10-T4 | Guest details and verification step (WhatsApp, or email for online payment only, ADR 031 and Q-100) | Medium | T3 | AC 9 | Not started |
 | M10-T5 | Extras (with the transfer car selector and flight details, Q-82) and coupon | Medium | T3 | AC 3, 4 | Not started |
 | M10-T6 | Payment choice, review, submit, confirmation, conflict and price-change paths | Critical | T4, T5 | AC 5–7 | Not started |
 | M10-T7 | Payment return page | Critical | T6 | AC 6 | Not started |
@@ -63,7 +63,7 @@ Planned, reviewed, and accepted one task at a time ([agent-workflow.md](../../en
 
 1. **Search** `/{branch}/book?checkIn&checkOut&adults&children`: a plain GET form (works without JavaScript), native date inputs, errors next to fields and announced; results from API-P5 rendered on the server: each available listing with its Room or Apartment badge, price per night and stay total **before VAT**, and a units selector up to the available count (cap per booking from the spec); unavailable listings with a reason.
 2. **Selection basket**: one or more units across listings (same dates); a running accommodation subtotal from API-P6 (server computed).
-3. **Details**: guest name, email, phone (country selector, E.164), special requests; verification step (`PhoneVerificationStep`, API-P9 and P10) with a channel choice offered only for ready channels (WhatsApp by default; email when WhatsApp is not ready, fails to send, or the guest prefers it), resend timing, attempts left, and the neutral blocked-number message; an email verified guest is told the hotel will confirm the phone on arrival.
+3. **Details**: guest name, email, phone (country selector, E.164), special requests; verification step (`PhoneVerificationStep`, API-P9 and P10) with a choice of ready channels, resend timing, attempts left, and the neutral blocked-number message. Offer email only when the guest chooses online payment and it is available for the branch and quote (Q-100). Tell an email verified guest that the hotel will confirm the phone on arrival.
 4. **Extras**: breakfast and airport transfer offered with their prices by unit (per booking, per night, per person, per person per night, or per car, child price where set) when the branch has them active; nothing preselected. The transfer has a car selector (1 to the branch's maximum, default 1) and optional flight number and arrival time; changing the cars re-quotes (Q-82).
 5. **Coupon**: one code field; applying re-quotes through API-P6; a refusal shows the reason in plain words.
 6. **Payment choice**: "Pay online now" and "Pay at the hotel", each with a one-line explanation; online hidden when no payment gateway is configured for the branch (the fake gateway's simulated checkout page serves development and tests).

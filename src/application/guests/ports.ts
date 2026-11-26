@@ -1,4 +1,4 @@
-import type { PhoneNumber } from "@/domain/guests";
+import { verificationUsableForBranch, type PhoneNumber } from "@/domain/guests";
 import type {
   VerificationChannel,
   VerificationPurpose,
@@ -211,13 +211,25 @@ export interface PhoneVerificationCrypto {
 export interface VerificationChannelReadiness {
   isReady(channel: VerificationChannel): Promise<boolean>;
 }
-/** Online booking needs at least one ready channel (Q-71 amended by Q-93). */
-export async function anyVerificationChannelReady(
+/**
+ * Online booking at a branch needs a usable verification channel (Q-71,
+ * amended by Q-93 and Q-100): WhatsApp, or email where online payment is
+ * possible, because a booking verified by email is paid online.
+ */
+export async function verificationUsableForBranchNow(
   readiness: VerificationChannelReadiness,
+  onlinePaymentAvailable: boolean,
 ): Promise<boolean> {
-  return (
-    (await readiness.isReady("WHATSAPP")) || (await readiness.isReady("EMAIL"))
-  );
+  const whatsAppReady = await readiness.isReady("WHATSAPP");
+  const emailReady =
+    !whatsAppReady &&
+    onlinePaymentAvailable &&
+    (await readiness.isReady("EMAIL"));
+  return verificationUsableForBranch({
+    whatsAppReady,
+    emailReady,
+    onlinePaymentAvailable,
+  });
 }
 
 /** The Admin switch for verification codes by email (Q-99). One row. */

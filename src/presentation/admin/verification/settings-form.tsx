@@ -27,6 +27,7 @@ type Props = Readonly<{
   action: FormAction;
   enabled: boolean;
   deliveryConfigured: boolean;
+  paymentConfigured: boolean;
 }>;
 
 /** The Admin switch for verification codes by email (Q-99). */
@@ -34,6 +35,7 @@ export function VerificationSettingsForm({
   action,
   enabled,
   deliveryConfigured,
+  paymentConfigured,
 }: Props) {
   const [state, formAction] = useActionState(action, idleFormState);
   const toast = useToast();
@@ -90,9 +92,11 @@ export function VerificationSettingsForm({
           Allow verification codes by email
         </label>
         <p className={muted} id={fieldId("hint")}>
-          {deliveryConfigured
-            ? "Guests can choose email when WhatsApp is not set up or a code does not arrive. Their phone stays unverified and is confirmed at the desk. Turning this off stops new email codes at once; codes already sent can still be used until they expire."
-            : "Email delivery is not set up on the server, so this can't be turned on yet."}
+          {!deliveryConfigured
+            ? "Email delivery is not set up on the server, so this can't be turned on yet."
+            : !paymentConfigured
+              ? "Online payment is not set up on the server, so this can't be turned on yet: bookings verified by email are paid online."
+              : "Guests can choose email when WhatsApp is not set up or a code does not arrive. They must pay online, and their phone stays unverified and is confirmed at the desk. Turning this off stops new email codes at once; codes already sent can still be used until they expire."}
         </p>
       </div>
       <FormActions

@@ -9,6 +9,7 @@ export function verificationSettings(
   return {
     emailVerificationEnabled: view.emailVerificationEnabled,
     emailDeliveryConfigured: view.emailDeliveryConfigured,
+    onlinePaymentConfigured: view.onlinePaymentConfigured,
     whatsAppConfigured: view.whatsAppConfigured,
     emailChannelReady: view.emailChannelReady,
     updatedAt: view.updatedAt?.toISOString() ?? null,

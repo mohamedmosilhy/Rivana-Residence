@@ -34,9 +34,12 @@ export interface BranchMediaCheck {
   isUsableImage(id: string): Promise<boolean>;
 }
 
-/** Whether any verification channel (WhatsApp per Q-71, or email) is ready (ADR 031). */
+/**
+ * Whether guests of a branch can verify for a booking: WhatsApp (Q-71), or
+ * email where the branch can take online payment (ADR 031, Q-100).
+ */
 export interface VerificationReadinessCheck {
-  anyChannelReady(): Promise<boolean>;
+  usableForBranch(onlinePaymentAvailable: boolean): Promise<boolean>;
 }
 
 /** The raw check-in time a body sent: undefined when absent, null when blank. */
@@ -45,6 +48,14 @@ function sentCheckInTime(input: unknown): string | null | undefined {
   if (!("checkInTime" in input)) return undefined;
   const value = (input as { checkInTime: unknown }).checkInTime;
   return typeof value === "string" && value.trim() !== "" ? value : null;
+}
+
+/** The raw online payment flag a body sent, undefined when absent or not a boolean. */
+function sentOnlinePayment(input: unknown): boolean | undefined {
+  if (typeof input !== "object" || input === null) return undefined;
+  const value = (input as { onlinePaymentEnabled?: unknown })
+    .onlinePaymentEnabled;
+  return typeof value === "boolean" ? value : undefined;
 }
 
 function sendsOnlineBookingOn(input: unknown): boolean {
@@ -103,6 +114,8 @@ export class ManageBranches {
           parsed.success
             ? parsed.data.checkInTime
             : (sentCheckInTime(input) ?? null),
+          // A new branch starts with online payment off.
+          false,
         )
       : [];
     if (!parsed.success || booking.length > 0) {
@@ -166,6 +179,8 @@ export class ManageBranches {
         stored && !stored.onlineBookingEnabled
           ? await this.onlineBookingIssues(
               sent !== undefined ? sent : stored.checkInTime,
+              Boolean(this.deps.paymentReady?.()) &&
+                (sentOnlinePayment(input) ?? stored.onlinePaymentEnabled),
             )
           : [];
       return invalid("Some branch details need attention.", [
@@ -201,6 +216,8 @@ export class ManageBranches {
     if (patch.onlineBookingEnabled === true && !current.onlineBookingEnabled) {
       const booking = await this.onlineBookingIssues(
         pick("checkInTime") ?? null,
+        Boolean(this.deps.paymentReady?.()) &&
+          Boolean(pick("onlinePaymentEnabled")),
       );
       if (booking.length > 0) {
         return invalid("Some branch details need attention.", booking);
@@ -242,17 +259,21 @@ export class ManageBranches {
   }
 
   /**
-   * Turning online booking on needs a verification channel ready, WhatsApp
-   * (Q-71) or email (ADR 031), and a check-in time (Q-09). Until the booking journey ships (M10) it is refused
-   * even then; M10 removes only that last refusal.
+   * Turning online booking on needs a usable verification channel, WhatsApp
+   * (Q-71), or email where the branch takes online payment (ADR 031, Q-100),
+   * and a check-in time (Q-09). Until the booking journey ships (M10) it is
+   * refused even then; M10 removes only that last refusal.
    */
   private async onlineBookingIssues(
     checkInTime: string | null,
+    onlinePaymentAvailable: boolean,
   ): Promise<DomainIssue[]> {
     const issue = (message: string) => [
       { path: "onlineBookingEnabled", message },
     ];
-    if (!(await this.deps.verification.anyChannelReady())) {
+    if (
+      !(await this.deps.verification.usableForBranch(onlinePaymentAvailable))
+    ) {
       return issue(ONLINE_BOOKING_NEEDS_VERIFICATION_MESSAGE);
     }
     if (!checkInTime) return issue(ONLINE_BOOKING_NEEDS_CHECK_IN_MESSAGE);

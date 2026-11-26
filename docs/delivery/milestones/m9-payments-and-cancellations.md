@@ -1,10 +1,10 @@
 # M9 — Online payments (provider neutral), payment holds, cancellation requests, refunds, and email verification
 
-Status: **In progress** (14/16 tasks accepted, with M9-T9 merged into the tasks that send each message. M9-T12b was accepted on 2026-11-26. M9-T12 was split into T12a and T12b on 2026-11-25. M9-T12c was added on 2026-11-26 (Q-100); the milestone close follows it.) Spec [0006](../../specs/0006-m9-payments-and-cancellations.md) and the task breakdown were approved on 2026-11-22 with Q-94…Q-97 and decisions D-A…D-E. M9-T9 merged into the tasks that send each message. The owner extended scope on 2026-11-17 with guest booking changes (M9-T10, T11, Q-83…Q-85), and on 2026-11-22 with provider neutral integrations (M9-T0b, T3, Q-92, ADR 030) and email verification as a fallback to WhatsApp (M9-T12, Q-93, ADR 031). Branch `m9-payments-and-cancellations`. [Milestone loop](./README.md#the-loop-every-milestone-follows)
+Status: **In progress** (all 15 standalone tasks accepted, with M9-T9 merged into the tasks that send each message. M9-T12c was accepted on 2026-11-26. The milestone close is pending.) Spec [0006](../../specs/0006-m9-payments-and-cancellations.md) and the task breakdown were approved on 2026-11-22 with Q-94…Q-97 and decisions D-A…D-E. M9-T9 merged into the tasks that send each message. The owner extended scope on 2026-11-17 with guest booking changes (M9-T10, T11, Q-83…Q-85), and on 2026-11-22 with provider neutral integrations (M9-T0b, T3, Q-92, ADR 030) and email verification as a fallback to WhatsApp (M9-T12, Q-93, ADR 031). Branch `m9-payments-and-cancellations`. [Milestone loop](./README.md#the-loop-every-milestone-follows)
 
 ## Objective
 
-Guests can pay online through a hosted checkout or choose pay at the hotel. An online booking holds its inventory for about 15 minutes in `AWAITING_PAYMENT` and becomes `CONFIRMED` **only** when a verified payment success result arrives. Guests request cancellations until 24 hours before the branch's check-in time on the arrival date; a Manager of the branch or an Admin approves or rejects; approved paid bookings are refunded through the gateway's refund API and become `CANCELLED` when the gateway confirms. **No payment, WhatsApp, or email provider is chosen in this milestone** (ADR 030): everything is built and proven against fake adapters behind ports, and the real adapters are plugged in at launch (M15-T4). Guests can also verify by email when WhatsApp is not ready (ADR 031).
+Guests can pay online through a hosted checkout or choose pay at the hotel. An online booking holds its inventory for about 15 minutes in `AWAITING_PAYMENT` and becomes `CONFIRMED` **only** when a verified payment success result arrives. Guests request cancellations until 24 hours before the branch's check-in time on the arrival date; a Manager of the branch or an Admin approves or rejects; approved paid bookings are refunded through the gateway's refund API and become `CANCELLED` when the gateway confirms. **No payment, WhatsApp, or email provider is chosen in this milestone** (ADR 030): everything is built and proven against fake adapters behind ports, and the real adapters are plugged in at launch (M15-T4). Guests paying online can verify by email when the branch offers it (ADR 031, Q-100).
 
 ## Read first
 
@@ -21,7 +21,7 @@ Guests can pay online through a hosted checkout or choose pay at the hotel. An o
 
 - Q-54 (decided): the online gateway charges **USD**.
 - Q-92 (decided 2026-11-22): **no keys, accounts, or provider choice are needed**; this milestone does not wait for them. Q-55 is replaced.
-- Q-93 (decided 2026-11-22): email verification fallback. The per email cap was confirmed in the M9-T12 plan (2026-11-25): 2 upcoming pay at hotel bookings and 1 open payment hold per verified email, the same numbers as the phone cap.
+- Q-93 (decided 2026-11-22): email verification fallback. Q-100 narrows the per email booking cap to one open payment hold per verified email because email bookings require online payment.
 - Q-62 ★, Q-63, Q-65 ★, Q-66 ★: recommendations accepted unless answered.
 
 ## Skills for this milestone
@@ -65,7 +65,7 @@ Planned, reviewed, and accepted one task at a time ([agent-workflow.md](../../en
 | M9-T11 | Change requests for paid bookings (S56…S58), migration `change_requests` | Critical | T10, T8 | AC 12, 15, 16; T-GCHG-9…12, C-17 | Accepted (2026-11-25) |
 | M9-T12a | Email code for booking: P9 `channel` and `email`, email code adapters, P7 with an email token, per email limits and cap, coupon per phone limit skipped, phone sessions hide email verified bookings, guest messages by email only for email bookings, the Admin email verification switch (A9 and toggle, Q-99), readiness gate, migration `verification_channels` (split 2026-11-25) | Critical | T0b, M8-T5, M8-T7b, M8-T11 | AC 13 (except the email session); T-VCH-1…5, 7, 8 | Accepted (2026-11-26) |
 | M9-T12b | Email guest session (G3…G6 by email) and staff fields (`verificationChannel`, `emailVerifiedAt`) (split 2026-11-25) | Critical | T12a | AC 13 (email session); T-VCH-6 | Accepted (2026-11-26) |
-| M9-T12c | Email verification only with online payment (Q-100): P7 refuses pay at hotel with an email token, the readiness gate counts email only where online payment is available, the demo seed and the email booking tests move to online payment (added 2026-11-26) | Critical | T12a, T12b, T4 | AC 13 as amended by Q-100 | Not started |
+| M9-T12c | Email verification only with online payment (Q-100): P7 requires online payment for email tokens, valid tokens can finish after new email codes are turned off, A3 and A9 enforce readiness, and PostgreSQL checks the payment method (added 2026-11-26) | Critical | T12a, T12b, T4 | AC 13 as amended by Q-100 | Accepted (2026-11-26) |
 
 AC 10 (the full run on the fake gateway) is recorded at milestone close. The real provider sandbox run belongs to M15-T4.
 
@@ -120,7 +120,7 @@ P7 online path (`paymentMethod: "ONLINE"`; `201 { reference, status: "AWAITING_P
 
 ## Database impact
 
-Additive migrations: `payments_and_cancellations` (with the enum value rename), `change_requests` (M9-T11), and `verification_channels` (M9-T12).
+Additive migrations: `payments_and_cancellations` (with the enum value rename), `change_requests` (M9-T11), `verification_channels` (M9-T12a), and `email_bookings_online_only` (M9-T12c).
 
 ## API impact
 
@@ -140,7 +140,7 @@ As listed; the callback endpoint is documented in OpenAPI as a webhook.
 10. A full run on the fake gateway and its simulated checkout page covers success, a declined attempt then success, abandonment, late success, a lost callback, and refund (pending, succeeded, failed then retried). The payment, WhatsApp, and email contract suites pass for every adapter in the repository. No real provider sandbox run is part of M9.
 11. A guest change to a pay-at-hotel booking before the deadline applies at once with the previewed total, writes one change-history row, one audit event, and the guest and staff messages, and flags a booking already entered in the hotel system; after the deadline, with an open request, for a blocked phone, with a stale version, or with a forbidden key nothing changes; a change racing a booking for the last unit never oversells (C-16).
 12. A change to a paid booking that alters the total creates one `OPEN` change request and holds nothing; only a Manager of the branch or an Admin decides it; approval re-checks inventory and prices and applies the change or records the conflict (C-17); no gateway call is made.
-13. A guest can verify by email: the code arrives by the fake email adapter, expires in 10 minutes, allows 5 attempts, and is single use; a booking with an email token needs the same email and is stored with `phoneVerified = false`; a per phone coupon limit is neither applied nor revealed for it; a blocked phone gets no code and no booking; per email and per client limits return `429`; responses are identical whether or not the email has history; with WhatsApp not ready and email ready, a branch can be switched to online booking and a booking succeeds; with neither ready it cannot (ADR 031).
+13. A guest can verify by email: the code arrives by the fake email adapter, expires in 10 minutes, allows 5 attempts, and is single use; a booking with an email token needs the same email and is stored with `phoneVerified = false`; a per phone coupon limit is neither applied nor revealed for it; a blocked phone gets no code and no booking; per email and per client limits return `429`; responses are identical whether or not the email has history; with WhatsApp unavailable, ready email satisfies the branch switch only if the branch can take online payment. An email token requires online payment, and a valid token can finish online after the Admin turns off new email codes (ADR 031, Q-100).
 14. Online payment is offered for a branch only when a gateway is ready, the branch's `onlinePaymentEnabled` switch is on, and the total is above zero. P6 returns the allowed `paymentMethods`; P7 refuses any other method with `409 PAYMENT_METHOD_UNAVAILABLE`. Only an Admin can turn the switch on, and it is refused while no gateway is ready.
 15. Staff cancellation, no-show, or check-in of a reservation with an open cancellation or change request closes that request in the same transaction (`CLOSED`, with the reason and the staff user), audited; the request can no longer be decided.
 16. A new cancellation or change request queues one staff alert email to the branch contact address in the same transaction as the request.

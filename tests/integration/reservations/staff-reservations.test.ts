@@ -27,6 +27,7 @@ import {
   waitForLockWaiters,
   websiteBooking,
 } from "./support/website-booking";
+import { bookByEmailOnline } from "./support/email-booking";
 
 const principals = vi.hoisted(() => new Map<string, StaffPrincipal>());
 vi.mock("@/composition/auth", () => ({
@@ -560,11 +561,11 @@ describe("staff reservation REST and PostgreSQL", () => {
   it("S2 shows how a website booking was verified and the proven email only with guests:read (M9-T12b)", async () => {
     const room = await seedBookable(client, { units: 4 });
     const website = async (phone: string, key: string, email?: string) => {
+      // A booking verified by email is paid online (Q-100).
+      if (email)
+        return (await bookByEmailOnline(client, { phone, email, key })).row.id;
       const created = await websiteBooking(client).execute(
-        bookingBody(
-          phone,
-          await issueToken(client, phone, email ? { email } : {}),
-        ),
+        bookingBody(phone, await issueToken(client, phone)),
         key,
       );
       if (!created.ok) throw new Error(JSON.stringify(created.error));

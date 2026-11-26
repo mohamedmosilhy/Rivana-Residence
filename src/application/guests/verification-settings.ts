@@ -20,6 +20,8 @@ export type VerificationSettingsView = Readonly<{
   emailVerificationEnabled: boolean;
   /** Whether the email adapter can deliver (deployment configuration). */
   emailDeliveryConfigured: boolean;
+  /** Whether a payment gateway is configured; email bookings need it (Q-100). */
+  onlinePaymentConfigured: boolean;
   /** Whether WhatsApp is configured per Q-71. */
   whatsAppConfigured: boolean;
   /** Email codes are offered only when delivery is configured and the switch is on. */
@@ -30,14 +32,17 @@ export type VerificationSettingsView = Readonly<{
 
 export const EMAIL_VERIFICATION_NEEDS_DELIVERY_MESSAGE =
   "Email verification can't be turned on until email delivery is set up.";
+export const EMAIL_VERIFICATION_NEEDS_PAYMENT_MESSAGE =
+  "Email verification can't be turned on until online payment is set up: bookings verified by email are paid online.";
 
 const input = z.object({ emailVerificationEnabled: z.boolean() }).strict();
 
 /**
  * The Admin's switch for verification codes by email (API-A9, Q-99,
  * spec 0006 Decision 9). One global setting, off by default. Turning it on is
- * refused while email delivery is not configured. Turning it off stops new
- * email codes; codes and tokens already issued may finish.
+ * refused while email delivery or online payment is not configured (a booking
+ * verified by email is paid online, Q-100). Turning it off stops new email
+ * codes; codes and tokens already issued may finish.
  */
 export class ManageVerificationSettings {
   constructor(
@@ -45,6 +50,7 @@ export class ManageVerificationSettings {
       unitOfWork: ReservationUnitOfWork<VerificationSettingsContext>;
       settings: Pick<VerificationSettingsRepository, "read">;
       emailDelivery: { isConfigured(): boolean };
+      onlinePayment: { isConfigured(): boolean };
       whatsApp: { isConfigured(): Promise<boolean> };
       clock: Clock;
     }>,
@@ -71,13 +77,24 @@ export class ManageVerificationSettings {
         issuesFromZod(parsed.error.issues),
       );
     const enable = parsed.data.emailVerificationEnabled;
-    if (enable && !this.deps.emailDelivery.isConfigured())
-      return invalid("The verification settings need attention.", [
-        {
+    const missing = !enable
+      ? []
+      : [
+          ...(this.deps.emailDelivery.isConfigured()
+            ? []
+            : [EMAIL_VERIFICATION_NEEDS_DELIVERY_MESSAGE]),
+          ...(this.deps.onlinePayment.isConfigured()
+            ? []
+            : [EMAIL_VERIFICATION_NEEDS_PAYMENT_MESSAGE]),
+        ];
+    if (missing.length > 0)
+      return invalid(
+        "The verification settings need attention.",
+        missing.map((message) => ({
           path: "emailVerificationEnabled",
-          message: EMAIL_VERIFICATION_NEEDS_DELIVERY_MESSAGE,
-        },
-      ]);
+          message,
+        })),
+      );
     const actor = access.value;
     const written = await this.deps.unitOfWork.run(async (context) => {
       const result = await context.settings.update({
@@ -122,6 +139,7 @@ export class ManageVerificationSettings {
     return {
       emailVerificationEnabled: enabled,
       emailDeliveryConfigured,
+      onlinePaymentConfigured: this.deps.onlinePayment.isConfigured(),
       whatsAppConfigured,
       emailChannelReady: emailDeliveryConfigured && enabled,
       updatedAt: record?.updatedAt ?? null,

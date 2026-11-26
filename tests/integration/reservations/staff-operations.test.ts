@@ -32,6 +32,7 @@ import {
   waitForLockWaiters,
   websiteBooking,
 } from "./support/website-booking";
+import { bookByEmailOnline } from "./support/email-booking";
 
 const principals = vi.hoisted(() => new Map<string, StaffPrincipal>());
 vi.mock("@/composition/auth", () => ({
@@ -954,16 +955,11 @@ describe("staff operations on PostgreSQL", () => {
   it("S14 sends an email verified booking's link by email only and audits it truthfully", async () => {
     await seedBookable(client);
     const phone = phoneOf(98);
-    const created = await websiteBooking(client).execute(
-      bookingBody(
-        phone,
-        await issueToken(client, phone, { email: "amina@example.test" }),
-      ),
-      "operations-email-booking",
-    );
-    if (!created.ok) throw new Error(JSON.stringify(created.error));
-    const booking = await client.reservation.findUniqueOrThrow({
-      where: { reference: created.value.reference },
+    const { row: booking } = await bookByEmailOnline(client, {
+      phone,
+      email: "amina@example.test",
+      key: "operations-email-booking",
+      paid: true,
     });
     await client.notificationOutbox.deleteMany();
     expect((await call(resend, booking.id, "POST")).status).toBe(202);

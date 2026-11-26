@@ -39,6 +39,9 @@ test.describe("Guest verification screen", () => {
       page.getByRole("heading", { level: 1, name: "Guest verification" }),
     ).toBeVisible();
     await expect(page.getByText("No channel ready")).toBeVisible();
+    await expect(
+      page.getByText("Online payment", { exact: true }),
+    ).toBeVisible();
     const box = page.getByRole("checkbox", {
       name: "Allow verification codes by email",
     });
@@ -53,6 +56,12 @@ test.describe("Guest verification screen", () => {
           "Email verification can't be turned on until email delivery is set up.",
         )
         .first(),
+    ).toBeVisible();
+    await expect(
+      page.getByText(
+        "Email verification can't be turned on until online payment is set up: bookings verified by email are paid online.",
+        { exact: true },
+      ),
     ).toBeVisible();
     await expectNoAxeViolations(page);
     const stored = await sql(

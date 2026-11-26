@@ -83,6 +83,10 @@ export const PROBLEMS: Readonly<Record<ProblemCode, ProblemDefinition>> = {
     status: 409,
     title: "This payment method is not available",
   },
+  ONLINE_PAYMENT_REQUIRED: {
+    status: 409,
+    title: "This booking must be paid online",
+  },
   PAYMENT_UNAVAILABLE: {
     status: 503,
     title: "Online checkout is temporarily unavailable",

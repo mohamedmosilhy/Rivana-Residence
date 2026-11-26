@@ -208,3 +208,27 @@ export function checkPhoneVerificationToken(
     return { valid: false, code: "PHONE_NOT_VERIFIED" };
   return { valid: true, channel: token.channel };
 }
+
+/**
+ * Whether guests of a branch can verify for a booking (ADR 031, Q-100). A
+ * WhatsApp code allows either payment method. An email code allows only
+ * online payment, so email helps a branch only where online payment is
+ * possible: the gateway is configured and the branch takes online payment.
+ */
+export function verificationUsableForBranch(
+  input: Readonly<{
+    whatsAppReady: boolean;
+    emailReady: boolean;
+    onlinePaymentAvailable: boolean;
+  }>,
+): boolean {
+  if (
+    typeof input.whatsAppReady !== "boolean" ||
+    typeof input.emailReady !== "boolean" ||
+    typeof input.onlinePaymentAvailable !== "boolean"
+  )
+    policyInputError("readiness");
+  return (
+    input.whatsAppReady || (input.emailReady && input.onlinePaymentAvailable)
+  );
+}

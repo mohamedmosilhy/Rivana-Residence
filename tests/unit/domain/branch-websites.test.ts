@@ -232,7 +232,11 @@ describe("ManageBranches", () => {
       isUsableImage: vi.fn(async (id: string) => id === "ready"),
     };
     const now = new Date("2026-11-07T10:00:00Z");
-    const verification = { anyChannelReady: vi.fn(async () => false) };
+    const verification = {
+      usableForBranch: vi.fn<
+        (onlinePaymentAvailable: boolean) => Promise<boolean>
+      >(async () => false),
+    };
     const useCase = new ManageBranches({
       branches: fake.repository,
       cache,
@@ -389,7 +393,7 @@ describe("ManageBranches", () => {
           },
         },
       });
-      expect(verification.anyChannelReady).toHaveBeenCalledOnce();
+      expect(verification.usableForBranch).toHaveBeenCalledOnce();
       expect(writes).toEqual([]);
     });
 
@@ -397,7 +401,7 @@ describe("ManageBranches", () => {
       const { useCase, verification, writes } = setup([
         branchRow({ id: "b2", slug: "demo-giza", checkInTime: "14:00" }),
       ]);
-      verification.anyChannelReady.mockResolvedValue(true);
+      verification.usableForBranch.mockResolvedValue(true);
       expect(
         await useCase.update(admin, "b2", {
           onlineBookingEnabled: true,
@@ -417,7 +421,7 @@ describe("ManageBranches", () => {
       const { useCase, verification, writes } = setup([
         branchRow({ id: "b2", slug: "demo-giza", checkInTime: "14:00" }),
       ]);
-      verification.anyChannelReady.mockResolvedValue(true);
+      verification.usableForBranch.mockResolvedValue(true);
       expect(
         await useCase.update(admin, "b2", { onlineBookingEnabled: true }),
       ).toMatchObject({
@@ -428,6 +432,41 @@ describe("ManageBranches", () => {
         },
       });
       expect(writes).toEqual([]);
+    });
+
+    it("asks about verification with online payment only when the branch can take it (Q-100)", async () => {
+      const setupWith = (paymentReady: boolean, stored: boolean) => {
+        const base = setup([
+          branchRow({
+            id: "b2",
+            slug: "demo-giza",
+            onlinePaymentEnabled: stored,
+          }),
+        ]);
+        const useCase = new ManageBranches({
+          branches: base.repository,
+          cache: base.cache,
+          media: base.media,
+          verification: base.verification,
+          paymentReady: () => paymentReady,
+          clock: { now: () => base.now },
+        });
+        return { ...base, useCase };
+      };
+      for (const [ready, stored, patched, expected] of [
+        [true, true, undefined, true],
+        [true, false, true, true],
+        [true, true, false, false],
+        [true, false, undefined, false],
+        [false, true, undefined, false],
+      ] as const) {
+        const { useCase, verification } = setupWith(ready, stored);
+        await useCase.update(admin, "b2", {
+          onlineBookingEnabled: true,
+          ...(patched === undefined ? {} : { onlinePaymentEnabled: patched }),
+        });
+        expect(verification.usableForBranch).toHaveBeenLastCalledWith(expected);
+      }
     });
 
     it("refuses on create too, alongside the other field errors", async () => {
@@ -450,13 +489,13 @@ describe("ManageBranches", () => {
       expect(
         (await useCase.update(admin, "b2", { onlineBookingEnabled: false })).ok,
       ).toBe(true);
-      expect(verification.anyChannelReady).not.toHaveBeenCalled();
+      expect(verification.usableForBranch).not.toHaveBeenCalled();
     });
 
     it("refuses an editor before reading WhatsApp readiness", async () => {
       const { useCase, verification } = setup();
       await useCase.update(editor, "b2", { onlineBookingEnabled: true });
-      expect(verification.anyChannelReady).not.toHaveBeenCalled();
+      expect(verification.usableForBranch).not.toHaveBeenCalled();
     });
   });
 

@@ -763,6 +763,7 @@ ALTER TABLE "CommercialSettings" ADD CHECK ("id" = 'default'); -- implemented (M
 ALTER TABLE "PhoneVerification" ADD CONSTRAINT "PhoneVerification_channel_email_check" CHECK (("channel" = 'EMAIL') = ("email" IS NOT NULL) AND ("email" IS NULL OR "email" = lower("email"))); -- implemented (M9-T12a)
 ALTER TABLE "Reservation" ADD CONSTRAINT "Reservation_verification_channel_check" CHECK ("verificationChannel" IS NULL OR "source" = 'WEBSITE'); -- implemented (M9-T12a); existing website rows backfilled WHATSAPP
 ALTER TABLE "Reservation" ADD CONSTRAINT "Reservation_verified_email_check" CHECK (COALESCE("verificationChannel" = 'EMAIL', false) = ("verifiedEmail" IS NOT NULL) AND ("verifiedEmail" IS NULL OR "verifiedEmail" = lower("verifiedEmail"))); -- implemented (M9-T12a)
+ALTER TABLE "Reservation" ADD CONSTRAINT "Reservation_email_online_check" CHECK ("verificationChannel" IS DISTINCT FROM 'EMAIL' OR "paymentMethod" = 'ONLINE') NOT VALID; -- implemented (M9-T12c). Enforced on inserts and updates
 ALTER TABLE "Reservation"     ADD CHECK ("status" <> 'AWAITING_PAYMENT' OR ("paymentMethod" = 'ONLINE' AND "holdExpiresAt" IS NOT NULL));
 ALTER TABLE "Reservation"
   ADD CONSTRAINT "Reservation_snapshot_check" CHECK (

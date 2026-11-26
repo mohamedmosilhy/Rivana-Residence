@@ -130,6 +130,14 @@ describe("create only reservation seed", () => {
         ["RR-DEM00009", "EMAIL"],
       ]),
     );
+    // Q-100: an email verified booking is paid online.
+    expect(
+      websites.find((row) => row.reference === "RR-DEM00009"),
+    ).toMatchObject({
+      paymentMethod: "ONLINE",
+      paymentStatus: "PAID",
+      payments: [{ provider: "fake", status: "SUCCEEDED" }],
+    });
     expect(
       state.guests.find((row) => row.phone === "+12025550103"),
     ).toMatchObject({ phoneVerifiedAt: null, email: "guest3@example.test" });

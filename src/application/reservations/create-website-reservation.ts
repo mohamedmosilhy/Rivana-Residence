@@ -2,7 +2,7 @@ import type { BranchRepository } from "@/application/branches";
 import type { PublicListing, PublicListingReader } from "@/application/content";
 import type { CouponRedemptionStore } from "@/application/coupons";
 import {
-  anyVerificationChannelReady,
+  verificationUsableForBranchNow,
   type PhoneVerificationRepository,
   type VerificationChannelReadiness,
   type VerificationRecord,
@@ -133,10 +133,18 @@ function withoutPhone(body: Readonly<Record<string, unknown>>) {
 }
 const NOT_VERIFIED = () =>
   failure("PHONE_NOT_VERIFIED", "Verify your phone number to continue.");
-const PAYMENT_METHOD_UNAVAILABLE = () =>
+const paymentMethodUnavailable = (channel: VerificationChannel) =>
   failure(
     "PAYMENT_METHOD_UNAVAILABLE",
-    "Online payment is not available. Choose pay at hotel.",
+    channel === "EMAIL"
+      ? "Online payment is not available for this booking. Verify by WhatsApp to pay at the hotel, or contact the hotel."
+      : "Online payment is not available. Choose pay at hotel.",
+  );
+/** Q-100: an email code proves no phone, so its booking is paid online. */
+const ONLINE_PAYMENT_REQUIRED = () =>
+  failure(
+    "ONLINE_PAYMENT_REQUIRED",
+    "Bookings verified by email are paid online. Choose online payment, or verify by WhatsApp to pay at the hotel.",
   );
 
 /**
@@ -174,8 +182,6 @@ export class CreateWebsiteReservation {
     // under the guest lock for a parallel retry.
     const earlier = await this.replayByKey(booking, keyHash, fingerprint);
     if (earlier) return earlier;
-    if (booking.paymentMethod === "ONLINE" && !this.deps.checkout)
-      return PAYMENT_METHOD_UNAVAILABLE();
     // Cheap read only check, so a made up token never writes or locks a guest
     // row. The full check runs again under the locks.
     const known = await this.deps.tokens.findByTokenHash(tokenHash);
@@ -198,6 +204,10 @@ export class CreateWebsiteReservation {
         NOT_VERIFIED()
       );
     }
+    // Refused before any lock or write, so the token stays usable and the
+    // guest can resubmit with online payment (Q-100).
+    if (known.channel === "EMAIL" && booking.paymentMethod !== "ONLINE")
+      return ONLINE_PAYMENT_REQUIRED();
 
     const branch = await this.deps.branches.findActiveRowBySlug(
       booking.quote.branchSlug,
@@ -206,10 +216,22 @@ export class CreateWebsiteReservation {
     if (!branch.onlineBookingEnabled)
       return branchNotBookable("ONLINE_BOOKING_DISABLED");
     if (!branch.checkInTime) return branchNotBookable("CHECK_IN_TIME_MISSING");
-    if (!(await anyVerificationChannelReady(this.deps.channels)))
+    const onlinePaymentAvailable =
+      Boolean(this.deps.checkout) && branch.onlinePaymentEnabled;
+    // Turning email codes off stops new codes. A guest who already proved
+    // their email can finish while the token and online payment are usable.
+    const canFinishByEmail =
+      known.channel === "EMAIL" && onlinePaymentAvailable;
+    if (
+      !canFinishByEmail &&
+      !(await verificationUsableForBranchNow(
+        this.deps.channels,
+        onlinePaymentAvailable,
+      ))
+    )
       return branchNotBookable("VERIFICATION_NOT_CONFIGURED");
-    if (booking.paymentMethod === "ONLINE" && !branch.onlinePaymentEnabled)
-      return PAYMENT_METHOD_UNAVAILABLE();
+    if (booking.paymentMethod === "ONLINE" && !onlinePaymentAvailable)
+      return paymentMethodUnavailable(known.channel);
 
     const listings = await this.deps.listings.listPublished(branch.id);
     const published = new Map(listings.map((room) => [room.slug, room]));
@@ -409,6 +431,9 @@ export class CreateWebsiteReservation {
       return checked.code === "PHONE_BLOCKED"
         ? failure("PHONE_BLOCKED", "Please contact the hotel to continue.")
         : NOT_VERIFIED();
+    // Q-100 again on the locked token, before it is consumed.
+    if (checked.channel === "EMAIL" && booking.paymentMethod !== "ONLINE")
+      return ONLINE_PAYMENT_REQUIRED();
     await context.verifications.consume(record!.id, now);
 
     const bookings = (await context.reservations.listPhoneBookings(phone)).map(
@@ -529,7 +554,7 @@ export class CreateWebsiteReservation {
         result.unavailableLines,
       );
     if (!result.paymentMethods.includes(booking.paymentMethod))
-      return PAYMENT_METHOD_UNAVAILABLE();
+      return paymentMethodUnavailable(prepared.channel);
     // The ids locked before the quote came from a read outside this
     // transaction. If a slug moved to another listing in between, the quote
     // priced a listing whose lock is not held, so refuse rather than store it.

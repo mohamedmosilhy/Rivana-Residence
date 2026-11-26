@@ -4,6 +4,7 @@ import {
   checkVerificationRequest,
   confirmVerificationCode,
   checkPhoneVerificationToken,
+  verificationUsableForBranch,
   verificationCodeExpiresAt,
   type VerificationCodeState,
   type PhoneVerificationToken,
@@ -282,5 +283,37 @@ describe("GV-1/2/3 pure verification policy", () => {
           email,
         ),
       ).toThrow(DomainValidationError);
+  });
+});
+
+describe("verification usable for a branch (Q-100)", () => {
+  it.each([
+    [false, false, false, false],
+    [false, false, true, false],
+    [false, true, false, false],
+    [false, true, true, true],
+    [true, false, false, true],
+    [true, false, true, true],
+    [true, true, false, true],
+    [true, true, true, true],
+  ])(
+    "WhatsApp %s, email %s, online payment %s gives %s",
+    (whatsAppReady, emailReady, onlinePaymentAvailable, usable) => {
+      expect(
+        verificationUsableForBranch({
+          whatsAppReady,
+          emailReady,
+          onlinePaymentAvailable,
+        }),
+      ).toBe(usable);
+    },
+  );
+  it("refuses a missing flag", () => {
+    expect(() =>
+      verificationUsableForBranch({
+        whatsAppReady: true,
+        emailReady: false,
+      } as never),
+    ).toThrow(DomainValidationError);
   });
 });

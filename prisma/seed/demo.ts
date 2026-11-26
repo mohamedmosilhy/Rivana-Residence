@@ -713,6 +713,37 @@ export async function seedDemoReservations(
                 },
               }
             : {}),
+          // A booking verified by email is always paid online (Q-100).
+          ...("emailVerified" in fixture
+            ? {
+                paymentMethod: "ONLINE",
+                paymentStatus: "PAID",
+                payments: {
+                  create: {
+                    id: "qvmrseeddemopaymentaaaab",
+                    provider: "fake",
+                    providerTransactionId: "fictional_demo_transaction",
+                    amountMinor: totalMinor,
+                    currency: "USD",
+                    status: "SUCCEEDED",
+                    createdAt: paymentCreatedAt,
+                    expiresAt: paymentExpiredAt,
+                    events: {
+                      create: {
+                        id: "qvmrseeddemopayeventaab",
+                        providerEventId: "fictional_demo_payment_succeeded",
+                        kind: "TRANSACTION",
+                        outcome: "SUCCEEDED",
+                        result: "APPLIED",
+                        amountMinor: totalMinor,
+                        currency: "USD",
+                        receivedAt: paymentCreatedAt,
+                      },
+                    },
+                  },
+                },
+              }
+            : {}),
           ...("openCancellation" in fixture
             ? {
                 cancellationRequests: {

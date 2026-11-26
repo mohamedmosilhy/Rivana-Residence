@@ -15,7 +15,7 @@ export type {
   GuestDetail,
   GuestReservationItem,
 } from "./ports";
-export { anyVerificationChannelReady } from "./ports";
+export { verificationUsableForBranchNow } from "./ports";
 export { ListGuests, GetGuest, ChangeGuestBlock } from "./guest-staff";
 export type { ChangeGuestBlockContext, GuestView } from "./guest-staff";
 export {
@@ -30,6 +30,7 @@ export type {
 export {
   ManageVerificationSettings,
   EMAIL_VERIFICATION_NEEDS_DELIVERY_MESSAGE,
+  EMAIL_VERIFICATION_NEEDS_PAYMENT_MESSAGE,
 } from "./verification-settings";
 export type {
   VerificationSettingsContext,

@@ -4,7 +4,10 @@ import type { AuditLog } from "@/application/audit";
 import type { StaffPrincipal } from "@/application/auth";
 import {
   EMAIL_VERIFICATION_NEEDS_DELIVERY_MESSAGE,
+  EMAIL_VERIFICATION_NEEDS_PAYMENT_MESSAGE,
   ManageVerificationSettings,
+  verificationUsableForBranchNow,
+  type VerificationChannelReadiness,
   type VerificationSettingsContext,
   type VerificationSettingsRecord,
   type VerificationSettingsRepository,
@@ -29,6 +32,7 @@ const manager: StaffPrincipal = {
 const now = new Date("2026-11-25T12:00:00Z");
 let record: VerificationSettingsRecord | null;
 let deliveryConfigured: boolean;
+let paymentConfigured: boolean;
 const appended: Parameters<AuditLog["append"]>[0][] = [];
 const settings: VerificationSettingsRepository = {
   read: async () => record,
@@ -54,6 +58,7 @@ const useCase = () =>
     },
     settings,
     emailDelivery: { isConfigured: () => deliveryConfigured },
+    onlinePayment: { isConfigured: () => paymentConfigured },
     whatsApp: { isConfigured: async () => false },
     clock: { now: () => now },
   });
@@ -61,7 +66,26 @@ const useCase = () =>
 beforeEach(() => {
   record = { emailEnabled: false, updatedAt: new Date("2026-11-01T00:00:00Z") };
   deliveryConfigured = true;
+  paymentConfigured = true;
   appended.length = 0;
+});
+
+describe("booking verification readiness (Q-100)", () => {
+  it.each([
+    [true, true, true],
+    [true, false, true],
+    [false, false, false],
+  ])(
+    "skips email when WhatsApp is %s and online payment is %s",
+    async (whatsAppReady, onlinePaymentAvailable, expected) => {
+      const isReady = vi.fn<VerificationChannelReadiness["isReady"]>();
+      isReady.mockResolvedValueOnce(whatsAppReady);
+      await expect(
+        verificationUsableForBranchNow({ isReady }, onlinePaymentAvailable),
+      ).resolves.toBe(expected);
+      expect(isReady.mock.calls).toEqual([["WHATSAPP"]]);
+    },
+  );
 });
 
 describe("ManageVerificationSettings", () => {
@@ -71,6 +95,7 @@ describe("ManageVerificationSettings", () => {
       value: {
         emailVerificationEnabled: false,
         emailDeliveryConfigured: true,
+        onlinePaymentConfigured: true,
         whatsAppConfigured: false,
         emailChannelReady: false,
         updatedAt: record!.updatedAt,
@@ -136,6 +161,42 @@ describe("ManageVerificationSettings", () => {
     record = { ...record!, emailEnabled: true };
     expect(await useCase().read(admin)).toMatchObject({
       value: { emailVerificationEnabled: true, emailChannelReady: false },
+    });
+  });
+  it("refuses to turn on while online payment is not configured, but allows turning off (Q-100)", async () => {
+    paymentConfigured = false;
+    expect(
+      await useCase().update(admin, { emailVerificationEnabled: true }),
+    ).toMatchObject({
+      error: {
+        code: "VALIDATION",
+        fieldErrors: {
+          emailVerificationEnabled: [EMAIL_VERIFICATION_NEEDS_PAYMENT_MESSAGE],
+        },
+      },
+    });
+    deliveryConfigured = false;
+    expect(
+      await useCase().update(admin, { emailVerificationEnabled: true }),
+    ).toMatchObject({
+      error: {
+        fieldErrors: {
+          emailVerificationEnabled: [
+            EMAIL_VERIFICATION_NEEDS_DELIVERY_MESSAGE,
+            EMAIL_VERIFICATION_NEEDS_PAYMENT_MESSAGE,
+          ],
+        },
+      },
+    });
+    expect(appended).toHaveLength(0);
+    record = { ...record!, emailEnabled: true };
+    expect(
+      await useCase().update(admin, { emailVerificationEnabled: false }),
+    ).toMatchObject({
+      value: {
+        emailVerificationEnabled: false,
+        onlinePaymentConfigured: false,
+      },
     });
   });
   it("reads a missing settings row as email codes off", async () => {

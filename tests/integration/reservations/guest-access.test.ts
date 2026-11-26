@@ -40,6 +40,7 @@ import {
   TEST_BRANCH_ID,
 } from "../support/database";
 import { withIndependentClients } from "./support/concurrency";
+import { bookByEmailOnline } from "./support/email-booking";
 import {
   bookingBody,
   issueToken,
@@ -113,26 +114,26 @@ async function book(
 ): Promise<Booked> {
   bookings += 1;
   const offset = 40 + bookings * 7;
-  const token = await issueToken(
-    client,
-    phone,
-    options.email ? { email: options.email } : {},
-  );
+  const stay = { checkIn: date(offset), checkOut: date(offset + 3) };
+  // An email token books only with the email it proved, paid online (Q-100).
+  if (options.email) {
+    const booked = await bookByEmailOnline(client, {
+      phone,
+      email: options.email,
+      key: `guest-access-${bookings}-key`,
+      body: { stay },
+      paid: true,
+    });
+    return {
+      reference: booked.reference,
+      manageToken: booked.manageToken,
+      phone,
+    };
+  }
   const created = await websiteBooking(client).execute(
-    bookingBody(phone, token, {
-      stay: { checkIn: date(offset), checkOut: date(offset + 3) },
+    bookingBody(phone, await issueToken(client, phone), {
+      stay,
       expectedTotal: { amountMinor: TOTAL_MINOR, currency: "USD" },
-      // An email token books only with the email it proved.
-      ...(options.email
-        ? {
-            guest: {
-              fullName: GUEST_NAME,
-              email: options.email,
-              phone,
-              country: "EG",
-            },
-          }
-        : {}),
     }),
     `guest-access-${bookings}-key`,
   );

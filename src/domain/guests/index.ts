@@ -22,6 +22,7 @@ export {
   checkVerificationRequest,
   confirmVerificationCode,
   checkPhoneVerificationToken,
+  verificationUsableForBranch,
   type VerificationCodeState,
   type PhoneVerificationToken,
 } from "./verification-policy";

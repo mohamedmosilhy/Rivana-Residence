@@ -23,6 +23,12 @@ import {
   waitForLockWaiters,
   websiteBooking,
 } from "./support/website-booking";
+import { allowOnlinePayment, openCheckout } from "./support/email-booking";
+import {
+  callbackEvent,
+  paymentCallback,
+  signed,
+} from "./support/payment-callback";
 
 // covers: AC-1 to AC-4, T-RES-1…12, T-NTF-3, C-1, C-2, C-9, C-11 (use case level, no HTTP)
 const client = createTestClient();
@@ -722,16 +728,123 @@ describe("CreateWebsiteReservation", () => {
     const email = "amina@example.test";
     const emailToken = (who = phone, address = email) =>
       issueToken(client, who, { email: address });
+    const emailBody = (
+      who: string,
+      token: string,
+      overrides: Record<string, unknown> = {},
+    ) => bookingBody(who, token, { paymentMethod: "ONLINE", ...overrides });
+    /** A booking verified by email is paid online (Q-100). */
     const bookByEmail = async (
       overrides: Record<string, unknown> = {},
       idempotencyKey = key("email"),
       who = phone,
       options: Parameters<typeof websiteBooking>[1] = {},
-    ) =>
-      websiteBooking(client, options).execute(
-        bookingBody(who, await emailToken(who), overrides),
+    ) => {
+      await allowOnlinePayment(client);
+      return websiteBooking(client, {
+        checkout: openCheckout,
+        ...options,
+      }).execute(
+        emailBody(who, await emailToken(who), overrides),
         idempotencyKey,
       );
+    };
+    /** The gateway confirms the one open hold of a reservation. */
+    const pay = async (reservationId: string) => {
+      const payment = await client.payment.findFirstOrThrow({
+        where: { reservationId },
+      });
+      const captured = await paymentCallback(client).useCase.execute(
+        signed(callbackEvent(payment)),
+      );
+      expect(captured.ok).toBe(true);
+    };
+
+    it("refuses pay at hotel, writes nothing, and keeps the token for an online booking (Q-100)", async () => {
+      await seedBookable(client);
+      await allowOnlinePayment(client);
+      const token = await emailToken();
+      const before = await rowCounts(client);
+      const refused = await websiteBooking(client, {
+        checkout: openCheckout,
+      }).execute(bookingBody(phone, token), key("at-hotel"));
+      expectFailure(refused, "ONLINE_PAYMENT_REQUIRED");
+      expect(await rowCounts(client)).toEqual(before);
+      expect(await client.guest.count()).toBe(0);
+      const online = await websiteBooking(client, {
+        checkout: openCheckout,
+      }).execute(emailBody(phone, token), key("online"));
+      expect(online).toMatchObject({
+        ok: true,
+        value: { status: "AWAITING_PAYMENT" },
+      });
+      expect(await client.reservation.findFirstOrThrow()).toMatchObject({
+        verificationChannel: "EMAIL",
+        paymentMethod: "ONLINE",
+        paymentStatus: "AWAITING",
+      });
+    });
+
+    it("refuses an email booking that cannot be paid online: no gateway, branch off, or a zero total", async () => {
+      await seedBookable(client);
+      // The branch does not take online payment.
+      expectFailure(
+        await websiteBooking(client, { checkout: openCheckout }).execute(
+          emailBody(phone, await emailToken()),
+          key("branch-off"),
+        ),
+        "PAYMENT_METHOD_UNAVAILABLE",
+      );
+      await allowOnlinePayment(client);
+      // No payment gateway is configured.
+      expectFailure(
+        await websiteBooking(client).execute(
+          emailBody(phone, await emailToken()),
+          key("no-gateway"),
+        ),
+        "PAYMENT_METHOD_UNAVAILABLE",
+      );
+      // A coupon that covers everything leaves nothing to pay.
+      await coupon(null, 10_000, 5);
+      const zero = await bookByEmail(
+        {
+          couponCode: "WELCOME",
+          expectedTotal: { amountMinor: 0, currency: "USD" },
+        },
+        key("zero"),
+      );
+      expect(zero).toMatchObject({
+        ok: false,
+        error: {
+          code: "PAYMENT_METHOD_UNAVAILABLE",
+          message: expect.stringContaining(
+            "Verify by WhatsApp to pay at the hotel",
+          ),
+        },
+      });
+      expect((await rowCounts(client)).reservations).toBe(0);
+    });
+
+    it("cannot open an email-only branch for booking without a payment gateway (Q-100)", async () => {
+      await seedBookable(client);
+      await allowOnlinePayment(client);
+      const token = await emailToken();
+      const result = await websiteBooking(client, {
+        setupConfigured: false,
+        emailReady: true,
+      }).execute(emailBody(phone, token), key("email-no-gateway"));
+      expect(result).toMatchObject({
+        ok: false,
+        error: {
+          code: "BRANCH_NOT_BOOKABLE",
+          context: { reason: "VERIFICATION_NOT_CONFIGURED" },
+        },
+      });
+      expect(await rowCounts(client)).toMatchObject({
+        reservations: 0,
+        consumed: 0,
+      });
+    });
 
     it("books with an email token, records the channel, and never verifies the phone", async () => {
       await seedBookable(client);
@@ -740,6 +853,7 @@ describe("CreateWebsiteReservation", () => {
       });
       expect(result.ok).toBe(true);
       if (!result.ok) return;
+      await pay(result.value.reservationId);
       const row = await client.reservation.findUniqueOrThrow({
         where: { id: result.value.reservationId },
         include: { guest: true },
@@ -914,77 +1028,84 @@ describe("CreateWebsiteReservation", () => {
           blockReason: "Test",
         },
       });
-      const result = await websiteBooking(client).execute(
-        bookingBody(phone, token),
-        key("blocked"),
-      );
+      await allowOnlinePayment(client);
+      const result = await websiteBooking(client, {
+        checkout: openCheckout,
+      }).execute(emailBody(phone, token), key("blocked"));
       expectFailure(result, "PHONE_BLOCKED");
       expect((await rowCounts(client)).reservations).toBe(0);
     });
 
-    it("counts against the phone cap and the per email cap", async () => {
-      await seedBookable(client);
+    it("allows one open payment hold per email, and counts the typed phone's holds", async () => {
+      await seedBookable(client, { units: 4 });
       const stays = [
         { checkIn: "2031-04-10", checkOut: "2031-04-13" },
         { checkIn: "2031-05-10", checkOut: "2031-05-13" },
         { checkIn: "2031-06-10", checkOut: "2031-06-13" },
       ];
-      // Two email bookings from two different phones fill the email cap.
-      expect(
-        (await bookByEmail({ stay: stays[0] }, key("e1"), phoneOf(11))).ok,
-      ).toBe(true);
-      expect(
-        (await bookByEmail({ stay: stays[1] }, key("e2"), phoneOf(12))).ok,
-      ).toBe(true);
+      const first = await bookByEmail(
+        { stay: stays[0] },
+        key("e1"),
+        phoneOf(11),
+      );
+      expect(first.ok).toBe(true);
+      if (!first.ok) return;
+      // The same email from another phone: one open hold already.
       expectFailure(
-        await bookByEmail({ stay: stays[2] }, key("e3"), phoneOf(13)),
+        await bookByEmail({ stay: stays[1] }, key("e2"), phoneOf(12)),
         "BOOKING_LIMIT_REACHED",
       );
       // WhatsApp bookings with that email do not count toward the email cap.
-      expect((await book({ stay: stays[2] }, key("w1"), phoneOf(14))).ok).toBe(
+      expect((await book({ stay: stays[1] }, key("w1"), phoneOf(14))).ok).toBe(
         true,
       );
-      // The phone cap still counts email bookings for the typed phone.
+      // A paid booking is no longer a hold.
+      await pay(first.value.reservationId);
+      expect(
+        (await bookByEmail({ stay: stays[2] }, key("e3"), phoneOf(13))).ok,
+      ).toBe(true);
+      // The email hold also counts against the typed phone's one open hold.
       await resetDatabase(client);
-      await seedBookable(client);
-      expect((await book({ stay: stays[0] }, key("p1"))).ok).toBe(true);
-      expect((await book({ stay: stays[1] }, key("p2"))).ok).toBe(true);
+      await seedBookable(client, { units: 4 });
+      expect((await bookByEmail({ stay: stays[0] }, key("p1"), phone)).ok).toBe(
+        true,
+      );
       expectFailure(
-        await bookByEmail({ stay: stays[2] }, key("p3"), phone),
+        await websiteBooking(client, { checkout: openCheckout }).execute(
+          bookingBody(phone, await issueToken(client, phone), {
+            paymentMethod: "ONLINE",
+            stay: stays[1],
+          }),
+          key("p2"),
+        ),
         "BOOKING_LIMIT_REACHED",
       );
+      // It does not use up the phone's pay at hotel bookings.
+      expect((await book({ stay: stays[1] }, key("p3"))).ok).toBe(true);
     });
 
     it("keeps counting a booking in the email cap after its contact email changes", async () => {
       await seedBookable(client);
-      const stays = [
-        { checkIn: "2031-04-10", checkOut: "2031-04-13" },
-        { checkIn: "2031-05-10", checkOut: "2031-05-13" },
-        { checkIn: "2031-06-10", checkOut: "2031-06-13" },
-      ];
-      for (const [index, stay] of stays.slice(0, 2).entries())
-        expect(
-          (
-            await bookByEmail(
-              { stay },
-              key(`moved-${index}`),
-              phoneOf(31 + index),
-            )
-          ).ok,
-        ).toBe(true);
+      expect((await bookByEmail({}, key("moved-0"), phoneOf(31))).ok).toBe(
+        true,
+      );
       expect(
         (
           await client.reservation.findMany({
             select: { verifiedEmail: true },
           })
         ).map((row) => row.verifiedEmail),
-      ).toEqual([email, email]);
-      // A guest change or a staff edit moves both contact emails elsewhere.
+      ).toEqual([email]);
+      // A guest change or a staff edit moves the contact email elsewhere.
       await client.reservation.updateMany({
         data: { guestEmail: "moved@example.test" },
       });
       expectFailure(
-        await bookByEmail({ stay: stays[2] }, key("moved-2"), phoneOf(33)),
+        await bookByEmail(
+          { stay: { checkIn: "2031-05-10", checkOut: "2031-05-13" } },
+          key("moved-1"),
+          phoneOf(33),
+        ),
         "BOOKING_LIMIT_REACHED",
       );
     });
@@ -998,14 +1119,12 @@ describe("CreateWebsiteReservation", () => {
       expect(result.ok).toBe(true);
     });
 
-    it("C-VCH: two email bookings from different phones at the email cap book only one, waiting on the email lock (20 rounds)", async () => {
+    it("C-VCH: two email bookings for one email from different phones leave only one open hold, waiting on the email lock (20 rounds)", async () => {
       for (let round = 0; round < ROUNDS; round += 1) {
         await resetDatabase(client);
         await seedBookable(client);
         await seedBookable(client, { slug: "nile" });
-        expect((await bookByEmail({}, key("prior"), phoneOf(21))).ok).toBe(
-          true,
-        );
+        await allowOnlinePayment(client);
         const tokens = [
           await emailToken(phoneOf(22)),
           await emailToken(phoneOf(23)),
@@ -1014,15 +1133,18 @@ describe("CreateWebsiteReservation", () => {
         const results = await withIndependentClients(3, async (clients) => {
           const first = websiteBooking(clients[0]!, {
             audit: paused.audit,
+            checkout: openCheckout,
           }).execute(
-            bookingBody(phoneOf(22), tokens[0]!, {
+            emailBody(phoneOf(22), tokens[0]!, {
               stay: { checkIn: "2031-05-10", checkOut: "2031-05-13" },
             }),
             key("race-a"),
           );
           await paused.reached;
-          const second = websiteBooking(clients[1]!).execute(
-            bookingBody(phoneOf(23), tokens[1]!, {
+          const second = websiteBooking(clients[1]!, {
+            checkout: openCheckout,
+          }).execute(
+            emailBody(phoneOf(23), tokens[1]!, {
               lines: [
                 { roomSlug: "nile", occupancy: { adults: 2, children: 0 } },
               ],
@@ -1030,14 +1152,14 @@ describe("CreateWebsiteReservation", () => {
             }),
             key("race-b"),
           );
-          // Different phones, so only the email lock can make it wait.
+          // Different phones and listings, so only the email lock can make it wait.
           await waitForLockWaiters(clients[2]!, 1);
           paused.release();
           return Promise.all([first, second]);
         });
         expect(results[0]!.ok).toBe(true);
         expectFailure(results[1]!, "BOOKING_LIMIT_REACHED");
-        expect((await rowCounts(client)).reservations).toBe(2);
+        expect((await rowCounts(client)).reservations).toBe(1);
       }
     }, 120_000);
   });

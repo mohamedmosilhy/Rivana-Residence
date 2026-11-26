@@ -35,6 +35,7 @@ import {
   TEST_BRANCH_ID,
 } from "../support/database";
 import { deferred, withIndependentClients } from "./support/concurrency";
+import { bookByEmailOnline } from "./support/email-booking";
 import {
   bookingBody,
   issueToken,
@@ -68,15 +69,23 @@ async function book(units = 1, options: { email?: string } = {}) {
   await createActor(client);
   const listing = await seedBookable(client, { units });
   const phone = phoneOf(11);
-  const created = await websiteBooking(client).execute(
-    bookingBody(
+  // A booking verified by email is paid online (Q-100).
+  if (options.email) {
+    const booked = await bookByEmailOnline(client, {
       phone,
-      await issueToken(
-        client,
-        phone,
-        options.email ? { email: options.email } : {},
-      ),
-    ),
+      email: options.email,
+      key: "guest-change-booking",
+      paid: true,
+    });
+    return {
+      listing,
+      row: booked.row,
+      phone,
+      access: { kind: "MANAGE_TOKEN", token: booked.manageToken } as const,
+    };
+  }
+  const created = await websiteBooking(client).execute(
+    bookingBody(phone, await issueToken(client, phone)),
     "guest-change-booking",
   );
   if (!created.ok || !created.value.manageToken)

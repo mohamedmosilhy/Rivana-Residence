@@ -17,6 +17,7 @@ import {
   SmtpVerificationCodeEmail,
 } from "@/infrastructure/email/verification-code-email";
 
+import { isPaymentGatewayReady } from "./provider-readiness";
 import {
   reservationEmailConfig,
   reservationEmailReadiness,
@@ -60,6 +61,7 @@ export function manageVerificationSettings(
     ),
     settings: new PrismaVerificationSettingsRepository(client),
     emailDelivery: { isConfigured: emailDeliveryConfigured },
+    onlinePayment: { isConfigured: isPaymentGatewayReady },
     whatsApp: whatsAppSetupReader(),
     clock: { now: () => new Date() },
   });

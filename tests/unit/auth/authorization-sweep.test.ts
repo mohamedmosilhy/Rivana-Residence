@@ -138,6 +138,7 @@ const verificationSettings = () =>
     unitOfWork: tripwire("unitOfWork"),
     settings: tripwire("settings"),
     emailDelivery: tripwire("emailDelivery"),
+    onlinePayment: tripwire("onlinePayment"),
     whatsApp: tripwire("whatsApp"),
     clock: tripwire("clock"),
   });
