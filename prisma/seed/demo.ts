@@ -7,6 +7,7 @@ import {
   defaultPageSections,
 } from "../../src/domain/content/default-sections.ts";
 import { richTextFromEditorText } from "../../src/domain/shared/rich-text.ts";
+import { localDateAt } from "../../src/domain/shared/zoned-time.ts";
 import type { PrismaClient } from "../../src/generated/prisma/client.ts";
 import { IMAGES, type ImageKey } from "../initial-content/content.ts";
 
@@ -43,7 +44,7 @@ export async function seedDemoInventory(client: PrismaClient) {
   return client.$transaction(async (tx) => {
     const branch = await tx.branch.findUniqueOrThrow({
       where: { slug: DEMO_BRANCH_SLUG },
-      select: { id: true },
+      select: { id: true, timeZone: true },
     });
     // Resolve every target first so a missing listing cannot leave half an upgrade.
     const targets = await Promise.all(
@@ -98,7 +99,9 @@ export async function seedDemoInventory(client: PrismaClient) {
       });
       created += units.count + base.count + period.count;
     }
-    return { created };
+    const arrival = localDateAt(new Date(), branch.timeZone).addDays(7);
+    const searchPath = `/${DEMO_BRANCH_SLUG}/book?checkIn=${arrival.value}&checkOut=${arrival.addDays(2).value}&adults=2&children=0`;
+    return { created, searchPath };
   });
 }
 

@@ -245,6 +245,12 @@ describe("the one seed (runSeed)", () => {
       where: { slug: "demo-giza" },
     });
     expect(giza.status).toBe("ACTIVE");
+    expect(giza.onlineBookingEnabled).toBe(false);
+    expect(lines).toContainEqual(
+      expect.stringMatching(
+        /^Demo search example \(once local booking is configured\): \/demo-giza\/book\?checkIn=\d{4}-\d{2}-\d{2}&checkOut=\d{4}-\d{2}-\d{2}&adults=2&children=0$/,
+      ),
+    );
     expect(
       (
         await client.room.findMany({

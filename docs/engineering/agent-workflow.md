@@ -49,7 +49,7 @@ Before the first task (steps 0–4 of the [milestone loop](../delivery/milestone
 | 1. Plan | Read the task row, the spec, and the code in the area. Identify layers, dependencies, and risks. Present the task card and the implementation approach. In Claude Code, use plan mode | — | **Wait for the owner's approval** |
 | 2. Design | Clarify the domain rules, application responsibilities, interfaces and contracts, database changes, API behavior, error handling, and authorization the task needs. Usually a few lines in the plan. If a load-bearing decision is not in the spec, extend the spec | `/architect` (only when a decision is owed) | **Wait for approval** if it changes a contract, the schema, a port, or the architecture |
 | 3. Implement | Build only the approved task, following the architecture and standards. No unrelated refactors, no new dependencies, no silent scope growth. Unexpected requirement or architectural problem → stop and explain (see [Scope changes](#scope-changes-and-surprises)) | `/develop` (logic or UI track), `/debug` for unclear failures | — |
-| 4. Verify | Add or update tests for the new behavior. Run the gates for the task's risk tier ([quality-gates.md](../testing/quality-gates.md#gates-per-task)). Prove the behavior in the running app when the task has observable behavior | `/test`, `/check verify` | Every applicable gate passes, or the failure is reported |
+| 4. Verify | Add or update tests for the new behavior. Run the gates for the task's risk tier ([quality-gates.md](../testing/quality-gates.md#gates-per-task)). Prove the behavior in the running app when the task has observable behavior | `/test`, `/check verify` | Every applicable gate passes, or the failure is reported. A task that changes a screen also captures its [screenshots](#screenshots-and-preview-links-ui-tasks) |
 | 5. Independent review | A reviewer on a different model reads the task's uncommitted diff against the requirements, the approved task card, the architecture, security rules, and the acceptance criteria. The author fixes each finding or answers it with evidence | `/check review uncommitted` | Findings resolved or explicitly left for the owner |
 | 6. Review package | Present the [Engineering Review Package](#engineering-review-package) in the required plain, detailed format | — | **Wait for the owner's acceptance** |
 | 7. Sync and commit | After acceptance: update the docs whose behavior changed, the task's status in the brief, and the task log row in the milestone evidence report; then commit on the milestone branch | — (`/sync` when a new area convention appeared) | — |
@@ -116,8 +116,27 @@ Presented in the chat at Stage 6, and again (updated) after every round of reque
 9. **Risks, limits, and deferred work.** Everything that is known to be imperfect, with the task or milestone that will handle it.
 10. **Decisions for the owner.** Numbered questions, each with the recommended answer and its cost, or "none".
 11. **What happens after acceptance.** The commit message, the status rows and docs that will be updated, and a statement that the next task will not start.
+12. **Screenshots and preview links** (UI tasks only, always last). The screenshot folder and the live links described [below](#screenshots-and-preview-links-ui-tasks).
 
 When the owner asks for changes, the updated package starts with **What changed since the last package** (a short table), then repeats the parts above in full with current facts.
+
+## Screenshots and preview links (UI tasks)
+
+Owner rule, 2026-11-26. It applies to every task that adds or changes a screen a person sees. The owner sends the screenshots to the client and tries the screens through the links.
+
+**Screenshots**
+
+- Capture every new or changed screen and each of its states (empty, results, errors, refusals) at desktop (1280 px) and mobile (390 px) widths, as full pages.
+- Save them in `docs/delivery/reports/screenshots/m<N>/m<N>-t<K>/`, named `<state>-desktop.png` and `<state>-mobile.png`, and list them under **Screenshots** in the milestone evidence report.
+- They must be fit for a client: fictional demo data only; no personal data, tokens, or secrets; no developer overlay.
+- Open each image and check it shows the intended state. Capture again after any requested change.
+
+**Preview links**
+
+- End the review package with a link to each new screen and state on a running local server, so the owner can try it. Open every link just before sending it.
+- Say which server and database each link uses, and whether it runs the working tree or a copy of it.
+- Fill demo data into a separate local database. Changing the owner's `rivana` database needs the owner's word.
+- When a state cannot be opened by a link, say why and how to reproduce it.
 
 ## Scope changes and surprises
 

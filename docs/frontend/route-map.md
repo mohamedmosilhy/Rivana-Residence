@@ -19,7 +19,7 @@ Since M5 every public page lives under its branch, at `/{branch}/…` (ADR 026, 
 | `/{branch}/stay/[slug]` | Listing detail with badge and apartment facts; the disabled Book Now carries the branch and listing; it opens `/{branch}/book` once bookable online (IN-4) | Implemented (M5); booking link planned (M10) |
 | `/{branch}/facilities`, `/{branch}/facilities/[slug]` | Branch facilities | Implemented (M5) |
 | `/{branch}/contact` | Branch contact details, interactive Google Map, enquiry form (records the branch) | Implemented (M5) |
-| `/{branch}/book?checkIn&checkOut&adults&children` | Search form plus results; a plain GET form that works without JavaScript and is shareable | Planned (M10) |
+| `/{branch}/book?checkIn&checkOut&adults&children&room` | Search form plus results with prices before VAT; a plain GET form that works without JavaScript and is shareable; optional `room` highlights a listing. When the branch cannot take online bookings, the hotel contact panel replaces the form. `noindex` | Implemented (M10-T2); unit selection planned (M10-T3) |
 | `/{branch}/book/details` | Selected units, guest details, phone verification, extras, coupon, payment choice, review with VAT, submit (`POST /api/v1/reservations`) | Planned (M10) |
 | `/{branch}/book/confirmed` | Confirmation for a `CONFIRMED` booking | Planned (M10) |
 | `/{branch}/book/payment` | Return page after the payment gateway: shows the server status (confirmed, waiting, payment not completed) | Planned (M10) |

@@ -8,12 +8,11 @@ import {
 import { manageVerificationSettings } from "@/composition/verification-channels";
 import { ListBranches } from "@/application/branches";
 import { CheckHealth } from "@/application/health";
-import { RateLimiter } from "@/application/shared/rate-limit";
-import { resolveStaffFromHeaders, throttleKeys } from "@/composition/auth";
+import { resolveStaffFromHeaders } from "@/composition/auth";
+import { searchAndRecordAvailability } from "@/composition/booking-search";
 import { manageBranches } from "@/composition/content";
 import {
   getAvailabilityGrid,
-  publicAvailability,
   manageBlocks,
   managePhysicalRooms,
 } from "@/composition/inventory";
@@ -29,24 +28,21 @@ import {
   sendWhatsAppTestMessage,
 } from "@/composition/notifications";
 import { getRateCalendar, manageRates } from "@/composition/pricing";
-import { clientAddressFrom, isSameOriginRequest } from "@/composition/http";
+import { isSameOriginRequest } from "@/composition/http";
 import {
   getActiveBranchBySlug,
   getActiveBranches,
   getPublishedRoom,
   getPublishedRooms,
 } from "@/composition/public";
-import { quoteSteps, searchSteps } from "@/domain/analytics";
+import { consumePublicRateLimit } from "@/composition/public-rate-limit";
+import { quoteSteps } from "@/domain/analytics";
 import type { ThrottleRule } from "@/domain/auth/login-throttle";
 import { NextRouteCacheInvalidator } from "@/infrastructure/cache/next-cache-invalidator";
-import { getPrisma } from "@/infrastructure/db/prisma/client";
 import { PrismaDatabaseProbe } from "@/infrastructure/db/prisma/database-probe";
 import { PrismaBranchRepository } from "@/infrastructure/db/prisma/repositories/branches/branch-repository";
-import { PrismaPublicRateLimitStore } from "@/infrastructure/db/prisma/repositories/public-rate-limit-store";
 
 // Composition for `/api/v1` Route Handlers and their shared HTTP layer.
-
-const clock = { now: () => new Date() };
 
 export function checkHealth() {
   return new CheckHealth(new PrismaDatabaseProbe()).execute();
@@ -57,10 +53,7 @@ export const httpDependencies = {
   isSameOrigin: isSameOriginRequest,
   resolveStaff: resolveStaffFromHeaders,
   rateLimit: (namespace: string, rule: ThrottleRule, request: Request) =>
-    new RateLimiter(
-      new PrismaPublicRateLimitStore(getPrisma(), clock),
-      throttleKeys(),
-    ).consume(namespace, rule, clientAddressFrom(request.headers)),
+    consumePublicRateLimit(namespace, rule, request.headers),
 };
 
 // Branch API (API-P1…P4, API-A1…A3; spec 0002). Public reads go through the
@@ -248,29 +241,17 @@ export async function quoteBooking(input: unknown, headers: Headers) {
 
 // API-P5: uncached public availability with server-resolved branch identity.
 // A search that finds nothing is recorded even without a visit (unmet demand).
-export async function searchPublicAvailability(
+export function searchPublicAvailability(
   slug: string,
   input: unknown,
   headers: Headers,
 ) {
-  const result = await publicAvailability().execute(slug, input);
-  if (result.ok) {
-    const { branchId, stay, results } = result.value;
-    await recordFunnelSteps({
-      sessionId: analyticsSessionFrom(headers),
-      headers,
-      steps: () =>
-        searchSteps({
-          branchId,
-          stay: {
-            checkIn: stay.checkIn.value,
-            checkOut: stay.checkOut.value,
-          },
-          results,
-        }),
-    });
-  }
-  return result;
+  return searchAndRecordAvailability(
+    slug,
+    input,
+    headers,
+    analyticsSessionFrom(headers),
+  );
 }
 
 // API-S37…S39, audited coupon management.

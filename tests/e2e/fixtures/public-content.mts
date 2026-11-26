@@ -11,6 +11,7 @@ import {
   type ManifestEntry,
 } from "../../../src/application/media/import-reference-assets.ts";
 import { richTextFromEditorText } from "../../../src/domain/shared/rich-text.ts";
+import { localDateAt } from "../../../src/domain/shared/zoned-time.ts";
 import type { PrismaClient } from "../../../src/generated/prisma/client.ts";
 import { DEFAULT_BRANCH_ID as BRANCH_ID } from "../../../prisma/seed-data.ts";
 import { PrismaBranchRepository } from "../../../src/infrastructure/db/prisma/repositories/branches/branch-repository.ts";
@@ -56,6 +57,74 @@ function ok<T>(
 ) {
   if (!result.ok) throw new Error(result.error.message);
   return result.value;
+}
+
+/** Only used in the isolated, read-only booking search browser run. */
+export async function seedBookingSearch(client: PrismaClient) {
+  const branch = await client.branch.update({
+    where: { id: BRANCH_ID },
+    data: { onlineBookingEnabled: true },
+  });
+  await client.whatsAppSettings.update({
+    where: { id: "default" },
+    data: {
+      businessPhoneNumber: "+2025550100",
+      providerPhoneNumberId: "123456789",
+    },
+  });
+  await client.whatsAppTemplate.createMany({
+    data: [
+      { purpose: "VERIFICATION_CODE", category: "AUTHENTICATION" },
+      { purpose: "BOOKING_CONFIRMED", category: "UTILITY" },
+    ].map(({ purpose, category }) => ({
+      id: `e2e-search-${purpose.toLowerCase()}`,
+      purpose,
+      category,
+      language: "en",
+      providerName: purpose.toLowerCase(),
+      previewText: "Readiness fixture",
+      variables: [],
+    })),
+  });
+  const listings = await client.room.findMany({
+    where: { branchId: branch.id, status: "PUBLISHED" },
+  });
+  const apartment = listings.find(
+    (listing) => listing.slug === "studio-with-balcony",
+  )!;
+  await client.room.update({
+    where: { id: apartment.id },
+    data: { accommodationType: "APARTMENT", bedroomCount: 1, bathroomCount: 1 },
+  });
+  for (const listing of listings) {
+    await client.roomBaseRate.create({
+      data: {
+        roomTypeId: listing.id,
+        amountMinor: listing.id === apartment.id ? 12000 : 8000,
+      },
+    });
+    // No physical unit for Superior Double, so it always shows as sold out.
+    if (listing.slug !== "superior-double") {
+      await client.physicalRoom.create({
+        data: {
+          id: `search-${listing.slug}`,
+          branchId: branch.id,
+          roomTypeId: listing.id,
+          label: `SEARCH ${listing.slug}`,
+        },
+      });
+    }
+  }
+  const secondNight = localDateAt(new Date(), branch.timeZone).addDays(8);
+  await client.ratePeriod.create({
+    data: {
+      id: "e2e-booking-search-period",
+      roomTypeId: apartment.id,
+      startDate: new Date(`${secondNight.value}T00:00:00Z`),
+      endDate: new Date(`${secondNight.addDays(1).value}T00:00:00Z`),
+      amountMinor: 14000,
+    },
+  });
 }
 
 export async function seedPublicContent(

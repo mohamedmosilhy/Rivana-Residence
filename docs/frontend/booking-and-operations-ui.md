@@ -1,6 +1,6 @@
 # Booking and operations UI
 
-The booking journey and the staff reservation screens: journey, state, components, accessibility. Status: **Planned**, design accepted 2026-10-24 and revised 2026-11-06 (immediate confirmation, several units, services, coupon, VAT review, online payment, cancellation requests; built in M10–M13). Routes are listed in [route-map.md](./route-map.md). It reuses the design system ([../design-system.md](./design-system.md), [../component-architecture.md](./component-architecture.md)), the Tailwind tokens in `src/app/globals.css`, and the class helpers in `src/presentation/site/classes.ts` and `src/presentation/admin/ui/`.
+The booking journey and the staff reservation screens: journey, state, components, accessibility. Status: **Planned**, design accepted 2026-10-24 and revised 2026-11-06 (immediate confirmation, several units, services, coupon, VAT review, online payment, cancellation requests; built in M10–M13). **Implemented (M10-T2):** the search and results step, `/{branch}/book`, in `src/presentation/features/booking/`; the later steps remain planned. Routes are listed in [route-map.md](./route-map.md). It reuses the design system ([../design-system.md](./design-system.md), [../component-architecture.md](./component-architecture.md)), the Tailwind tokens in `src/app/globals.css`, and the class helpers in `src/presentation/site/classes.ts` and `src/presentation/admin/ui/`.
 
 ## Customer journey
 
@@ -40,8 +40,10 @@ State strategy:
 | Component | Kind | Notes |
 | --- | --- | --- |
 | `BranchCard` | Server | Reuses card patterns from `site/cards.tsx` |
-| `StaySearchForm` | Server form (GET) + small client enhancer | Native `<input type="date">` (accessible, no picker dependency), number steppers as `<input type="number">` with labels |
-| `AvailabilityResultCard` | Server | Listing summary with Room or Apartment badge, availability, price per night and stay total **before VAT**, units selector, "see breakdown" `<details>` |
+| `StaySearchForm` | Server form (GET) | **Implemented (M10-T2)** with no client script. Native `<input type="date">` (accessible, no picker dependency) and labelled `<input type="number">` guest counts; errors beside each field and a focused error heading |
+| `BookingSearchFrame`, `BookingContact` | Server | **Implemented (M10-T2).** The branch photo header, and the hotel contact panel shown when online booking is unavailable |
+| `AvailabilityResults` | Server | **Implemented (M10-T2).** Available listings as cards (badge, price per night or "Nightly rates vary", stay total for one unit **before VAT**, nightly prices in `<details>`), then unavailable listings with a plain reason |
+| Units selector on result cards | Client | Planned (M10-T3) |
 | `BranchChooser`, `BranchSwitcher` | Server + small client disclosure | Chooser cards at `/`; header switcher that keeps the page type (M5) |
 | `ServicesPicker` | Client | Breakfast and airport transfer priced by each service's unit (per booking, per night, per person, or per person per night, with child prices where set); nothing preselected |
 | `CouponField` | Client | One code; apply re-quotes; refusal reason announced |

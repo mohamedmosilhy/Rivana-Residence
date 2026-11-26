@@ -53,6 +53,7 @@ vi.mock("@/composition/auth", () => ({
 const { GET } = await import(
   "@/app/api/v1/branches/[branchSlug]/availability/route"
 );
+const { searchBookingPage } = await import("@/composition/booking-search");
 const client = createTestClient();
 const NOW = new Date("2031-03-01T10:00:00Z");
 const QUERY = "checkIn=2031-03-10&checkOut=2031-03-14&adults=2&children=0";
@@ -70,6 +71,13 @@ const request = (query = QUERY, slug = "new-cairo") =>
   );
 const body = async (response: Response) =>
   AvailabilityResponse.parse(await response.json());
+
+const pageSearch = () =>
+  searchBookingPage(
+    "new-cairo",
+    { checkIn: "2031-03-10", checkOut: "2031-03-14", adults: 2, children: 0 },
+    new Headers(),
+  );
 
 beforeEach(async () => {
   vi.useFakeTimers({ toFake: ["Date"] });
@@ -496,4 +504,48 @@ it("P5 counts persisted sales and reads a released sale on the next request", as
   expect(
     (await body(await request(QUERY + "&unitsRequested=2"))).results[0],
   ).toMatchObject({ unitsAvailable: 2, available: true });
+});
+
+it("the booking page sees a committed booking and a payment hold on the next search", async () => {
+  const repo = new PrismaReservationRepository(client);
+  const stay = range("2031-03-10", "2031-03-14");
+  expect((await repo.insert(reservationInput(listing, { stay }))).ok).toBe(
+    true,
+  );
+  expect(await pageSearch()).toMatchObject({
+    ok: true,
+    value: { results: [{ available: true, unitsAvailable: 1 }] },
+  });
+  expect(
+    (
+      await repo.insert(
+        reservationInput(listing, {
+          stay,
+          status: "AWAITING_PAYMENT",
+          paymentMethod: "ONLINE",
+          paymentStatus: "AWAITING",
+          holdExpiresAt: new Date(+NOW + 15 * 60_000),
+        }),
+      )
+    ).ok,
+  ).toBe(true);
+  expect(await pageSearch()).toMatchObject({
+    ok: true,
+    value: { results: [{ available: false, reason: "SOLD_OUT" }] },
+  });
+});
+
+it("P5 and the booking page share the availability limit and retry window", async () => {
+  const responses = await Promise.all(
+    Array.from({ length: 59 }, () => request()),
+  );
+  expect(responses.every(({ status }) => status === 200)).toBe(true);
+  expect((await pageSearch()).ok).toBe(true);
+  expect((await request()).status).toBe(429);
+  expect(await pageSearch()).toMatchObject({
+    ok: false,
+    error: { code: "RATE_LIMITED", retryAfterSeconds: 60 },
+  });
+  vi.setSystemTime(new Date(+NOW + 60_000));
+  expect((await pageSearch()).ok).toBe(true);
 });

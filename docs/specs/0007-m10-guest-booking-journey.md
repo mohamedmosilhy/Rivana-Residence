@@ -352,6 +352,13 @@ Owner decisions at planning and acceptance:
 
 For later screens: show a fallback for an unknown problem code (T4 to T8b), and preview again if a G5 answer has no `ETag` (T8b).
 
+### Settled during M10-T2 (2026-11-26)
+
+- **Readiness.** `GetBookingSearchSetup` reads the branch fresh and applies the P7 rule: online booking on, a check-in time, and a usable verification channel (email counts only with online payment). T4 extends this read in `GetBookingSetup` instead of adding a second rule.
+- **Limiter and analytics.** The page and P5 share the `availability` bucket (60 a minute per client), wired in `src/composition/public-rate-limit.ts`, which scheduled jobs must not import. The page passes no session, so only unmet demand is stored.
+- **Failures.** A refused search shows the wait time. An unexpected failure keeps the entries and logs only the error class and a short code.
+- **Browser tests.** `BOOKING_SEARCH_E2E=1` prepares bookable fixtures for `tests/e2e/booking-search.spec.ts`. It does not settle how the E2E-G journeys complete a booking (planned at T4).
+
 ## Build plan
 
 The project builds backend before the screens that use it, one task at a time. Analytics backend first (it changes P7 and the payment paths, which the screens then exercise), then the client, then the journey in the order a guest walks it, then the after booking pages, then the launch pieces. Each UI task adds its component tests, E2E paths, axe checks, and visual baselines (390 and 1280 px) for its own steps.

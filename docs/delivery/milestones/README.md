@@ -215,6 +215,7 @@ The parts, in order:
 9. Risks, limits, and deferred work
 10. Decisions for you, each with a recommendation
 11. What happens after you accept
+12. Screenshots and preview links, for tasks that change a screen ([rule](../../engineering/agent-workflow.md#screenshots-and-preview-links-ui-tasks))
 
 If a package skips a part or says "see the diff", ask for it again with: "Give me the full review
 package in the format in docs/engineering/agent-workflow.md."

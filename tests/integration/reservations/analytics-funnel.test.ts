@@ -88,6 +88,7 @@ vi.mock("@/composition/auth", () => ({
 const search = await import(
   "@/app/api/v1/branches/[branchSlug]/availability/route"
 );
+const { searchBookingPage } = await import("@/composition/booking-search");
 const quotes = await import("@/app/api/v1/quotes/route");
 const codes = await import("@/app/api/v1/phone-verifications/route");
 const confirmations = await import(
@@ -216,6 +217,46 @@ afterEach(() => {
 afterAll(() => client.$disconnect());
 
 describe("the journey (AC-11, AC-13)", () => {
+  it("waits for the page response and records only eligible unmet demand without a session", async () => {
+    await seed();
+    const work: (() => Promise<void>)[] = [];
+    deferredWork.hold = work;
+    const stay = { checkIn: "2031-04-10", checkOut: "2031-04-13", children: 0 };
+    const searchPage = (adults: number, extra: Headers_ = {}) =>
+      searchBookingPage(
+        "new-cairo",
+        { ...stay, adults },
+        new Headers(tracked(extra)),
+      );
+
+    expect((await searchPage(2)).ok).toBe(true);
+    expect((await searchPage(0)).ok).toBe(false);
+    const requests: readonly Headers_[] = [
+      { DNT: "1" },
+      { "Sec-GPC": "1" },
+      { Purpose: "prefetch" },
+      {},
+    ];
+    for (const extra of requests) {
+      expect((await searchPage(8, extra)).ok).toBe(true);
+    }
+
+    expect(await events()).toEqual([]);
+    for (const record of work) await record();
+    expect(await events()).toMatchObject([
+      {
+        name: "SEARCH",
+        branchId: TEST_BRANCH_ID,
+        outcome: "NO_AVAILABILITY",
+        sessionId: null,
+        funnelStep: null,
+        path: null,
+        stayCheckIn: new Date("2031-04-10T00:00:00Z"),
+        stayCheckOut: new Date("2031-04-13T00:00:00Z"),
+      },
+    ]);
+  });
+
   it("stores every step of a pay at hotel booking under one visit, with no cookie and no personal data", async () => {
     const room = await seed();
     vi.spyOn(

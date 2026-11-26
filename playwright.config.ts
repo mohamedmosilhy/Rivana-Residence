@@ -3,6 +3,10 @@ import { E2E_PHONE_VERIFICATION_SECRET } from "./tests/e2e/support/phone-verific
 
 const port = 3100;
 const e2eDatabaseUrl = process.env.E2E_DATABASE_URL;
+const bookingSearch = process.env.BOOKING_SEARCH_E2E === "1";
+if (bookingSearch && !e2eDatabaseUrl) {
+  throw new Error("BOOKING_SEARCH_E2E requires E2E_DATABASE_URL.");
+}
 
 // Release acceptance (`npm run test:e2e:browsers`) repeats the public,
 // shell, and security suites in Firefox and WebKit at phone, tablet, and
@@ -95,12 +99,30 @@ export default defineConfig({
         ...CROSS_BROWSER_PROJECTS.map((project) => project.name),
       ],
     },
-  ],
+  ]
+    .filter(
+      (project) =>
+        !bookingSearch ||
+        ["desktop-chromium", "mobile-chromium"].includes(project.name) ||
+        project.name.startsWith("webkit-"),
+    )
+    .map((project, index) =>
+      bookingSearch
+        ? {
+            ...project,
+            testMatch: /booking-search\.spec/,
+            use: {
+              ...project.use,
+              extraHTTPHeaders: { "X-Forwarded-For": `192.0.2.${index + 1}` },
+            },
+          }
+        : project,
+    ),
   webServer: {
     // The data cache persists on disk between runs, but the test database is
     // rebuilt out of band on every run, so start from an empty cache.
     command: `npm run build && rm -rf .next/cache/fetch-cache && npm run start -- --hostname 127.0.0.1 --port ${port}`,
-    reuseExistingServer: !process.env.CI,
+    reuseExistingServer: !process.env.CI && !bookingSearch,
     timeout: 180_000,
     // An uncached page: the readiness probe must not fill the content cache.
     url: `http://127.0.0.1:${port}/admin/login`,
@@ -114,6 +136,11 @@ export default defineConfig({
       // API fixtures can simulate separate clients on this loopback-only server.
       AUTH_TRUST_PROXY_HEADERS: "true",
       ANALYTICS_ENABLED: "true",
+      // The focused search run only reads readiness. The value is fictional
+      // and the scenario never sends a code or calls a provider.
+      ...(bookingSearch
+        ? { WHATSAPP_ACCESS_TOKEN: "e2e-search-readiness-only" }
+        : {}),
       ...(e2eDatabaseUrl ? { DATABASE_URL: e2eDatabaseUrl } : {}),
     },
   },

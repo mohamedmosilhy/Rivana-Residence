@@ -134,6 +134,9 @@ export async function runSeed(
     log(
       `Demo inventory: created ${inventory.created} fictional unit/rate records; existing records preserved.`,
     );
+    log(
+      `Demo search example (once local booking is configured): ${inventory.searchPath}`,
+    );
     const reservations = await seedDemoReservations(client, user.id);
     log(
       `Demo reservations: created ${reservations.created} fictional bookings; existing records preserved.`,
