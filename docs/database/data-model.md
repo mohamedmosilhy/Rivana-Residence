@@ -2,7 +2,7 @@
 
 PostgreSQL is the system of record for content, staff identity, enquiries, promotions (retired), media metadata, branches, inventory, prices, services, coupons, VAT, reservations, guest records (including marketing consent), and payments. M9 also stores payment events, cancellation requests, and guest change requests. Card data is never stored (hosted checkout, ADR 025). Binary images live in the configured media store (a persistent server directory). Prisma is the migration and persistence adapter, not the domain model; it is imported only under `src/infrastructure/db`.
 
-The implemented schema is `prisma/schema.prisma`. At M9 close there are 19 migrations, including the four M9 migrations for payments and cancellations, change requests, verification channels, and online payment for email bookings. Tables marked *planned* are specified here and added by milestone migrations ([migrations-and-seeding.md](./migrations-and-seeding.md)).
+The implemented schema is `prisma/schema.prisma`. At M9 close there are 19 migrations, including the four M9 migrations for payments and cancellations, change requests, verification channels, and online payment for email bookings. M10-T0a adds the 20th, `20261126130000_site_analytics`. Tables marked *planned* are specified here and added by milestone migrations ([migrations-and-seeding.md](./migrations-and-seeding.md)).
 
 ## Conventions
 
@@ -33,7 +33,7 @@ The implemented schema is `prisma/schema.prisma`. At M9 close there are 19 migra
 | Guest change requests | `ChangeRequest` | Implemented (M9-T11, Q-85) |
 | Reservation changes | `ReservationChange`; columns `Reservation.changeSeq`, `Reservation.pmsUpdatePendingSince` (the clearing user and time are in the S55 audit event) | Implemented (M8-T9, Q-83, Q-84) |
 | Transfer cars | `ServicePriceUnit.PER_VEHICLE`, `ServiceOffering.maxVehicles`, `ReservationService.vehicles` | Implemented (M8-T3b, Q-82): migrations `20261117120000_transfer_vehicle_unit` (enum value, on its own so the next migration can use it) and `20261117120100_transfer_vehicles` (columns, backfill of 3 cars per transfer offering and 1 car per stored transfer line, checks `ServiceOffering_vehicles_check`, `ServiceOffering_vehicle_unit_check`, `ReservationService_vehicles_check`, `ReservationService_vehicle_unit_check`) |
-| Website analytics | `SiteEvent`, `SiteDailyTotal`, `AnalyticsSalt` | Planned (M10-T0a, T0b; ADR 029, Q-86, Q-87) |
+| Website analytics | `SiteEvent`, `SiteDailyTotal`, `AnalyticsSalt` | Tables and P11 implemented (M10-T0a). Rollup and retention planned (M10-T0b). |
 | Guests | `Guest` (verified phone profiles, blocking, marketing consent), `PhoneVerification` | Implemented (M8 and M9). Verification and guest access support WhatsApp and email. |
 | Messaging settings | `WhatsAppSettings`, `WhatsAppTemplate` (Admin-managed, Q-67), `VerificationSettings` (the Admin email verification switch, Q-99; implemented M9-T12a) | Admin setup for WhatsApp is implemented (M8-T4). The Admin email switch and API are implemented (M9-T12a). |
 | Marketing | `Broadcast` | Planned (M13) |
@@ -354,6 +354,7 @@ model Reservation {
   pmsEnteredAt         DateTime?         @db.Timestamptz(3) // WEBSITE only (Q-40)
   pmsEnteredById       String?           @db.VarChar(32)
   privacyNoticeVersion String?           @db.VarChar(40)
+  analyticsSessionId  String?             @db.VarChar(32) // online payments only. P7 wiring planned in M10-T0b
   verificationChannel VerificationChannel? // WEBSITE only (CHECK): WHATSAPP or EMAIL; null on a website row reads as WHATSAPP (M9-T12a, ADR 031)
   verifiedEmail       String?             @db.VarChar(320) // EMAIL bookings only (CHECK): the lowercased email the code proved; contact edits never change it; the per email cap counts by it (M9-T12a)
   manageTokenHash      String?           @unique @db.VarChar(64)
@@ -656,39 +657,50 @@ model ChangeRequest {
   @@index([reservationId, createdAt])
 }
 
-model SiteEvent {                      // planned M10-T0a (ADR 029): no personal data; deleted after 90 days (Q-87)
-  id            BigInt   @id @default(autoincrement())
-  occurredAt    DateTime @db.Timestamptz(3)
-  branchId      String?  @db.VarChar(32)      // null for the chooser and pages outside a branch
-  name          String   @db.VarChar(30)      // fixed list: PAGE_VIEW, STEP_VIEW, SEARCH, QUOTE, CODE_REQUESTED, PHONE_VERIFIED, BOOKING_SUBMITTED, BOOKING_CONFIRMED, CHECKOUT_REFUSED
-  funnelStep    Int?                           // 1–8 (FR-ANL)
-  path          String?  @db.VarChar(200)     // route pattern or path without query string
-  roomId        String?  @db.VarChar(32)
-  sessionId     String   @db.VarChar(32)      // random, per tab session, from the beacon
-  visitorHash   String   @db.Char(32)         // HMAC(daily salt, IP + user agent); cannot link days
-  referrerHost  String?  @db.VarChar(100)
-  utmSource / utmMedium / utmCampaign  String? @db.VarChar(60)
-  device        String?  @db.VarChar(10)      // MOBILE | TABLET | DESKTOP
-  outcome       String?  @db.VarChar(40)      // e.g. INVENTORY_UNAVAILABLE, NO_AVAILABILITY; stay dates for unmet demand
+// Implemented M10-T0a. SQL requires a fixed bookingStep on STEP_VIEW only.
+// M10-T0b will populate daily totals and delete raw events older than 90 days.
+model SiteEvent {
+  id           BigInt    @id @default(autoincrement())
+  occurredAt   DateTime  @db.Timestamptz(3)
+  branchId     String?   @db.VarChar(32)
+  name         String    @db.VarChar(30)
+  funnelStep   Int?
+  bookingStep  String?   @db.VarChar(20)
+  path         String?   @db.VarChar(200)
+  roomId       String?   @db.VarChar(32)
+  sessionId    String?   @db.VarChar(32)
+  visitorHash  String?   @db.Char(32)
+  referrerHost String?   @db.VarChar(100)
+  utmSource    String?   @db.VarChar(60)
+  utmMedium    String?   @db.VarChar(60)
+  utmCampaign  String?   @db.VarChar(60)
+  device       String?   @db.VarChar(10)
+  outcome      String?   @db.VarChar(40)
+  stayCheckIn  DateTime? @db.Date
+  stayCheckOut DateTime? @db.Date
+  branch       Branch?   @relation(fields: [branchId], references: [id], onDelete: SetNull)
+  room         Room?     @relation(fields: [roomId], references: [id], onDelete: SetNull)
+
   @@index([occurredAt])
   @@index([branchId, occurredAt])
-  @@index([sessionId])
+  @@index([sessionId, name])
 }
 
-model SiteDailyTotal {                 // planned M10-T0b: kept indefinitely
-  date       DateTime @db.Date
-  branchId   String   @db.VarChar(32)         // '' for outside a branch
-  dimension  String   @db.VarChar(30)         // e.g. TOTAL, FUNNEL_STEP, DROP_OFF, EXIT_PAGE, LANDING_PAGE, SOURCE, DEVICE, LISTING, UNMET_DATE
-  key        String   @db.VarChar(200)
-  visitors   Int
-  sessions   Int
-  count      Int
+model SiteDailyTotal {
+  date      DateTime @db.Date
+  branchId  String   @db.VarChar(32)
+  dimension String   @db.VarChar(30)
+  key       String   @db.VarChar(200)
+  visitors  Int
+  sessions  Int
+  count     Int
+
   @@id([date, branchId, dimension, key])
 }
 
-model AnalyticsSalt {                  // planned M10-T0a: one row per day; deleted when it rotates (Q-86)
-  day   DateTime @id @db.Date
-  salt  Bytes
+model AnalyticsSalt {
+  day  DateTime @id @db.Date
+  salt Bytes
 }
 
 model Broadcast {                      // M13 (ADR 028)

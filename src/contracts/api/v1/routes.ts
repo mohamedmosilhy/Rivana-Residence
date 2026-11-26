@@ -1,3 +1,4 @@
+import { AnalyticsEventRequest } from "./analytics";
 import {
   ChangeRequestDto,
   StaffChangeRequestList,
@@ -131,6 +132,7 @@ export type ApiRoute = Readonly<{
   security: "public" | "staff" | "guest" | "webhook";
   request?: z.ZodType;
   requestOptional?: boolean;
+  acceptTextJson?: boolean;
   /** Query parameters, documented from the object's keys. */
   query?: z.ZodObject;
   /** Request headers the endpoint reads (for example `Idempotency-Key`). */
@@ -264,6 +266,27 @@ const decisionErrors = [
 ];
 
 export const API_ROUTES: readonly ApiRoute[] = [
+  {
+    method: "post",
+    path: "/api/v1/analytics/events",
+    operationId: "recordAnalyticsEvents",
+    summary: "Receive page and booking step views",
+    tag: "Analytics",
+    security: "public",
+    request: AnalyticsEventRequest,
+    acceptTextJson: true,
+    responses: {
+      204: { description: "Empty acknowledgement, including skipped events." },
+    },
+    errors: [
+      "MALFORMED_JSON",
+      "PAYLOAD_TOO_LARGE",
+      "UNSUPPORTED_MEDIA_TYPE",
+      "VALIDATION",
+      "RATE_LIMITED",
+    ],
+  },
+
   {
     method: "post",
     path: "/api/v1/reservations",

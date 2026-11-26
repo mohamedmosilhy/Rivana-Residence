@@ -11,6 +11,50 @@
     }
   ],
   "paths": {
+    "/api/v1/analytics/events": {
+      "post": {
+        "operationId": "recordAnalyticsEvents",
+        "summary": "Receive page and booking step views",
+        "tags": [
+          "Analytics"
+        ],
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AnalyticsEventRequest"
+              }
+            },
+            "text/plain": {
+              "schema": {
+                "type": "string",
+                "contentMediaType": "application/json",
+                "contentSchema": {
+                  "$ref": "#/components/schemas/AnalyticsEventRequest"
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "Empty acknowledgement, including skipped events."
+          },
+          "default": {
+            "description": "Problem details. Codes: INTERNAL, MALFORMED_JSON, PAYLOAD_TOO_LARGE, UNSUPPORTED_MEDIA_TYPE, VALIDATION, RATE_LIMITED.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/reservations": {
       "post": {
         "operationId": "createWebsiteReservation",
@@ -4548,6 +4592,139 @@
   },
   "components": {
     "schemas": {
+      "AnalyticsEventRequest": {
+        "type": "object",
+        "properties": {
+          "sessionId": {
+            "type": "string",
+            "pattern": "^[0-9a-fA-F]{32}$"
+          },
+          "events": {
+            "maxItems": 20,
+            "type": "array",
+            "items": {
+              "oneOf": [
+                {
+                  "type": "object",
+                  "properties": {
+                    "name": {
+                      "type": "string",
+                      "const": "PAGE_VIEW"
+                    },
+                    "path": {
+                      "type": "string",
+                      "maxLength": 200,
+                      "pattern": "^\\/"
+                    },
+                    "branchSlug": {
+                      "type": "string",
+                      "maxLength": 80,
+                      "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+                    },
+                    "roomSlug": {
+                      "type": "string",
+                      "maxLength": 120,
+                      "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+                    },
+                    "referrer": {
+                      "type": "string"
+                    },
+                    "utm": {
+                      "type": "object",
+                      "properties": {
+                        "source": {
+                          "type": "string"
+                        },
+                        "medium": {
+                          "type": "string"
+                        },
+                        "campaign": {
+                          "type": "string"
+                        }
+                      },
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "name",
+                    "path"
+                  ],
+                  "additionalProperties": false
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "name": {
+                      "type": "string",
+                      "const": "STEP_VIEW"
+                    },
+                    "step": {
+                      "type": "string",
+                      "enum": [
+                        "SEARCH",
+                        "DETAILS",
+                        "VERIFY",
+                        "EXTRAS",
+                        "PAYMENT",
+                        "REVIEW",
+                        "CONFIRMED",
+                        "PAYMENT_RETURN",
+                        "MANAGE",
+                        "FIND",
+                        "CHANGE"
+                      ]
+                    },
+                    "path": {
+                      "type": "string",
+                      "maxLength": 200,
+                      "pattern": "^\\/"
+                    },
+                    "branchSlug": {
+                      "type": "string",
+                      "maxLength": 80,
+                      "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+                    },
+                    "roomSlug": {
+                      "type": "string",
+                      "maxLength": 120,
+                      "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+                    },
+                    "referrer": {
+                      "type": "string"
+                    },
+                    "utm": {
+                      "type": "object",
+                      "properties": {
+                        "source": {
+                          "type": "string"
+                        },
+                        "medium": {
+                          "type": "string"
+                        },
+                        "campaign": {
+                          "type": "string"
+                        }
+                      },
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "name",
+                    "step",
+                    "path"
+                  ],
+                  "additionalProperties": false
+                }
+              ]
+            }
+          }
+        },
+        "required": [
+          "sessionId",
+          "events"
+        ],
+        "additionalProperties": false
+      },
       "PhoneVerificationRequest": {
         "type": "object",
         "properties": {

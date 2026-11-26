@@ -30,6 +30,8 @@ docs/                       this documentation
 
 M6's shared values and pure rules now exist: `src/domain/shared/{local-date,stay-range,stay-policy,occupancy,money}.ts`, the explicit branch date helper in `zoned-time.ts`, `src/domain/inventory/{availability-calculator,inventory-reduction,index}.ts`, and `src/domain/pricing/{nightly-price-resolver,index}.ts` (T1 and T2 accepted 2026-11-08). T4 added `src/application/{inventory,reservations}/`, `src/infrastructure/db/prisma/unit-of-work.ts`, the inventory lock and reader adapters, and `tests/integration/reservations/` (accepted 2026-11-09). Concrete repositories, composition, and API additions below remain planned. Current task evidence is in the [M6 report](../delivery/reports/m6-inventory-and-availability.md).
 
+M10-T0a added the analytics module: `src/domain/analytics/`, `src/application/analytics/`, `src/infrastructure/db/prisma/repositories/analytics/`, `src/composition/analytics.ts`, and `src/app/api/v1/analytics/events/` ([M10 report](../delivery/reports/m10-guest-booking-journey.md)).
+
 ```text
 src/
   app/

@@ -69,8 +69,15 @@ export const GUEST_CHANGE_RATE_LIMIT = {
   rule: { maxFailures: 10, windowMs: 3_600_000, lockMs: 3_600_000 },
 } as const;
 
+/** P11: 120 analytics batches per client per minute. */
+export const ANALYTICS_RATE_LIMIT = {
+  name: "analytics",
+  rule: { maxFailures: 120, windowMs: 60_000, lockMs: 60_000 },
+} as const;
+
 /** Every limiter namespace on the shared store; cleanup prunes each one. */
 export const PUBLIC_RATE_LIMITS = [
+  ANALYTICS_RATE_LIMIT,
   GUEST_READ_RATE_LIMIT,
   GUEST_REQUEST_RATE_LIMIT,
   GUEST_CHANGE_PREVIEW_RATE_LIMIT,

@@ -24,7 +24,8 @@ import {
  *   4. content    the old site's rooms, facilities, photos, and page text
  *   5. WhatsApp   required empty setup, existing configuration preserved;
  *                 the email verification switch (off unless an Admin set it)
- *   6. demo       only with --demo, never in production: fictional data
+ *   6. analytics  verify storage is ready; only recording creates traffic
+ *   7. demo       only with --demo, never in production: fictional data
  */
 export async function runSeed(
   client: PrismaClient,
@@ -108,6 +109,11 @@ export async function runSeed(
   log(
     "Verification: the email code switch is in place; an Admin's choice is preserved.",
   );
+
+  // The analytics tables start empty. Check the migration without
+  // creating traffic, daily totals, or a secret before collection starts.
+  await client.siteEvent.findFirst({ select: { id: true } });
+  log("Analytics: storage is ready. No traffic was seeded.");
 
   if (options.demo) {
     const demo = await seedDemo(client, { staffId: user.id });

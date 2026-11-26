@@ -164,6 +164,7 @@ A backup holds a custom-format database dump (no owners or grants), `images/` as
 - migrations and seed complete;
 - security headers/CSP/TLS verified;
 - accessibility, responsive, SEO, performance, and critical E2E gates pass;
-- Search Console/analytics configured if approved;
+- Keep `ANALYTICS_ENABLED=false` in production until the privacy notice is published and the M10-T0b retention job is running. P11 accepts valid batches with collection off and stores no events.
+- Configure Search Console if approved;
 - support ownership, incident contact, and content training documented;
 - booking status clearly disabled until provider integration.

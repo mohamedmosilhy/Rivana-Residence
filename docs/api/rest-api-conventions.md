@@ -5,7 +5,7 @@ Status: **Implemented in M4** (2026-11-06): the shared HTTP layer (`src/app/api/
 ## Shape
 
 - Base path `/api/v1`. Public resources sit at the top level; staff resources under `/api/v1/staff`. There are no role-named prefixes.
-- JSON only (`application/json; charset=utf-8`). Requests with a body must send `Content-Type: application/json`, otherwise `415`. Bodies are capped at 32 KB (`413`).
+- JSON routes accept `Content-Type: application/json`. P11 also accepts JSON sent as `text/plain` by a browser beacon. Other unsupported media types give `415`. Bodies are capped at 32 KB (`413`).
 - Field names are `camelCase`. Dates are `YYYY-MM-DD`. Instants are ISO 8601 UTC with `Z`. Money is `{ "amountMinor": 7000, "currency": "USD" } ($70.00)`.
 - Ids are opaque strings. Public resources use slugs (`branchSlug`, `roomSlug`) and references; staff resources use ids.
 - Responses are DTOs from `src/contracts/api/v1`, never Prisma or domain objects. Unknown request fields are rejected (`.strict()`), which prevents mass assignment.

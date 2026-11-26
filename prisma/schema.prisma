@@ -355,6 +355,7 @@ model Room {
   baseRate         RoomBaseRate?
   ratePeriods      RatePeriod[]
   reservationRooms ReservationRoom[]
+  siteEvents       SiteEvent[]
 
   // Composite target for same-branch foreign keys from inventory and
   // reservations (ADR 017).
@@ -644,6 +645,7 @@ model Branch {
   couponBranches   CouponBranch[]
   reservations     Reservation[]
   syncCheckpoints  BranchSyncCheckpoint[]
+  siteEvents       SiteEvent[]
 
   @@index([status, sortOrder])
 }
@@ -913,6 +915,7 @@ model Reservation {
   pmsEnteredById        String?                  @db.VarChar(32)
   changeSeq             Int                      @default(0) // last ReservationChange.seq (M8-T9)
   pmsUpdatePendingSince DateTime?                @db.Timestamptz(3) // set by a change after hotel-system entry (Q-84)
+  analyticsSessionId    String?                  @db.VarChar(32) // online payments only
   privacyNoticeVersion  String?                  @db.VarChar(40)
   verificationChannel   VerificationChannel? // WEBSITE: how the contact was verified; null reads as WHATSAPP (ADR 031)
   verifiedEmail         String?                  @db.VarChar(320) // the email an EMAIL code proved; never changed by contact edits (CHECK)
@@ -1240,4 +1243,49 @@ model BranchSyncCheckpoint {
   recordedBy   User               @relation(fields: [recordedById], references: [id], onDelete: Restrict, onUpdate: Restrict)
 
   @@index([branchId, recordedAt])
+}
+
+// Website analytics, ADR 029. Value checks live in the SQL migration.
+model SiteEvent {
+  id           BigInt    @id @default(autoincrement())
+  occurredAt   DateTime  @db.Timestamptz(3)
+  branchId     String?   @db.VarChar(32)
+  name         String    @db.VarChar(30)
+  funnelStep   Int?
+  bookingStep  String?   @db.VarChar(20)
+  path         String?   @db.VarChar(200)
+  roomId       String?   @db.VarChar(32)
+  sessionId    String?   @db.VarChar(32)
+  visitorHash  String?   @db.Char(32)
+  referrerHost String?   @db.VarChar(100)
+  utmSource    String?   @db.VarChar(60)
+  utmMedium    String?   @db.VarChar(60)
+  utmCampaign  String?   @db.VarChar(60)
+  device       String?   @db.VarChar(10)
+  outcome      String?   @db.VarChar(40)
+  stayCheckIn  DateTime? @db.Date
+  stayCheckOut DateTime? @db.Date
+  branch       Branch?   @relation(fields: [branchId], references: [id], onDelete: SetNull)
+  room         Room?     @relation(fields: [roomId], references: [id], onDelete: SetNull)
+
+  @@index([occurredAt])
+  @@index([branchId, occurredAt])
+  @@index([sessionId, name])
+}
+
+model SiteDailyTotal {
+  date      DateTime @db.Date
+  branchId  String   @db.VarChar(32)
+  dimension String   @db.VarChar(30)
+  key       String   @db.VarChar(200)
+  visitors  Int
+  sessions  Int
+  count     Int
+
+  @@id([date, branchId, dimension, key])
+}
+
+model AnalyticsSalt {
+  day  DateTime @id @db.Date
+  salt Bytes
 }

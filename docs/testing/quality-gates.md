@@ -43,7 +43,11 @@ The owner selected Node **26.13.0 LTS** for the Mac, CI, and hosting. On macOS w
 
 The required gates passed. `npm run check` passed with 2,547 unit and contract tests in 115 files, plus format, lint, type check, and the production build. PostgreSQL passed 1,077 tests in 67 files. Chromium passed 228 with 35 intentional skips. WebKit passed 100 with 29 intentional skips. Fresh and populated migrations showed no Prisma drift. Lighthouse passed for four URLs on each profile with three mobile paint warnings. The optional Firefox suite could not start on this Mac. The live walkthrough and focused tests verified all 16 criteria. [Exact commands and counts](../delivery/reports/m9-payments-and-cancellations.md#commands-and-results) · [Acceptance evidence](../delivery/reports/m9-payments-and-cancellations.md#acceptance-criteria-and-evidence)
 
-## Latest accepted task results (2026-11-26, M9-T12c)
+## Latest accepted task results (2026-11-26, M10-T0a)
+
+The final `npm run check` passed formatting, lint (one existing warning in `payment-callback.test.ts`), type checking, 2,565 unit and contract tests in 116 files, and the production build. Chromium passed 230 tests with 35 intentional skips. Before the file move, all 1,086 PostgreSQL tests passed in 69 files (339, 302, 445). After the move the shards passed 338, 302 and 445 tests. One existing M9 email migration test timed out in the first shard and passed on its own. All nine focused analytics integration and migration tests passed on the final layout. [Task log](../delivery/reports/m10-guest-booking-journey.md#task-log)
+
+## Previous accepted task results (2026-11-26, M9-T12c)
 
 `npm run check` passed format, lint (one existing warning in `payment-callback.test.ts`), typecheck, 2,547 unit and contract tests in 115 files, and the production build. The three PostgreSQL shards passed 1,077 tests in 67 files (339, 306, and 432). Nine booking race cases and 14 inventory concurrency cases passed 20 rounds each in isolated runs. Chromium passed 228 tests with 35 intentional skips. A PostgreSQL route test confirmed that switching off email stops new codes and permits an already issued code to complete an online hold at an eligible branch. Prisma reported no drift on fresh and populated upgrades. Nine server markers were absent from 37 client chunks. [Task log](../delivery/reports/m9-payments-and-cancellations.md#task-log) · [Independent review](../reviews/2026-11-26-m9-t12c.md)
 

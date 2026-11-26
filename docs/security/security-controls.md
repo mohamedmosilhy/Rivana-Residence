@@ -25,6 +25,8 @@ P5 uses one namespaced HMAC key per trusted client across branches, with a share
 
 The public limiter namespaces (`availability`, `quote`, `quote-coupon`) are isolated from staff account and client keys and from each other. Quote requests take `quote` (60 per minute); requests that send a coupon code also take `quote-coupon` (20 per 10 minutes) to slow code guessing, and coupon refusals share one message so only `context.reason` differs. The limiter keys hold a hashed client identity only, never a phone or a code. Hourly `npm run throttles -- cleanup-public` removes at most 1,000 expired buckets per namespace, skips busy rows, and preserves active windows and locks. See [deployment](../operations/deployment.md#public-throttle-cleanup-m6-t9) for invocation and trusted-proxy rehearsal. P5 endpoint wiring is implemented in M6-T10. It resolves the active branch from the URL on the server, performs uncached reads, and returns an explicit public field allowlist.
 
+P11 (M10-T0a, implemented) takes its own `analytics` namespace: 120 batches per client per minute, then `429` with `Retry-After`. It needs no session or CSRF token because a browser beacon cannot send one. Only same origin traffic is recorded, and bots, prefetches, Global Privacy Control and Do Not Track are dropped. Hourly cleanup covers this namespace too. [ADR 029](../adr/029-first-party-site-analytics.md)
+
 ## Authorization
 
 - Roles: `EDITOR` and `ADMIN` (implemented). `RECEPTIONIST` and `MANAGER`, with branch-scoped authorization, are planned (ADR 018). Threats and controls for branch-scoped data are in [threat-model.md](./threat-model.md).

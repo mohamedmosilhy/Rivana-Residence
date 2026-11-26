@@ -15,6 +15,8 @@ export type BodyResult<T> = Readonly<{ ok: true; value: T }> | BodyFailure;
 
 const JSON_TYPE = /^application\/json\s*(;.*)?$/i;
 
+const TEXT_TYPE = /^text\/plain\s*(;.*)?$/i;
+
 /**
  * Reads the raw body, refusing a declared or actual size over `maxBytes`.
  * The stream is counted, so a missing or false Content-Length cannot get a
@@ -58,9 +60,13 @@ export async function parseJson(
   options: Readonly<{
     maxBytes?: number;
     allowEmpty?: boolean | undefined;
+    acceptTextJson?: boolean | undefined;
   }> = {},
 ): Promise<BodyResult<unknown>> {
-  const isJson = JSON_TYPE.test(request.headers.get("content-type") ?? "");
+  const contentType = request.headers.get("content-type") ?? "";
+  const isJson =
+    JSON_TYPE.test(contentType) ||
+    (options.acceptTextJson && TEXT_TYPE.test(contentType));
   if (!isJson && !options.allowEmpty) {
     return { ok: false, code: "UNSUPPORTED_MEDIA_TYPE" };
   }
@@ -86,10 +92,12 @@ export async function parseJson(
  * itself. Messages describe the rule and never echo the submitted value.
  */
 export function fieldErrorsFrom(issues: readonly z.core.$ZodIssue[]) {
-  const fieldErrors: Record<string, string[]> = {};
+  const fieldErrors = new Map<string, string[]>();
   const add = (path: readonly PropertyKey[], message: string) => {
     const key = path.length > 0 ? path.map(String).join(".") : "_root";
-    (fieldErrors[key] ??= []).push(message);
+    const messages = fieldErrors.get(key);
+    if (messages) messages.push(message);
+    else fieldErrors.set(key, [message]);
   };
   for (const issue of issues) {
     if (issue.code === "unrecognized_keys") {
@@ -98,7 +106,7 @@ export function fieldErrorsFrom(issues: readonly z.core.$ZodIssue[]) {
       add(issue.path, issue.message);
     }
   }
-  return fieldErrors;
+  return Object.fromEntries(fieldErrors);
 }
 
 /** `validate(schema, value)`: failures become 422 VALIDATION. */

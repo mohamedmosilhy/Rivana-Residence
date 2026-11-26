@@ -34,6 +34,10 @@ const serverEnvSchema = z
       .enum(["true", "false"])
       .default("false")
       .transform((value) => value === "true"),
+    ANALYTICS_ENABLED: z
+      .enum(["true", "false"])
+      .default("false")
+      .transform((value) => value === "true"),
     // Contact enquiry delivery. "none" stores enquiries for the admin inbox
     // only; "outbox" writes each message to a directory (development and
     // tests); "smtp" sends email.

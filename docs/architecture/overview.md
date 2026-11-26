@@ -163,7 +163,7 @@ All Book Now controls (header, listing cards, listing detail, mobile bar) use on
 
 - **Today (implemented):** `DisabledBookingProvider` returns "not available". Each control is a real `<button>` with `aria-disabled`, focusable, with an accessible explanation of how to book by phone or contact. There is no fake date picker, price, calendar, or success state.
 - **Planned (M10):** the provider gains an internal mode. For a listing whose branch is active, has online booking enabled, and is bookable (IN-4), Book Now opens `/{branchSlug}/book` with the listing preselected. Otherwise the disabled behavior stays, so switching a branch's online booking off needs no deploy.
-- Analytics events, if analytics is approved: `booking_cta_view`, `booking_cta_click`, never with guest-entered data.
+- Analytics ([ADR 029](../adr/029-first-party-site-analytics.md)): the collector accepts only page views and booking step views, never guest-entered data. It has no separate Book Now click event. The browser beacon that sends them is planned in M10-T10.
 
 ## Caching and publication
 

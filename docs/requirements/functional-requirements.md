@@ -218,13 +218,13 @@ Requirements:
 - **FR-RPT-3** Statistics are shown on screen only. There is no CSV export (Q-14).
 - **FR-RPT-4** Website traffic and the booking funnel are reported from FR-ANL (M12-T4b).
 
-## FR-ANL Website analytics — Planned (collection M10-T0a, T0b, T10; report M12-T4b)
+## FR-ANL Website analytics — P11 and storage implemented (M10-T0a). Server events and retention (T0b), browser beacon (T10) and reporting (M12-T4b) are planned.
 
 First-party and cookieless (Q-86, ADR 029). Definitions, per branch and date range:
 
 - **Visitors**: distinct daily visitor hashes (a visitor on two days counts twice; the hash cannot link days).
 - **Sessions**: a visitor's events with gaps under 30 minutes.
-- **Funnel steps**, each counted once per session: (1) visited the site, (2) viewed a listing, (3) searched availability (P5), (4) built a quote (P6), (5) requested a verification code (P9), (6) verified the phone (P10), (7) submitted a booking (P7), (8) booking confirmed (pay at hotel at once; Paymob on verified success).
+- **Funnel steps**, each counted once per session: (1) visited the site, (2) viewed a listing, (3) searched availability (a browser search step view or P5 with a session id), (4) built a quote (P6), (5) requested a verification code (P9), (6) verified the phone (P10), (7) submitted a booking (P7), (8) booking confirmed (pay at hotel at once; online after verified payment success).
 - **Conversion**: sessions reaching step 8 ÷ sessions; **booking-start rate**: sessions reaching step 3 ÷ sessions.
 - **Drop-off**: for each step, the sessions whose furthest step it was.
 - **Exit page**: the last page of a session that did not reach step 8.
@@ -236,8 +236,8 @@ First-party and cookieless (Q-86, ADR 029). Definitions, per branch and date ran
 
 Requirements:
 
-- **FR-ANL-1** Public pages record page views through a small first-party beacon, and the server records the funnel steps from the API itself. No cookie, no third-party script, no personal data in an event (no name, phone, email, reference, token, or full IP) (Q-86).
-- **FR-ANL-2** The visitor hash uses a salt that rotates daily and is then deleted; the IP is used only to compute it and is never stored. Global Privacy Control and Do Not Track stop recording; known bots are dropped (Q-86).
+- **FR-ANL-1** Public pages record page views through a small first-party beacon, and the server records booking outcomes from the API. A search without a session id only measures unmet demand. No cookie, no third-party script, no personal data in an event (no name, phone, email, reference, token, or full IP) (Q-86).
+- **FR-ANL-2** The visitor hash uses a salt that rotates daily and is then deleted; the IP is used only to compute it and is never stored. Events without a trusted client address or browser request have no visitor hash. Global Privacy Control and Do Not Track stop recording; known bots are dropped (Q-86). Only approved referrer and campaign labels are stored.
 - **FR-ANL-3** The collection endpoint is rate-limited, accepts only a fixed list of event names and fields, and never affects the page or the booking when it fails.
 - **FR-ANL-4** Raw events are deleted after 90 days; daily totals are kept indefinitely (Q-87).
 - **FR-ANL-5** Managers see their branches; Admins see all, including pages outside a branch. On screen only, with every figure's definition (Q-14, Q-88, FR-RPT-2).

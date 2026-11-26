@@ -109,6 +109,12 @@ describe("the one seed (runSeed)", () => {
   it("builds a complete site on an empty database", async () => {
     const result = await seed();
     expect(result.contentSeeded).toBe(true);
+    expect(lines).toContain(
+      "Analytics: storage is ready. No traffic was seeded.",
+    );
+    expect(await client.siteEvent.count()).toBe(0);
+    expect(await client.siteDailyTotal.count()).toBe(0);
+    expect(await client.analyticsSalt.count()).toBe(0);
 
     const admin = await client.user.findUniqueOrThrow({
       where: { email: SEED_ADMIN.email },
@@ -157,6 +163,7 @@ describe("the one seed (runSeed)", () => {
       "Inventory",
       "WhatsApp",
       "Verification",
+      "Analytics",
     ]);
     await rm(mediaRoot, { recursive: true, force: true });
   }, 120_000);

@@ -1,3 +1,4 @@
+import { AnalyticsEventRequest } from "./analytics";
 import { ChangeRequestDto, StaffChangeRequestList } from "./change-requests";
 import {
   PhoneVerificationRequest,
@@ -112,6 +113,7 @@ import { API_ROUTES, type ApiRoute } from "./routes";
 
 /** Every named schema, in the order it appears under components. */
 const COMPONENTS: Readonly<Record<string, z.ZodType>> = {
+  AnalyticsEventRequest,
   PhoneVerificationRequest,
   PhoneVerificationConfirmation,
   PhoneVerificationRequested,
@@ -328,7 +330,20 @@ function operation(route: ApiRoute) {
       ? {
           requestBody: {
             required: !route.requestOptional,
-            content: { "application/json": { schema: refFor(route.request) } },
+            content: {
+              "application/json": { schema: refFor(route.request) },
+              ...(route.acceptTextJson
+                ? {
+                    "text/plain": {
+                      schema: {
+                        type: "string",
+                        contentMediaType: "application/json",
+                        contentSchema: refFor(route.request),
+                      },
+                    },
+                  }
+                : {}),
+            },
           },
         }
       : {}),

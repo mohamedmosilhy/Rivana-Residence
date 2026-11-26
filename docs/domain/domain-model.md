@@ -28,7 +28,7 @@ flowchart LR
   Payments["Payments: The payment gateway holds, callbacks, refunds (planned)"]
   Marketing["Marketing: consent, broadcasts, feedback (planned)"]
   Reporting["Reporting (planned, read-only)"]
-  Analytics["Website analytics: page views, funnel steps (planned, ADR 029)"]
+  Analytics["Website analytics: page views, funnel rules (M10-T0a, ADR 029)"]
   Audit["Audit log (planned)"]
   Guests["Guests: verified phone profiles, blocking (planned)"]
   Notify["Notifications: email + WhatsApp (planned)"]
@@ -172,9 +172,9 @@ Better Auth owns user, account, session, and verification records. Rivana adds a
 - `CancellationRequest` (reservation, reason, status `OPEN|APPROVED|REJECTED|REFUND_PENDING|REFUND_FAILED|COMPLETED|CLOSED`, staff decision, closure reason, and the paid staff cancellation reason and notification choice). Rules CX-1…7.
 - `ChangeRequest` (M9-T11, Q-85) stores the reservation and version, the requested change, the captured, old and previewed totals, and the status `OPEN|APPROVED|REJECTED|CLOSED`. It also records the decision, closure reason, and last approval conflict. The reservation lock enforces one open request across changes and cancellations. Rules GC-4 and GC-5.
 
-### Website analytics (planned, ADR 029)
+### Website analytics (collection foundation implemented in M10-T0a, ADR 029)
 
-- `SiteEvent` (occurred at, branch?, event name from a fixed list, path, listing?, funnel step?, session id, visitor hash for the day, referrer domain, UTM source/medium/campaign, device class, outcome code). No personal data; deleted after 90 days (Q-87).
+- `SiteEvent` (occurred at, branch?, event name from a fixed list, path, listing?, booking step name?, funnel step?, session id?, visitor hash for the day?, referrer domain, UTM source/medium/campaign, device class, outcome code). P11 stores public route patterns and fixed traffic labels. Raw event deletion after 90 days is planned in M10-T0b (Q-87).
 - `SiteDailyTotal` (date, branch?, dimension, key, visitors, sessions, count), kept indefinitely.
 - `FunnelDefinition` (pure): the eight ordered steps of FR-ANL, furthest step per session, drop-off and exit page.
 
@@ -314,6 +314,9 @@ Identity (implemented)
   CredentialAuthenticator, StaffDirectory, LoginThrottleStore, ThrottleKeyDeriver
 Shared (implemented)
   Clock, IdGenerator, Hasher
+Website analytics (collection implemented, M10-T0a)
+  SiteEventStore             branchIdFor(slug), roomIdFor(branchId, slug), record(events)
+  AnalyticsSaltStore         current(day, makeSalt): one salt per UTC day, older salts deleted
 Operations (planned)
   ReservationUnitOfWork      transaction(work) → binds the repositories below to one DB transaction
     InventoryLock            lockRoomTypes(branchId, roomTypeIds)          (ADR 016)

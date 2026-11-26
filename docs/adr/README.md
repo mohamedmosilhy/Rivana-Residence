@@ -32,7 +32,7 @@ ADRs record the decisions that materially shape Rivana, in one numbered sequence
 | [026](./026-branch-websites-and-accommodation.md) | Branch-owned websites at `/{branchSlug}/…`; rooms and apartments in one catalog; per-branch maps | Accepted 2026-11-06 (extends 006, 017) |
 | [027](./027-booking-price-composition.md) | Price composition: date prices, services, coupons, VAT; promotion popup retired | Accepted 2026-11-06 (amends 020); `PER_VEHICLE` amendment accepted 2026-11-17 (M8-T3b) |
 | [028](./028-whatsapp-guest-messaging.md) | WhatsApp confirmations, feedback requests, consented marketing broadcasts; Admin-managed number, templates, and test message | Accepted 2026-11-06 (extends 019) |
-| [029](./029-first-party-site-analytics.md) | First-party, cookieless website analytics and booking funnel inside the Next.js app | Proposed 2026-11-17 |
+| [029](./029-first-party-site-analytics.md) | First-party, cookieless website analytics and booking funnel inside the Next.js app | Accepted 2026-11-26 |
 | [030](./030-provider-neutral-integrations.md) | Provider neutral payment, WhatsApp, and email: ports, fake reference adapters, contract tests, real adapters plugged in at launch | Accepted 2026-11-22 (supersedes parts of 025; amends 028) |
 | [031](./031-email-verification-fallback.md) | Verification by email as a fallback to WhatsApp; the phone stays a claimed contact | Accepted 2026-11-22 (extends 019, 028) |
 

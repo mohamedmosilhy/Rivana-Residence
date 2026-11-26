@@ -54,6 +54,8 @@ type RouteOptions<Body, Query> = Readonly<{
   route: string;
   body?: z.ZodType<Body>;
   bodyOptional?: boolean;
+  acceptTextJson?: boolean;
+  serverRequestId?: boolean;
   query?: z.ZodType<Query>;
   maxBytes?: number;
 }>;
@@ -136,7 +138,7 @@ export function createRoutes(deps: HttpDependencies) {
   async function run(
     request: Request,
     context: NextContext | undefined,
-    route: string,
+    options: Readonly<{ route: string; serverRequestId?: boolean }>,
     steps: (state: {
       requestId: string;
       params: Params;
@@ -145,7 +147,10 @@ export function createRoutes(deps: HttpDependencies) {
     }) => Promise<HandlerResult>,
   ): Promise<Response> {
     const started = now();
-    const requestId = requestIdFor(request);
+    const { route, serverRequestId } = options;
+    const requestId = serverRequestId
+      ? crypto.randomUUID()
+      : requestIdFor(request);
     const state = {
       requestId,
       params: {} as Params,
@@ -203,6 +208,7 @@ export function createRoutes(deps: HttpDependencies) {
               await parseJson(request, {
                 maxBytes: options.maxBytes ?? DEFAULT_MAX_BODY_BYTES,
                 allowEmpty: options.bodyOptional,
+                acceptTextJson: options.acceptTextJson,
               }),
               requestId,
             ),
@@ -240,7 +246,7 @@ export function createRoutes(deps: HttpDependencies) {
     handler: (context: BaseContext<Body, Query>) => Promise<HandlerResult>,
   ): RouteHandler {
     return (request: Request, context?: NextContext) =>
-      run(request, context, options.route, async (state) => {
+      run(request, context, options, async (state) => {
         if (options.rateLimit) {
           const outcome = await deps.rateLimit(
             options.rateLimit.name,
@@ -288,7 +294,7 @@ export function createRoutes(deps: HttpDependencies) {
     ) => Promise<HandlerResult>,
   ): RouteHandler {
     return (request: Request, context?: NextContext) =>
-      run(request, context, options.route, async (state) => {
+      run(request, context, options, async (state) => {
         if (UNSAFE_METHODS.has(request.method) && !deps.isSameOrigin(request)) {
           refuse("CROSS_SITE_REQUEST", state.requestId);
         }
@@ -331,7 +337,7 @@ export function createRoutes(deps: HttpDependencies) {
     ) => Promise<HandlerResult>,
   ): RouteHandler {
     return (request: Request, context?: NextContext) =>
-      run(request, context, options.route, async (state) => {
+      run(request, context, options, async (state) => {
         const rawBody = fromBody(
           await readRawBody(
             request,

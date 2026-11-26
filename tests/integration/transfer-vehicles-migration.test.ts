@@ -170,6 +170,8 @@ it("upgrades populated M8 storage, preserves monetary history, enforces car cons
         // and only an EMAIL booking stores the email it proved.
         verificationChannel: null,
         verifiedEmail: null,
+        // M10-T0a adds the column without linking existing reservations.
+        analyticsSessionId: null,
       })),
     );
     expect((await db.query('SELECT * FROM "ReservationService"')).rows).toEqual(
