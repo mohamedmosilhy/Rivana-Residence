@@ -227,6 +227,11 @@ export type ReservationInsert = Readonly<{
   idempotencyKeyHash: string | null;
   requestFingerprint: string | null;
   createdById: string | null;
+  /**
+   * The anonymous website visit of an ONLINE booking, kept only until its
+   * payment resolves (ADR 029). Never read back into a stored reservation.
+   */
+  analyticsSessionId?: string | null;
   at: Date;
   lines: readonly Omit<StoredReservationLine, "stay" | "consumesInventory">[];
 }>;
@@ -240,6 +245,7 @@ export type StoredReservation = Readonly<
     | "externalChannel"
     | "verificationChannel"
     | "verifiedEmail"
+    | "analyticsSessionId"
   > & {
     externalChannel: string | null;
     /** Null on staff and external bookings, and on website bookings written before ADR 031 (read as WHATSAPP). */
@@ -363,14 +369,18 @@ export interface ReservationRepository {
     roomTypeIds: readonly string[],
     at: Date,
   ): Promise<readonly string[]>;
-  /** Transaction only, after locking and checking the awaiting reservation. */
+  /**
+   * Transaction only, after locking and checking the awaiting reservation.
+   * Clears the analytics session id.
+   */
   markPaymentFailed(branchId: string, id: string, at: Date): Promise<void>;
   /**
    * Transaction only, after `lockById`. Sets `CONFIRMED` and `paymentStatus
    * PAID`, clears the hold, and makes every unit consume inventory again (a
-   * late success has re-checked capacity under the listing locks).
+   * late success has re-checked capacity under the listing locks). Clears the
+   * analytics session id and returns the one it held, or null.
    */
-  confirmPaid(branchId: string, id: string, at: Date): Promise<void>;
+  confirmPaid(branchId: string, id: string, at: Date): Promise<string | null>;
   /** Transaction only, after `lockById`. Mirrors the payment onto the reservation row. */
   setPaymentStatus(
     branchId: string,

@@ -1,6 +1,6 @@
 # M10 — Guest booking journey
 
-Status: **In progress (1/13 tasks accepted).** [Task log](../reports/m10-guest-booking-journey.md#task-log). Opened 2026-11-26: spec [0007](../../specs/0007-m10-guest-booking-journey.md) and the task breakdown below were approved by the owner on 2026-11-26, after an independent cross check with every recommended fix applied. Scope extended by the owner on 2026-11-17 with first-party website analytics (M10-T0a, T0b, T10; ADR 029, Q-86, Q-87), the guest change UI (M10-T8b; Q-83…Q-85), and the transfer car selector (M10-T5; Q-82). Branch: `m10-guest-booking-journey`. Follow the [milestone loop](./README.md#the-loop-every-milestone-follows).
+Status: **In progress (2/13 tasks accepted).** [Task log](../reports/m10-guest-booking-journey.md#task-log). Opened 2026-11-26: spec [0007](../../specs/0007-m10-guest-booking-journey.md) and the task breakdown below were approved by the owner on 2026-11-26, after an independent cross check with every recommended fix applied. Scope extended by the owner on 2026-11-17 with first-party website analytics (M10-T0a, T0b, T10; ADR 029, Q-86, Q-87), the guest change UI (M10-T8b; Q-83…Q-85), and the transfer car selector (M10-T5; Q-82). Branch: `m10-guest-booking-journey`. Follow the [milestone loop](./README.md#the-loop-every-milestone-follows).
 
 ## Objective
 
@@ -46,7 +46,7 @@ Planned, reviewed, and accepted one task at a time ([agent-workflow.md](../../en
 | Task | Title | Risk | Depends on | Covers (criteria, tests) | Status |
 | --- | --- | --- | --- | --- | --- |
 | M10-T0a | Analytics foundation (ADR 029 accepted at planning, funnel wording amended): migration `site_analytics` (`SiteEvent` with nullable `sessionId` and `visitorHash` and stay date columns, `SiteDailyTotal`, `AnalyticsSalt`, `Reservation.analyticsSessionId`), pure event and funnel mapping rules, `RecordSiteEvent`, salt rotation, API P11 with strict parsing and the same origin rule, `analytics` limiter bucket, bot, prefetch, and GPC/DNT filtering | Critical | M9 | AC 11, 13; T-ANL-1…6 | Accepted 2026-11-26 |
-| M10-T0b | Server-side funnel steps through `RecordFunnelStep` after the use case and outside its transaction; optional `Rivana-Analytics-Session` header on P5, P6, P9, P10; `analyticsSessionId` on P7 stored for online bookings and cleared when the payment resolves; step 8 from the callback and reconcile; `npm run analytics -- rollup` (daily totals, 90-day deletion) on the hourly cron | Critical | T0a | AC 11; T-ANL-7…10 | Not started |
+| M10-T0b | Server-side funnel steps through `RecordFunnelStep` after the use case and outside its transaction; optional `Rivana-Analytics-Session` header on P5, P6, P9, P10; `analyticsSessionId` on P7 stored for online bookings and cleared when the payment resolves; step 8 from the callback and reconcile; `npm run analytics -- rollup` (daily totals, 90-day deletion) on the hourly cron | Critical | T0a | AC 11; T-ANL-7…10 | Accepted 2026-11-26 |
 | M10-T1 | Typed API client on the contracts (`src/presentation/api-client/`), problem mapping, headers, analytics session helper, shared money formatter; additive `branch.timeZone` on the guest reservation response (G1, G4) | Medium | T0b | AC 5, 8, 13; client unit tests, contract tests | Not started |
 | M10-T2 | Search and results page, server `SEARCH` event for unmet demand, booking off explanation in place of the form | Medium | T1 | AC 1, 9, 10 | Not started |
 | M10-T3 | Selection basket with guests per unit and server-computed subtotal | Medium | T2 | AC 2 | Not started |
@@ -73,7 +73,7 @@ Planned, reviewed, and accepted one task at a time ([agent-workflow.md](../../en
 10. **Manage** `/reservations/manage#t=…` and **My reservations** `/reservations/find`: status, details, payment status, and "Request cancellation" (with reason) when before the deadline; otherwise the branch's contact details. Shows open, approved, rejected, and refund states.
 11. **Book Now**: `BookingProvider` internal mode per branch: when the branch has online booking on and the listing is bookable, Book Now goes to `/{branch}/book` prefilled with the listing; otherwise the honest disabled control.
 12. Typed API client in `src/presentation/api-client/` built on the contracts.
-13. **Analytics backend (M10-T0a, T0b; ADR 029).** The `analytics` module and API P11 as the ADR describes; the funnel steps recorded by the server from the API use cases through a port called after their own work, so a tracking failure never changes a booking; the rollup and retention job on the hourly cron.
+13. **Analytics backend (M10-T0a, T0b; ADR 029).** The `analytics` module and API P11 as the ADR describes; the funnel steps recorded by the server from the API use cases through a use case that composition calls after theirs, so a tracking failure never changes a booking; the rollup and retention job on the hourly cron.
 14. **Change booking (M10-T8b).** On the manage page and in My reservations, "Change booking" opens the same steps as booking (dates, units, guests, extras with cars, contact details) prefilled with the reservation; the preview (G5) shows what changed and the old and new totals with VAT; confirm calls G6 with `If-Match` and the previewed total. Pay at hotel → "Your booking was changed"; paid with a new total → "Sent to the hotel for approval". Phone, branch, payment method, and coupon are shown read-only. After the deadline or with an open request, the branch's contact details replace the button.
 15. **Beacon and step events (M10-T10).** A client component of about 1 KB in the public layouts sends `PAGE_VIEW` on navigation and `STEP_VIEW` on each booking step through `sendBeacon`; it does nothing under GPC or DNT and never blocks rendering.
 
@@ -110,6 +110,7 @@ Screenshots of every step (desktop and mobile), including errors, conflict, coup
 
 - Legal and tax wording not ready: online booking stays off until approved text replaces the placeholders.
 - Payment return-page timing: polling with a clear waiting state.
+- The Playwright server runs in production mode, which refuses fake providers, so a booking cannot be completed there. Settle how E2E-G journeys run when planning M10-T4 (found at M10-T0b).
 
 ## Handoff
 

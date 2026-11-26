@@ -93,6 +93,23 @@ export type WebsiteReservationResult = Readonly<{
   checkoutUrl?: string;
 }>;
 
+/** What a booking request just saved, told to the caller after the commit. */
+export type SavedWebsiteBooking = Readonly<{
+  branchId: string;
+  status: ReservationStatus;
+  roomTypeIds: readonly string[];
+}>;
+
+export type WebsiteBookingOptions = Readonly<{
+  /** Stored with an ONLINE booking only. Not part of the replay fingerprint. */
+  analyticsSessionId?: string | null;
+  /**
+   * Called once when this request saved a new booking, before checkout opens,
+   * so it is told even when checkout then fails. Never on a replay.
+   */
+  onSaved?: (booking: SavedWebsiteBooking) => void;
+}>;
+
 type Dependencies = Readonly<{
   unitOfWork: ReservationUnitOfWork<CreateWebsiteReservationContext>;
   branches: Pick<BranchRepository, "findActiveRowBySlug">;
@@ -164,6 +181,7 @@ export class CreateWebsiteReservation {
   async execute(
     input: unknown,
     idempotencyKey: unknown,
+    options: WebsiteBookingOptions = {},
   ): Promise<Result<WebsiteReservationResult>> {
     const parsed = parseWebsiteBooking(input, idempotencyKey);
     if (!parsed.ok) return parsed;
@@ -269,7 +287,14 @@ export class CreateWebsiteReservation {
           ? success(state)
           : priceChanged(state.quote),
       mutate: (context, state) =>
-        this.insert(context, booking, state, branch.id, byId),
+        this.insert(
+          context,
+          booking,
+          state,
+          branch.id,
+          byId,
+          options.analyticsSessionId ?? null,
+        ),
       audit: async (context, state, value) => {
         await context.audit.append(
           auditEvent({
@@ -301,7 +326,22 @@ export class CreateWebsiteReservation {
       },
     };
     const created = await this.guard.execute(operation);
-    return created.ok ? this.checkout(booking, created.value) : created;
+    if (!created.ok) return created;
+    if (!created.value.replayed)
+      this.notifySaved(options, created.value, roomIds);
+    return this.checkout(booking, created.value);
+  }
+
+  private notifySaved(
+    options: WebsiteBookingOptions,
+    { branchId, status }: WebsiteReservationResult,
+    roomTypeIds: readonly string[],
+  ) {
+    try {
+      options.onSaved?.({ branchId, status, roomTypeIds });
+    } catch {
+      // The booking is committed. A listener never changes its answer.
+    }
   }
 
   private checkout(
@@ -602,6 +642,7 @@ export class CreateWebsiteReservation {
     state: State,
     branchId: string,
     listings: ReadonlyMap<string, PublicListing>,
+    analyticsSessionId: string | null,
   ): Promise<Result<WebsiteReservationResult>> {
     const { crypto, clock, ids } = this.deps;
     const now = clock.now();
@@ -741,6 +782,7 @@ export class CreateWebsiteReservation {
         idempotencyKeyHash: prepared.keyHash,
         requestFingerprint: prepared.fingerprint,
         createdById: null,
+        analyticsSessionId: online ? analyticsSessionId : null,
         at: now,
         lines,
       };

@@ -67,12 +67,26 @@ type Dependencies = Readonly<{
     send: Pick<RefundDispatcher, "send">;
   }>;
   provider?: string;
+  /**
+   * Told after the commit that confirmed an online booking, once per booking.
+   * Reconciliation confirms through this class, so it is told there too.
+   */
+  onBookingConfirmed?: (booking: ConfirmedOnlineBooking) => Promise<void>;
   clock: Clock;
   ids: IdGenerator;
 }>;
 
+export type ConfirmedOnlineBooking = Readonly<{
+  branchId: string;
+  confirmedAt: Date;
+  roomTypeIds: readonly string[];
+  /** Null when the booking held none, or its hold had already ended. */
+  analyticsSessionId: string | null;
+}>;
+
 type Applied = Readonly<{
   result: PaymentEventResult;
+  confirmed?: ConfirmedOnlineBooking;
   refund?: RefundRequest;
   /** The refund attempt `refund` belongs to, so the stamp cannot land on a newer attempt. */
   refundAttempt?: number;
@@ -153,9 +167,18 @@ export class ProcessPaymentCallback {
       outcome = await this.applyUnderListingLocks(event, payment, reservation);
     if (!outcome.ok) return outcome;
     const applied = outcome.value as Extract<Outcome, { redo: false }>;
+    if (applied.confirmed) await this.notifyConfirmed(applied.confirmed);
     if (applied.refund && applied.refundAttempt !== undefined)
       await this.deps.refunds?.send.send(applied.refund, applied.refundAttempt);
     return success(undefined);
+  }
+
+  private async notifyConfirmed(booking: ConfirmedOnlineBooking) {
+    try {
+      await this.deps.onBookingConfirmed?.(booking);
+    } catch {
+      // The payment is committed. A listener never changes the answer.
+    }
   }
 
   /**
@@ -452,7 +475,7 @@ export class ProcessPaymentCallback {
     }
 
     const late = decision === "CONFIRM_LATE";
-    await context.reservations.confirmPaid(
+    const analyticsSessionId = await context.reservations.confirmPaid(
       reservation.branchId,
       reservation.id,
       now,
@@ -462,6 +485,12 @@ export class ProcessPaymentCallback {
     await this.releaseConfirmation(context, reservation, now);
     return done({
       result: "APPLIED",
+      confirmed: {
+        branchId: reservation.branchId,
+        confirmedAt: now,
+        roomTypeIds: reservation.lines.map((line) => line.roomTypeId),
+        analyticsSessionId,
+      },
       audit: {
         occurredAt: now,
         actorType: "SYSTEM",

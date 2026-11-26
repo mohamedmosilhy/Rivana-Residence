@@ -26,6 +26,7 @@ export type { ReservationStorageContext } from "./storage-context";
 export {
   CreateWebsiteReservation,
   type CreateWebsiteReservationContext,
+  type SavedWebsiteBooking,
   type WebsiteReservationResult,
 } from "./create-website-reservation";
 
@@ -96,6 +97,7 @@ export {
   ProcessPaymentCallback,
   refundAttemptKey,
   type ProcessPaymentCallbackContext,
+  type ConfirmedOnlineBooking,
 } from "./process-payment-callback";
 export {
   ExpirePaymentHolds,

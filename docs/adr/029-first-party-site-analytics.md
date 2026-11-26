@@ -33,6 +33,8 @@ Constraints already in force:
 - **Search counting.** A browser search step view or a P5 search with a session id counts toward funnel step 3. The search page also records demand without a session id. That event measures unmet demand only. A payment confirmation received without a browser request has no visitor hash.
 - **Approved traffic labels.** Store only approved referrer hosts, traffic source and medium labels, and campaign labels. Leave unfamiliar values empty. If the trusted address is missing, keep the session event with no visitor hash and exclude it from the unique visitor count.
 - **Activation.** Production recording defaults to off. Enable `ANALYTICS_ENABLED` after the analytics privacy notice is published and the 90 day deletion job is running.
+- **Server side recording (M10-T0b).** Composition records the steps after the use case, after the response is sent, and catches every failure. The website booking and payment use cases report a saved and a confirmed booking through optional listeners and import nothing from analytics. Online confirmation is recorded through the id kept on the reservation until the payment resolves; a success after the hold expired is not counted.
+- **Totals (M10-T0b).** The job counts UTC days for the whole site, each branch, and pages outside a branch, and deletes raw events only for days that have totals. [Counting rules](../specs/0007-m10-guest-booking-journey.md#settled-during-m10-t0b-2026-11-26)
 
 ## Consequences
 

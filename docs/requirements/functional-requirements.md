@@ -218,21 +218,22 @@ Requirements:
 - **FR-RPT-3** Statistics are shown on screen only. There is no CSV export (Q-14).
 - **FR-RPT-4** Website traffic and the booking funnel are reported from FR-ANL (M12-T4b).
 
-## FR-ANL Website analytics — P11 and storage implemented (M10-T0a). Server events and retention (T0b), browser beacon (T10) and reporting (M12-T4b) are planned.
+## FR-ANL Website analytics — P11, server events, daily totals and retention implemented (M10-T0a, T0b). The browser beacon (T10) and reporting (M12-T4b) are planned.
 
 First-party and cookieless (Q-86, ADR 029). Definitions, per branch and date range:
 
 - **Visitors**: distinct daily visitor hashes (a visitor on two days counts twice; the hash cannot link days).
 - **Sessions**: a visitor's events with gaps under 30 minutes.
-- **Funnel steps**, each counted once per session: (1) visited the site, (2) viewed a listing, (3) searched availability (a browser search step view or P5 with a session id), (4) built a quote (P6), (5) requested a verification code (P9), (6) verified the phone (P10), (7) submitted a booking (P7), (8) booking confirmed (pay at hotel at once; online after verified payment success).
+- **Funnel steps**, each counted once per session (steps 5 and 6 count booking codes only, not "My reservations" sign in): (1) visited the site, (2) viewed a listing, (3) searched availability (a browser search step view or P5 with a session id), (4) built a quote (P6), (5) requested a verification code (P9), (6) verified the phone (P10), (7) submitted a booking (P7), (8) booking confirmed (pay at hotel at once; online after verified payment success).
 - **Conversion**: sessions reaching step 8 ÷ sessions; **booking-start rate**: sessions reaching step 3 ÷ sessions.
 - **Drop-off**: for each step, the sessions whose furthest step it was.
 - **Exit page**: the last page of a session that did not reach step 8.
 - **Unmet demand**: searches with no available listing, by stay date (Q-89).
-- **Checkout refusals**: `INVENTORY_UNAVAILABLE` and `PRICE_CHANGED` responses at P7 (Q-89).
+- **Checkout refusals**: `INVENTORY_UNAVAILABLE` and `PRICE_CHANGED` responses at P7 (Q-89). A resent request that is refused again counts again; the totals also hold the sessions.
 - **Verification abandonment**: sessions at step 5 that never reach step 6 (Q-89).
 - **Listing conversion**: listing views → quotes → bookings, per listing (Q-89).
 - **Landing pages, traffic sources** (referrer domain and UTM parameters), **device type**, and comparison with the previous period of equal length.
+- **Days** are UTC. A session counts on the day it started. A payment confirmed after its 15 minute hold expired is not counted as a confirmation.
 
 Requirements:
 

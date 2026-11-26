@@ -60,6 +60,12 @@ export const WebsiteReservationRequest = z
       .max(32_768)
       .optional()
       .describe("Honeypot. Leave empty."),
+    // Any value passes: tracking never refuses a booking.
+    analyticsSessionId: z.unknown().optional().meta({
+      type: "string",
+      description:
+        "Optional website visit id, 32 lowercase hexadecimal characters. Kept for an online booking until its payment resolves. Not kept under Global Privacy Control or Do Not Track. Any other value is ignored, never causes an error, and is not part of the idempotency check.",
+    }),
   })
   .strict();
 

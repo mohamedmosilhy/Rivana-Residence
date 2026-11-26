@@ -1,4 +1,4 @@
-import { AnalyticsEventRequest } from "./analytics";
+import { AnalyticsEventRequest, AnalyticsSessionHeader } from "./analytics";
 import {
   ChangeRequestDto,
   StaffChangeRequestList,
@@ -724,6 +724,7 @@ export const API_ROUTES: readonly ApiRoute[] = [
     method: "post",
     path: "/api/v1/phone-verifications",
     operationId: "requestPhoneVerification",
+    headers: [AnalyticsSessionHeader],
     summary:
       "API-P9. Send a verification code after commit, by WhatsApp (default) or email (ADR 031). Three per phone and three per email per rolling 15 minutes, ten per rolling 24 hours, ten per client per hour across both channels.",
     tag: "Guests",
@@ -753,6 +754,7 @@ export const API_ROUTES: readonly ApiRoute[] = [
     method: "post",
     path: "/api/v1/phone-verifications/{verificationId}/confirmation",
     operationId: "confirmPhoneVerification",
+    headers: [AnalyticsSessionHeader],
     summary:
       "API-P10. Confirm a six digit code, at most five attempts. Twenty requests per client per ten minutes.",
     tag: "Guests",
@@ -847,6 +849,7 @@ export const API_ROUTES: readonly ApiRoute[] = [
     method: "get",
     path: "/api/v1/branches/{branchSlug}/availability",
     operationId: "searchAvailability",
+    headers: [AnalyticsSessionHeader],
     summary:
       "API-P5. Uncached published listing availability and accommodation prices before VAT.",
     tag: "Inventory",
@@ -865,6 +868,7 @@ export const API_ROUTES: readonly ApiRoute[] = [
     method: "post",
     path: "/api/v1/quotes",
     operationId: "createQuote",
+    headers: [AnalyticsSessionHeader],
     summary:
       "API-P6. Server computed quote: accommodation for one to five units, requested services, an optional coupon, and VAT. Reads only: no hold, lock, or cache. The client never sends a price.",
     tag: "Quotes",

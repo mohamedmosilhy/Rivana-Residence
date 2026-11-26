@@ -10,21 +10,15 @@ import {
   type BrowserSiteEvent,
 } from "@/domain/analytics";
 
-import type {
-  AnalyticsSaltStore,
-  RecordedSiteEvent,
-  SiteEventStore,
-} from "./ports";
-import { RotateAnalyticsSalt } from "./rotate-analytics-salt";
+import type { RecordedSiteEvent, SiteEventStore } from "./ports";
+import { visitorHashFor, type VisitorHashing } from "./visitor-hash";
 
-type Dependencies = Readonly<{
-  clock: Clock;
-  events: SiteEventStore;
-  salts: AnalyticsSaltStore;
-  makeSalt(): Uint8Array;
-  hashVisitor(salt: Uint8Array, address: string, userAgent: string): string;
-  reportFailure(): void;
-}>;
+type Dependencies = VisitorHashing &
+  Readonly<{
+    clock: Clock;
+    events: SiteEventStore;
+    reportFailure(): void;
+  }>;
 
 function lookupOnce(
   cache: Map<string, Promise<string | null>>,
@@ -90,16 +84,12 @@ export class RecordSiteEvent {
         });
       }
       if (rows.length === 0) return;
-      const salt = input.clientAddress
-        ? await new RotateAnalyticsSalt(
-            this.deps.salts,
-            this.deps.makeSalt,
-          ).execute(occurredAt)
-        : null;
-      const visitorHash =
-        salt && input.clientAddress
-          ? this.deps.hashVisitor(salt, input.clientAddress, userAgent)
-          : null;
+      const visitorHash = await visitorHashFor(
+        this.deps,
+        occurredAt,
+        input.clientAddress,
+        userAgent,
+      );
       await this.deps.events.record(
         rows.map((row) => ({ ...row, visitorHash })),
       );

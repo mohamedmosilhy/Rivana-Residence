@@ -290,6 +290,7 @@ export class PrismaReservationRepository implements ReservationRepository {
         status: "PAYMENT_FAILED",
         paymentStatus: "FAILED",
         holdExpiresAt: null,
+        analyticsSessionId: null,
         statusChangedAt: at,
         updatedAt: at,
         version: { increment: 1 },
@@ -298,6 +299,12 @@ export class PrismaReservationRepository implements ReservationRepository {
   }
 
   async confirmPaid(branchId: string, id: string, at: Date) {
+    // The caller holds the reservation lock, so nothing changes in between.
+    const { analyticsSessionId } =
+      await this.client.reservation.findUniqueOrThrow({
+        where: { id, branchId },
+        select: { analyticsSessionId: true },
+      });
     await this.client.reservationRoom.updateMany({
       where: { reservationId: id, branchId },
       data: { consumesInventory: consumesInventory("CONFIRMED") },
@@ -308,11 +315,13 @@ export class PrismaReservationRepository implements ReservationRepository {
         status: "CONFIRMED",
         paymentStatus: "PAID",
         holdExpiresAt: null,
+        analyticsSessionId: null,
         statusChangedAt: at,
         updatedAt: at,
         version: { increment: 1 },
       },
     });
+    return analyticsSessionId;
   }
 
   async setPaymentStatus(
@@ -803,6 +812,7 @@ export class PrismaReservationRepository implements ReservationRepository {
           idempotencyKeyHash: input.idempotencyKeyHash,
           requestFingerprint: input.requestFingerprint,
           createdById: input.createdById,
+          analyticsSessionId: input.analyticsSessionId ?? null,
           statusChangedAt: input.at,
           createdAt: input.at,
           updatedAt: input.at,

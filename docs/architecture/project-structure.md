@@ -32,6 +32,8 @@ M6's shared values and pure rules now exist: `src/domain/shared/{local-date,stay
 
 M10-T0a added the analytics module: `src/domain/analytics/`, `src/application/analytics/`, `src/infrastructure/db/prisma/repositories/analytics/`, `src/composition/analytics.ts`, and `src/app/api/v1/analytics/events/` ([M10 report](../delivery/reports/m10-guest-booking-journey.md)).
 
+M10-T0b added server side steps and daily totals in the same folders, `src/composition/analytics-jobs.ts`, and `scripts/analytics.mts`.
+
 ```text
 src/
   app/

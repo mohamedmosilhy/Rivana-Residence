@@ -27,6 +27,8 @@ The public limiter namespaces (`availability`, `quote`, `quote-coupon`) are isol
 
 P11 (M10-T0a, implemented) takes its own `analytics` namespace: 120 batches per client per minute, then `429` with `Retry-After`. It needs no session or CSRF token because a browser beacon cannot send one. Only same origin traffic is recorded, and bots, prefetches, Global Privacy Control and Do Not Track are dropped. Hourly cleanup covers this namespace too. [ADR 029](../adr/029-first-party-site-analytics.md)
 
+Server side booking steps (M10-T0b) follow the same opt out and bot rules, run after the response, and store no name, contact detail, reference, token, or code. The visit id stays on an online booking only until its payment resolves, and never appears in an audit row or any response. Raw events older than 90 days are deleted by the hourly rollup.
+
 ## Authorization
 
 - Roles: `EDITOR` and `ADMIN` (implemented). `RECEPTIONIST` and `MANAGER`, with branch-scoped authorization, are planned (ADR 018). Threats and controls for branch-scoped data are in [threat-model.md](./threat-model.md).

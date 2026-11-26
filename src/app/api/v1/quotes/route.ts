@@ -18,8 +18,8 @@ export const POST = publicRoute(
     rateLimitAfterBody: (body) =>
       body.couponCode ? QUOTE_COUPON_RATE_LIMIT : null,
   },
-  async ({ body, setBranch }) =>
-    toHttp(await quoteBooking(publicQuoteRequest(body)), {
+  async ({ body, request, setBranch }) =>
+    toHttp(await quoteBooking(publicQuoteRequest(body), request.headers), {
       ok: (result) => {
         setBranch(result.branchId);
         return json(200, quoteResponse(result));

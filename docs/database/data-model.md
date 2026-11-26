@@ -33,7 +33,7 @@ The implemented schema is `prisma/schema.prisma`. At M9 close there are 19 migra
 | Guest change requests | `ChangeRequest` | Implemented (M9-T11, Q-85) |
 | Reservation changes | `ReservationChange`; columns `Reservation.changeSeq`, `Reservation.pmsUpdatePendingSince` (the clearing user and time are in the S55 audit event) | Implemented (M8-T9, Q-83, Q-84) |
 | Transfer cars | `ServicePriceUnit.PER_VEHICLE`, `ServiceOffering.maxVehicles`, `ReservationService.vehicles` | Implemented (M8-T3b, Q-82): migrations `20261117120000_transfer_vehicle_unit` (enum value, on its own so the next migration can use it) and `20261117120100_transfer_vehicles` (columns, backfill of 3 cars per transfer offering and 1 car per stored transfer line, checks `ServiceOffering_vehicles_check`, `ServiceOffering_vehicle_unit_check`, `ReservationService_vehicles_check`, `ReservationService_vehicle_unit_check`) |
-| Website analytics | `SiteEvent`, `SiteDailyTotal`, `AnalyticsSalt` | Tables and P11 implemented (M10-T0a). Rollup and retention planned (M10-T0b). |
+| Website analytics | `SiteEvent`, `SiteDailyTotal`, `AnalyticsSalt` | Tables and P11 implemented (M10-T0a). Server events, daily totals, and 90 day retention implemented (M10-T0b); the report is planned (M12-T4b). |
 | Guests | `Guest` (verified phone profiles, blocking, marketing consent), `PhoneVerification` | Implemented (M8 and M9). Verification and guest access support WhatsApp and email. |
 | Messaging settings | `WhatsAppSettings`, `WhatsAppTemplate` (Admin-managed, Q-67), `VerificationSettings` (the Admin email verification switch, Q-99; implemented M9-T12a) | Admin setup for WhatsApp is implemented (M8-T4). The Admin email switch and API are implemented (M9-T12a). |
 | Marketing | `Broadcast` | Planned (M13) |
@@ -354,7 +354,7 @@ model Reservation {
   pmsEnteredAt         DateTime?         @db.Timestamptz(3) // WEBSITE only (Q-40)
   pmsEnteredById       String?           @db.VarChar(32)
   privacyNoticeVersion String?           @db.VarChar(40)
-  analyticsSessionId  String?             @db.VarChar(32) // online payments only. P7 wiring planned in M10-T0b
+  analyticsSessionId  String?             @db.VarChar(32) // online payments only: written by P7, cleared when the payment resolves (M10-T0b)
   verificationChannel VerificationChannel? // WEBSITE only (CHECK): WHATSAPP or EMAIL; null on a website row reads as WHATSAPP (M9-T12a, ADR 031)
   verifiedEmail       String?             @db.VarChar(320) // EMAIL bookings only (CHECK): the lowercased email the code proved; contact edits never change it; the per email cap counts by it (M9-T12a)
   manageTokenHash      String?           @unique @db.VarChar(64)
@@ -658,7 +658,9 @@ model ChangeRequest {
 }
 
 // Implemented M10-T0a. SQL requires a fixed bookingStep on STEP_VIEW only.
-// M10-T0b will populate daily totals and delete raw events older than 90 days.
+// M10-T0b writes daily totals and deletes totalled raw events older than 90 days.
+// SiteDailyTotal.branchId: '*' whole site, '' outside a branch, else a branch id.
+// LANDING_PAGE in a branch row is the first page in that branch. See spec 0007.
 model SiteEvent {
   id           BigInt    @id @default(autoincrement())
   occurredAt   DateTime  @db.Timestamptz(3)

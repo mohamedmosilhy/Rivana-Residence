@@ -1,6 +1,10 @@
 import "server-only";
 
 import type { StaffPrincipal } from "@/application/auth";
+import {
+  analyticsSessionFrom,
+  recordFunnelSteps,
+} from "@/composition/analytics";
 import { manageVerificationSettings } from "@/composition/verification-channels";
 import { ListBranches } from "@/application/branches";
 import { CheckHealth } from "@/application/health";
@@ -32,6 +36,7 @@ import {
   getPublishedRoom,
   getPublishedRooms,
 } from "@/composition/public";
+import { quoteSteps, searchSteps } from "@/domain/analytics";
 import type { ThrottleRule } from "@/domain/auth/login-throttle";
 import { NextRouteCacheInvalidator } from "@/infrastructure/cache/next-cache-invalidator";
 import { getPrisma } from "@/infrastructure/db/prisma/client";
@@ -224,14 +229,48 @@ export function updateCommercialSettings(
   return manageCommercialSettings().update(staff, input);
 }
 
-// API-P6: uncached public quote; nothing is written, locked, or cached.
-export function quoteBooking(input: unknown) {
-  return buildQuoteBooking().execute(input);
+// API-P6: uncached public quote; nothing about the booking is written, locked,
+// or cached. A priced quote is recorded for the website report afterwards.
+export async function quoteBooking(input: unknown, headers: Headers) {
+  const result = await buildQuoteBooking().execute(input);
+  const sessionId = analyticsSessionFrom(headers);
+  if (result.ok && sessionId) {
+    const { branchId, quote } = result.value;
+    if (quote)
+      await recordFunnelSteps({
+        sessionId,
+        headers,
+        steps: () => quoteSteps(branchId, quote.lines),
+      });
+  }
+  return result;
 }
 
 // API-P5: uncached public availability with server-resolved branch identity.
-export function searchPublicAvailability(slug: string, input: unknown) {
-  return publicAvailability().execute(slug, input);
+// A search that finds nothing is recorded even without a visit (unmet demand).
+export async function searchPublicAvailability(
+  slug: string,
+  input: unknown,
+  headers: Headers,
+) {
+  const result = await publicAvailability().execute(slug, input);
+  if (result.ok) {
+    const { branchId, stay, results } = result.value;
+    await recordFunnelSteps({
+      sessionId: analyticsSessionFrom(headers),
+      headers,
+      steps: () =>
+        searchSteps({
+          branchId,
+          stay: {
+            checkIn: stay.checkIn.value,
+            checkOut: stay.checkOut.value,
+          },
+          results,
+        }),
+    });
+  }
+  return result;
 }
 
 // API-S37…S39, audited coupon management.

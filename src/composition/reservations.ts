@@ -42,10 +42,20 @@ import {
   GetReservationHistory,
   type StaffBookingContext,
   type CreateWebsiteReservationContext,
+  type SavedWebsiteBooking,
   type ReservationStorageContext,
   type ReservationUnitOfWork,
 } from "@/application/reservations";
 import { QuoteBooking } from "@/application/quotes";
+import {
+  bookingAnalyticsSession,
+  recordFunnelSteps,
+} from "@/composition/analytics";
+import {
+  bookingConfirmedSteps,
+  bookingSavedSteps,
+  refusalSteps,
+} from "@/domain/analytics";
 import { verificationChannelReadiness } from "@/composition/verification-channels";
 import { reservationMessageWriter } from "@/composition/reservation-jobs";
 import {
@@ -221,6 +231,51 @@ export function createWebsiteReservation(
   });
 }
 
+/**
+ * API-P7. The analytics session id is taken out of the body before the use
+ * case sees it, so it never joins the replay fingerprint. The steps are
+ * recorded after the booking work, whatever its outcome.
+ */
+export async function submitWebsiteBooking(
+  body: Readonly<{ branchSlug: string; analyticsSessionId?: unknown }>,
+  idempotencyKey: string,
+  headers: Headers,
+) {
+  const { analyticsSessionId, ...booking } = body;
+  const sessionId = bookingAnalyticsSession(analyticsSessionId, headers);
+  const saved: SavedWebsiteBooking[] = [];
+  try {
+    const result = await createWebsiteReservation().execute(
+      booking,
+      idempotencyKey,
+      {
+        analyticsSessionId: sessionId,
+        onSaved: (fact) => saved.push(fact),
+      },
+    );
+    if (!result.ok && sessionId)
+      await recordFunnelSteps({
+        sessionId,
+        headers,
+        steps: () => refusalSteps(booking.branchSlug, result.error.code),
+      });
+    return result;
+  } finally {
+    // A saved booking counts even if opening checkout then failed.
+    const [fact] = saved;
+    if (sessionId && fact)
+      await recordFunnelSteps({
+        sessionId,
+        headers,
+        steps: () =>
+          bookingSavedSteps({
+            ...fact,
+            confirmed: fact.status === "CONFIRMED",
+          }),
+      });
+  }
+}
+
 /** The transaction-bound ports that finish a refund. */
 export function completeRefundContext(
   transaction: DatabaseClient,
@@ -301,6 +356,16 @@ export function processPaymentCallback(
       reservations: new PrismaReservationRepository(client),
     },
     refunds: refundServices({ client, clock, gateway }),
+    onBookingConfirmed: async (booking) => {
+      const { analyticsSessionId, branchId, roomTypeIds } = booking;
+      if (analyticsSessionId)
+        await recordFunnelSteps({
+          sessionId: analyticsSessionId,
+          headers: null,
+          occurredAt: booking.confirmedAt,
+          steps: () => bookingConfirmedSteps(branchId, roomTypeIds),
+        });
+    },
     ...(gateway ? { gateway } : {}),
     ...(provider ? { provider } : {}),
     clock,

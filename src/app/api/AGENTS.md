@@ -26,6 +26,7 @@ The versioned REST API (`/api/v1/**`). Conventions: [docs/api/rest-api-conventio
 - No import from `@/infrastructure/**` or the generated Prisma client. Get use cases from `@/composition/*`.
 - Each `route.ts` stays within 60 lines.
 - Request and response schemas live in `src/contracts/api/v1` (Zod only) and are registered in `routes.ts` there. After adding or changing an endpoint, run `npm run openapi` and commit `docs/api/openapi.json`; a freshness test fails otherwise.
+- P5, P6, P9, P10 and P7 pass `request.headers` to their composition function, which records the website analytics step after the use case (M10-T0b). A handler never records one itself.
 - P11 opts into `acceptTextJson` for browser beacons and `serverRequestId` to keep client supplied identifiers out of request logs. Both JSON media types use the same body limit and strict schema.
 - Never log bodies, cookies, tokens, or `Authorization`. Only the logger's allow listed fields are written.
 - `webhookRoute` keeps the raw bytes for signature checks and skips the session and CSRF checks; the use case must verify the signature.

@@ -1,7 +1,7 @@
 import { reservationResponse } from "@/app/api/v1/_dto/reservations";
 import { json, problem, publicRoute, toHttp } from "@/app/api/v1/_http";
 import { BOOKING_CREATE_RATE_LIMIT } from "@/application/shared/public-rate-limit-policy";
-import { createWebsiteReservation } from "@/composition/reservations";
+import { submitWebsiteBooking } from "@/composition/reservations";
 import { WebsiteReservationRequest } from "@/contracts/api/v1/reservations";
 
 // API-P7. The body never carries a price, status or branch id. The key comes
@@ -17,7 +17,7 @@ export const POST = publicRoute(
     // request with an invalid body and no key gets the body's 422.
     const key = request.headers.get("idempotency-key");
     if (!key) return problem("MISSING_IDEMPOTENCY_KEY", { requestId });
-    return toHttp(await createWebsiteReservation().execute(body, key), {
+    return toHttp(await submitWebsiteBooking(body, key, request.headers), {
       ok: (result) => {
         setBranch(result.branchId);
         const { status, body: payload } = reservationResponse(result);

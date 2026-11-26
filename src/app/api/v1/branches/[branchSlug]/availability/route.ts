@@ -23,6 +23,7 @@ export const GET = publicRoute(
       await searchPublicAvailability(
         String(params.branchSlug),
         availabilityInput(query),
+        request.headers,
       ),
       {
         ok: (value) => {

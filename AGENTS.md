@@ -47,6 +47,7 @@ npm run staff -- create --email … --name … --role ADMIN   # passwords via pr
 
 # Maintenance (hourly app-user cron; bounded buckets listed in PUBLIC_RATE_LIMITS)
 npm run throttles -- cleanup-public
+npm run analytics -- rollup                   # hourly: daily website totals, 90 day deletion of raw events
 
 # Reservation jobs (schedule all four; the dispatcher sends queued messages only after commit)
 npm run reservations -- outbox
@@ -84,6 +85,7 @@ npm run reservations -- reconcile-payments    # every 5 minutes: recovers lost c
 - **Refund results carry the original attempt key.** The gateway returns `refundAttemptKey` on verified refund events and lookup results. Check it against the active attempt under the reservation lock before changing state. [Spec 0006](./docs/specs/0006-m9-payments-and-cancellations.md#decision-7-cancellation-requests-decisions-refunds-m9-t7-t8)
 - **Paid guest changes** compare the new quote with the captured payment in M9. A request holds no additional inventory and checks for competing requests under the reservation lock. An immediate change or staff approval takes the listing locks before the reservation lock. Persist an approval conflict before returning the error so the staff queue can show it. [Spec 0006](./docs/specs/0006-m9-payments-and-cancellations.md#decision-8-guest-changes-and-change-requests-m9-t10-t11)
 - **Never fabricate an external hotel-system integration.** Synchronization with the hotel's system is manual and must never be described as real-time.
+- **Website analytics never touch a booking** (ADR 029). Record server steps from `src/composition` through `recordFunnelSteps` after the use case returned; booking and payment use cases import nothing from `analytics` and only tell optional listeners after commit. `Reservation.analyticsSessionId` is never part of a stored reservation view, audit row, fingerprint, or response.
 - **Keep docs and tests in sync with the code.** Run the gates and report exact results; never claim a check passed without running it.
 - Detailed coding standards are in [docs/engineering/engineering-standards.md](./docs/engineering/engineering-standards.md). The working loop is in [docs/engineering/agent-workflow.md](./docs/engineering/agent-workflow.md).
 

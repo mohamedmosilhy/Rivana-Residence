@@ -1763,6 +1763,17 @@
           "Guests"
         ],
         "security": [],
+        "parameters": [
+          {
+            "name": "Rivana-Analytics-Session",
+            "in": "header",
+            "required": false,
+            "description": "The browser's anonymous website visit id: 32 hexadecimal characters. Used only for the website report. Any other value is ignored and never causes an error.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
         "requestBody": {
           "required": true,
           "content": {
@@ -1810,6 +1821,15 @@
             "name": "verificationId",
             "in": "path",
             "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Rivana-Analytics-Session",
+            "in": "header",
+            "required": false,
+            "description": "The browser's anonymous website visit id: 32 hexadecimal characters. Used only for the website report. Any other value is ignored and never causes an error.",
             "schema": {
               "type": "string"
             }
@@ -2120,6 +2140,15 @@
               "description": "Whole number 1–5; defaults to 1.",
               "type": "string"
             }
+          },
+          {
+            "name": "Rivana-Analytics-Session",
+            "in": "header",
+            "required": false,
+            "description": "The browser's anonymous website visit id: 32 hexadecimal characters. Used only for the website report. Any other value is ignored and never causes an error.",
+            "schema": {
+              "type": "string"
+            }
           }
         ],
         "responses": {
@@ -2154,6 +2183,17 @@
           "Quotes"
         ],
         "security": [],
+        "parameters": [
+          {
+            "name": "Rivana-Analytics-Session",
+            "in": "header",
+            "required": false,
+            "description": "The browser's anonymous website visit id: 32 hexadecimal characters. Used only for the website report. Any other value is ignored and never causes an error.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
         "requestBody": {
           "required": true,
           "content": {
@@ -6103,6 +6143,10 @@
             "description": "Honeypot. Leave empty.",
             "type": "string",
             "maxLength": 32768
+          },
+          "analyticsSessionId": {
+            "type": "string",
+            "description": "Optional website visit id, 32 lowercase hexadecimal characters. Kept for an online booking until its payment resolves. Not kept under Global Privacy Control or Do Not Track. Any other value is ignored, never causes an error, and is not part of the idempotency check."
           }
         },
         "required": [

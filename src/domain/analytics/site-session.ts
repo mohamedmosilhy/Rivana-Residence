@@ -32,7 +32,7 @@ export function funnelStepFor(event: FunnelInput) {
   }
 }
 
-type SessionEvent = Readonly<{
+export type SessionEvent = Readonly<{
   id: bigint;
   occurredAt: Date;
   sessionId: string | null;
@@ -43,7 +43,7 @@ type SessionEvent = Readonly<{
 
 const SESSION_GAP_MS = 30 * 60_000;
 
-function summarizeSession(events: readonly SessionEvent[]) {
+export function summarizeSession(events: readonly SessionEvent[]) {
   const steps = new Set<number>();
   let exitPage = null;
   for (const event of events) {
@@ -63,8 +63,16 @@ function summarizeSession(events: readonly SessionEvent[]) {
   };
 }
 
-export function summarizeSiteSessions(events: readonly SessionEvent[]) {
-  const byId = new Map<string, SessionEvent[]>();
+/**
+ * Splits events into visits: one session id, cut at activity gaps of 30
+ * minutes or more. A booking confirmation is the server's answer to a payment,
+ * not visitor activity: it joins the visit before it however late it arrives,
+ * and never keeps a visit open. Events without a session id belong to no visit.
+ */
+export function splitSiteSessions<Event extends SessionEvent>(
+  events: readonly Event[],
+) {
+  const byId = new Map<string, Event[]>();
   for (const event of events) {
     if (!event.sessionId) continue;
     const group = byId.get(event.sessionId);
@@ -78,18 +86,27 @@ export function summarizeSiteSessions(events: readonly SessionEvent[]) {
       (left, right) =>
         +left.occurredAt - +right.occurredAt || Number(left.id - right.id),
     );
-    const sessions: SessionEvent[][] = [];
-    let latest: SessionEvent | undefined;
+    const sessions: Event[][] = [];
+    let latest: Event | undefined;
     for (const event of group) {
-      if (!latest || +event.occurredAt - +latest.occurredAt >= SESSION_GAP_MS) {
+      const confirmation = event.name === "BOOKING_CONFIRMED";
+      if (
+        sessions.length === 0 ||
+        (!confirmation &&
+          (!latest || +event.occurredAt - +latest.occurredAt >= SESSION_GAP_MS))
+      ) {
         sessions.push([]);
       }
       sessions.at(-1)?.push(event);
-      latest = event;
+      if (!confirmation) latest = event;
     }
-    return sessions.map((session) => ({
-      sessionId,
-      ...summarizeSession(session),
-    }));
+    return sessions.map((session) => ({ sessionId, events: session }));
   });
+}
+
+export function summarizeSiteSessions(events: readonly SessionEvent[]) {
+  return splitSiteSessions(events).map((session) => ({
+    sessionId: session.sessionId,
+    ...summarizeSession(session.events),
+  }));
 }

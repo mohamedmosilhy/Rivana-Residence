@@ -19,6 +19,7 @@ import {
   type RequestCancellationContext,
 } from "@/application/reservations";
 import type { Clock } from "@/application/shared/providers";
+import { verificationSteps } from "@/domain/analytics";
 import { NodeBookingCrypto } from "@/infrastructure/crypto/booking-crypto";
 import {
   PrismaAuditLog,
@@ -32,6 +33,10 @@ import { PrismaChangeRequestStore } from "@/infrastructure/db/prisma/repositorie
 import { PrismaCancellationRequestStore } from "@/infrastructure/db/prisma/repositories/reservations/cancellation-request-store";
 import { PrismaBranchRepository } from "@/infrastructure/db/prisma/repositories/branches/branch-repository";
 import { reservationMessageWriter } from "@/composition/reservation-jobs";
+import {
+  analyticsSessionFrom,
+  recordFunnelSteps,
+} from "@/composition/analytics";
 import { throttleKeys } from "@/composition/auth";
 import { clientAddressFrom } from "@/composition/http";
 import { whatsAppSender } from "@/composition/notifications";
@@ -70,9 +75,12 @@ function dependencies(secret: string | undefined) {
     ids: new Cuid2IdGenerator(),
   };
 }
-export function requestPhoneVerification(input: unknown, headers: Headers) {
+export async function requestPhoneVerification(
+  input: Readonly<{ purpose: string }>,
+  headers: Headers,
+) {
   const secret = getServerEnv().PHONE_VERIFICATION_SECRET;
-  return new RequestPhoneVerification({
+  const result = await new RequestPhoneVerification({
     ...dependencies(secret),
     channels: verificationChannelReadiness(),
     sender: whatsAppSender(),
@@ -84,10 +92,34 @@ export function requestPhoneVerification(input: unknown, headers: Headers) {
       clientAddressFrom(headers) || "anonymous",
     ),
   );
+  if (result.ok)
+    await recordFunnelSteps({
+      sessionId: analyticsSessionFrom(headers),
+      headers,
+      steps: () => verificationSteps("CODE_REQUESTED", input.purpose),
+    });
+  return result;
 }
-export function confirmPhoneVerification(id: unknown, input: unknown) {
-  const secret = getServerEnv().PHONE_VERIFICATION_SECRET;
-  return new ConfirmPhoneVerification(dependencies(secret)).execute(id, input);
+export async function confirmPhoneVerification(
+  id: string,
+  input: unknown,
+  headers: Headers,
+) {
+  const deps = dependencies(getServerEnv().PHONE_VERIFICATION_SECRET);
+  const result = await new ConfirmPhoneVerification(deps).execute(id, input);
+  const sessionId = analyticsSessionFrom(headers);
+  if (result.ok && sessionId)
+    await recordFunnelSteps({
+      sessionId,
+      headers,
+      // The purpose never changes after the code is requested.
+      steps: async () =>
+        verificationSteps(
+          "PHONE_VERIFIED",
+          (await deps.verifications.findById(id))?.purpose,
+        ),
+    });
+  return result;
 }
 
 /** S50 to S53 (M8-T11). */

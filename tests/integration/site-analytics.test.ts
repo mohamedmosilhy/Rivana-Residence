@@ -307,6 +307,7 @@ describe("P11 (AC-11, AC-13, T-ANL-4 through T-ANL-6)", () => {
       events: {
         branchIdFor: store.branchIdFor.bind(store),
         roomIdFor: store.roomIdFor.bind(store),
+        recordedSince: store.recordedSince.bind(store),
         record: async () => {
           throw new Error("request included private data");
         },

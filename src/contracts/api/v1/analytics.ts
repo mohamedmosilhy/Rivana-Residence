@@ -1,5 +1,14 @@
 import { z } from "zod";
 
+/** Optional on P5, P6, P9 and P10. P7 takes the same value in its body. */
+export const AnalyticsSessionHeader = {
+  name: "Rivana-Analytics-Session",
+  required: false,
+  description:
+    "The browser's anonymous website visit id: 32 hexadecimal characters. Used only for the website report. Any other value is ignored and never causes an error.",
+  schema: z.string(),
+} as const;
+
 const eventFields = {
   path: z.string().max(200).regex(/^\//, "Use a path starting with /."),
   branchSlug: z

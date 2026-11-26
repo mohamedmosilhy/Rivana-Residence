@@ -9,8 +9,13 @@ export const POST = publicRoute(
     body: PhoneVerificationConfirmation,
     rateLimit: VERIFICATION_CONFIRM_RATE_LIMIT,
   },
-  async ({ params, body }) =>
-    toHttp(await confirmPhoneVerification(params.verificationId, body), {
-      ok: (value) => json(200, value),
-    }),
+  async ({ params, body, request }) =>
+    toHttp(
+      await confirmPhoneVerification(
+        String(params.verificationId),
+        body,
+        request.headers,
+      ),
+      { ok: (value) => json(200, value) },
+    ),
 );

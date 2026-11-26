@@ -100,6 +100,16 @@ Schedule it hourly in the existing app user's cron before P5 is exposed. Run fro
 
 The deployment paths above are examples, not provisioned paths. Check exit status and log output during deployment rehearsal. A result of 1,000 means more expired rows may remain; additional bounded runs are safe. Cleanup is storage maintenance, not part of request admission, so missed runs do not bypass the limit.
 
+### Website analytics rollup (M10-T0b)
+
+`npm run analytics -- rollup` writes the daily totals, deletes raw events older than 90 days once their day has totals, and rotates the visitor salt. Schedule it hourly in the app user's cron, with the same release, runtime, and environment as the other maintenance commands. Schedule it even while collection is off, so retention never stops; it then keeps one salt row and stores nothing else.
+
+```cron
+15 * * * * cd /srv/rivana/current && npm run analytics -- rollup >> /var/log/rivana/analytics.log 2>&1
+```
+
+It prints `{"rolledUpDays":N,"failedDays":N,"deletedEvents":N}`, or `{"skipped":"ALREADY_RUNNING"}` when another run holds its lock. It exits with status 1 when a day fails or the run cannot complete, and 2 for invalid arguments. Alert on status 1: a day that keeps failing keeps its raw events past 90 days.
+
 P5 uses one availability bucket per trusted client across branches, allowing 60 admissions per 60 second window. P5 endpoint wiring is implemented in M6-T10. Without a trusted address, all such requests share one anonymous bucket. Enable `AUTH_TRUST_PROXY_HEADERS` only when the edge overwrites client supplied forwarding headers and the Next.js listener cannot be reached directly. Rehearse that trust configuration before public exposure. Staff sign-in policy remains separate.
 
 P7 (`POST /api/v1/reservations`, M8-T7b) uses the `booking-create` bucket: 5 admissions per trusted client per hour, on top of the per phone caps. Every request counts, including a replay, a missing key and a price change, because admission runs before the body is read (owner decision, 2026-11-20, to revisit with the payment gateway in M9). A guest whose response was lost can therefore see `429` with `Retry-After` for up to an hour even though the booking exists; the hotel can confirm it by phone or from the staff screens. The bucket is far more sensitive to proxy configuration than P5: with trust off, or behind a proxy that hides visitor addresses, the whole site shares five bookings an hour. The hourly cleanup prunes this bucket with the others.
@@ -164,7 +174,7 @@ A backup holds a custom-format database dump (no owners or grants), `images/` as
 - migrations and seed complete;
 - security headers/CSP/TLS verified;
 - accessibility, responsive, SEO, performance, and critical E2E gates pass;
-- Keep `ANALYTICS_ENABLED=false` in production until the privacy notice is published and the M10-T0b retention job is running. P11 accepts valid batches with collection off and stores no events.
+- Keep `ANALYTICS_ENABLED=false` in production until the privacy notice is published and the hourly [analytics rollup](#website-analytics-rollup-m10-t0b) is scheduled. P11 accepts valid batches with collection off and stores no events.
 - Configure Search Console if approved;
 - support ownership, incident contact, and content training documented;
 - booking status clearly disabled until provider integration.
