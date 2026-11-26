@@ -111,6 +111,14 @@ The owner makes engineering decisions and accepts every task; a reviewer's appro
 - [sync](.agents/skills/sync/): `JavaScript-Mastery-Pro/skills`, keep `AGENTS.md` and scope current after a change
 - [document](.agents/skills/document/): `JavaScript-Mastery-Pro/skills`, PR text, changelog, release notes
 
+Frontend skills (added 2026-11-26 for M10; copied into the repo, not managed by `skills-lock.json`). They serve the UI track of `/develop` and never override [docs/frontend/design-system.md](./docs/frontend/design-system.md):
+
+- [ui-ux-pro-max](.agents/skills/ui-ux-pro-max/): local UX and accessibility guidance (Python, no network); suggestions only, keep the existing visual language
+- [vercel-react-best-practices](.agents/skills/vercel-react-best-practices/): Vercel Engineering (MIT), React and Next.js performance patterns; the bundled Next.js docs win where they differ
+- [vercel-composition-patterns](.agents/skills/vercel-composition-patterns/): Vercel Engineering (MIT), component composition instead of boolean props
+- [frontend-design](.agents/skills/frontend-design/): `anthropics/claude-plugins-official` (Apache 2.0), UI craft and polish within the design system only
+- [21st-ui-review](.agents/skills/21st-ui-review/): optional UI review through the external `21st` CLI; ask the owner before the first run, never `--fix` unreviewed
+
 Claude Code loads the same skills from `.claude/skills/`. Project rules above override any skill guidance.
 
 ## Git

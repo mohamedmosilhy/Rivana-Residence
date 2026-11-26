@@ -1,6 +1,6 @@
 # M10 — Guest booking journey
 
-Status: **Not started.** Scope extended by the owner on 2026-11-17 with first-party website analytics (M10-T0a, T0b, T10; ADR 029, Q-86, Q-87), the guest change UI (M10-T8b; Q-83…Q-85), and the transfer car selector (M10-T5; Q-82). Branch: `m10-guest-booking-journey`. Follow the [milestone loop](./README.md#the-loop-every-milestone-follows).
+Status: **In progress (0/13 tasks accepted).** Opened 2026-11-26: spec [0007](../../specs/0007-m10-guest-booking-journey.md) and the task breakdown below were approved by the owner on 2026-11-26, after an independent cross check with every recommended fix applied. Scope extended by the owner on 2026-11-17 with first-party website analytics (M10-T0a, T0b, T10; ADR 029, Q-86, Q-87), the guest change UI (M10-T8b; Q-83…Q-85), and the transfer car selector (M10-T5; Q-82). Branch: `m10-guest-booking-journey`. Follow the [milestone loop](./README.md#the-loop-every-milestone-follows).
 
 ## Objective
 
@@ -41,23 +41,23 @@ Booking pages under `/{branch}/book`, manage page, "My reservations", cancellati
 
 ## Task breakdown
 
-Planned, reviewed, and accepted one task at a time ([agent-workflow.md](../../engineering/agent-workflow.md)). Rows are confirmed at milestone open; the numbered **Tasks** below hold the detail. This table is provisional: re-confirm it against the code and decisions at milestone open.
+Planned, reviewed, and accepted one task at a time ([agent-workflow.md](../../engineering/agent-workflow.md)). Rows confirmed at milestone open (2026-11-26) against spec [0007](../../specs/0007-m10-guest-booking-journey.md#task-breakdown-approved-2026-11-26), which holds the design detail. Changes from the provisional table: T0b and T4 raised to Critical; T0a carries the analytics session column on reservations and the nullable session and visitor fields; T1 carries the `branch.timeZone` contract change; T2 the booking off explanation; T4 `GetBookingSetup`; T6 the placeholder legal copy and the confirmed page; T9 the approved `BookingProvider` port change.
 
 | Task | Title | Risk | Depends on | Covers (criteria, tests) | Status |
 | --- | --- | --- | --- | --- | --- |
-| M10-T0a | Analytics foundation (ADR 029): migration `site_analytics` (`SiteEvent`, `SiteDailyTotal`, `AnalyticsSalt`), pure event and funnel rules, `RecordSiteEvent`, API P11 with strict parsing, `analytics` limiter bucket, bot and GPC/DNT filtering, daily salt rotation | Critical | M9 | AC 11; T-ANL-1…6 | Not started |
-| M10-T0b | Server-side funnel steps from P5, P6, P9, P10, P7, and the payment result (after the use case, outside its transaction); `analyticsSessionId` on P7; `npm run analytics -- rollup` (daily totals, 90-day deletion) | Medium | T0a | AC 11; T-ANL-7…10 | Not started |
-| M10-T1 | Typed API client on the contracts (`src/presentation/api-client/`) | Medium | M9 | client unit tests | Not started |
-| M10-T2 | Search and results page | Medium | T1 | AC 1, 9 | Not started |
-| M10-T3 | Selection basket with server-computed subtotal | Medium | T2 | AC 2 | Not started |
-| M10-T4 | Guest details and verification step (WhatsApp, or email for online payment only, ADR 031 and Q-100) | Medium | T3 | AC 9 | Not started |
-| M10-T5 | Extras (with the transfer car selector and flight details, Q-82) and coupon | Medium | T3 | AC 3, 4 | Not started |
-| M10-T6 | Payment choice, review, submit, confirmation, conflict and price-change paths | Critical | T4, T5 | AC 5–7 | Not started |
-| M10-T7 | Payment return page | Critical | T6 | AC 6 | Not started |
-| M10-T8 | Manage reservation and My reservations with cancellation requests | Critical | T1 | AC 8 | Not started |
-| M10-T8b | Change booking: preview and apply on the manage page and in My reservations (G5, G6), old and new totals, "sent to the hotel for approval" state for paid bookings, deadline and contact fallback (Q-83…Q-85) | Critical | T8, M9-T10, M9-T11 | AC 12 | Not started |
-| M10-T9 | Book Now internal mode per branch | Low | T6 | AC 10 | Not started |
-| M10-T10 | Page-view beacon on every public page (marketing and booking), `STEP_VIEW` events in each booking step, session id kept across steps and sent with P7; within the script budget | Medium | T0a, T6 | AC 11; T-ANL-11…12, Lighthouse budget | Not started |
+| M10-T0a | Analytics foundation (ADR 029 accepted at planning, funnel wording amended): migration `site_analytics` (`SiteEvent` with nullable `sessionId` and `visitorHash` and stay date columns, `SiteDailyTotal`, `AnalyticsSalt`, `Reservation.analyticsSessionId`), pure event and funnel mapping rules, `RecordSiteEvent`, salt rotation, API P11 with strict parsing and the same origin rule, `analytics` limiter bucket, bot, prefetch, and GPC/DNT filtering | Critical | M9 | AC 11, 13; T-ANL-1…6 | Not started |
+| M10-T0b | Server-side funnel steps through `RecordFunnelStep` after the use case and outside its transaction; optional `Rivana-Analytics-Session` header on P5, P6, P9, P10; `analyticsSessionId` on P7 stored for online bookings and cleared when the payment resolves; step 8 from the callback and reconcile; `npm run analytics -- rollup` (daily totals, 90-day deletion) on the hourly cron | Critical | T0a | AC 11; T-ANL-7…10 | Not started |
+| M10-T1 | Typed API client on the contracts (`src/presentation/api-client/`), problem mapping, headers, analytics session helper, shared money formatter; additive `branch.timeZone` on the guest reservation response (G1, G4) | Medium | T0b | AC 5, 8, 13; client unit tests, contract tests | Not started |
+| M10-T2 | Search and results page, server `SEARCH` event for unmet demand, booking off explanation in place of the form | Medium | T1 | AC 1, 9, 10 | Not started |
+| M10-T3 | Selection basket with guests per unit and server-computed subtotal | Medium | T2 | AC 2 | Not started |
+| M10-T4 | Details frame (`GetBookingSetup`), guest details, verification (WhatsApp, or email only with online payment, ADR 031 and Q-100), tab draft | Critical | T3 | AC 9, 13, 14; E2E-G-5; `PhoneVerificationStep` tests; no token in URLs, logs, or events | Not started |
+| M10-T5 | Extras (with the transfer car selector and flight details, Q-82) and coupon | Medium | T4 | AC 3, 4; `ServicesPicker`, `CouponField` tests | Not started |
+| M10-T6 | Payment choice, review, placeholder legal copy flagged by the audit, submit, confirmation page, conflict and price-change paths | Critical | T4, T5 | AC 5–7, 14; E2E-G-1, 2, 4, 7; `PriceSummary` tests | Not started |
+| M10-T7 | Payment return page | Critical | T6 | AC 6; E2E-G-3 | Not started |
+| M10-T8 | Manage reservation and My reservations with cancellation requests | Critical | T1 | AC 8, 13; E2E-G-6 | Not started |
+| M10-T8b | Change booking: prefill from an empty G5 preview and G1, preview and apply (G5, G6), old and new totals, "sent to the hotel for approval" state for paid bookings, deadline and contact fallback (Q-83…Q-85) | Critical | T8, T5 | AC 12; E2E-G-9 | Not started |
+| M10-T9 | Book Now internal mode per branch (`BookingProvider` port takes the branch and listing) | Low | T6 | AC 10; E2E-G-8 part | Not started |
+| M10-T10 | Page-view beacon on every public page (marketing and booking), `STEP_VIEW` events in each booking step, session id kept across steps and sent with P7; within the script budget | Medium | T0a, T6, T8 | AC 11; T-ANL-11…12, Lighthouse budget | Not started |
 
 ## Tasks
 
@@ -95,6 +95,8 @@ One additive migration, `site_analytics` (M10-T0a), and one public endpoint, API
 10. With online booking off for a branch, Book Now stays disabled and `/{branch}/book` explains how to book by contacting the hotel.
 11. Visiting pages and walking the booking journey produces events for every funnel step with the same session id and no cookie; a confirmed booking is linked to its session; no stored event contains an IP, query string, name, phone, email, reference, or token; GPC stops recording; the rollup produces daily totals and deletes events older than 90 days; the public pages stay within the Lighthouse budgets.
 12. A guest changes a pay-at-hotel booking (dates, units, extras with cars) and sees the new details at once; a paid booking with a new total shows "sent to the hotel for approval"; after the deadline the button is replaced by contact details; no total is computed in the browser.
+13. No verification, booking, manage, or guest session token appears in a URL query string, a server log, or an analytics event (added at milestone open, spec 0007).
+14. Email verification is offered only when the quote allows online payment and email codes are available; after an email verification only online payment is offered, with the reason (added at milestone open, spec 0007, Q-100).
 
 ## Tests
 

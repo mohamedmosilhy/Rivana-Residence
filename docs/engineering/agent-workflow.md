@@ -172,6 +172,20 @@ Both copies were verified identical (`diff -r`). Each skill ships `SKILL.md` (bo
 | `sync` | Updates `AGENTS.md` and scope after a change | Both | Milestone close, or Stage 7 when a new convention appeared |
 | `document` | PR text, changelog, release notes, postmortems | Both | When the owner asks |
 
+### Frontend skills (added 2026-11-26, M10)
+
+Copied by hand from the owner's Claude Code installation into both `.claude/skills/` and `.agents/skills/` (identical, `diff -r`), so Codex and every clone have them. They are not in `skills-lock.json`; refresh them by copying again. Prettier and ESLint already ignore both folders. They serve the UI track of `/develop` and never override the [design system](../frontend/design-system.md) or the project rules. How each is used in M10 is in [spec 0007](../specs/0007-m10-guest-booking-journey.md#frontend-skills-for-the-build).
+
+| Skill | Source and licence | Use on Rivana |
+| --- | --- | --- |
+| `ui-ux-pro-max` | Community skill, no licence file shipped with the copy | UX and accessibility guidance while building screens; runs locally (Python 3), suggestions only |
+| `vercel-react-best-practices` | Vercel Engineering, MIT | React and Next.js patterns for client islands; the bundled Next.js docs win where they differ |
+| `vercel-composition-patterns` | Vercel Engineering, MIT | Composing components with slots instead of boolean props |
+| `frontend-design` | Anthropic official plugins, Apache 2.0 | UI craft within the existing design system only |
+| `21st-ui-review` | 21st.dev, uses the external `21st` CLI | Optional UI review; ask the owner before the first run; never `--fix` unreviewed |
+
+Not installed on purpose: the 21st build, explore, generate, and catalog skills (they send project context to an external service and can add dependencies).
+
 How the skills relate to project rules:
 
 - The skills are general workflow skills, not framework-specific. Project rules (Next.js-only, REST through Route Handlers, layered modules, DB-backed consistency, this workflow's gates) come from `AGENTS.md` and these docs, and **override any skill suggestion**. Where a skill would continue past a gate, stop at the gate.
