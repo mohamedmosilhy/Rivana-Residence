@@ -1,5 +1,8 @@
 "use client";
 
+import type { Route } from "next";
+import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import {
   createContext,
   use,
@@ -14,7 +17,13 @@ import type { ApiProblem } from "@/presentation/api-client/result";
 import { formatMoney } from "@/presentation/format/money";
 import { button, link } from "@/presentation/site/classes";
 
-import { bookingDetailsHref, useSelectionQuote } from "./selection-quote";
+import {
+  bookingDetailsHref,
+  decodeSelection,
+  encodeSelection,
+  type SelectionLine,
+} from "./selection-link";
+import { useSelectionQuote } from "./selection-quote";
 
 type Line = QuoteInput["lines"][number];
 type Counts = Line["occupancy"];
@@ -57,6 +66,41 @@ function listingSelection(
     limitMessage:
       units.length >= limit ? `Maximum ${limit} units per booking.` : null,
   };
+}
+
+/**
+ * The units named by the address's `u` value, as far as these results can
+ * still hold them. Without one, as after a new search, the basket is empty.
+ */
+function restoreUnits(
+  value: string | null,
+  listings: readonly Listing[],
+  limit: number,
+) {
+  const units: SelectedUnit[] = [];
+  for (const line of (value && decodeSelection(value)) || []) {
+    const listing = listings.find(({ slug }) => slug === line.roomSlug);
+    if (!listing || listingSelection(units, limit, listing).limitMessage)
+      continue;
+    const { adults, children } = line.occupancy;
+    units.push({
+      id: units.length + 1,
+      listing,
+      occupancy: {
+        adults: Math.max(1, Math.min(adults, listing.maxAdults)),
+        children: Math.min(children, listing.maxChildren),
+      },
+    });
+  }
+  return units;
+}
+
+/** So that going back from the details page rebuilds this basket. */
+function rememberSelection(lines: readonly SelectionLine[]) {
+  const url = new URL(window.location.href);
+  url.searchParams.set("u", encodeSelection(lines));
+  url.searchParams.delete("notice");
+  window.history.replaceState(null, "", url);
 }
 
 export function AddBookingUnit({ listing }: Readonly<{ listing: Listing }>) {
@@ -156,16 +200,21 @@ export function BookingSelection({
   stay,
   initialOccupancy,
   limit,
+  listings,
   children,
 }: Readonly<{
   branchSlug: string;
   stay: QuoteInput["stay"];
   initialOccupancy: Counts;
   limit: number;
+  listings: readonly Listing[];
   children: ReactNode;
 }>) {
-  const [units, setUnits] = useState<readonly SelectedUnit[]>([]);
-  const nextId = useRef(0);
+  const remembered = useSearchParams()?.get("u") ?? null;
+  const [units, setUnits] = useState<readonly SelectedUnit[]>(() =>
+    restoreUnits(remembered, listings, limit),
+  );
+  const nextId = useRef(units.length);
   const heading = useRef<HTMLHeadingElement>(null);
   const lines = useMemo(
     () =>
@@ -367,23 +416,14 @@ export function BookingSelection({
           </button>
         )}
         {canContinue && (
-          <>
-            <button
-              type="button"
-              className={button("primary", "w-full")}
-              disabled
-              aria-describedby="booking-details-status"
-              data-details-href={bookingDetailsHref(branchSlug, stay, lines)}
-            >
-              Continue
-            </button>
-            <p
-              id="booking-details-status"
-              className="m-0 text-small text-neutral-600"
-            >
-              Online booking details are coming soon. Contact the hotel to book.
-            </p>
-          </>
+          <Link
+            href={bookingDetailsHref(branchSlug, stay, lines) as Route}
+            prefetch={false}
+            className={button("primary", "w-full")}
+            onClick={() => rememberSelection(lines)}
+          >
+            Continue
+          </Link>
         )}
       </section>
     </div>

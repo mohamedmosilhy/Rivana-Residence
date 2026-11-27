@@ -40,6 +40,8 @@ npm run build
 npm run check                     # format:check, lint, typecheck, unit, build
 TEST_DATABASE_URL=postgresql://<user>@127.0.0.1:5432/rivana_test npm run test:integration
 E2E_DATABASE_URL=postgresql://<user>@127.0.0.1:5432/rivana_e2e_test npm run test:e2e
+# Booking journeys that need a provider: development server, fake providers, no other `next dev` running
+BOOKING_JOURNEY_E2E=1 E2E_DATABASE_URL=postgresql://<user>@127.0.0.1:5432/rivana_e2e_test npm run test:e2e
 
 # Database
 npm run db:migrate                # dev migrations; production uses npm run db:deploy

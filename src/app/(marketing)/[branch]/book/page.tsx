@@ -2,22 +2,20 @@ import type { Metadata } from "next";
 import { headers } from "next/headers";
 import { notFound } from "next/navigation";
 
-import {
-  getBookingSearchSetup,
-  searchBookingPage,
-} from "@/composition/booking-search";
+import { getBookingReadiness } from "@/composition/booking-details";
+import { searchBookingPage } from "@/composition/booking-search";
 import { DEFAULT_STAY_POLICY } from "@/domain/shared/stay-policy";
 import { AvailabilityResults } from "@/presentation/features/booking/availability-results";
 import {
   BookingContact,
   BookingSearchFrame,
-  bookingSearchPanel,
 } from "@/presentation/features/booking/booking-search-frame";
 import {
   SearchFeedback,
   StaySearchForm,
   staySearchFields,
 } from "@/presentation/features/booking/stay-search-form";
+import { alertBox, bookingPanel } from "@/presentation/site/classes";
 
 import {
   pageMetadata,
@@ -41,6 +39,14 @@ export async function generateMetadata({
     robots: { index: false, follow: true },
   };
 }
+
+/** Why the details page sent the guest back. */
+const notices = {
+  unavailable:
+    "Part of your selection is no longer available. Check what is left and choose again.",
+  selection:
+    "We couldn’t open that selection. Search and choose your stay again.",
+};
 
 async function runSearch(slug: string, input: unknown) {
   const requestHeaders = await headers();
@@ -69,7 +75,7 @@ export default async function BookingSearchPage({
   searchParams,
 }: PageProps<"/[branch]/book">) {
   const branch = await requireBranch(params);
-  const setup = await getBookingSearchSetup(branch.id);
+  const setup = await getBookingReadiness(branch.id);
   if (!setup) notFound();
 
   if (!setup.bookable) {
@@ -104,7 +110,12 @@ export default async function BookingSearchPage({
 
   return (
     <BookingSearchFrame branch={branch}>
-      <div className={bookingSearchPanel}>
+      <div className={bookingPanel}>
+        {query.notice && (
+          <p role="alert" className={`${alertBox} mt-0 mb-4`}>
+            {notices[query.notice]}
+          </p>
+        )}
         {generalError && (
           <div className="mb-4">
             {error?.code === "RATE_LIMITED" ? (

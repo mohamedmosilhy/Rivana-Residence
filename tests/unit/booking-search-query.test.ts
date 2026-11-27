@@ -17,7 +17,16 @@ it("only submits when a stay field is present and keeps a valid preferred listin
     room: "deluxe-double",
     errors: {},
     input: null,
+    notice: null,
   });
+});
+
+it("reads only the two reasons the details page can send back", () => {
+  for (const notice of ["unavailable", "selection"])
+    expect(readStaySearchQuery({ notice }).notice).toBe(notice);
+  expect(
+    readStaySearchQuery({ notice: "Your card was charged" }).notice,
+  ).toBeNull();
 });
 
 it("passes stay inputs only and leaves semantic calendar and count checks to availability", () => {

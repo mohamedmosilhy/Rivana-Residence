@@ -1,3 +1,7 @@
 export type { BookingLaunchDescriptor, BookingProvider } from "./ports";
-export { GetBookingSearchSetup } from "./get-booking-search-setup";
+export {
+  GetBookingSetup,
+  type BookingSetup,
+  type NotBookableReason,
+} from "./get-booking-setup";
 export { ResolveBooking } from "./resolve-booking";

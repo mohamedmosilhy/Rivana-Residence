@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 
 import type { PublicBranch } from "@/application/public";
 import {
+  bookingPanel,
   button,
   container,
   eyebrowDark,
@@ -17,9 +18,11 @@ import { SiteImage } from "@/presentation/site/site-image";
 
 export function BookingSearchFrame({
   branch,
+  title = "Find your stay",
   children,
 }: Readonly<{
   branch: Pick<PublicBranch, "name" | "hero">;
+  title?: string;
   children: ReactNode;
 }>) {
   return (
@@ -36,7 +39,7 @@ export function BookingSearchFrame({
         >
           <div className="min-w-0">
             <p className={eyebrowDark}>{branch.name}</p>
-            <h1 className={heroTitle}>Find your stay</h1>
+            <h1 className={heroTitle}>{title}</h1>
           </div>
           {branch.hero && (
             <div className={goldFrame}>
@@ -62,9 +65,6 @@ export function BookingSearchFrame({
   );
 }
 
-export const bookingSearchPanel =
-  "border border-neutral-300 border-t-2 border-t-gold-400 bg-surface p-[clamp(1.125rem,3vw,2rem)] shadow-[var(--shadow-md)]";
-
 export function BookingContact({
   slug,
   phone,
@@ -72,7 +72,7 @@ export function BookingContact({
 }: Readonly<{ slug: string; phone: string | null; email: string | null }>) {
   return (
     <section
-      className={`${bookingSearchPanel} grid items-start gap-6 md:grid-cols-[1.1fr_1fr] md:gap-10`}
+      className={`${bookingPanel} grid items-start gap-6 md:grid-cols-[1.1fr_1fr] md:gap-10`}
       aria-labelledby="booking-contact"
     >
       <div>

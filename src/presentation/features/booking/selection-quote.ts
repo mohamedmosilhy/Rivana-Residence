@@ -49,22 +49,3 @@ export function useSelectionQuote(
     retry: () => setAttempt((previous) => previous + 1),
   };
 }
-
-/** Selection handoff to the details page, as specified in 0007. */
-export function bookingDetailsHref(
-  branchSlug: string,
-  { checkIn, checkOut }: Stay,
-  lines: Lines,
-) {
-  const query = new URLSearchParams({
-    checkIn,
-    checkOut,
-    u: lines
-      .map(
-        ({ roomSlug, occupancy }) =>
-          `${roomSlug}.${occupancy.adults}.${occupancy.children}`,
-      )
-      .join(","),
-  });
-  return `/${branchSlug}/book/details?${query}`;
-}

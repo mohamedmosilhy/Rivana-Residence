@@ -14,6 +14,7 @@ The checks for each risk tier, the commands, and the most recent recorded result
 | Production build | `npm run build` | |
 | Aggregate | `npm run check` | Format, lint, typecheck, unit and contract tests, and build |
 | E2E (Chromium projects) | `E2E_DATABASE_URL=postgresql://<user>@127.0.0.1:5432/rivana_e2e_test npm run test:e2e` | Builds and starts on :3100 |
+| E2E booking journey | `BOOKING_JOURNEY_E2E=1 E2E_DATABASE_URL=… npx playwright test` | Development server with fake providers (M10-T4); stop any other `next dev` in the checkout first. `BOOKING_SEARCH_E2E=1` is the production build search run |
 | E2E cross-browser | `CROSS_BROWSER=1 npx playwright test --project=webkit-*` | Firefox cannot start on macOS 27 locally; run it in Linux CI |
 | Lighthouse | `CHROME_PATH=… npm run lighthouse` / `lighthouse:mobile` | |
 | OpenAPI freshness (planned M4) | part of `npm run test` | |
@@ -43,7 +44,11 @@ The owner selected Node **26.13.0 LTS** for the Mac, CI, and hosting. On macOS w
 
 The required gates passed. `npm run check` passed with 2,547 unit and contract tests in 115 files, plus format, lint, type check, and the production build. PostgreSQL passed 1,077 tests in 67 files. Chromium passed 228 with 35 intentional skips. WebKit passed 100 with 29 intentional skips. Fresh and populated migrations showed no Prisma drift. Lighthouse passed for four URLs on each profile with three mobile paint warnings. The optional Firefox suite could not start on this Mac. The live walkthrough and focused tests verified all 16 criteria. [Exact commands and counts](../delivery/reports/m9-payments-and-cancellations.md#commands-and-results) · [Acceptance evidence](../delivery/reports/m9-payments-and-cancellations.md#acceptance-criteria-and-evidence)
 
-## Latest accepted task results (2026-11-27, M10-T3)
+## Latest accepted task results (2026-11-27, M10-T4)
+
+`npm run check` passed format, lint with one existing warning, type checking, 2,902 unit and contract tests in 132 files, and the production build. PostgreSQL passed 1,133 tests across three shards (72 files). Chromium passed 238 with 55 intentional skips. The search run passed 35 with 10 skips and the new journey run passed 20, both in Chromium and WebKit. First load scripts stayed under the 260 KB gate on the results and details pages with little room left. Claude Opus 5.5 approved the recheck. [Exact commands in the task log](../delivery/reports/m10-guest-booking-journey.md#task-log) · [Independent review](../reviews/2026-11-27-m10-t4.md)
+
+## Previous accepted task results (2026-11-27, M10-T3)
 
 `npm run check` passed format, lint with one existing warning, type checking, 2,756 unit and contract tests in 126 files, and the production build. PostgreSQL passed 1,129 tests across three shards. The full Chromium run passed 236 with 45 intentional skips. The focused Chromium and WebKit run passed 30 with five intentional skips. The live basket showed a $420.00 accommodation subtotal from P6, passed 49 axe rules with zero violations, and stayed within the 260 KB script budget. GPT-6.2 Astra approved the recheck with zero open findings. [Exact commands in the task log](../delivery/reports/m10-guest-booking-journey.md#task-log) · [Independent review](../reviews/2026-11-27-m10-t3.md)
 

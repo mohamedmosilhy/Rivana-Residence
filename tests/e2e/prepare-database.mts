@@ -11,6 +11,7 @@ import { seedDatabase } from "../../prisma/seed-data.ts";
 import { createStaff, setStaffActive } from "../../scripts/staff-admin.ts";
 import { E2E_PASSWORD, E2E_PROJECTS, accountsFor } from "./support/accounts.ts";
 import {
+  seedBookingJourney,
   seedBookingSearch,
   seedPublicContent,
   seedSecondBranch,
@@ -105,6 +106,9 @@ await rm("/tmp/rivana-e2e-outbox", { recursive: true, force: true });
     await seedSecondBranch(client, actor, images);
     if (process.env.BOOKING_SEARCH_E2E === "1") {
       await seedBookingSearch(client);
+    }
+    if (process.env.BOOKING_JOURNEY_E2E === "1") {
+      await seedBookingJourney(client);
     }
   } finally {
     await client.$disconnect();

@@ -132,6 +132,22 @@ export async function seedBookingSearch(client: PrismaClient) {
   });
 }
 
+/**
+ * Only for the booking journey run on the development server: both ways to
+ * verify, which needs online payment for email (ADR 031).
+ */
+export async function seedBookingJourney(client: PrismaClient) {
+  await seedBookingSearch(client);
+  await client.branch.update({
+    where: { id: BRANCH_ID },
+    data: { onlinePaymentEnabled: true },
+  });
+  await client.verificationSettings.update({
+    where: { id: "default" },
+    data: { emailEnabled: true },
+  });
+}
+
 export async function seedPublicContent(
   client: PrismaClient,
   mediaRoot: string,

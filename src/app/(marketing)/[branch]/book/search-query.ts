@@ -53,8 +53,11 @@ export function readStaySearchQuery(query: Query) {
     }
   }
 
+  const notice = z.enum(["unavailable", "selection"]).safeParse(query.notice);
+
   return {
     values,
+    notice: notice.success ? notice.data : null,
     room: room.success ? room.data : null,
     errors,
     input:

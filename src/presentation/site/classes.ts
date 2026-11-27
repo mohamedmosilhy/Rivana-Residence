@@ -142,3 +142,21 @@ export const holdingEyebrow = `${eyebrowDarkFlush} max-w-[36rem]`;
 export const holdingMuted = "m-0 max-w-[36rem] font-normal text-inverse-muted";
 export const holdingActions =
   "m-0 flex max-w-[36rem] flex-wrap items-center gap-4 text-inverse-strong";
+
+// Booking journey forms: a persistent label above a 52px square control, with
+// help and error text beside it.
+export const bookingPanel =
+  "border border-neutral-300 border-t-2 border-t-gold-400 bg-surface p-[clamp(1.125rem,3vw,2rem)] shadow-[var(--shadow-md)]";
+export const bookingHeading =
+  "m-0 scroll-mt-[calc(var(--header-height-compact)+1.5rem)] font-display text-heading-lg leading-tight font-normal text-plum-900";
+export const fieldGroup = "grid min-w-0 content-start gap-2";
+export const fieldLabel = "text-small leading-6 font-medium text-plum-900";
+export const fieldControl =
+  "min-h-13 w-full min-w-0 rounded-none border border-control-border bg-surface px-3 text-base text-neutral-950 read-only:bg-canvas aria-invalid:border-danger";
+/** The chevron drawn over a restyled native list (its parent is relative). */
+export const selectArrow =
+  "pointer-events-none absolute top-1/2 right-3 size-2 -translate-y-3/4 rotate-45 border-r border-b border-current";
+export const fieldHelp = "m-0 text-small text-neutral-600";
+export const fieldError = "m-0 text-small text-danger";
+export const alertBox =
+  "border-l-2 border-danger bg-canvas px-4 py-3 text-small text-neutral-950";

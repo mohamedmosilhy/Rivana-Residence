@@ -11,21 +11,19 @@ import { Icon } from "@/presentation/site/icons";
 import { SiteImage } from "@/presentation/site/site-image";
 
 import { AddBookingUnit, BookingSelection } from "./booking-selection";
+import { displayDate } from "./display-date";
 import { searchFeedbackId } from "./stay-search-form";
 
 type Listing = PublicAvailability["results"][number];
 
-const dateFormat = new Intl.DateTimeFormat("en-GB", {
-  timeZone: "UTC",
-  weekday: "short",
-  day: "numeric",
-  month: "short",
-  year: "numeric",
+/** What the selection basket needs to know about an available listing. */
+const basketListing = ({ roomType, unitsAvailable }: Listing) => ({
+  slug: roomType.slug,
+  name: roomType.name,
+  unitsAvailable,
+  maxAdults: roomType.facts.maxAdults,
+  maxChildren: roomType.facts.maxChildren,
 });
-
-function displayDate(day: LocalDate) {
-  return dateFormat.format(new Date(`${day.value}T00:00:00Z`));
-}
 
 const reasons: Record<NonNullable<Listing["reason"]>, string> = {
   SOLD_OUT: "Not available for these dates.",
@@ -133,15 +131,7 @@ function ResultCard({
             View details <Icon name="arrow" className={linkIcon} />
           </Link>
         </div>
-        <AddBookingUnit
-          listing={{
-            slug: roomType.slug,
-            name: roomType.name,
-            unitsAvailable: listing.unitsAvailable,
-            maxAdults: roomType.facts.maxAdults,
-            maxChildren: roomType.facts.maxChildren,
-          }}
-        />
+        <AddBookingUnit listing={basketListing(listing)} />
       </div>
     </article>
   );
@@ -184,6 +174,7 @@ export function AvailabilityResults({
           stay={stay}
           initialOccupancy={{ adults, children }}
           limit={MAX_UNITS_REQUESTED}
+          listings={available.map(basketListing)}
         >
           <ul className="m-0 grid list-none gap-6 p-0 md:grid-cols-2">
             {available.map((listing) => (

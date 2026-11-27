@@ -1,25 +1,11 @@
 import "server-only";
 
-import { GetBookingSearchSetup } from "@/application/booking";
 import { AVAILABILITY_RATE_LIMIT } from "@/application/shared/public-rate-limit-policy";
 import { rateLimited } from "@/application/shared/result";
 import { recordFunnelSteps } from "@/composition/analytics";
 import { publicAvailability } from "@/composition/inventory";
-import { isPaymentGatewayReady } from "@/composition/provider-readiness";
 import { consumePublicRateLimit } from "@/composition/public-rate-limit";
-import { verificationChannelReadiness } from "@/composition/verification-channels";
 import { searchSteps } from "@/domain/analytics";
-import { PrismaBranchRepository } from "@/infrastructure/db/prisma/repositories/branches/branch-repository";
-
-/** A fresh read of the settings that decide whether the branch can take new bookings. */
-export function getBookingSearchSetup(branchId: string) {
-  return new GetBookingSearchSetup({
-    branches: new PrismaBranchRepository(),
-    channels: verificationChannelReadiness(),
-    paymentReady: isPaymentGatewayReady,
-    clock: { now: () => new Date() },
-  }).execute(branchId);
-}
 
 export async function searchAndRecordAvailability(
   slug: string,

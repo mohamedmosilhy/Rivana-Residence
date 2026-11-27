@@ -1,6 +1,6 @@
 # M10 — Guest booking journey
 
-Status: **In progress (5/13 tasks accepted).** [Task log](../reports/m10-guest-booking-journey.md#task-log). Opened 2026-11-26: spec [0007](../../specs/0007-m10-guest-booking-journey.md) and the task breakdown below were approved by the owner on 2026-11-26, after an independent cross check with every recommended fix applied. Scope extended by the owner on 2026-11-17 with first-party website analytics (M10-T0a, T0b, T10; ADR 029, Q-86, Q-87), the guest change UI (M10-T8b; Q-83…Q-85), and the transfer car selector (M10-T5; Q-82). Branch: `m10-guest-booking-journey`. Follow the [milestone loop](./README.md#the-loop-every-milestone-follows).
+Status: **In progress (6/13 tasks accepted).** [Task log](../reports/m10-guest-booking-journey.md#task-log). Opened 2026-11-26: spec [0007](../../specs/0007-m10-guest-booking-journey.md) and the task breakdown below were approved by the owner on 2026-11-26, after an independent cross check with every recommended fix applied. Scope extended by the owner on 2026-11-17 with first-party website analytics (M10-T0a, T0b, T10; ADR 029, Q-86, Q-87), the guest change UI (M10-T8b; Q-83…Q-85), and the transfer car selector (M10-T5; Q-82). Branch: `m10-guest-booking-journey`. Follow the [milestone loop](./README.md#the-loop-every-milestone-follows).
 
 ## Objective
 
@@ -50,7 +50,7 @@ Planned, reviewed, and accepted one task at a time ([agent-workflow.md](../../en
 | M10-T1 | Typed API client on the contracts (`src/presentation/api-client/`), problem mapping, headers, analytics session helper, shared money formatter; additive `branch.timeZone` on the guest reservation response (G1, G4) | Medium | T0b | AC 5, 8, 13; client unit tests, contract tests | Accepted 2026-11-26 |
 | M10-T2 | Search and results page, server `SEARCH` event for unmet demand, booking off explanation in place of the form | Medium | T1 | AC 1, 9, 10 | Accepted 2026-11-26 |
 | M10-T3 | Selection basket with guests per unit and server-computed subtotal | Medium | T2 | AC 2 | Accepted 2026-11-27 |
-| M10-T4 | Details frame (`GetBookingSetup`), guest details, verification (WhatsApp, or email only with online payment, ADR 031 and Q-100), tab draft | Critical | T3 | AC 9, 13, 14; E2E-G-5; `PhoneVerificationStep` tests; no token in URLs, logs, or events | Not started |
+| M10-T4 | Details frame (`GetBookingSetup`), guest details, verification (WhatsApp, or email only with online payment, ADR 031 and Q-100), tab draft | Critical | T3 | AC 9, 13, 14; E2E-G-5; `PhoneVerificationStep` tests; no token in URLs, logs, or events | Accepted 2026-11-27 |
 | M10-T5 | Extras (with the transfer car selector and flight details, Q-82) and coupon | Medium | T4 | AC 3, 4; `ServicesPicker`, `CouponField` tests | Not started |
 | M10-T6 | Payment choice, review, placeholder legal copy flagged by the audit, submit, confirmation page, conflict and price-change paths | Critical | T4, T5 | AC 5–7, 14; E2E-G-1, 2, 4, 7; `PriceSummary` tests | Not started |
 | M10-T7 | Payment return page | Critical | T6 | AC 6; E2E-G-3 | Not started |
@@ -110,7 +110,8 @@ Screenshots of every step (desktop and mobile), including errors, conflict, coup
 
 - Legal and tax wording not ready: online booking stays off until approved text replaces the placeholders.
 - Payment return-page timing: polling with a clear waiting state.
-- The Playwright server runs in production mode, which refuses fake providers, so a booking cannot be completed there. Settle how E2E-G journeys run when planning M10-T4 (found at M10-T0b).
+- The Playwright server runs in production mode, which refuses fake providers, so a booking cannot be completed there (found at M10-T0b). Settled at M10-T4: provider journeys run opt in on the development server (`BOOKING_JOURNEY_E2E=1`, [spec 0007](../../specs/0007-m10-guest-booking-journey.md#settled-during-m10-t4-2026-11-27)).
+- The results and details pages load close to the 260 KB script limit (M10-T4 measurement). Later booking steps load on demand.
 
 ## Handoff
 

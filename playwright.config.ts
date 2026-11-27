@@ -4,9 +4,22 @@ import { E2E_PHONE_VERIFICATION_SECRET } from "./tests/e2e/support/phone-verific
 const port = 3100;
 const e2eDatabaseUrl = process.env.E2E_DATABASE_URL;
 const bookingSearch = process.env.BOOKING_SEARCH_E2E === "1";
-if (bookingSearch && !e2eDatabaseUrl) {
-  throw new Error("BOOKING_SEARCH_E2E requires E2E_DATABASE_URL.");
+// Journeys that need a provider run on the development server: the production
+// server refuses the fake WhatsApp, email and payment providers. No other
+// `next dev` may be running in this checkout meanwhile.
+const bookingJourney = process.env.BOOKING_JOURNEY_E2E === "1";
+if ((bookingSearch || bookingJourney) && !e2eDatabaseUrl) {
+  throw new Error("The focused booking runs require E2E_DATABASE_URL.");
 }
+if (bookingSearch && bookingJourney) {
+  throw new Error("Run BOOKING_SEARCH_E2E and BOOKING_JOURNEY_E2E separately.");
+}
+/** The one spec file of a focused booking run. */
+const focused = bookingSearch
+  ? /booking-search\.spec/
+  : bookingJourney
+    ? /booking-journey\.spec/
+    : null;
 
 // Release acceptance (`npm run test:e2e:browsers`) repeats the public,
 // shell, and security suites in Firefox and WebKit at phone, tablet, and
@@ -102,15 +115,15 @@ export default defineConfig({
   ]
     .filter(
       (project) =>
-        !bookingSearch ||
+        !focused ||
         ["desktop-chromium", "mobile-chromium"].includes(project.name) ||
         project.name.startsWith("webkit-"),
     )
     .map((project, index) =>
-      bookingSearch
+      focused
         ? {
             ...project,
-            testMatch: /booking-search\.spec/,
+            testMatch: focused,
             use: {
               ...project.use,
               extraHTTPHeaders: { "X-Forwarded-For": `192.0.2.${index + 1}` },
@@ -121,8 +134,12 @@ export default defineConfig({
   webServer: {
     // The data cache persists on disk between runs, but the test database is
     // rebuilt out of band on every run, so start from an empty cache.
-    command: `npm run build && rm -rf .next/cache/fetch-cache && npm run start -- --hostname 127.0.0.1 --port ${port}`,
-    reuseExistingServer: !process.env.CI && !bookingSearch,
+    // A development cache left from before a production build can make every
+    // page reload without end, so the journey run starts without one.
+    command: bookingJourney
+      ? `rm -rf .next/dev && npm run dev -- --hostname 127.0.0.1 --port ${port}`
+      : `npm run build && rm -rf .next/cache/fetch-cache && npm run start -- --hostname 127.0.0.1 --port ${port}`,
+    reuseExistingServer: !process.env.CI && !focused,
     timeout: 180_000,
     // An uncached page: the readiness probe must not fill the content cache.
     url: `http://127.0.0.1:${port}/admin/login`,
@@ -140,6 +157,14 @@ export default defineConfig({
       // and the scenario never sends a code or calls a provider.
       ...(bookingSearch
         ? { WHATSAPP_ACCESS_TOKEN: "e2e-search-readiness-only" }
+        : {}),
+      // Fictional only. Nothing reaches a provider.
+      ...(bookingJourney
+        ? {
+            WHATSAPP_PROVIDER: "fake",
+            EMAIL_PROVIDER: "fake",
+            PAYMENT_PROVIDER: "fake",
+          }
         : {}),
       ...(e2eDatabaseUrl ? { DATABASE_URL: e2eDatabaseUrl } : {}),
     },

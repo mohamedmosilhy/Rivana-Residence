@@ -354,7 +354,7 @@ For later screens: show a fallback for an unknown problem code (T4 to T8b), and 
 
 ### Settled during M10-T2 (2026-11-26)
 
-- **Readiness.** `GetBookingSearchSetup` reads the branch fresh and applies the P7 rule: online booking on, a check-in time, and a usable verification channel (email counts only with online payment). T4 extends this read in `GetBookingSetup` instead of adding a second rule.
+- **Readiness.** The search page reads the branch fresh and applies the P7 rule: online booking on, a check-in time, and a usable verification channel (email counts only with online payment). M10-T4 moved this read into `GetBookingSetup` (`readiness()`), so there is one rule.
 - **Limiter and analytics.** The page and P5 share the `availability` bucket (60 a minute per client), wired in `src/composition/public-rate-limit.ts`, which scheduled jobs must not import. The page passes no session, so only unmet demand is stored.
 - **Failures.** A refused search shows the wait time. An unexpected failure keeps the entries and logs only the error class and a short code.
 - **Browser tests.** `BOOKING_SEARCH_E2E=1` prepares bookable fixtures for `tests/e2e/booking-search.spec.ts`. It does not settle how the E2E-G journeys complete a booking (planned at T4).
@@ -365,6 +365,27 @@ For later screens: show a fallback for an unknown problem code (T4 to T8b), and 
 - The basket waits 250 ms after edits settle before requesting P6 with an empty services list. Earlier requests are cancelled, and only the current answer can supply the accommodation subtotal. Quote failures preserve the selection.
 - Each listing shows its selected count and a link to the basket. P6 quantity refusals are explained once per listing, and unit validation messages describe the affected guest fields.
 - The owner approved preparing and testing the existing details URL in T3. Continue goes live in T4 when the destination validates and quotes the selection.
+
+### Settled during M10-T4 (2026-11-27)
+
+Owner decisions at planning (the four recommendations, approved with the plan):
+
+- **Journeys with providers** run opt in on the development server (`BOOKING_JOURNEY_E2E=1`), where fake providers are allowed. The test asks for a code through the screen, then replaces its hash with a known one in the disposable database. No production code changed. This run is not part of the standard browser run, needs no other `next dev` in the checkout, and starts with an empty `.next/dev` (after a production build, a leftover cache made every page reload without end; clearing it fixed that).
+- **Phone entry.** The server builds the country list, with Egypt first chosen. `libphonenumber-js/min` loads in the browser only when the phone is used, and checks the length only; the server decides validity.
+- **Going back.** Continue writes `u` into the results address, and the basket is rebuilt from it ("Change selection", browser Back, and a refused selection). A new search still starts empty. This amends M10-T3.
+- **Until M10-T5 and T6**, a verified guest sees that extras and payment are coming soon, with the hotel contacts.
+
+As built:
+
+- `GetBookingSetup` has `readiness()` (no services, for the search page) and `execute()` (adds active services and `maxVehicles`).
+- The details page quotes through `QuoteBooking` under P6's `quote` bucket and records no website step. A broken selection returns to the results with `notice=selection`, an unavailable one with `notice=unavailable` and the selection.
+- Email is offered only when the setup offers it and the quote lists `ONLINE`.
+- Waits: a refused WhatsApp send and a WhatsApp code's resend time hold both channels (every send counts against the phone); the email equivalents hold email only, since the limit may be the address's own.
+- Code and token expiry count on the device clock from when each request was made; the resend wait comes from the server's `resendAvailableAt` less the code issue time, so a wrong device clock does not change it.
+- The tab draft holds name, email, country, phone and special requests. Line breaks in special requests become spaces, because the server refuses control characters there.
+- A verification is dropped when the phone changes, and an email verification also when the email changes.
+
+Known limits left open at acceptance: an email refusal that is really the phone's limit lets one WhatsApp send be refused; a code the server reports expired loses its resend wait; one dimmed "Send by email instead" button can lack a written reason. First load scripts are close to the 260 KB gate (results 259,207 bytes with headers), so later steps load on demand and the owner is asked if first load still exceeds it. The load after step 1 is about 300 KB.
 
 ## Build plan
 

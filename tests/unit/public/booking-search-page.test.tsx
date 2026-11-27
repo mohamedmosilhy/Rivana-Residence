@@ -13,15 +13,15 @@ const bookingDate = LocalDate.parse("2026-11-26");
 vi.mock("next/headers", () => ({
   headers: () => Promise.resolve(new Headers()),
 }));
-vi.mock("@/composition/booking-search", () => ({
-  getBookingSearchSetup: async () => ({
+vi.mock("@/composition/booking-details", () => ({
+  getBookingReadiness: async () => ({
     bookable: true,
     today: bookingDate,
     phone: null,
     email: null,
   }),
-  searchBookingPage,
 }));
+vi.mock("@/composition/booking-search", () => ({ searchBookingPage }));
 vi.mock("@/app/(marketing)/site-content", () => ({
   requireBranch: async () => ({
     id: "branch-id",

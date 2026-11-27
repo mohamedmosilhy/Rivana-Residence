@@ -2,11 +2,11 @@ import { randomBytes } from "node:crypto";
 import { mkdir } from "node:fs/promises";
 import path from "node:path";
 
-import AxeBuilder from "@axe-core/playwright";
 import { expect, test, type Page } from "@playwright/test";
 
 import { localDateAt } from "../../src/domain/shared/zoned-time";
 
+import { verifyAccessibility } from "./support/booking";
 import { sql } from "./support/session";
 
 const booking = "/new-cairo/book";
@@ -48,35 +48,6 @@ async function capture(page: Page, name: string, fullPage = false) {
     animations: "disabled",
     scale: "css",
   });
-}
-
-async function verifyAccessibility(page: Page) {
-  const { violations } = await new AxeBuilder({ page }).analyze();
-  expect(
-    violations.filter(
-      ({ impact }) => impact === "serious" || impact === "critical",
-    ),
-  ).toEqual([]);
-  expect(
-    await page.evaluate(() => document.documentElement.scrollWidth),
-  ).toBeLessThanOrEqual(await page.evaluate(() => window.innerWidth));
-  const targets = await page
-    .locator("main :is(input:not([type=hidden]), select, button, a, summary)")
-    .evaluateAll((elements) =>
-      elements
-        .filter((element) => element.getClientRects().length > 0)
-        .map((element) => {
-          const { width, height } = element.getBoundingClientRect();
-          return {
-            name: element.textContent?.trim() || element.getAttribute("name"),
-            width,
-            height,
-          };
-        }),
-    );
-  expect(
-    targets.filter(({ width, height }) => width < 44 || height < 44),
-  ).toEqual([]);
 }
 
 async function captureSelection(page: Page, name: string, desktop: boolean) {
@@ -128,6 +99,25 @@ test("the booking page gives contact details while booking is off", async ({
   }
 });
 
+test("the details page gives contact details while booking is off", async ({
+  page,
+}) => {
+  test.skip(ready, "The focused search suite enables this branch.");
+  await page.setViewportSize({ width: 320, height: 760 });
+  // Booking is refused before the address is read.
+  const response = await page.goto(`${booking}/details?u=anything`);
+  expect(response?.status()).toBe(200);
+  await expect(
+    page.getByRole("heading", { name: "Book with the hotel" }),
+  ).toBeVisible();
+  await expect(page.getByLabel("Full name")).toHaveCount(0);
+  await expect(page.locator('meta[name="robots"]')).toHaveAttribute(
+    "content",
+    "noindex, nofollow",
+  );
+  await verifyAccessibility(page);
+});
+
 test("unknown and inactive branch booking pages return 404", async ({
   request,
 }) => {
@@ -140,7 +130,7 @@ test("unknown and inactive branch booking pages return 404", async ({
 test.describe("with booking available", () => {
   test.skip(!ready, "Run the focused BOOKING_SEARCH_E2E=1 search suite.");
 
-  test("AC-2 selects a room and apartment, checks the server subtotal, and prepares the details link", async ({
+  test("AC-2 selects a room and apartment, checks the server subtotal, and links to the details page", async ({
     page,
   }, testInfo) => {
     const desktop = testInfo.project.name === "desktop-chromium";
@@ -192,12 +182,8 @@ test.describe("with booking available", () => {
       services: [],
     });
     await expect(basket.getByText("$420.00")).toBeVisible();
-    const next = basket.getByRole("button", { name: "Continue" });
-    await expect(next).toBeDisabled();
-    const href = new URL(
-      (await next.getAttribute("data-details-href"))!,
-      page.url(),
-    );
+    const next = basket.getByRole("link", { name: "Continue" });
+    const href = new URL((await next.getAttribute("href"))!, page.url());
     expect(href.pathname).toBe("/new-cairo/book/details");
     expect(Object.fromEntries(href.searchParams)).toEqual({
       checkIn: dates.checkIn,
@@ -232,6 +218,62 @@ test.describe("with booking available", () => {
     await page.goto(search(stay(8)));
     await expect(
       basket.getByText("Choose up to 5 rooms or apartments for this stay."),
+    ).toBeVisible();
+  });
+
+  // The production build: no code is sent, so no provider is called.
+  test("prices the selection on the details page and rebuilds it on the way back", async ({
+    page,
+  }) => {
+    const dates = await seasonalStay();
+    await page.setViewportSize({ width: 320, height: 844 });
+    await page.goto(search(dates));
+    await page
+      .getByRole("button", { name: "Add to stay: Deluxe Double" })
+      .click();
+    const basket = page.getByRole("region", { name: "Your selection" });
+    await basket.getByRole("link", { name: "Continue" }).click();
+    await expect(
+      page.getByRole("heading", { name: "Your details" }),
+    ).toBeVisible();
+    const stayPanel = page.getByRole("complementary", { name: "Your stay" });
+    await expect(stayPanel.getByText("Deluxe Double")).toBeVisible();
+    await expect(stayPanel.getByText("$160.00")).toHaveCount(2);
+    await verifyAccessibility(page);
+
+    // The browser's own Back rebuilds the basket from the address.
+    await page.goBack();
+    await expect(
+      basket.getByRole("group", { name: "Deluxe Double · Unit 1" }),
+    ).toBeVisible();
+    await basket.getByRole("link", { name: "Continue" }).click();
+    await page.getByRole("link", { name: "Change selection" }).click();
+    await expect(page).toHaveURL(/\/new-cairo\/book\?.*u=deluxe-double/);
+    await expect(
+      basket.getByRole("group", { name: "Deluxe Double · Unit 1" }),
+    ).toBeVisible();
+
+    const details = (u: string) =>
+      `${booking}/details?${new URLSearchParams({
+        checkIn: dates.checkIn,
+        checkOut: dates.checkOut,
+        u,
+      })}`;
+    // Superior Double has no unit: back to the results with the reason.
+    await page.goto(details("deluxe-double.2.0,superior-double.2.0"));
+    await expect(page).toHaveURL(/notice=unavailable/);
+    await expect(
+      page.getByText("Part of your selection is no longer available."),
+    ).toBeVisible();
+    await expect(
+      basket.getByRole("group", { name: "Deluxe Double · Unit 1" }),
+    ).toBeVisible();
+    await expect(basket.getByRole("group")).toHaveCount(1);
+    await verifyAccessibility(page);
+    await page.goto(details("no-such-listing.2.0"));
+    await expect(page).toHaveURL(/notice=selection/);
+    await expect(
+      page.getByText("We couldn’t open that selection."),
     ).toBeVisible();
   });
 
@@ -300,9 +342,7 @@ test.describe("with booking available", () => {
       basket.getByText("The full quantity is unavailable.", { exact: false }),
     ).toHaveCount(1);
     await expect(basket.getByText("$160.00")).toHaveCount(0);
-    await expect(basket.getByRole("button", { name: "Continue" })).toHaveCount(
-      0,
-    );
+    await expect(basket.getByRole("link", { name: "Continue" })).toHaveCount(0);
     if (captureState)
       await captureSelection(page, "availability-changed", desktop);
     await basket
