@@ -92,7 +92,7 @@ Measured on 2026-11-27 with Lighthouse `resource-summary` (script transfer, head
 | `/{branch}/book` with results | 265,489 | 265,827 |
 | `/{branch}/book/details` | 265,096 | 266,453 |
 
-Both are above the 260,000 byte budget. [`.lighthouserc.cjs`](../../.lighthouserc.cjs) audits only Home, Rooms, a room detail, and Contact, and its script size assertion is a warning, so no gate reported this. The M10-T4 note of 259,207 bytes for the results page was not reproduced. The extras step and price panel load on demand (about 8 KB compressed). **Open:** bringing both pages under the budget and adding them to the Lighthouse run.
+Both are above the 260,000 byte budget. [`.lighthouserc.cjs`](../../.lighthouserc.cjs) audits only Home, Rooms, a room detail, and Contact, and its script size assertion is a warning, so no gate reported this. The M10-T4 note of 259,207 bytes for the results page was not reproduced. The extras step and price panel load on demand (about 8 KB compressed). **Planned (M10-T10, owner 2026-11-27):** bring both pages under the budget and add them to the Lighthouse run.
 
 ## Phase 10 measured baseline
 

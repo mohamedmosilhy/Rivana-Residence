@@ -407,7 +407,13 @@ As built:
 - Choices live in memory only: they survive moving between steps and verifying again, and are lost on reload or a changed selection.
 - The architecture test that guards reservation tables matches the text `.coupon`, so screen code reads the quote's coupon field by destructuring.
 
-Open at acceptance: the booking pages are above the script budget ([performance.md](../frontend/performance.md#booking-page-scripts-m10)); narrowing that test pattern; and optional review points (the panel's wording away from the step after a sold out or closed answer, a repeated refusal not announced again, and a broad focus fallback).
+Owner decisions after acceptance (2026-11-27):
+
+- M10-T10 brings the results and details pages under the script budget and adds them to the Lighthouse run ([performance.md](../frontend/performance.md#booking-page-scripts-m10)).
+- The `.coupon` pattern in `persistence-boundaries.test.ts` will be narrowed to database calls in a small separate change, planned and approved before it is made.
+- M10-T6 corrects the panel's wording away from the extras step after a sold out or closed answer.
+
+Still open, optional review points: a repeated coupon refusal is not announced again, and the focus fallback is broad.
 
 ## Build plan
 
@@ -440,12 +446,12 @@ Changes from the brief's provisional table: T0b and T4 raised to Critical; T0a n
 | M10-T3 | Selection basket with server computed subtotal | Medium | T2 | AC 2 |
 | M10-T4 | Details frame and `GetBookingSetup`, guest details, verification (WhatsApp, or email only with online payment, Q-100), draft storage | Critical (personal data, tokens) | T3 | AC 9, 13, 14; E2E-G-5; `PhoneVerificationStep` tests; a test that no token reaches a URL, log line, or analytics row |
 | M10-T5 | Extras (transfer car selector and flight details, Q-82) and coupon | Medium | T4 | AC 3, 4; `ServicesPicker`, `CouponField` tests |
-| M10-T6 | Payment choice, review, placeholder legal copy, submit, confirmed page, conflict and price change paths | Critical | T4, T5 | AC 5, 6, 7, 14; E2E-G-1, 2, 4, 7; `PriceSummary` tests; an E2E where an email verified guest sees only online payment |
+| M10-T6 | Payment choice, review, placeholder legal copy, submit, confirmed page, conflict and price change paths. From the M10-T5 review (owner agreed 2026-11-27): away from the extras step, the price panel must not say the price updates on return when the answer was sold out or booking closed | Critical | T4, T5 | AC 5, 6, 7, 14; E2E-G-1, 2, 4, 7; `PriceSummary` tests; an E2E where an email verified guest sees only online payment |
 | M10-T7 | Payment return page | Critical | T6 | AC 6; E2E-G-3 |
 | M10-T8 | Manage reservation and My reservations with cancellation requests | Critical | T1 | AC 8, 13; E2E-G-5 part, E2E-G-6 |
 | M10-T8b | Change booking: prefill from an empty G5 preview, preview and apply (G5, G6), old and new totals, "sent to the hotel for approval", deadline and contact fallback | Critical | T8, T5 | AC 12; E2E-G-9 |
 | M10-T9 | Book Now internal mode per branch (`BookingProvider` port takes the branch and listing, approved) | Low | T6 | AC 10; E2E-G-8 part |
-| M10-T10 | Page view beacon on every public page, `STEP_VIEW` in each booking step, session id kept across steps and sent with P7, within the script budget | Medium | T0a, T6, T8 | AC 11; T-ANL-11…12, Lighthouse budget |
+| M10-T10 | Page view beacon on every public page, `STEP_VIEW` in each booking step, session id kept across steps and sent with P7, within the script budget. Added 2026-11-27 (owner agreed at M10-T5): bring the results and details pages under the 260,000 byte script budget and add them to the Lighthouse run | Medium | T0a, T6, T8 | AC 11; T-ANL-11…12, Lighthouse budget |
 | M10-T11 | Visual baselines for every booking step at 390 and 1280 px (added 2026-11-27, owner approved at M10-T5 planning; runs on the development server with fake providers). Runs after T10, before milestone close | Low | T2 to T10 | Brief tests: visual baselines |
 
 ## Consequences
