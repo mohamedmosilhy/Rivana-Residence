@@ -4,6 +4,7 @@
 type IconName =
   | "arrow"
   | "arrow-left"
+  | "check"
   | "clock"
   | "close"
   | "mail"
@@ -13,6 +14,7 @@ type IconName =
 const PATHS: Record<IconName, string> = {
   arrow: "M4 12h15M13 6l6 6-6 6",
   "arrow-left": "M20 12H5M11 6l-6 6 6 6",
+  check: "M5 12.5l4.5 4.5L19 7.5",
   clock: "M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18ZM12 7v5l3 2",
   close: "M6 6l12 12M18 6 6 18",
   mail: "M3.5 6.5h17v11h-17zM4 7l8 6 8-6",

@@ -252,6 +252,9 @@ describe("the one seed (runSeed)", () => {
       ),
     );
     expect(lines).toContain(
+      "Demo checkout example: verify a fictional guest, apply DEMO_PERCENT, then review VAT and choose Pay at the hotel. An email code requires online checkout.",
+    );
+    expect(lines).toContain(
       "Demo selection example: add a Giza Garden Room and a Giza Family Apartment to the same stay.",
     );
     expect(

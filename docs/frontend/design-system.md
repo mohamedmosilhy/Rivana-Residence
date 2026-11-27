@@ -78,6 +78,8 @@ Fluid public type scale using `clamp`:
 
 Body line height is 1.65; display lines use 0.98–1.12. Long text blocks target 60–72 characters.
 
+Prices and booking references use the body face with tabular figures (`figures` in `site/classes.ts`): Marcellus draws a zero like the letter O (M10-T6). Headings beside them stay in the display face.
+
 ## Spacing and layout
 
 Base space tokens: `1=4`, `2=8`, `3=12`, `4=16`, `5=20`, `6=24`, `8=32`, `10=40`, `12=48`, `16=64`, `20=80`, `24=96`, `30=120` pixels.

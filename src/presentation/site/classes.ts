@@ -164,3 +164,16 @@ export const choiceCard =
 export const choiceInput = "size-5 flex-none accent-plum-700";
 export const alertBox =
   "border-l-2 border-danger bg-canvas px-4 py-3 text-small text-neutral-950";
+// Prices and booking references use the body face: the display face draws a
+// zero like the letter O. Each adds its own size.
+export const figures = "font-body font-medium tabular-nums text-plum-900";
+export const bookingSubheading =
+  "m-0 font-display text-heading-md font-normal text-plum-900";
+/** One titled part of a booking step, ruled off from the part above. */
+export const bookingBlock =
+  "grid min-w-0 content-start gap-3 border-t border-neutral-300 pt-5";
+/** A list of label and value pairs; each pair is a div holding dt and dd. */
+export const factList =
+  "m-0 grid grid-cols-[repeat(auto-fill,minmax(min(100%,9.5rem),1fr))] gap-x-6 gap-y-4";
+export const factTerm = "text-small text-neutral-600";
+export const factValue = "m-0 wrap-anywhere text-neutral-950";

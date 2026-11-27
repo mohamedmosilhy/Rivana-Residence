@@ -63,6 +63,12 @@ const query = {
 };
 const setup = (overrides: object = {}) => ({
   bookable: true,
+  checkInTime: "14:00",
+  timeZone: "Africa/Cairo",
+  consentVersions: {
+    privacyNotice: "privacy-placeholder-v1",
+    marketing: "marketing-placeholder-v1",
+  },
   channels: { whatsapp: true, email: true },
   phone: "+20 2 1234 5678",
   email: "stay@example.test",
@@ -309,3 +315,32 @@ describe("booking details page", () => {
     await expect(open()).rejects.toThrow("not-found");
   });
 });
+
+it.each([
+  ["2026-12-02T11:59:59.999Z", false],
+  ["2026-12-02T12:00:00.000Z", true],
+])(
+  "uses the branch deadline and current server time at %s",
+  async (now, insideWindow) => {
+    vi.useFakeTimers();
+    try {
+      vi.setSystemTime(new Date(now));
+      await open();
+      expect(journey).toHaveBeenCalledWith(
+        expect.objectContaining({
+          terms: expect.objectContaining({
+            insideWindow,
+            timeZone: "Africa/Cairo",
+            deadlineLabel: expect.stringContaining("14:00"),
+            consentVersions: {
+              privacyNotice: "privacy-placeholder-v1",
+              marketing: "marketing-placeholder-v1",
+            },
+          }),
+        }),
+      );
+    } finally {
+      vi.useRealTimers();
+    }
+  },
+);

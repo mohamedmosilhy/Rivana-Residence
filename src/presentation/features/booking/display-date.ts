@@ -12,3 +12,7 @@ const dateFormat = new Intl.DateTimeFormat("en-GB", {
 export function displayDate(day: Pick<LocalDate, "value">) {
   return dateFormat.format(new Date(`${day.value}T00:00:00Z`));
 }
+
+/** One night under a stay whose dates and year are already shown. */
+export const displayNight = (day: Pick<LocalDate, "value">) =>
+  displayDate(day).replace(/ \d{4}$/, "");

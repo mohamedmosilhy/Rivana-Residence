@@ -415,6 +415,31 @@ Owner decisions after acceptance (2026-11-27):
 
 Still open, optional review points: a repeated coupon refusal is not announced again, and the focus fallback is broad.
 
+### Settled during M10-T6 (2026-11-27)
+
+Owner decisions at planning (both recommendations, approved with the plan):
+
+- With two payment methods, neither is preselected. A single method is selected and the reason is shown.
+- A retry that finds the booking already saved shows its reference and status (the manage link is issued once). A usable checkout address offers "Continue to payment".
+
+As built:
+
+- Continue to review always asks P6 again. A total that differs from the last one, or a `PRICE_CHANGED` answer, needs "Accept new total", which takes a new key. The guest can instead return to extras, which drops the old comparison.
+- Adding a skipped extra on the review returns to the extras step. Leaving the review clears the consent ticks.
+- A `201` is saved as reference, status, branch and manage token (`rivana.booking.result`). If the tab cannot store it, the reference stays on screen instead of navigating.
+- `PAYMENT_UNAVAILABLE` means the booking was saved. The screen says it was received without promising a hold, because a definite gateway refusal releases it. The retry with the same key reports the true status.
+- The confirmation page shows the full price from G1 and withholds details when the stored branch or reference differs.
+- Prices on the results, basket, summary, review and confirmation use the body face.
+
+Owner decisions at acceptance (2026-11-27, both recommendations):
+
+- The browser asks before the page is left while a booking is being sent or its result is unknown, because a reload would lose the request key and a second try could book twice.
+- The new price font stays on the earlier results and basket screens.
+
+Known limits of the leave warning: in app navigation (an in app link, or Back between pages loaded without a reload) does not fire it; iOS Safari never shows it, and closing the app or a crash skips it; browsers show only their own text. The server's per phone booking limit is the remaining backstop.
+
+Still open: the privacy checkbox gets its link with the approved wording; nightly prices sit inside the unit's row header for screen readers; the deadline note reads the server time directly; on phones the price panel sits above each step. Online payment returns to `/{branch}/book/payment`, which M10-T7 builds, and the manage link opens the page M10-T8 builds.
+
 ## Build plan
 
 The project builds backend before the screens that use it, one task at a time. Analytics backend first (it changes P7 and the payment paths, which the screens then exercise), then the client, then the journey in the order a guest walks it, then the after booking pages, then the launch pieces. Each UI task adds its component tests, E2E paths, axe checks, and visual baselines (390 and 1280 px) for its own steps.

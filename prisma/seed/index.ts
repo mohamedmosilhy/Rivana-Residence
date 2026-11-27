@@ -140,6 +140,9 @@ export async function runSeed(
     log(
       "Demo selection example: add a Giza Garden Room and a Giza Family Apartment to the same stay.",
     );
+    log(
+      "Demo checkout example: verify a fictional guest, apply DEMO_PERCENT, then review VAT and choose Pay at the hotel. An email code requires online checkout.",
+    );
     const reservations = await seedDemoReservations(client, user.id);
     log(
       `Demo reservations: created ${reservations.created} fictional bookings; existing records preserved.`,

@@ -71,3 +71,31 @@ it("hides figures that do not answer the current choices", () => {
   expect(screen.getByText("Updating price…")).toBeVisible();
   expect(screen.getByRole("table", { hidden: true })).toHaveClass("invisible");
 });
+
+it("shows each unit's server nightly amounts and seasonal label on review", () => {
+  const line = quote.lines[0]!;
+  render(
+    <PriceSummary
+      nightly
+      quote={{
+        ...quote,
+        lines: [
+          line,
+          {
+            ...line,
+            roomName: "Apartment",
+            nights: [
+              { night: "2026-12-03", label: "Winter", amount: usd(12456) },
+            ],
+          },
+        ],
+      }}
+      stale={null}
+      changeHref="/back"
+    />,
+  );
+  expect(rows().find((row) => row?.startsWith("Apartment"))).toContain(
+    "Thu, 3 Dec (Winter) · $124.56",
+  );
+  expect(rows().join()).toContain("Fri, 4 Dec · $80.00");
+});

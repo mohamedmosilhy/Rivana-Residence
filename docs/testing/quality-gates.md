@@ -44,7 +44,11 @@ The owner selected Node **26.13.0 LTS** for the Mac, CI, and hosting. On macOS w
 
 The required gates passed. `npm run check` passed with 2,547 unit and contract tests in 115 files, plus format, lint, type check, and the production build. PostgreSQL passed 1,077 tests in 67 files. Chromium passed 228 with 35 intentional skips. WebKit passed 100 with 29 intentional skips. Fresh and populated migrations showed no Prisma drift. Lighthouse passed for four URLs on each profile with three mobile paint warnings. The optional Firefox suite could not start on this Mac. The live walkthrough and focused tests verified all 16 criteria. [Exact commands and counts](../delivery/reports/m9-payments-and-cancellations.md#commands-and-results) · [Acceptance evidence](../delivery/reports/m9-payments-and-cancellations.md#acceptance-criteria-and-evidence)
 
-## Latest accepted task results (2026-11-27, M10-T5)
+## Latest accepted task results (2026-11-27, M10-T6)
+
+`npm run check` passed format, lint with one existing warning, type checking, 3,014 unit and contract tests in 137 files, and the production build. PostgreSQL passed 1,133 tests across three shards (72 files), run before the review fixes, which changed no server code. Chromium passed 238 with 77 intentional skips after one unrelated branch websites test failed once and the full rerun passed. The search run passed 35 with 10 skips and the journey run passed 75 three times in a row, both in Chromium and WebKit. The browser bundle scan found no server markers. Claude Opus 5.5 approved the rechecks. [Exact commands in the task log](../delivery/reports/m10-guest-booking-journey.md#task-log) · [Independent review](../reviews/2026-11-27-m10-t6.md)
+
+## Previous accepted task results (2026-11-27, M10-T5)
 
 `npm run check` passed format, lint with one existing warning, type checking, 2,968 unit and contract tests in 136 files, and the production build. PostgreSQL passed 1,133 tests across three shards (72 files), run before the review fixes, which changed no server code. Chromium passed 238 with 61 intentional skips. The search run passed 35 with 10 skips and the journey run passed 35, both in Chromium and WebKit. Lighthouse script size on the results and details pages is above the 260,000 byte budget, as it was before this task ([performance.md](../frontend/performance.md#booking-page-scripts-m10)). Claude Opus 5.5 approved the recheck. [Exact commands in the task log](../delivery/reports/m10-guest-booking-journey.md#task-log) · [Independent review](../reviews/2026-11-27-m10-t5.md)
 

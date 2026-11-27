@@ -14,8 +14,6 @@ import {
   bookingHeading,
   bookingPanel,
   button,
-  eyebrowFlush,
-  link,
 } from "@/presentation/site/classes";
 
 import { clearDraft, readDraft, saveDraft } from "./booking-draft";
@@ -27,6 +25,7 @@ import {
   type PaymentMethods,
   type Quote,
 } from "./extras-state";
+import type { ReviewTerms } from "./booking-review";
 import type { BookingSelectionBase } from "./extras-step";
 import type { GuestDetails, GuestDetailsErrors } from "./guest-details";
 import { GuestDetailsForm, type PhoneCountry } from "./guest-details-form";
@@ -46,6 +45,9 @@ const PhoneVerificationStep = lazy(async () => ({
 const ExtrasStep = lazy(async () => ({
   default: (await import("./extras-step")).ExtrasStep,
 }));
+const BookingCheckout = lazy(async () => ({
+  default: (await import("./booking-checkout")).BookingCheckout,
+}));
 const PriceSummary = lazy(async () => ({
   default: (await import("./price-summary")).PriceSummary,
 }));
@@ -53,6 +55,7 @@ const PriceSummary = lazy(async () => ({
 type JourneyProps = Readonly<{
   /** The server rendered stay summary, shown until the extras step. */
   summary: ReactNode;
+  terms: ReviewTerms;
   selection: BookingSelectionBase;
   services: readonly OfferedService[];
   maxVehicles: number | null;
@@ -100,6 +103,7 @@ function JourneyLayout({
 
 function JourneySteps({
   summary,
+  terms,
   selection,
   services,
   maxVehicles,
@@ -147,14 +151,28 @@ function JourneySteps({
     confirmed !== null &&
     step === "extras" &&
     verification.verified !== null;
-  // Prices are checked on the extras step only, so say so elsewhere.
-  const stale = isPriced(extras)
-    ? null
-    : !onExtras
-      ? "The price updates when you return to extras."
-      : extras.problem
-        ? "The price needs checking."
-        : "Updating price…";
+  const [checkoutView, setCheckoutView] = useState<"payment" | "review">(
+    "payment",
+  );
+  const [chosenMethod, chooseMethod] = useState<PaymentMethods[number] | null>(
+    null,
+  );
+  const [oldPrice, setOldPrice] = useState<Quote["total"] | null>(null);
+  const [checkoutBusy, setCheckoutBusy] = useState(false);
+  const [checkoutStale, setCheckoutStale] = useState<string | null>(null);
+  const stale =
+    checkoutStale ??
+    (extras.problem?.kind === "unavailable"
+      ? "Your selection is no longer available."
+      : extras.problem?.kind === "closed"
+        ? "Online booking is unavailable."
+        : isPriced(extras)
+          ? null
+          : !onExtras
+            ? "The price updates when you return to extras."
+            : extras.problem
+              ? "The price needs checking."
+              : "Updating price…");
 
   function content() {
     if (blocked) return <Blocked contact={contact} />;
@@ -197,8 +215,43 @@ function JourneySteps({
         </Suspense>
       );
 
-    if (step === "payment")
-      return <PaymentSoon contact={contact} onBack={() => setStep("extras")} />;
+    if (step === "payment" && verification.verified)
+      return (
+        <Suspense fallback={<p role="status">Loading payment…</p>}>
+          <BookingCheckout
+            selection={selection}
+            guest={confirmed}
+            verified={verification.verified}
+            terms={terms}
+            contact={contact}
+            extras={extras}
+            services={services}
+            onChange={setExtras}
+            chosen={chosenMethod}
+            choose={chooseMethod}
+            oldPrice={oldPrice}
+            setOldPrice={setOldPrice}
+            view={checkoutView}
+            onView={setCheckoutView}
+            onLock={setCheckoutBusy}
+            onPriceStatus={setCheckoutStale}
+            onBack={() => {
+              setCheckoutView("payment");
+              setStep("extras");
+            }}
+            onVerify={() => {
+              setVerification(noVerification);
+              setCheckoutView("payment");
+              setStep("verify");
+            }}
+            onBlocked={() => {
+              clearDraft(contact.slug);
+              setVerification(noVerification);
+              setBlocked(true);
+            }}
+          />
+        </Suspense>
+      );
 
     return (
       <Suspense fallback={<p role="status">Loading verification…</p>}>
@@ -244,6 +297,8 @@ function JourneySteps({
             <PriceSummary
               quote={extras.priced.quote}
               stale={stale}
+              nightly={step === "payment" && checkoutView === "review"}
+              allowChange={!checkoutBusy}
               changeHref={bookingResultsHref(
                 selection.branchSlug,
                 selection.stay,
@@ -258,34 +313,6 @@ function JourneySteps({
     >
       {content()}
     </JourneyLayout>
-  );
-}
-
-/** Steps 4 and 5 arrive with the next task (M10-T6). */
-function PaymentSoon({
-  contact,
-  onBack,
-}: Readonly<{ contact: HotelContactDetails; onBack: () => void }>) {
-  const heading = useRef<HTMLHeadingElement>(null);
-  useEffect(() => heading.current?.focus(), []);
-  return (
-    <div className="grid gap-3">
-      <p className={eyebrowFlush}>Step 4 of 5</p>
-      <h2 ref={heading} tabIndex={-1} className={bookingHeading}>
-        Payment and review
-      </h2>
-      <p className="m-0">
-        Payment and review are coming soon. Contact the hotel to book.
-      </p>
-      <HotelContact contact={contact} />
-      <button
-        type="button"
-        className={`${link} justify-self-start`}
-        onClick={onBack}
-      >
-        Back to extras
-      </button>
-    </div>
   );
 }
 

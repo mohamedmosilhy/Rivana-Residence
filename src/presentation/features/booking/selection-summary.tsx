@@ -3,7 +3,7 @@ import Link from "next/link";
 
 import type { QuoteView } from "@/application/quotes";
 import { formatMoney } from "@/presentation/format/money";
-import { bookingPanel, link } from "@/presentation/site/classes";
+import { bookingPanel, figures, link } from "@/presentation/site/classes";
 
 import { displayDate } from "./display-date";
 
@@ -58,7 +58,7 @@ export function SelectionSummary({
       </ul>
       <dl className="m-0 grid gap-1">
         <dt className="text-small">Accommodation subtotal before VAT</dt>
-        <dd className="m-0 font-display text-heading-lg leading-tight text-plum-900">
+        <dd className={`${figures} m-0 text-heading-lg leading-tight`}>
           {formatMoney(quote.accommodationMinor)}
         </dd>
       </dl>

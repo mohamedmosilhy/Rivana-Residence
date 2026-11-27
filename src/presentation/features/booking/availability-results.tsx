@@ -6,7 +6,12 @@ import { MAX_UNITS_REQUESTED } from "@/domain/inventory";
 import type { LocalDate } from "@/domain/shared/local-date";
 import { formatMoney } from "@/presentation/format/money";
 import { AccommodationBadge } from "@/presentation/site/cards";
-import { link, linkIcon, sectionHeading } from "@/presentation/site/classes";
+import {
+  link,
+  linkIcon,
+  sectionHeading,
+  figures,
+} from "@/presentation/site/classes";
 import { Icon } from "@/presentation/site/icons";
 import { SiteImage } from "@/presentation/site/site-image";
 
@@ -50,7 +55,7 @@ function RateDetails({
             : "Nightly rates vary"}
         </p>
         <p className="m-0 grid gap-1 text-small text-neutral-600 sm:text-right">
-          <strong className="font-display text-heading-lg leading-none font-normal text-plum-900">
+          <strong className={`${figures} text-heading-lg leading-none`}>
             {formatMoney(accommodationTotal)}
           </strong>
           Stay total for one unit, before VAT

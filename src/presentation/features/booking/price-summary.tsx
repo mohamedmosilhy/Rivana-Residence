@@ -1,54 +1,13 @@
 import type { Route } from "next";
 import Link from "next/link";
-import type { ReactNode } from "react";
 
 import { formatMoney } from "@/presentation/format/money";
 import { bookingPanel, link } from "@/presentation/site/classes";
 
-import { displayDate } from "./display-date";
+import { displayDate, displayNight } from "./display-date";
 import { serviceName } from "./extras-answer";
 import type { Quote } from "./extras-state";
-
-const count = (value: number, one: string, many: string) =>
-  `${value} ${value === 1 ? one : many}`;
-
-const percent = new Intl.NumberFormat("en-US", {
-  style: "percent",
-  maximumFractionDigits: 2,
-});
-
-function Row({
-  label,
-  note,
-  amount,
-  strong = false,
-}: Readonly<{
-  label: string;
-  note?: ReactNode;
-  amount: string;
-  strong?: boolean;
-}>) {
-  return (
-    <tr className="border-b border-neutral-300 align-top">
-      <th
-        scope="row"
-        className={`py-2.5 pr-3 text-left break-words ${strong ? "font-display text-heading-md text-plum-900" : "font-normal"}`}
-      >
-        {label}
-        {note && (
-          <span className="block text-small font-normal text-neutral-600">
-            {note}
-          </span>
-        )}
-      </th>
-      <td
-        className={`py-2.5 text-right whitespace-nowrap tabular-nums ${strong ? "font-display text-heading-md text-plum-900" : ""}`}
-      >
-        {amount}
-      </td>
-    </tr>
-  );
-}
+import { count, PriceRow, vatLabel } from "./price-row";
 
 /**
  * The server's price, line by line (PR-7): every amount is shown as it came.
@@ -58,11 +17,15 @@ export function PriceSummary({
   quote,
   stale,
   changeHref,
+  nightly = false,
+  allowChange = true,
 }: Readonly<{
   quote: Quote;
   /** Why the held figures are not current; null when they are. */
   stale: string | null;
   changeHref: string;
+  nightly?: boolean;
+  allowChange?: boolean;
 }>) {
   const { checkIn, checkOut } = quote.stay;
   const { coupon } = quote;
@@ -92,15 +55,31 @@ export function PriceSummary({
           <caption className="sr-only">Price of your stay</caption>
           <tbody>
             {quote.lines.map((line, index) => (
-              <Row
+              <PriceRow
                 key={index}
                 label={line.roomName}
-                note={`${count(line.occupancy.adults, "adult", "adults")}, ${count(line.occupancy.children, "child", "children")}`}
+                note={
+                  <>
+                    {count(line.occupancy.adults, "adult", "adults")},{" "}
+                    {count(line.occupancy.children, "child", "children")}
+                    {nightly && (
+                      <span className="mt-2 grid gap-1 border-l border-gold-rule pl-3 tabular-nums">
+                        {line.nights.map((night) => (
+                          <span key={night.night}>
+                            {displayNight({ value: night.night })}
+                            {night.label && ` (${night.label})`} ·{" "}
+                            {formatMoney(night.amount)}
+                          </span>
+                        ))}
+                      </span>
+                    )}
+                  </>
+                }
                 amount={formatMoney(line.accommodation)}
               />
             ))}
             {quote.services.map((service) => (
-              <Row
+              <PriceRow
                 key={service.kind}
                 label={serviceName[service.kind]}
                 note={
@@ -111,19 +90,19 @@ export function PriceSummary({
                 amount={formatMoney(service.amount)}
               />
             ))}
-            <Row label="Subtotal" amount={formatMoney(quote.subtotal)} />
+            <PriceRow label="Subtotal" amount={formatMoney(quote.subtotal)} />
             {coupon && (
-              <Row
+              <PriceRow
                 label="Discount"
                 note={`Code ${coupon.code}`}
                 amount={`−${formatMoney(quote.discount)}`}
               />
             )}
-            <Row
-              label={`VAT (${percent.format(quote.vatRateBasisPoints / 10_000)})`}
+            <PriceRow
+              label={vatLabel(quote.vatRateBasisPoints)}
               amount={formatMoney(quote.vat)}
             />
-            <Row label="Total" amount={formatMoney(quote.total)} strong />
+            <PriceRow label="Total" amount={formatMoney(quote.total)} strong />
           </tbody>
         </table>
         {stale && (
@@ -132,13 +111,15 @@ export function PriceSummary({
           </p>
         )}
       </div>
-      <Link
-        href={changeHref as Route}
-        prefetch={false}
-        className={`${link} justify-self-start`}
-      >
-        Change selection
-      </Link>
+      {allowChange && (
+        <Link
+          href={changeHref as Route}
+          prefetch={false}
+          className={`${link} justify-self-start`}
+        >
+          Change selection
+        </Link>
+      )}
     </aside>
   );
 }

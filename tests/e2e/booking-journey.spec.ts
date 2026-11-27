@@ -28,7 +28,7 @@ const projects = [
 /** A fictional number and address of its own for each project and test. */
 function guest(testInfo: TestInfo, scenario: number) {
   const number = scenario * 10 + projects.indexOf(testInfo.project.name);
-  const local = `555-01${String(number).padStart(2, "0")}`;
+  const local = `555-${String(100 + number).padStart(4, "0")}`;
   return {
     fullName: "Amina Hassan",
     email: `amina.${number}@example.test`,
@@ -38,12 +38,12 @@ function guest(testInfo: TestInfo, scenario: number) {
 }
 type Guest = ReturnType<typeof guest>;
 
-function detailsPage() {
+function detailsPage(days = 20, units = "deluxe-double.2.0") {
   const from = localDateAt(new Date(), "Africa/Cairo");
   const query = new URLSearchParams({
-    checkIn: from.addDays(20).value,
-    checkOut: from.addDays(22).value,
-    u: "deluxe-double.2.0",
+    checkIn: from.addDays(days).value,
+    checkOut: from.addDays(days + 2).value,
+    u: units,
   });
   return `/new-cairo/book/details?${query}`;
 }
@@ -52,8 +52,12 @@ const heading = (page: Page, name: string) =>
   page.getByRole("heading", { name });
 const button = (page: Page, name: string) => page.getByRole("button", { name });
 
-async function fillDetails(page: Page, who: Guest) {
-  await page.goto(detailsPage());
+async function fillDetails(
+  page: Page,
+  who: Guest,
+  href: string | null = detailsPage(),
+) {
+  if (href) await page.goto(href);
   await page.getByLabel("Full name").fill(who.fullName);
   await page.getByLabel("Email").fill(who.email);
   await page.getByLabel("Phone country").selectOption("US");
@@ -80,7 +84,9 @@ async function enterCode(page: Page, value: string) {
 }
 
 async function capture(page: Page, testInfo: TestInfo, state: string) {
-  const directory = process.env.BOOKING_JOURNEY_SCREENSHOTS;
+  const directory = state.startsWith("checkout-")
+    ? process.env.BOOKING_CHECKOUT_SCREENSHOTS
+    : process.env.BOOKING_JOURNEY_SCREENSHOTS;
   if (!directory || !testInfo.project.name.endsWith("chromium")) return;
   const desktop = testInfo.project.name === "desktop-chromium";
   const previous = page.viewportSize()!;
@@ -93,6 +99,13 @@ async function capture(page: Page, testInfo: TestInfo, state: string) {
     }
     window.scrollTo({ top: 0, behavior: "instant" });
     await document.fonts.ready;
+    // A photo still decoding would leave an empty frame in the picture.
+    await Promise.all(
+      Array.from(document.images, (image) => {
+        image.loading = "eager";
+        return image.decode().catch(() => undefined);
+      }),
+    );
   });
   await mkdir(directory, { recursive: true });
   await page.screenshot({
@@ -465,7 +478,7 @@ test("AC-3, AC-4: the server prices extras, cars and a coupon, by keyboard", asy
   expect(checks.join()).not.toContain("MS 985");
 
   await button(page, "Continue to payment").press("Enter");
-  await expect(heading(page, "Payment and review")).toBeFocused();
+  await expect(heading(page, "Choose how to pay")).toBeFocused();
   await verifyAccessibility(page);
   await button(page, "Back to extras").press("Enter");
   await expect(box(page, /Breakfast/)).toBeChecked();
@@ -585,7 +598,7 @@ test("price checks that fail keep the choices and say what to do", async ({
   );
   await box(page, /Breakfast/).uncheck();
   await expect(
-    page.getByText("Your selection is no longer available."),
+    page.getByRole("alert").getByText("Your selection is no longer available."),
   ).toBeVisible();
   await verifyAccessibility(page);
   await capture(page, testInfo, "selection-unavailable");
@@ -617,4 +630,323 @@ test("AC-14: an email guest cannot continue with a total of zero", async ({
   );
   await verifyAccessibility(page);
   await capture(page, testInfo, "email-total-not-payable");
+});
+
+/** Distinct dates, contact and client address for each real write. */
+async function checkoutGuest(
+  page: Page,
+  info: TestInfo,
+  scenario: number,
+  href: string | null,
+  email = false,
+) {
+  const who = guest(info, scenario);
+  await page.setExtraHTTPHeaders({
+    "X-Forwarded-For": `198.51.100.${scenario * 10 + projects.indexOf(info.project.name)}`,
+  });
+  await fillDetails(page, who, href);
+  if (email) await page.getByRole("radio", { name: /Email to/ }).check();
+  await setKnownCode(await requestCode(page), code);
+  await enterCode(page, code);
+  await button(page, "Continue to extras").click();
+  return who;
+}
+const submitButton = (page: Page) => button(page, "Confirm booking");
+/**
+ * Answers booking submissions in the order queued, through one route held for
+ * the whole test: replacing one-use routes between clicks can let a request
+ * through in WebKit. An unplanned submission is cut off, never booked.
+ */
+async function scriptBookingAnswers(page: Page) {
+  const queued: { status: number; json: object }[] = [];
+  const keys: (string | undefined)[] = [];
+  await page.route("**/api/v1/reservations", (route) => {
+    keys.push(route.request().headers()["idempotency-key"]);
+    const next = queued.shift();
+    return next ? route.fulfill(next) : route.abort("failed");
+  });
+  return {
+    keys,
+    answer: (status: number, json: object) => queued.push({ status, json }),
+  };
+}
+const onBooking = (page: Page) =>
+  page.waitForResponse((r) => r.url().endsWith("/api/v1/reservations"));
+const records = (who: Guest) =>
+  sql(
+    'SELECT reference,status,"totalMinor" FROM "Reservation" WHERE "guestPhone"=$1',
+    [who.phone],
+  );
+async function review(page: Page, email = false) {
+  await button(page, "Continue to payment").click();
+  if (!email)
+    await page.getByRole("radio", { name: /Pay at the hotel/ }).check();
+  await button(page, "Continue to review").click();
+  await expect(heading(page, "Review your booking")).toBeVisible();
+  await box(page, /I accept the privacy/).check();
+}
+
+test("checkout: two units with extras, coupon and VAT are confirmed once", async ({
+  page,
+}, info) => {
+  const days = 35 + projects.indexOf(info.project.name) * 3;
+  const dates = new URL(detailsPage(days), "http://localhost").searchParams;
+  dates.delete("u");
+  dates.set("adults", "2");
+  dates.set("children", "0");
+  await page.setViewportSize({ width: 320, height: 844 });
+  await page.goto(`/new-cairo/book?${dates}`);
+  await button(page, "Add to stay: Deluxe Double").click();
+  await button(page, "Add to stay: Studio with Balcony").click();
+  await page.getByRole("link", { name: /^Continue/ }).click();
+  const who = await checkoutGuest(page, info, 8, null);
+  await priced(page, () => box(page, /Airport transfer/).check());
+  await priced(page, () => page.getByLabel("Cars").selectOption("2"));
+  await page.getByLabel(/Flight number/).fill("Demo flight 120");
+  await couponField(page).fill("WELCOME10");
+  await priced(page, () => button(page, "Apply").click());
+  await button(page, "Continue to payment").click();
+  await expect(page.getByRole("radio", { checked: true })).toHaveCount(0);
+  await verifyAccessibility(page);
+  await capture(page, info, "checkout-payment");
+  await page.getByRole("radio", { name: /Pay at the hotel/ }).press("Space");
+  await button(page, "Continue to review").press("Enter");
+  await expect(submitButton(page)).toBeDisabled();
+  await expect(box(page, /marketing consent/i)).not.toBeChecked();
+  await page.getByRole("button", { name: /Add breakfast/ }).click();
+  await expect(box(page, /Breakfast/)).toBeChecked();
+  await review(page);
+  await verifyAccessibility(page);
+  await capture(page, info, "checkout-review");
+  const summary = page.getByRole("complementary", { name: "Your stay" });
+  await expect(summary).toContainText("Studio with Balcony");
+  const created = onBooking(page);
+  await submitButton(page).evaluate((el: HTMLButtonElement) => {
+    el.click();
+    el.click();
+  });
+  const response = await created;
+  expect(response.status()).toBe(201);
+  const [data] = (await records(who)).rows;
+  const body = response.request().postDataJSON();
+  expect(body.expectedTotal.amountMinor).toBe(data.totalMinor);
+  expect(body.services).toContainEqual({
+    kind: "AIRPORT_TRANSFER",
+    vehicles: 2,
+    details: "Demo flight 120",
+  });
+  await expect(heading(page, "Confirmed")).toBeVisible();
+  await expect(page.getByText(data.reference)).toBeVisible();
+  expect((await records(who)).rows).toEqual([
+    {
+      reference: data.reference,
+      status: "CONFIRMED",
+      totalMinor: body.expectedTotal.amountMinor,
+    },
+  ]);
+  expect(
+    await page.evaluate(() =>
+      sessionStorage.getItem("rivana.booking.draft.new-cairo"),
+    ),
+  ).toBeNull();
+  await verifyAccessibility(page);
+  await capture(page, info, "checkout-confirmed");
+});
+
+test("checkout: email verification hands a pending booking to hosted checkout", async ({
+  page,
+}, info) => {
+  const days = 55 + projects.indexOf(info.project.name) * 3;
+  const who = await checkoutGuest(page, info, 9, detailsPage(days), true);
+  await button(page, "Continue to payment").click();
+  await expect(page.getByRole("radio")).toHaveCount(1);
+  await expect(
+    page.getByRole("radio", { name: /Pay online now/ }),
+  ).toBeChecked();
+  await capture(page, info, "checkout-email-payment");
+  await button(page, "Continue to review").click();
+  await expect(box(page, /marketing consent/i)).toHaveCount(0);
+  await box(page, /I accept the privacy/).check();
+  await capture(page, info, "checkout-email-review");
+  await button(page, "Continue to secure checkout").click();
+  await expect(page).toHaveURL(/\/dev\/fake-checkout\//);
+  expect((await records(who)).rows[0].status).toBe("AWAITING_PAYMENT");
+});
+
+test("checkout: a lost response retries exactly the same saved booking", async ({
+  page,
+}, info) => {
+  const days = 75 + projects.indexOf(info.project.name) * 3;
+  const who = await checkoutGuest(page, info, 10, detailsPage(days));
+  await review(page);
+  let key: string | undefined;
+  await page.route(
+    "**/api/v1/reservations",
+    async (route) => {
+      key = route.request().headers()["idempotency-key"];
+      expect((await route.fetch()).status()).toBe(201);
+      await route.abort("failed");
+    },
+    { times: 1 },
+  );
+  await submitButton(page).click();
+  await expect(button(page, "Retry same booking")).toBeVisible();
+  await capture(page, info, "checkout-retry");
+  // Leaving now would lose the request key, so the browser asks first.
+  const prompt = page.waitForEvent("dialog");
+  await page.close({ runBeforeUnload: true });
+  const dialog = await prompt;
+  expect(dialog.type()).toBe("beforeunload");
+  await dialog.dismiss();
+  const replay = onBooking(page);
+  await button(page, "Retry same booking").click();
+  const response = await replay;
+  expect(response.status()).toBe(200);
+  expect(response.request().headers()["idempotency-key"]).toBe(key);
+  expect((await response.json()).manageUrl).toBeNull();
+  await expect(heading(page, "Your booking reference")).toBeVisible();
+  expect((await records(who)).rows).toHaveLength(1);
+  await capture(page, info, "checkout-reference");
+});
+
+test("checkout: the second browser books the last units before the first submits", async ({
+  page,
+  browser,
+}, info) => {
+  const days = 95 + projects.indexOf(info.project.name) * 3;
+  const who = await checkoutGuest(page, info, 11, detailsPage(days));
+  await review(page);
+  const other = await browser.newContext({
+    baseURL: info.project.use.baseURL!,
+  });
+  try {
+    const winner = await other.newPage();
+    await checkoutGuest(
+      winner,
+      info,
+      12,
+      detailsPage(days, "deluxe-double.2.0,deluxe-double.2.0"),
+    );
+    await review(winner);
+    await submitButton(winner).click();
+    await expect(heading(winner, "Confirmed")).toBeVisible();
+    const answer = onBooking(page);
+    await submitButton(page).click();
+    expect((await answer).status()).toBe(409);
+    await expect(page).toHaveURL(/notice=unavailable/);
+    expect((await records(who)).rowCount).toBe(0);
+    await capture(page, info, "checkout-sold-out");
+  } finally {
+    await other.close();
+  }
+});
+
+test("checkout: a changed nightly rate requires explicit acceptance", async ({
+  page,
+}, info) => {
+  const days = 115 + projects.indexOf(info.project.name) * 3;
+  const href = detailsPage(days);
+  const who = await checkoutGuest(page, info, 13, href);
+  await review(page);
+  const params = new URL(href, "http://localhost").searchParams;
+  await sql(
+    `INSERT INTO "RatePeriod"(id,"roomTypeId","startDate","endDate","amountMinor","updatedAt") SELECT $1,id,$2::date,$3::date,9900,now() FROM "Room" WHERE slug='deluxe-double'`,
+    [`t6-${info.project.name}`, params.get("checkIn"), params.get("checkOut")],
+  );
+  const refused = onBooking(page);
+  await submitButton(page).click();
+  const first = await refused;
+  expect((await first.json()).code).toBe("PRICE_CHANGED");
+  await expect(button(page, "Accept new total")).toBeVisible();
+  await expect(submitButton(page)).toHaveCount(0);
+  await capture(page, info, "checkout-price-changed");
+  expect((await records(who)).rowCount).toBe(0);
+  await button(page, "Accept new total").click();
+  const saved = onBooking(page);
+  await submitButton(page).click();
+  const last = await saved;
+  expect(last.request().headers()["idempotency-key"]).not.toBe(
+    first.request().headers()["idempotency-key"],
+  );
+  await expect(heading(page, "Confirmed")).toBeVisible();
+  expect((await records(who)).rows[0].totalMinor).toBe(
+    last.request().postDataJSON().expectedTotal.amountMinor,
+  );
+});
+
+test("checkout: recovery when the booking link is missing, expired or cannot be checked", async ({
+  page,
+}, info) => {
+  await page.goto("/new-cairo/book/confirmed");
+  await expect(heading(page, "Open your booking message")).toBeVisible();
+  await verifyAccessibility(page);
+  await capture(page, info, "checkout-missing-link");
+  await page.evaluate(() =>
+    sessionStorage.setItem(
+      "rivana.booking.result",
+      JSON.stringify({
+        reference: "DEMO",
+        branchSlug: "new-cairo",
+        status: "CONFIRMED",
+        token: "x".repeat(43),
+      }),
+    ),
+  );
+  await page.route("**/api/v1/guest/reservation", (r) => r.abort());
+  await page.reload();
+  await expect(button(page, "Check again")).toBeVisible();
+  await capture(page, info, "checkout-read-failed");
+  await page.unroute("**/api/v1/guest/reservation");
+  await button(page, "Check again").click();
+  await expect(heading(page, "Open your booking message")).toBeVisible();
+});
+
+test("checkout: a changed method, a temporary refusal and a closed branch give recovery steps", async ({
+  page,
+}, info) => {
+  await checkoutGuest(page, info, 14, detailsPage(12));
+  await review(page);
+  const booking = await scriptBookingAnswers(page);
+  const fail = (code: string, status: number) =>
+    booking.answer(status, { code, title: "Booking refused" });
+  fail("PAYMENT_METHOD_UNAVAILABLE", 409);
+  await submitButton(page).click();
+  await expect(heading(page, "Choose how to pay")).toBeVisible();
+  await capture(page, info, "checkout-method-changed");
+  await page.getByRole("radio", { name: /Pay at the hotel/ }).check();
+  await button(page, "Continue to review").click();
+  fail("RATE_LIMITED", 429);
+  await submitButton(page).click();
+  await expect(
+    page.getByRole("alert").filter({ hasText: "Too many attempts" }),
+  ).toBeVisible();
+  await capture(page, info, "checkout-rate-limited");
+  fail("BRANCH_NOT_BOOKABLE", 409);
+  await submitButton(page).click();
+  await expect(heading(page, "Contact the hotel")).toBeVisible();
+  await verifyAccessibility(page);
+  await capture(page, info, "checkout-closed");
+});
+
+test("checkout: checkout that cannot open is retried, then reported as failed", async ({
+  page,
+}, info) => {
+  await checkoutGuest(page, info, 15, detailsPage(13));
+  await review(page);
+  const { answer, keys } = await scriptBookingAnswers(page);
+  answer(503, { code: "PAYMENT_UNAVAILABLE", title: "Unavailable" });
+  await submitButton(page).click();
+  await expect(button(page, "Retry same booking")).toBeVisible();
+  await verifyAccessibility(page);
+  await capture(page, info, "checkout-unavailable");
+  answer(200, {
+    reference: "RR-DEMO1234",
+    status: "PAYMENT_FAILED",
+    manageUrl: null,
+  });
+  await button(page, "Retry same booking").click();
+  await expect(page.getByText(/units are no longer held/)).toBeVisible();
+  expect(keys[1]).toBe(keys[0]);
+  await verifyAccessibility(page);
+  await capture(page, info, "checkout-payment-failed");
 });

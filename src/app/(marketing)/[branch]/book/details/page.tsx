@@ -8,6 +8,7 @@ import {
   getBookingSetup,
   quoteBookingDetails,
 } from "@/composition/booking-details";
+import { CancellationDeadline } from "@/domain/reservations";
 import { VERIFICATION_POLICY } from "@/domain/guests";
 import { BookingJourney } from "@/presentation/features/booking/booking-journey";
 import {
@@ -145,6 +146,14 @@ export default async function BookingDetailsPage({
     amountMinor,
     currency: "USD" as const,
   });
+  const deadline = CancellationDeadline.for(setup, quote.stay.checkIn);
+  const deadlineLabel =
+    deadline &&
+    new Intl.DateTimeFormat("en-GB", {
+      dateStyle: "full",
+      timeStyle: "short",
+      timeZone: setup.timeZone,
+    }).format(deadline);
   return (
     <BookingSearchFrame branch={branch} title="Your booking">
       <BookingJourney
@@ -168,6 +177,13 @@ export default async function BookingDetailsPage({
         price={{
           quote: displayQuote(quote),
           paymentMethods: [...paymentMethods],
+        }}
+        terms={{
+          branchName: branch.name,
+          deadlineLabel,
+          timeZone: setup.timeZone,
+          insideWindow: !CancellationDeadline.isOpen(deadline, new Date()),
+          consentVersions: setup.consentVersions,
         }}
         countries={phoneCountries()}
         channels={channels}

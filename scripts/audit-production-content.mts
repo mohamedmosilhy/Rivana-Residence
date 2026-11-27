@@ -1,5 +1,7 @@
 import "server-only";
 
+import { bookingPolicyCopy } from "../src/presentation/features/booking/booking-policy-copy.ts";
+import { GUEST_CONSENT_VERSIONS } from "../src/domain/guests/consent-policy.ts";
 import { ResolveBooking } from "../src/application/booking/resolve-booking.ts";
 import { DisabledBookingProvider } from "../src/infrastructure/booking/disabled-booking-provider.ts";
 import { getPrisma } from "../src/infrastructure/db/prisma/client.ts";
@@ -152,6 +154,18 @@ try {
     "Launch blocker: the client must provide and approve the privacy notice, enquiry retention wording, image credits, and image-rights sign-off.",
   );
 
+  for (const [name, words] of Object.entries(bookingPolicyCopy)) {
+    record(
+      `Guest booking policy (${name})`,
+      !placeholder(words),
+      "Requires hotel-approved booking wording.",
+    );
+  }
+  record(
+    "Guest booking consent versions",
+    Object.values(GUEST_CONSENT_VERSIONS).every((value) => !placeholder(value)),
+    "Replace the provisional consent versions when wording is approved.",
+  );
   for (const check of checks) {
     console.log(
       `${check.ok ? "PASS" : "BLOCKED"} — ${check.name}: ${check.detail}`,

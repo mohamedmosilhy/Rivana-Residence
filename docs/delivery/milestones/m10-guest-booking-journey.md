@@ -1,6 +1,6 @@
 # M10 — Guest booking journey
 
-Status: **In progress (7/14 tasks accepted).** [Task log](../reports/m10-guest-booking-journey.md#task-log). Opened 2026-11-26: spec [0007](../../specs/0007-m10-guest-booking-journey.md) and the task breakdown below were approved by the owner on 2026-11-26, after an independent cross check with every recommended fix applied. Scope extended by the owner on 2026-11-17 with first-party website analytics (M10-T0a, T0b, T10; ADR 029, Q-86, Q-87), the guest change UI (M10-T8b; Q-83…Q-85), and the transfer car selector (M10-T5; Q-82). Branch: `m10-guest-booking-journey`. Follow the [milestone loop](./README.md#the-loop-every-milestone-follows).
+Status: **In progress (8/14 tasks accepted).** [Task log](../reports/m10-guest-booking-journey.md#task-log). Opened 2026-11-26: spec [0007](../../specs/0007-m10-guest-booking-journey.md) and the task breakdown below were approved by the owner on 2026-11-26, after an independent cross check with every recommended fix applied. Scope extended by the owner on 2026-11-17 with first-party website analytics (M10-T0a, T0b, T10; ADR 029, Q-86, Q-87), the guest change UI (M10-T8b; Q-83…Q-85), and the transfer car selector (M10-T5; Q-82). Branch: `m10-guest-booking-journey`. Follow the [milestone loop](./README.md#the-loop-every-milestone-follows).
 
 ## Objective
 
@@ -52,7 +52,7 @@ Planned, reviewed, and accepted one task at a time ([agent-workflow.md](../../en
 | M10-T3 | Selection basket with guests per unit and server-computed subtotal | Medium | T2 | AC 2 | Accepted 2026-11-27 |
 | M10-T4 | Details frame (`GetBookingSetup`), guest details, verification (WhatsApp, or email only with online payment, ADR 031 and Q-100), tab draft | Critical | T3 | AC 9, 13, 14; E2E-G-5; `PhoneVerificationStep` tests; no token in URLs, logs, or events | Accepted 2026-11-27 |
 | M10-T5 | Extras (with the transfer car selector and flight details, Q-82) and coupon | Medium | T4 | AC 3, 4; `ServicesPicker`, `CouponField` tests | Accepted 2026-11-27 |
-| M10-T6 | Payment choice, review, placeholder legal copy flagged by the audit, submit, confirmation page, conflict and price-change paths. From the M10-T5 review (owner agreed 2026-11-27): away from the extras step, the price panel must not say the price updates on return when the answer was sold out or booking closed | Critical | T4, T5 | AC 5–7, 14; E2E-G-1, 2, 4, 7; `PriceSummary` tests | Not started |
+| M10-T6 | Payment choice, review, placeholder legal copy flagged by the audit, submit, confirmation page, conflict and price-change paths. From the M10-T5 review (owner agreed 2026-11-27): away from the extras step, the price panel must not say the price updates on return when the answer was sold out or booking closed | Critical | T4, T5 | AC 5–7, 14; E2E-G-1, 2, 4, 7; `PriceSummary` tests | Accepted 2026-11-27 |
 | M10-T7 | Payment return page | Critical | T6 | AC 6; E2E-G-3 | Not started |
 | M10-T8 | Manage reservation and My reservations with cancellation requests | Critical | T1 | AC 8, 13; E2E-G-6 | Not started |
 | M10-T8b | Change booking: prefill from an empty G5 preview and G1, preview and apply (G5, G6), old and new totals, "sent to the hotel for approval" state for paid bookings, deadline and contact fallback (Q-83…Q-85) | Critical | T8, T5 | AC 12; E2E-G-9 | Not started |
