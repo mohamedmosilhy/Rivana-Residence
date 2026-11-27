@@ -2,6 +2,7 @@ import type { Route } from "next";
 import Link from "next/link";
 
 import type { PublicAvailability } from "@/application/public";
+import { MAX_UNITS_REQUESTED } from "@/domain/inventory";
 import type { LocalDate } from "@/domain/shared/local-date";
 import { formatMoney } from "@/presentation/format/money";
 import { AccommodationBadge } from "@/presentation/site/cards";
@@ -9,6 +10,7 @@ import { link, linkIcon, sectionHeading } from "@/presentation/site/classes";
 import { Icon } from "@/presentation/site/icons";
 import { SiteImage } from "@/presentation/site/site-image";
 
+import { AddBookingUnit, BookingSelection } from "./booking-selection";
 import { searchFeedbackId } from "./stay-search-form";
 
 type Listing = PublicAvailability["results"][number];
@@ -131,6 +133,15 @@ function ResultCard({
             View details <Icon name="arrow" className={linkIcon} />
           </Link>
         </div>
+        <AddBookingUnit
+          listing={{
+            slug: roomType.slug,
+            name: roomType.name,
+            unitsAvailable: listing.unitsAvailable,
+            maxAdults: roomType.facts.maxAdults,
+            maxChildren: roomType.facts.maxChildren,
+          }}
+        />
       </div>
     </article>
   );
@@ -143,6 +154,8 @@ export function AvailabilityResults({
   const available = search.results.filter((listing) => listing.available);
   const unavailable = search.results.filter((listing) => !listing.available);
   const { checkIn, checkOut } = search.stay;
+  const stay = { checkIn: checkIn.value, checkOut: checkOut.value };
+  const { adults, children } = search.occupancy;
   return (
     <section aria-labelledby={searchFeedbackId} className="grid gap-6 md:gap-8">
       <div>
@@ -165,18 +178,26 @@ export function AvailabilityResults({
         )}
       </div>
       {available.length > 0 && (
-        <ul className="m-0 grid list-none gap-6 p-0 md:grid-cols-2">
-          {available.map((listing) => (
-            <li key={listing.roomType.slug} className="min-w-0">
-              <ResultCard
-                listing={listing}
-                branch={search.branchSlug}
-                checkIn={checkIn}
-                highlighted={listing.roomType.slug === room}
-              />
-            </li>
-          ))}
-        </ul>
+        <BookingSelection
+          key={`${search.branchSlug}/${stay.checkIn}/${stay.checkOut}/${adults}/${children}`}
+          branchSlug={search.branchSlug}
+          stay={stay}
+          initialOccupancy={{ adults, children }}
+          limit={MAX_UNITS_REQUESTED}
+        >
+          <ul className="m-0 grid list-none gap-6 p-0 md:grid-cols-2">
+            {available.map((listing) => (
+              <li key={listing.roomType.slug} className="min-w-0">
+                <ResultCard
+                  listing={listing}
+                  branch={search.branchSlug}
+                  checkIn={checkIn}
+                  highlighted={listing.roomType.slug === room}
+                />
+              </li>
+            ))}
+          </ul>
+        </BookingSelection>
       )}
       {unavailable.length > 0 && (
         <section

@@ -59,7 +59,7 @@ function ok<T>(
   return result.value;
 }
 
-/** Only used in the isolated, read-only booking search browser run. */
+/** Only used in the isolated booking search and quote browser run. */
 export async function seedBookingSearch(client: PrismaClient) {
   const branch = await client.branch.update({
     where: { id: BRANCH_ID },
@@ -103,14 +103,19 @@ export async function seedBookingSearch(client: PrismaClient) {
         amountMinor: listing.id === apartment.id ? 12000 : 8000,
       },
     });
-    // No physical unit for Superior Double, so it always shows as sold out.
-    if (listing.slug !== "superior-double") {
+    // Leave Superior Double sold out and make both basket limits reachable.
+    const unitCount =
+      {
+        "studio-with-balcony": 4,
+        "deluxe-double": 2,
+      }[listing.slug] ?? 0;
+    for (let index = 1; index <= unitCount; index++) {
       await client.physicalRoom.create({
         data: {
-          id: `search-${listing.slug}`,
+          id: `search-${listing.slug}-${index}`,
           branchId: branch.id,
           roomTypeId: listing.id,
-          label: `SEARCH ${listing.slug}`,
+          label: `SEARCH ${listing.slug} ${index}`,
         },
       });
     }

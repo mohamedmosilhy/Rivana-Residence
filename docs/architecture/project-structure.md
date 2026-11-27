@@ -41,7 +41,7 @@ src/
   app/
     (marketing)/page.tsx                  branch chooser or redirect to the only branch         (M5)
     (marketing)/[branch]/                 home, about, stay/[slug], facilities/[slug], contact (M5)
-    (marketing)/[branch]/book/            search/results (M10-T2), details & review, confirmed, payment  (M10)
+    (marketing)/[branch]/book/            search/results (M10-T2), selection (M10-T3), details & review, confirmed, payment (M10)
     (marketing)/reservations/manage/      guest manage page (token from fragment)              (M10)
     (marketing)/reservations/find/        "My reservations" (phone + code)                     (M10)
     admin/(protected)/reservations/       list, new, [id]                                      (M11)

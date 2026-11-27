@@ -137,6 +137,9 @@ export async function runSeed(
     log(
       `Demo search example (once local booking is configured): ${inventory.searchPath}`,
     );
+    log(
+      "Demo selection example: add a Giza Garden Room and a Giza Family Apartment to the same stay.",
+    );
     const reservations = await seedDemoReservations(client, user.id);
     log(
       `Demo reservations: created ${reservations.created} fictional bookings; existing records preserved.`,

@@ -251,6 +251,9 @@ describe("the one seed (runSeed)", () => {
         /^Demo search example \(once local booking is configured\): \/demo-giza\/book\?checkIn=\d{4}-\d{2}-\d{2}&checkOut=\d{4}-\d{2}-\d{2}&adults=2&children=0$/,
       ),
     );
+    expect(lines).toContain(
+      "Demo selection example: add a Giza Garden Room and a Giza Family Apartment to the same stay.",
+    );
     expect(
       (
         await client.room.findMany({

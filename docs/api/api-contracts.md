@@ -58,7 +58,7 @@ type CancellationRequestDto = { id: string; status: "OPEN" | "APPROVED" | "REJEC
 
 **Guest reservation time zone (implemented M10-T1).** `GuestReservationDto.branch` is `{ name, slug, phone, email, timeZone }`, where `timeZone` is the branch's IANA name for showing times such as `cancellationDeadline` in branch local time. It is returned by G1, G4 `GET`, and a G6 `200`. G3 summaries and the `context.branch` of refusals are unchanged.
 
-**Typed browser client (implemented M10-T1).** `src/presentation/api-client` has one function for each of P5, P6, P7, P9, P10, P11, and G1 to G6, typed from `src/contracts` and not re-validated in the browser ([spec 0007](../specs/0007-m10-guest-booking-journey.md#settled-during-m10-t1-2026-11-26)). No screen uses it yet.
+**Typed browser client (implemented M10-T1).** `src/presentation/api-client` has one function for each of P5, P6, P7, P9, P10, P11, and G1 to G6, typed from `src/contracts` and not re-validated in the browser ([spec 0007](../specs/0007-m10-guest-booking-journey.md#settled-during-m10-t1-2026-11-26)). The booking selection basket calls P6 through this client (M10-T3).
 
 ## Staff endpoints
 

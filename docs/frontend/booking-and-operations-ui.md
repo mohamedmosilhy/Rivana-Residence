@@ -1,6 +1,6 @@
 # Booking and operations UI
 
-The booking journey and the staff reservation screens: journey, state, components, accessibility. Status: **Planned**, design accepted 2026-10-24 and revised 2026-11-06 (immediate confirmation, several units, services, coupon, VAT review, online payment, cancellation requests; built in M10–M13). **Implemented (M10-T2):** the search and results step, `/{branch}/book`, in `src/presentation/features/booking/`; the later steps remain planned. Routes are listed in [route-map.md](./route-map.md). It reuses the design system ([../design-system.md](./design-system.md), [../component-architecture.md](./component-architecture.md)), the Tailwind tokens in `src/app/globals.css`, and the class helpers in `src/presentation/site/classes.ts` and `src/presentation/admin/ui/`.
+The booking journey and the staff reservation screens: journey, state, components, accessibility. Status: **Planned**, design accepted 2026-10-24 and revised 2026-11-06 (immediate confirmation, several units, services, coupon, VAT review, online payment, cancellation requests; built in M10–M13). **Implemented:** search and results (M10-T2) and the selection basket (M10-T3) at `/{branch}/book` in `src/presentation/features/booking/`. Routes are listed in [route-map.md](./route-map.md). It reuses the design system ([../design-system.md](./design-system.md), [../component-architecture.md](./component-architecture.md)), the Tailwind tokens in `src/app/globals.css`, and the class helpers in `src/presentation/site/classes.ts` and `src/presentation/admin/ui/`.
 
 ## Customer journey
 
@@ -29,7 +29,7 @@ State strategy:
 
 - **Search state** lives in the URL (query parameters), so pages are server-rendered from it. There is no global store.
 - **Form state** is local component state (`useState`), because the form submits to the REST API rather than to a Server Action. React Hook Form stays reserved for complex admin forms, per the existing convention.
-- **Server state**: Server Components fetch through use cases. Client components call the typed API client (`src/presentation/api-client`, **implemented M10-T1**; no screen uses it yet). Amounts are shown with `formatMoney` from `src/presentation/format/money.ts`. The server is authoritative for availability and price, and the client never computes totals.
+- **Server state**: Server Components fetch through use cases. Client components call the typed API client (`src/presentation/api-client`, **implemented M10-T1**). The basket uses the client to request P6 quotes. Amounts are shown with `formatMoney` from `src/presentation/format/money.ts`. The server is authoritative for availability and price, and the client never computes totals.
 - **Server state for prices**: every change to units, extras, or coupon re-quotes through API-P6; the review shows exactly the server quote, and `expectedTotal` is the quote's total.
 - **Payment return**: the manage token from the `201` response is kept in `sessionStorage` for the return page, which polls API-G1 and shows "Confirmed" only for `CONFIRMED`. The return URL's query string is never trusted.
 - **Double-submit protection**: one `Idempotency-Key` per review step (`crypto.randomUUID()`), kept across retries of the same submission; the button is disabled while in flight; the key is regenerated only when the request content changes.
@@ -43,7 +43,7 @@ State strategy:
 | `StaySearchForm` | Server form (GET) | **Implemented (M10-T2)** with no client script. Native `<input type="date">` (accessible, no picker dependency) and labelled `<input type="number">` guest counts; errors beside each field and a focused error heading |
 | `BookingSearchFrame`, `BookingContact` | Server | **Implemented (M10-T2).** The branch photo header, and the hotel contact panel shown when online booking is unavailable |
 | `AvailabilityResults` | Server | **Implemented (M10-T2).** Available listings as cards (badge, price per night or "Nightly rates vary", stay total for one unit **before VAT**, nightly prices in `<details>`), then unavailable listings with a plain reason |
-| Units selector on result cards | Client | Planned (M10-T3) |
+| `AddBookingUnit`, `BookingSelection` | Client | **Implemented (M10-T3).** Available cards show the selected count and link to the basket. Each new unit starts with the search party and can be edited or removed. The basket shows the P6 accommodation subtotal before VAT. Continue goes live with the details page in M10-T4. |
 | `BranchChooser`, `BranchSwitcher` | Server + small client disclosure | Chooser cards at `/`; header switcher that keeps the page type (M5) |
 | `ServicesPicker` | Client | Breakfast and airport transfer priced by each service's unit (per booking, per night, per person, or per person per night, with child prices where set); nothing preselected |
 | `CouponField` | Client | One code; apply re-quotes; refusal reason announced |

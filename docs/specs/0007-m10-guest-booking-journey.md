@@ -359,6 +359,13 @@ For later screens: show a fallback for an unknown problem code (T4 to T8b), and 
 - **Failures.** A refused search shows the wait time. An unexpected failure keeps the entries and logs only the error class and a short code.
 - **Browser tests.** `BOOKING_SEARCH_E2E=1` prepares bookable fixtures for `tests/e2e/booking-search.spec.ts`. It does not settle how the E2E-G journeys complete a booking (planned at T4).
 
+### Settled during M10-T3 (2026-11-27)
+
+- The basket starts empty. Added units use the search party within the listing’s guest limits. A change to the search criteria resets the basket.
+- The basket waits 250 ms after edits settle before requesting P6 with an empty services list. Earlier requests are cancelled, and only the current answer can supply the accommodation subtotal. Quote failures preserve the selection.
+- Each listing shows its selected count and a link to the basket. P6 quantity refusals are explained once per listing, and unit validation messages describe the affected guest fields.
+- The owner approved preparing and testing the existing details URL in T3. Continue goes live in T4 when the destination validates and quotes the selection.
+
 ## Build plan
 
 The project builds backend before the screens that use it, one task at a time. Analytics backend first (it changes P7 and the payment paths, which the screens then exercise), then the client, then the journey in the order a guest walks it, then the after booking pages, then the launch pieces. Each UI task adds its component tests, E2E paths, axe checks, and visual baselines (390 and 1280 px) for its own steps.

@@ -21,6 +21,21 @@ const stay = (daysAhead: number, adults = 2, from = today()) => ({
 const search = (params: Record<string, string>) =>
   `${booking}?${new URLSearchParams(params)}`;
 
+async function seasonalStay() {
+  const {
+    rows: [period],
+  } = await sql(
+    `SELECT ("startDate"::date - 1)::text AS "checkIn", "endDate"::date::text AS "checkOut"
+     FROM "RatePeriod" WHERE id = 'e2e-booking-search-period'`,
+  );
+  return {
+    checkIn: String(period.checkIn),
+    checkOut: String(period.checkOut),
+    adults: "2",
+    children: "0",
+  };
+}
+
 async function capture(page: Page, name: string, fullPage = false) {
   const directory = process.env.BOOKING_SEARCH_SCREENSHOTS;
   if (!directory) return;
@@ -46,7 +61,7 @@ async function verifyAccessibility(page: Page) {
     await page.evaluate(() => document.documentElement.scrollWidth),
   ).toBeLessThanOrEqual(await page.evaluate(() => window.innerWidth));
   const targets = await page
-    .locator("main :is(input:not([type=hidden]), button, a, summary)")
+    .locator("main :is(input:not([type=hidden]), select, button, a, summary)")
     .evaluateAll((elements) =>
       elements
         .filter((element) => element.getClientRects().length > 0)
@@ -62,6 +77,28 @@ async function verifyAccessibility(page: Page) {
   expect(
     targets.filter(({ width, height }) => width < 44 || height < 44),
   ).toEqual([]);
+}
+
+async function captureSelection(page: Page, name: string, desktop: boolean) {
+  const directory = process.env.BOOKING_SELECTION_SCREENSHOTS;
+  if (!directory) return;
+  await page.setViewportSize(
+    desktop ? { width: 1280, height: 920 } : { width: 390, height: 844 },
+  );
+  await page.evaluate(async () => {
+    if (document.activeElement instanceof HTMLElement) {
+      document.activeElement.blur();
+    }
+    window.scrollTo({ top: 0, behavior: "instant" });
+    await document.fonts.ready;
+  });
+  await mkdir(directory, { recursive: true });
+  await page.screenshot({
+    path: path.join(directory, `${name}-${desktop ? "desktop" : "mobile"}.png`),
+    fullPage: true,
+    animations: "disabled",
+    scale: "css",
+  });
 }
 
 test("the booking page gives contact details while booking is off", async ({
@@ -103,6 +140,199 @@ test("unknown and inactive branch booking pages return 404", async ({
 test.describe("with booking available", () => {
   test.skip(!ready, "Run the focused BOOKING_SEARCH_E2E=1 search suite.");
 
+  test("AC-2 selects a room and apartment, checks the server subtotal, and prepares the details link", async ({
+    page,
+  }, testInfo) => {
+    const desktop = testInfo.project.name === "desktop-chromium";
+    const captureState = testInfo.project.name.endsWith("chromium");
+    const dates = await seasonalStay();
+    await page.goto(search(dates));
+    const initialWidth = await page.evaluate(() => innerWidth);
+    if (captureState) await captureSelection(page, "empty-selection", desktop);
+    const basket = page.getByRole("region", { name: "Your selection" });
+    const room = page.getByRole("button", {
+      name: "Add to stay: Deluxe Double",
+    });
+    const apartment = page.getByRole("button", {
+      name: "Add to stay: Studio with Balcony",
+    });
+    // The action also works by keyboard with the server-rendered cards.
+    await room.press("Enter");
+    const roomCard = page.getByRole("article").filter({ has: room });
+    await expect(
+      roomCard.getByText("1 selected", { exact: true }),
+    ).toBeVisible();
+    await expect(
+      roomCard.getByRole("link", { name: "View selection" }),
+    ).toHaveAttribute("href", "#booking-selection");
+    await apartment.press("Space");
+    const unit = basket.getByRole("group", {
+      name: "Studio with Balcony · Unit 2",
+    });
+    const resultPromise = page.waitForResponse(
+      (response) =>
+        response.url().endsWith("/api/v1/quotes") &&
+        response.request().postDataJSON().lines[1]?.occupancy.children === 1,
+    );
+    await unit.getByLabel("Children").selectOption("1");
+    const response = await resultPromise;
+    expect(response.ok()).toBe(true);
+    const quote = await response.json();
+    expect(quote.quote.accommodation.amountMinor).toBe(42_000);
+    expect(response.request().postDataJSON()).toEqual({
+      branchSlug: "new-cairo",
+      stay: { checkIn: dates.checkIn, checkOut: dates.checkOut },
+      lines: [
+        { roomSlug: "deluxe-double", occupancy: { adults: 2, children: 0 } },
+        {
+          roomSlug: "studio-with-balcony",
+          occupancy: { adults: 2, children: 1 },
+        },
+      ],
+      services: [],
+    });
+    await expect(basket.getByText("$420.00")).toBeVisible();
+    const next = basket.getByRole("button", { name: "Continue" });
+    await expect(next).toBeDisabled();
+    const href = new URL(
+      (await next.getAttribute("data-details-href"))!,
+      page.url(),
+    );
+    expect(href.pathname).toBe("/new-cairo/book/details");
+    expect(Object.fromEntries(href.searchParams)).toEqual({
+      checkIn: dates.checkIn,
+      checkOut: dates.checkOut,
+      u: "deluxe-double.2.0,studio-with-balcony.2.1",
+    });
+    if (captureState) await captureSelection(page, "mixed-selection", desktop);
+    await page.setViewportSize({ width: 320, height: 844 });
+    await verifyAccessibility(page);
+    await page.setViewportSize({ width: initialWidth, height: 844 });
+
+    for (let count = 0; count < 3; count++) await apartment.click();
+    await expect(basket.getByText("5 of 5 units selected")).toBeVisible();
+    await expect(apartment).toHaveAccessibleDescription(
+      "All 4 available units selected.",
+    );
+    await expect(room).toHaveAccessibleDescription(
+      "Maximum 5 units per booking.",
+    );
+    await expect(apartment).toBeDisabled();
+    await expect(room).toBeDisabled();
+    await expect(basket.getByText("$1,200.00")).toBeVisible();
+    if (captureState) await captureSelection(page, "selection-limit", desktop);
+    await basket
+      .getByRole("button", { name: "Remove Studio with Balcony, unit 5" })
+      .click();
+    await expect(
+      basket.getByRole("heading", { name: "Your selection" }),
+    ).toBeFocused();
+    await expect(room).toBeEnabled();
+    await expect(basket.getByText("$940.00")).toBeVisible();
+    await page.goto(search(stay(8)));
+    await expect(
+      basket.getByText("Choose up to 5 rooms or apartments for this stay."),
+    ).toBeVisible();
+  });
+
+  test("keeps units through quote failures and offers a fresh check when availability changes", async ({
+    page,
+  }, testInfo) => {
+    const desktop = testInfo.project.name === "desktop-chromium";
+    const captureState = testInfo.project.name.endsWith("chromium");
+    const quotes = "**/api/v1/quotes";
+    const dates = await seasonalStay();
+    const basket = page.getByRole("region", { name: "Your selection" });
+    await page.route(
+      quotes,
+      async (route) => {
+        await route.abort("internetdisconnected");
+      },
+      { times: 1 },
+    );
+    await page.goto(search(dates));
+    await page
+      .getByRole("button", { name: "Add to stay: Deluxe Double" })
+      .click();
+    await expect(
+      basket.getByText("We couldn’t check the price. Please try again."),
+    ).toBeVisible();
+    await expect(basket.getByText("1 of 5 units selected")).toBeVisible();
+    if (captureState) await captureSelection(page, "quote-error", desktop);
+    const retry = basket.getByRole("button", { name: "Check again" });
+    await retry.press("Enter");
+    await expect(
+      basket.getByRole("heading", { name: "Your selection" }),
+    ).toBeFocused();
+    await expect(basket.getByText("$160.00")).toBeVisible();
+
+    await page.route(
+      quotes,
+      async (route) => {
+        await route.fulfill({
+          json: {
+            available: false,
+            bookable: false,
+            unavailableLines: [1, 2],
+            quote: null,
+            paymentMethods: [],
+          },
+        });
+      },
+      { times: 1 },
+    );
+    const apartment = page.getByRole("button", {
+      name: "Add to stay: Studio with Balcony",
+    });
+    await apartment.dblclick();
+    await expect(
+      basket.getByText(
+        "Availability changed. Adjust your selection or check again.",
+      ),
+    ).toBeVisible();
+    const affected = basket.getByRole("group", {
+      name: "Studio with Balcony · Unit 2",
+    });
+    await expect(affected).toHaveAccessibleDescription(
+      "The full quantity is unavailable. Try removing a unit of this type.",
+    );
+    await expect(
+      basket.getByText("The full quantity is unavailable.", { exact: false }),
+    ).toHaveCount(1);
+    await expect(basket.getByText("$160.00")).toHaveCount(0);
+    await expect(basket.getByRole("button", { name: "Continue" })).toHaveCount(
+      0,
+    );
+    if (captureState)
+      await captureSelection(page, "availability-changed", desktop);
+    await basket
+      .getByRole("button", { name: "Remove Studio with Balcony, unit 3" })
+      .click();
+    await expect(basket.getByText("$420.00")).toBeVisible();
+
+    const occupancyError =
+      "This listing sleeps at most 1 adults and 0 children.";
+    await page.route(
+      quotes,
+      (route) =>
+        route.fulfill({
+          status: 422,
+          json: {
+            code: "VALIDATION",
+            title: "Check the units.",
+            fieldErrors: { "lines.1.occupancy": [occupancyError] },
+          },
+        }),
+      { times: 1 },
+    );
+    await affected.getByLabel("Children").selectOption("1");
+    await expect(affected).toHaveAccessibleDescription(occupancyError);
+    await expect(basket.getByText("$420.00")).toHaveCount(0);
+    await affected.getByLabel("Adults").selectOption("1");
+    await affected.getByLabel("Children").selectOption("0");
+    await expect(basket.getByText("$420.00")).toBeVisible();
+  });
+
   test("submits by keyboard without JavaScript and shows exact prices and unavailable reasons", async ({
     baseURL,
     browser,
@@ -114,18 +344,7 @@ test.describe("with booking available", () => {
     const viewport = desktop
       ? { width: 1280, height: 920 }
       : { width: 390, height: 844 };
-    const {
-      rows: [period],
-    } = await sql(
-      `SELECT ("startDate"::date - 1)::text AS "checkIn", "endDate"::date::text AS "checkOut"
-       FROM "RatePeriod" WHERE id = 'e2e-booking-search-period'`,
-    );
-    const dates = {
-      checkIn: String(period.checkIn),
-      checkOut: String(period.checkOut),
-      adults: "2",
-      children: "0",
-    };
+    const dates = await seasonalStay();
     const context = await browser.newContext({
       ...(baseURL ? { baseURL } : {}),
       ...(extraHTTPHeaders ? { extraHTTPHeaders } : {}),
