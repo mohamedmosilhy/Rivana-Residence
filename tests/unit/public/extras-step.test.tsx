@@ -293,7 +293,7 @@ it("shows the server's car limit beside Cars until the guest picks again", async
   await type(screen.getByLabelText("Cars"), "3");
   await answer();
   expect(screen.getByLabelText("Cars")).toHaveAccessibleDescription(
-    "Choose from 1 to 2 cars.",
+    "Choose from 1 to 2 cars. 3 cars take up to 6 people.",
   );
   // The page never changes the guest's number by itself.
   expect(screen.getByLabelText("Cars")).toHaveValue("3");

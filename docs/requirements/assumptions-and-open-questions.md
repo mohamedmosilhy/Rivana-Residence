@@ -110,6 +110,12 @@ Relayed by the project owner on 2026-11-17, who approved the recommendations. Th
 | Q-100 | **Email verification only with online payment.** A booking verified by email must be paid online; pay at hotel stays available only after a WhatsApp code. A fake booking then either gets paid or its 15 minute payment hold expires and the room returns by itself. Email bookings therefore need a live payment gateway, so in practice email becomes usable when the gateway goes live (M15). | Owner, 2026-11-26 (after M9-T12b, on the client's concern about fake bookings); implemented **M9-T12c**, including completion of already issued email codes and tokens (owner, 2026-11-26); [ADR 031](../adr/031-email-verification-fallback.md); spec [0006 Decision 9](../specs/0006-m9-payments-and-cancellations.md#decision-9-email-verification-m9-t12-adr-031) |
 | Q-98 | **Settle approved guest changes to bookings paid online through the gateway at launch.** If the price increases, collect only the difference by hosted checkout. Hold any extra inventory for a limited time and apply the change after verified payment. An expired checkout leaves the original booking in place. If the price decreases, apply the approved change and request a partial refund for the difference. Staff can see pending and failed refunds and retry a failed one. Compare future totals with successful payments minus completed refunds. The chosen gateway must support both additional checkout payments and partial refunds. | Owner, 2026-11-25. [M15-T4d](../delivery/milestones/m15-joint-launch.md#task-breakdown) updates the desk settlement rule in Q-66 and Q-85 for this flow once the launch task is delivered. |
 
+### Decided 2026-11-27 (transfer car capacity)
+
+| Id | Decision | Source and effect |
+| --- | --- | --- |
+| Q-101 | **People per transfer car.** One car takes two people. The booking page shows the capacity of the chosen cars ("2 cars take up to 4 people."). | Owner, 2026-11-27. A fixed display value for every branch (M10-T5b); it does not block, warn about, or reprice a larger party. A per branch setting would be a later change |
+
 ## Superseded decisions
 
 Kept as the record of the earlier approved design (accepted M1–M3 documents and ADRs describe them).

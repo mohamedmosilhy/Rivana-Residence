@@ -422,8 +422,16 @@ test("AC-3, AC-4: the server prices extras, cars and a coupon, by keyboard", asy
 
   await priced(page, () => box(page, /Breakfast/).press("Space"));
   await priced(page, () => box(page, /Airport transfer/).press("Space"));
+  await expect(page.getByLabel("Cars")).toHaveAccessibleDescription(
+    "1 car takes up to 2 people.",
+  );
+  await expect(total(page)).toBeVisible();
+  await capture(page, testInfo, "extras-one-car");
   const two = await priced(page, () =>
     page.getByLabel("Cars").selectOption("2"),
+  );
+  await expect(page.getByLabel("Cars")).toHaveAccessibleDescription(
+    "2 cars take up to 4 people.",
   );
   expect(two.body.quote.services).toMatchObject([
     { kind: "BREAKFAST" },

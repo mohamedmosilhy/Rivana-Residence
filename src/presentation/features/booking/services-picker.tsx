@@ -15,6 +15,14 @@ import type { OfferedService, ServiceKind } from "./extras-state";
 
 export const FLIGHT_DETAILS_LIMIT = 300;
 
+/** How many people one car takes, on every branch (Q-101). A hint only. */
+const PEOPLE_PER_CAR = 2;
+
+function carCapacity(cars: number) {
+  const subject = cars === 1 ? "1 car takes" : `${cars} cars take`;
+  return `${subject} up to ${cars * PEOPLE_PER_CAR} people.`;
+}
+
 /** The price in words, by the unit staff chose (SV-3). Before VAT. */
 export function servicePrice({ unit, price, childPrice }: OfferedService) {
   const amount = formatMoney(price);
@@ -110,7 +118,9 @@ export function ServicesPicker({
                       value={cars}
                       aria-invalid={carsError ? true : undefined}
                       aria-describedby={
-                        carsError ? "transfer-cars-error" : undefined
+                        carsError
+                          ? "transfer-cars-error transfer-cars-help"
+                          : "transfer-cars-help"
                       }
                       className={`${fieldControl} appearance-none pr-10`}
                       onChange={(event) =>
@@ -134,6 +144,13 @@ export function ServicesPicker({
                       {carsError}
                     </p>
                   )}
+                  <p
+                    id="transfer-cars-help"
+                    aria-live="polite"
+                    className={fieldHelp}
+                  >
+                    {carCapacity(cars)}
+                  </p>
                 </div>
                 <div className={fieldGroup}>
                   <label htmlFor="transfer-flight" className={fieldLabel}>

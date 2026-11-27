@@ -92,7 +92,7 @@ Each section states its status: **Implemented** (built and accepted in Phases 1�
 - **FR-SVC-2** Guests may choose services while booking. The final review may offer unchosen services as an optional cross-sell. A service is never added without the guest's explicit choice.
 - **FR-SVC-3** Chosen services are part of the subtotal, the coupon base, and the VAT base (ADR 027).
 - **FR-SVC-4** Approved prices are open (Q-56). The airport transfer is an arrival pickup with an optional flight number and arrival time as plain text (Q-56, Q-82).
-- **FR-SVC-5** For the airport transfer the guest chooses the number of cars, from 1 to the branch's maximum (`maxVehicles`, default 3). A `PER_VEHICLE` price unit charges the price × cars; the car count is stored for every unit (Q-82, SV-5). **Implemented (M8-T3b)** in the quote (P6), the staff service API (S35, S36), and reservation storage; UI planned (M10-T5, M12-T2).
+- **FR-SVC-5** For the airport transfer the guest chooses the number of cars, from 1 to the branch's maximum (`maxVehicles`, default 3). A `PER_VEHICLE` price unit charges the price × cars; the car count is stored for every unit (Q-82, SV-5). **Implemented (M8-T3b)** in the quote (P6), the staff service API (S35, S36), and reservation storage; The guest booking page is built (M10-T5); the staff screen is planned (M12-T2). The booking page says how many people the chosen cars take, 2 per car on every branch, as information only: nothing is blocked or repriced (Q-101, M10-T5b).
 - **FR-SVC-6** Services can be added, removed, or changed after booking, by staff (FR-RES-6) and by the guest (FR-GCHG) (Q-83).
 
 ## FR-CPN Coupons — Partly implemented (M7-T5 management API; quote M7-T6, redemption M8, UI M10 and M12 planned)

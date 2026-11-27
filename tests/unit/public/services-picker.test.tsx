@@ -91,6 +91,30 @@ it.each(["PER_VEHICLE", "PER_BOOKING"] as const)(
   },
 );
 
+it.each([
+  [1, "1 car takes up to 2 people."],
+  [2, "2 cars take up to 4 people."],
+  [3, "3 cars take up to 6 people."],
+])("says how many people %i car(s) take", (cars, words) => {
+  render(<ServicesPicker {...props} transfer cars={cars} />);
+  expect(screen.getByText(words)).toHaveAttribute("aria-live", "polite");
+  expect(screen.getByLabelText("Cars")).toHaveAccessibleDescription(words);
+});
+
+it("keeps the capacity hint beside a car error", () => {
+  render(
+    <ServicesPicker
+      {...props}
+      transfer
+      cars={2}
+      carsError="Choose from 1 to 1 cars."
+    />,
+  );
+  expect(screen.getByLabelText("Cars")).toHaveAccessibleDescription(
+    "Choose from 1 to 1 cars. 2 cars take up to 4 people.",
+  );
+});
+
 it("shows nothing when the branch offers no extra", () => {
   const { container } = render(<ServicesPicker {...props} services={[]} />);
   expect(container).toBeEmptyDOMElement();
