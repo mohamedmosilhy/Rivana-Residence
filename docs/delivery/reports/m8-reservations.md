@@ -102,7 +102,7 @@ Evidence the brief asks for: concurrency output (above, 22 files / 446 tests, 20
 
 ## Screenshots (UI milestones; desktop 1280 and mobile 390)
 
-Not applicable beyond M8-T4b: the only screen, `/admin/settings/whatsapp`, was proven by Playwright (axe, no horizontal scroll, desktop and mobile) in that task. No new screenshots were taken at close.
+M8-T4b verified the Admin WhatsApp screen with Playwright at both sizes. The 2026-11-27 captures show the current build with a demo number and booking confirmation template. The status panel shows the remaining setup steps. [Desktop](screenshots/m8/m8-t4b/whatsapp-settings-desktop.png) · [Mobile](screenshots/m8/m8-t4b/whatsapp-settings-mobile.png)
 
 ## Known limitations, risks, deferred work
 

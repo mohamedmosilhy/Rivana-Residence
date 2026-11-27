@@ -137,6 +137,22 @@ The other 13 baselines are unchanged.
 
 ## Screenshots
 
+### Additional captures, 2026-11-27
+
+Both branches are active in a local demo database. These full-page captures show the current build at 1280 px and 390 px. The open switcher is in the header on desktop and inside the menu on mobile. In both views, switching from New Cairo’s listings opens the Giza listings.
+
+| Screen | Desktop | Mobile |
+| --- | --- | --- |
+| Branch chooser with two active branches | [Desktop](screenshots/m5/2026-11-27/branch-chooser-desktop.png) | [Mobile](screenshots/m5/2026-11-27/branch-chooser-mobile.png) |
+| New Cairo home | [Desktop](screenshots/m5/2026-11-27/new-cairo-home-desktop.png) | [Mobile](screenshots/m5/2026-11-27/new-cairo-home-mobile.png) |
+| Giza demo home | [Desktop](screenshots/m5/2026-11-27/giza-home-desktop.png) | [Mobile](screenshots/m5/2026-11-27/giza-home-mobile.png) |
+| Open branch switcher | [Desktop](screenshots/m5/2026-11-27/branch-switcher-open-desktop.png) | [Mobile](screenshots/m5/2026-11-27/branch-switcher-open-mobile.png) |
+| Giza family apartment | [Desktop](screenshots/m5/2026-11-27/giza-apartment-desktop.png) | [Mobile](screenshots/m5/2026-11-27/giza-apartment-mobile.png) |
+| Admin branch list | [Desktop](screenshots/m5/2026-11-27/admin-branches-desktop.png) | [Mobile](screenshots/m5/2026-11-27/admin-branches-mobile.png) |
+| Admin edit page for the Giza demo branch | [Desktop](screenshots/m5/2026-11-27/admin-giza-edit-desktop.png) | [Mobile](screenshots/m5/2026-11-27/admin-giza-edit-mobile.png) |
+
+### Original milestone captures
+
 In `docs/delivery/reports/screenshots/m5/`:
 
 - **One branch:**

@@ -114,6 +114,8 @@ CONFIRMED        → CANCELLED                              confirmed refund aft
 
 The simulated checkout rendered the quoted amount, expiry and scenario controls at both widths. [Desktop, 1280 px](./screenshots/m9-fake-checkout-desktop.png) · [Mobile, 390 px](./screenshots/m9-fake-checkout-mobile.png)
 
+The 2026-11-27 captures show the M9-T12a Admin guest verification screen in the current build. The demo shows the status of WhatsApp, email delivery, and online payment, with email verification off. [Desktop, 1280 px](screenshots/m9/m9-t12a/guest-verification-settings-desktop.png) · [Mobile, 390 px](screenshots/m9/m9-t12a/guest-verification-settings-mobile.png)
+
 ## Known limits and deferred work
 
 - M10 delivers guest booking, payment return, and booking management screens. The public booking switch keeps its rollout guard through M9. M11 delivers the desk workflows. M12 integrates request and payment information into the broader management tools.
