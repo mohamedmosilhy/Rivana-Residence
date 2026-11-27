@@ -98,7 +98,7 @@ function ResultCard({
       className={`grid h-full content-start border bg-surface ${highlighted ? "border-gold-600" : "border-neutral-300"}`}
     >
       {roomType.hero && (
-        <div className="relative aspect-[16/9] bg-plum-100">
+        <div className="relative aspect-video bg-plum-100">
           <SiteImage
             image={roomType.hero}
             fill
