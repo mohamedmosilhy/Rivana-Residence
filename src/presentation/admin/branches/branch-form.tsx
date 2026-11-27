@@ -47,6 +47,8 @@ const LABELS: Record<BranchFormField | "heroMediaId", string> = {
   longitude: "Longitude",
   checkInTime: "Check-in time",
   checkOutTime: "Check-out time",
+  checkInUntilTime: "Latest check-in",
+  checkOutFromTime: "Earliest check-out",
   mapEmbedUrl: "Google Maps embed link",
   sortOrder: "Display order",
   heroMediaId: "Branch image",
@@ -240,8 +242,20 @@ export function BranchForm({
       <fieldset className={fieldset}>
         <legend className={legend}>Stay times</legend>
         <div className={formGrid}>
-          {text("checkInTime", { hint: "HH:MM, for example 14:00." })}
-          {text("checkOutTime", { hint: "HH:MM, for example 12:00." })}
+          {text("checkInTime", {
+            hint: "When check-in opens. HH:MM, for example 14:00.",
+          })}
+          {text("checkInUntilTime", {
+            hint: "Later the same day, for example 23:30.",
+          })}
+        </div>
+        <div className={formGrid}>
+          {text("checkOutFromTime", {
+            hint: "Before the check-out time, for example 00:00.",
+          })}
+          {text("checkOutTime", {
+            hint: "When guests must leave. HH:MM, for example 12:00.",
+          })}
         </div>
       </fieldset>
 

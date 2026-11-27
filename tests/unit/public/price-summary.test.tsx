@@ -3,7 +3,7 @@ import { expect, it } from "vitest";
 
 import { PriceSummary } from "@/presentation/features/booking/price-summary";
 
-import { bookingQuote, usd } from "./booking-extras-fixtures";
+import { bookingQuote, stayTimes, usd } from "./booking-extras-fixtures";
 
 const rows = () => screen.getAllByRole("row").map((row) => row.textContent);
 
@@ -38,7 +38,14 @@ const quote = bookingQuote({
 });
 
 it("lists the server's units, extras, discount, VAT rate and total", () => {
-  render(<PriceSummary quote={quote} stale={null} changeHref="/back" />);
+  render(
+    <PriceSummary
+      times={stayTimes}
+      quote={quote}
+      stale={null}
+      changeHref="/back"
+    />,
+  );
   expect(
     screen.getByRole("table", { name: "Price of your stay" }),
   ).toBeVisible();
@@ -58,7 +65,12 @@ it("lists the server's units, extras, discount, VAT rate and total", () => {
 
 it("shows no discount line without a coupon", () => {
   render(
-    <PriceSummary quote={bookingQuote()} stale={null} changeHref="/back" />,
+    <PriceSummary
+      times={stayTimes}
+      quote={bookingQuote()}
+      stale={null}
+      changeHref="/back"
+    />,
   );
   expect(rows().join()).not.toContain("Discount");
   expect(rows()).toContain("VAT (15%)$24.00");
@@ -66,7 +78,12 @@ it("shows no discount line without a coupon", () => {
 
 it("hides figures that do not answer the current choices", () => {
   render(
-    <PriceSummary quote={quote} stale="Updating price…" changeHref="/back" />,
+    <PriceSummary
+      times={stayTimes}
+      quote={quote}
+      stale="Updating price…"
+      changeHref="/back"
+    />,
   );
   expect(screen.getByText("Updating price…")).toBeVisible();
   expect(screen.getByRole("table", { hidden: true })).toHaveClass("invisible");
@@ -76,6 +93,7 @@ it("shows each unit's server nightly amounts and seasonal label on review", () =
   const line = quote.lines[0]!;
   render(
     <PriceSummary
+      times={stayTimes}
       nightly
       quote={{
         ...quote,
@@ -98,4 +116,27 @@ it("shows each unit's server nightly amounts and seasonal label on review", () =
     "Thu, 3 Dec (Winter) · $124.56",
   );
   expect(rows().join()).toContain("Fri, 4 Dec · $80.00");
+});
+
+it("shows each end of the stay as its date and the hotel's hours", () => {
+  render(
+    <PriceSummary
+      times={stayTimes}
+      quote={bookingQuote()}
+      stale={null}
+      changeHref="/back"
+    />,
+  );
+  expect(screen.getAllByRole("term").map((term) => term.textContent)).toEqual([
+    "Check-in",
+    "Check-out",
+  ]);
+  expect(
+    screen.getAllByRole("definition").map((item) => item.textContent),
+  ).toEqual([
+    "Thu, 3 Dec 2026",
+    "2:00 PM – 11:30 PM",
+    "Sat, 5 Dec 2026",
+    "12:00 AM – 11:30 AM",
+  ]);
 });

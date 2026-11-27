@@ -249,6 +249,8 @@ model Branch {
   phone / email / addressLine1 / addressLine2 / city / country / latitude / longitude   (as SiteSettings)
   checkInTime          String?      @db.VarChar(5)    // HH:MM, branch time zone; required to enable online booking (CX-1)
   checkOutTime         String?      @db.VarChar(5)
+  checkInUntilTime     String?      @db.VarChar(5)    // M10-T6b (Q-102): CHECK later than checkInTime
+  checkOutFromTime     String?      @db.VarChar(5)    // M10-T6b (Q-102): CHECK earlier than checkOutTime
   mapEmbedUrl          String?      @db.VarChar(1000) // https://www.google.com/maps/embed… only (Q-52)
   heroMediaId          String?      @db.VarChar(32)   // → MediaAsset RESTRICT
   syncReminderIntervalMinutes Int  @default(30)       // CHECK 10–240 (Q-20)

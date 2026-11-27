@@ -51,6 +51,8 @@ const row = {
   mapEmbedUrl: true,
   checkInTime: true,
   checkOutTime: true,
+  checkInUntilTime: true,
+  checkOutFromTime: true,
   heroMediaId: true,
   syncReminderIntervalMinutes: true,
   syncFollowUpMinutes: true,

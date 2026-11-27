@@ -37,6 +37,8 @@ export type BranchRow = BranchRecord &
     mapEmbedUrl: string | null;
     checkInTime: string | null;
     checkOutTime: string | null;
+    checkInUntilTime: string | null;
+    checkOutFromTime: string | null;
     heroMediaId: string | null;
     syncReminderIntervalMinutes: number;
     syncFollowUpMinutes: number;

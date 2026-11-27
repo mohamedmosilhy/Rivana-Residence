@@ -35,6 +35,12 @@ export const BranchDetail = BranchSummary.extend({
   longitude: z.number().nullable(),
   checkInTime: text.describe("HH:MM in the branch time zone"),
   checkOutTime: text.describe("HH:MM in the branch time zone"),
+  checkInUntilTime: text.describe(
+    "Latest check-in, HH:MM in the branch time zone",
+  ),
+  checkOutFromTime: text.describe(
+    "Earliest check-out, HH:MM in the branch time zone",
+  ),
   mapEmbedUrl: text.describe("A https://www.google.com/maps/embed… URL"),
 });
 
@@ -98,6 +104,8 @@ const branchFields = {
   mapEmbedUrl: text.optional(),
   checkInTime: text.optional(),
   checkOutTime: text.optional(),
+  checkInUntilTime: text.optional(),
+  checkOutFromTime: text.optional(),
   heroMediaId: text.optional(),
   onlineBookingEnabled: z.boolean().optional(),
   syncReminderIntervalMinutes: z.number().int().optional(),

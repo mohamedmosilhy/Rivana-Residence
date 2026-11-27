@@ -7753,6 +7753,20 @@
               "null"
             ]
           },
+          "checkInUntilTime": {
+            "description": "Latest check-in, HH:MM in the branch time zone",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "checkOutFromTime": {
+            "description": "Earliest check-out, HH:MM in the branch time zone",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
           "mapEmbedUrl": {
             "description": "A https://www.google.com/maps/embed… URL",
             "type": [
@@ -7777,6 +7791,8 @@
           "longitude",
           "checkInTime",
           "checkOutTime",
+          "checkInUntilTime",
+          "checkOutFromTime",
           "mapEmbedUrl"
         ],
         "additionalProperties": false
@@ -8193,6 +8209,18 @@
               "null"
             ]
           },
+          "checkInUntilTime": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "checkOutFromTime": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
           "heroMediaId": {
             "type": [
               "string",
@@ -8304,6 +8332,18 @@
             ]
           },
           "checkOutTime": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "checkInUntilTime": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "checkOutFromTime": {
             "type": [
               "string",
               "null"

@@ -24,6 +24,14 @@ export const bookingServices: OfferedService[] = [
   },
 ];
 
+/** A branch with both stay windows set (Q-102). */
+export const stayTimes = {
+  checkInTime: "14:00",
+  checkInUntilTime: "23:30",
+  checkOutTime: "11:30",
+  checkOutFromTime: "00:00",
+};
+
 /** A server quote for one room, two nights, with nothing added. */
 export function bookingQuote(overrides: Partial<Quote> = {}): Quote {
   return {

@@ -140,7 +140,13 @@ export async function seedBookingJourney(client: PrismaClient) {
   await seedBookingSearch(client);
   await client.branch.update({
     where: { id: BRANCH_ID },
-    data: { onlinePaymentEnabled: true },
+    data: {
+      onlinePaymentEnabled: true,
+      // The stay panel shows both windows (Q-102).
+      checkInUntilTime: "23:30",
+      checkOutTime: "11:30",
+      checkOutFromTime: "00:00",
+    },
   });
   await client.verificationSettings.update({
     where: { id: "default" },
@@ -701,6 +707,8 @@ export async function seedSecondBranch(
         mapEmbedUrl: "https://www.google.com/maps/embed?pb=demo-giza",
         checkInTime: "14:00",
         checkOutTime: "12:00",
+        checkInUntilTime: null,
+        checkOutFromTime: null,
         syncReminderIntervalMinutes: 30,
         syncFollowUpMinutes: 10,
         heroMediaId: image["about-exterior-wide.jpg"]!,

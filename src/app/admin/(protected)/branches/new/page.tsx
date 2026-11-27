@@ -56,6 +56,8 @@ export default async function NewBranchPage() {
             longitude: "",
             checkInTime: "",
             checkOutTime: "",
+            checkInUntilTime: "",
+            checkOutFromTime: "",
             mapEmbedUrl: "",
             sortOrder: "0",
             heroMediaId: null,

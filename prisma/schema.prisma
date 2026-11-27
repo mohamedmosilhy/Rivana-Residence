@@ -626,6 +626,8 @@ model Branch {
   mapEmbedUrl                 String?      @db.VarChar(2048)
   checkInTime                 String?      @db.VarChar(5)
   checkOutTime                String?      @db.VarChar(5)
+  checkInUntilTime            String?      @db.VarChar(5)
+  checkOutFromTime            String?      @db.VarChar(5)
   heroMediaId                 String?      @db.VarChar(32)
   syncReminderIntervalMinutes Int          @default(30)
   syncFollowUpMinutes         Int          @default(10)

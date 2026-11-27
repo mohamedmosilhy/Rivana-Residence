@@ -5,7 +5,7 @@ import type { QuoteView } from "@/application/quotes";
 import { formatMoney } from "@/presentation/format/money";
 import { bookingPanel, figures, link } from "@/presentation/site/classes";
 
-import { displayDate } from "./display-date";
+import { StayDates, type StayTimes } from "./stay-dates";
 
 const count = (value: number, one: string, many: string) =>
   `${value} ${value === 1 ? one : many}`;
@@ -13,8 +13,9 @@ const count = (value: number, one: string, many: string) =>
 /** What the guest is booking, as the server just priced it. */
 export function SelectionSummary({
   quote,
+  times,
   changeHref,
-}: Readonly<{ quote: QuoteView; changeHref: string }>) {
+}: Readonly<{ quote: QuoteView; times: StayTimes; changeHref: string }>) {
   const { checkIn, checkOut } = quote.stay;
   const nights = [...quote.stay.nights()].length;
   return (
@@ -28,11 +29,13 @@ export function SelectionSummary({
       >
         Your stay
       </h2>
+      <dl className="m-0 grid gap-3">
+        <StayDates
+          stay={{ checkIn: checkIn.value, checkOut: checkOut.value }}
+          times={times}
+        />
+      </dl>
       <p className="m-0 text-small text-neutral-800">
-        <time dateTime={checkIn.value}>{displayDate(checkIn)}</time>
-        {" to "}
-        <time dateTime={checkOut.value}>{displayDate(checkOut)}</time>
-        <br />
         {count(nights, "night", "nights")}
       </p>
       <ul className="m-0 list-none border-t border-neutral-300 p-0">

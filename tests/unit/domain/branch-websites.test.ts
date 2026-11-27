@@ -343,6 +343,44 @@ describe("ManageBranches", () => {
     });
   });
 
+  // Q-102: a patch may carry one side of a window, so the rule reads the row.
+  it("checks stay windows against the stored times", async () => {
+    const { useCase, writes } = setup([
+      branchRow(),
+      branchRow({
+        id: "b2",
+        slug: "demo-giza",
+        checkInTime: "14:00",
+        checkInUntilTime: "23:30",
+        checkOutTime: "11:30",
+      }),
+    ]);
+    for (const [patch, field] of [
+      [{ checkInTime: "23:45" }, "checkInUntilTime"],
+      [{ checkInTime: "" }, "checkInUntilTime"],
+      [{ checkOutTime: "", checkOutFromTime: "00:00" }, "checkOutFromTime"],
+      [{ checkOutFromTime: "12:00" }, "checkOutFromTime"],
+    ] as const) {
+      expect(await useCase.update(admin, "b2", patch)).toMatchObject({
+        ok: false,
+        error: { fieldErrors: { [field]: expect.any(Array) } },
+      });
+    }
+    expect(writes).toHaveLength(0);
+    expect(
+      await useCase.update(admin, "b2", { checkOutFromTime: "00:00" }),
+    ).toMatchObject({ ok: true });
+    expect(writes).toHaveLength(1);
+    // A main time and its window may be cleared together.
+    expect(
+      await useCase.update(admin, "b2", {
+        checkInTime: "",
+        checkInUntilTime: "",
+      }),
+    ).toMatchObject({ ok: true });
+    expect(writes).toHaveLength(2);
+  });
+
   // T-SITE-4: an update expires that branch's tags (listed explicitly) and
   // audits only the changed fields.
   it("audits changed fields and expires only that branch's tags", async () => {

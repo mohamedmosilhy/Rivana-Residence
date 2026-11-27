@@ -52,6 +52,7 @@ Each section states its status: **Implemented** (built and accepted in Phases 1â
 ## FR-BR Branches â€” Planned (M4 data, M5 API and minimal form, M12 full admin)
 
 - **FR-BR-1** Admin creates, edits, activates, and deactivates branches with the attributes in [branch-model.md](../domain/branch-model.md): content owner, contact, address, map embed, check-in and check-out times, sync reminder settings.
+- **FR-BR-1a** A branch may also set a latest check-in (later the same day than the check-in time) and an earliest check-out (before the check-out time). The booking and confirmation pages show each stay date with those hours in 12 hour form, or From and Until when only the main time is set (Q-102). **Implemented (M10-T6b).**
 - **FR-BR-2** Public branch listing shows only `ACTIVE` branches.
 - **FR-BR-3** Each branch has an `onlineBookingEnabled` switch. When it is off, Book Now keeps the honest disabled state. It cannot be turned on while WhatsApp is not configured (FR-NTF-5). The VAT rate is never empty (FR-TAX-1), so it does not gate the switch (Q-05 amended 2026-11-11).
 - **FR-BR-4** Deactivation hides the branch publicly, blocks new reservations, and keeps history manageable.

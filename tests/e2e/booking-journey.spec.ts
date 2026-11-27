@@ -412,6 +412,11 @@ test("AC-3, AC-4: the server prices extras, cars and a coupon, by keyboard", asy
   await button(page, "Continue to extras").press("Enter");
 
   await expect(heading(page, "Extras and coupon")).toBeFocused();
+  // Q-102: the stay panel gives the hotel's hours beside each date.
+  const stayPanel = page.getByRole("complementary", { name: "Your stay" });
+  await expect(stayPanel).toContainText("Check-in");
+  await expect(stayPanel).toContainText("2:00 PM – 11:30 PM");
+  await expect(stayPanel).toContainText("12:00 AM – 11:30 AM");
   await expect(box(page, /Breakfast/)).not.toBeChecked();
   await expect(box(page, /Airport transfer/)).not.toBeChecked();
   await expect(total(page)).toBeVisible();

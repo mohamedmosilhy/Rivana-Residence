@@ -76,6 +76,8 @@ export default async function EditBranchPage({
             longitude: text(branch.longitude),
             checkInTime: text(branch.checkInTime),
             checkOutTime: text(branch.checkOutTime),
+            checkInUntilTime: text(branch.checkInUntilTime),
+            checkOutFromTime: text(branch.checkOutFromTime),
             mapEmbedUrl: text(branch.mapEmbedUrl),
             sortOrder: String(branch.sortOrder),
             heroMediaId: branch.heroMediaId,

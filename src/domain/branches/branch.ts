@@ -161,6 +161,8 @@ const branchFields = z.object({
   ),
   checkInTime: optionalTime("check-in time"),
   checkOutTime: optionalTime("check-out time"),
+  checkInUntilTime: optionalTime("latest check-in time"),
+  checkOutFromTime: optionalTime("earliest check-out time"),
   syncReminderIntervalMinutes: z
     .number({ error: "Enter the reminder interval in minutes." })
     .int("Use whole minutes.")
@@ -180,6 +182,10 @@ type CrossFieldValues = Readonly<{
   syncReminderIntervalMinutes: number;
   latitude: number | null;
   longitude: number | null;
+  checkInTime: string | null;
+  checkOutTime: string | null;
+  checkInUntilTime: string | null;
+  checkOutFromTime: string | null;
 }>;
 
 /** Rules that span two fields; also run on a merged patch by the use case. */
@@ -196,6 +202,32 @@ export function branchCrossFieldIssues(branch: CrossFieldValues) {
       path: branch.latitude === null ? "latitude" : "longitude",
       message: "Enter both latitude and longitude, or leave both empty.",
     });
+  }
+  // Q-102: each window ends or starts at the branch's main time, on the same
+  // day. HH:MM text compares in time order.
+  const { checkInTime, checkInUntilTime } = branch;
+  if (checkInUntilTime !== null) {
+    if (checkInTime === null || checkInUntilTime <= checkInTime) {
+      issues.push({
+        path: "checkInUntilTime",
+        message:
+          checkInTime === null
+            ? "Add the check-in time first, or leave this empty."
+            : "The latest check-in must be later than the check-in time.",
+      });
+    }
+  }
+  const { checkOutTime, checkOutFromTime } = branch;
+  if (checkOutFromTime !== null) {
+    if (checkOutTime === null || checkOutFromTime >= checkOutTime) {
+      issues.push({
+        path: "checkOutFromTime",
+        message:
+          checkOutTime === null
+            ? "Add the check-out time first, or leave this empty."
+            : "The earliest check-out must be before the check-out time.",
+      });
+    }
   }
   return issues;
 }

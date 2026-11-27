@@ -52,6 +52,8 @@ export function branchDetail(branch: PublicBranch): BranchDetailDto {
     longitude: branch.longitude,
     checkInTime: branch.checkInTime,
     checkOutTime: branch.checkOutTime,
+    checkInUntilTime: branch.checkInUntilTime,
+    checkOutFromTime: branch.checkOutFromTime,
     mapEmbedUrl: branch.mapEmbedUrl,
   };
 }

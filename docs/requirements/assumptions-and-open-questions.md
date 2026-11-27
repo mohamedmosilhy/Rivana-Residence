@@ -116,6 +116,12 @@ Relayed by the project owner on 2026-11-17, who approved the recommendations. Th
 | --- | --- | --- |
 | Q-101 | **People per transfer car.** One car takes two people. The booking page shows the capacity of the chosen cars ("2 cars take up to 4 people."). | Owner, 2026-11-27. A fixed display value for every branch (M10-T5b); it does not block, warn about, or reprice a larger party. A per branch setting would be a later change |
 
+### Decided 2026-11-27 (check-in and check-out windows)
+
+| Id | Decision | Source and effect |
+| --- | --- | --- |
+| Q-102 | **Stay windows on the guest's booking.** Guests see each date with the hours they can arrive and must leave, for example check-in 2:00 PM to 11:30 PM and check-out 12:00 AM to 11:30 AM. | Owner, 2026-11-27 (M10-T6b). Two optional branch settings, latest check-in and earliest check-out, beside the existing times; a window does not pass midnight. Without them the pages say From or Until. Shown on the booking pages and the confirmation page, not in messages. Information only: price, availability and the cancellation deadline do not change. The pages show the branch's current times, not a copy stored with the booking |
+
 ## Superseded decisions
 
 Kept as the record of the earlier approved design (accepted M1–M3 documents and ADRs describe them).

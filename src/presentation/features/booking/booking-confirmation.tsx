@@ -17,10 +17,10 @@ import {
 } from "@/presentation/site/classes";
 import { Icon } from "@/presentation/site/icons";
 import { readBookingResult } from "./booking-result";
-import { displayDate } from "./display-date";
 import { HotelContact, type HotelContactDetails } from "./hotel-contact";
 import { serviceName } from "./extras-answer";
 import { count, PriceRow, vatLabel } from "./price-row";
+import { StayDates, type StayTimes } from "./stay-dates";
 
 type Detail = Extract<
   Awaited<ReturnType<typeof getGuestReservation>>,
@@ -30,8 +30,10 @@ type Answer = Detail | "missing" | "retry" | null;
 
 export function BookingConfirmation({
   contact,
+  times,
 }: {
   contact: HotelContactDetails;
+  times: StayTimes;
 }) {
   const [answer, setAnswer] = useState<Answer>(null);
   const [attempt, setAttempt] = useState(0);
@@ -99,7 +101,7 @@ export function BookingConfirmation({
       {answer === "missing" && (
         <h2 className={bookingHeading}>Open your booking message</h2>
       )}
-      {booking && <BookingDetails booking={booking} />}
+      {booking && <BookingDetails booking={booking} times={times} />}
       {answer !== null && (
         <div className={booking ? bookingBlock : "grid gap-3"}>
           <p className="m-0">
@@ -114,20 +116,16 @@ export function BookingConfirmation({
 }
 
 /** The reservation as the server holds it now. Every amount is shown as sent. */
-function BookingDetails({ booking }: Readonly<{ booking: Detail }>) {
+function BookingDetails({
+  booking,
+  times,
+}: Readonly<{ booking: Detail; times: StayTimes }>) {
   const confirmed = booking.status === "CONFIRMED";
   const { price, units } = booking;
-  const facts = [
-    ["Hotel", booking.branch.name],
-    ["Check-in", displayDate({ value: booking.stay.checkIn })],
-    ["Check-out", displayDate({ value: booking.stay.checkOut })],
-    [
-      "Payment method",
-      booking.paymentMethod === "PAY_AT_HOTEL"
-        ? "Pay at the hotel"
-        : "Online payment",
-    ],
-  ] as const;
+  const payment =
+    booking.paymentMethod === "PAY_AT_HOTEL"
+      ? "Pay at the hotel"
+      : "Online payment";
   return (
     <>
       <div className="flex flex-wrap items-center gap-4">
@@ -155,15 +153,15 @@ function BookingDetails({ booking }: Readonly<{ booking: Detail }>) {
         </strong>
       </div>
       <dl className={factList}>
-        {facts.map(
-          ([term, value]) =>
-            value && (
-              <div key={term} className="grid min-w-0 content-start gap-0.5">
-                <dt className={factTerm}>{term}</dt>
-                <dd className={factValue}>{value}</dd>
-              </div>
-            ),
-        )}
+        <div className="grid min-w-0 content-start gap-0.5">
+          <dt className={factTerm}>Hotel</dt>
+          <dd className={factValue}>{booking.branch.name}</dd>
+        </div>
+        <StayDates stay={booking.stay} times={times} />
+        <div className="grid min-w-0 content-start gap-0.5">
+          <dt className={factTerm}>Payment method</dt>
+          <dd className={factValue}>{payment}</dd>
+        </div>
       </dl>
       {(units.length > 0 || price) && (
         <div className={bookingBlock}>

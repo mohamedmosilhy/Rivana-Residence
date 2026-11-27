@@ -37,6 +37,7 @@ import {
   type Verification,
   type VerificationLifetimes,
 } from "./verification-state";
+import type { StayTimes } from "./stay-dates";
 
 const PhoneVerificationStep = lazy(async () => ({
   default: (await import("./phone-verification-step")).PhoneVerificationStep,
@@ -59,6 +60,7 @@ type JourneyProps = Readonly<{
   selection: BookingSelectionBase;
   services: readonly OfferedService[];
   maxVehicles: number | null;
+  times: StayTimes;
   /** The server's price of the selection with nothing added. */
   price: Readonly<{ quote: Quote; paymentMethods: PaymentMethods }>;
   countries: readonly PhoneCountry[];
@@ -107,6 +109,7 @@ function JourneySteps({
   selection,
   services,
   maxVehicles,
+  times,
   price,
   countries,
   channels,
@@ -296,6 +299,7 @@ function JourneySteps({
           <Suspense fallback={summary}>
             <PriceSummary
               quote={extras.priced.quote}
+              times={times}
               stale={stale}
               nightly={step === "payment" && checkoutView === "review"}
               allowChange={!checkoutBusy}

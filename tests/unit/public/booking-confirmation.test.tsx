@@ -7,6 +7,8 @@ import {
   saveBookingResult,
 } from "@/presentation/features/booking/booking-result";
 
+import { stayTimes } from "./booking-extras-fixtures";
+
 const { getGuestReservation } = vi.hoisted(() => ({
   getGuestReservation: vi.fn(),
 }));
@@ -23,7 +25,7 @@ const detail = {
   reference: created.reference,
   status: "CONFIRMED",
   stay: { checkIn: "2026-12-01", checkOut: "2026-12-05" },
-  branch: contact,
+  branch: { ...contact, name: "New Cairo" },
   units: [],
   paymentMethod: "PAY_AT_HOTEL",
   price: null,
@@ -60,7 +62,7 @@ it("keeps the one-time token scoped to the booking branch and rejects malformed 
   }
 });
 it("asks for the booking message on a direct visit", async () => {
-  render(<BookingConfirmation contact={contact} />);
+  render(<BookingConfirmation contact={contact} times={stayTimes} />);
   expect(await screen.findByText("Open your booking message")).toBeVisible();
   expect(getGuestReservation).not.toHaveBeenCalled();
 });
@@ -75,7 +77,7 @@ it.each([
       ok: true,
       data: { ...detail, ...patch },
     });
-    render(<BookingConfirmation contact={contact} />);
+    render(<BookingConfirmation contact={contact} times={stayTimes} />);
     expect(await screen.findByText("Open your booking message")).toBeVisible();
     expect(screen.queryByText(created.reference)).toBeNull();
   },
@@ -88,7 +90,7 @@ it.each(["AWAITING_PAYMENT", "PAYMENT_FAILED", "CANCELLED"])(
       ok: true,
       data: { ...detail, status },
     });
-    render(<BookingConfirmation contact={contact} />);
+    render(<BookingConfirmation contact={contact} times={stayTimes} />);
     expect(await screen.findByText(created.reference)).toBeVisible();
     expect(screen.queryByRole("heading", { name: "Confirmed" })).toBeNull();
   },
@@ -98,7 +100,7 @@ it("can retry a failed read, and displays confirmation only after G1 succeeds", 
   getGuestReservation
     .mockResolvedValueOnce({ ok: false, problem: { status: 503 } })
     .mockResolvedValueOnce({ ok: true, data: detail });
-  render(<BookingConfirmation contact={contact} />);
+  render(<BookingConfirmation contact={contact} times={stayTimes} />);
   fireEvent.click(await screen.findByRole("button", { name: "Check again" }));
   expect(
     await screen.findByRole("heading", { name: "Confirmed" }),
@@ -115,7 +117,7 @@ it("an expired link displays recovery without disclosing the reference", async (
     ok: false,
     problem: { status: 401 },
   });
-  render(<BookingConfirmation contact={contact} />);
+  render(<BookingConfirmation contact={contact} times={stayTimes} />);
   expect(await screen.findByText("Open your booking message")).toBeVisible();
   expect(screen.queryByText(created.reference)).toBeNull();
 });
@@ -160,8 +162,18 @@ it("shows every server amount, so the confirmed total can be followed", async ()
       },
     },
   });
-  render(<BookingConfirmation contact={contact} />);
+  render(<BookingConfirmation contact={contact} times={stayTimes} />);
   const rows = await screen.findAllByRole("row");
+  expect(
+    screen.getAllByRole("definition").map((item) => item.textContent),
+  ).toEqual([
+    "New Cairo",
+    "Tue, 1 Dec 2026",
+    "2:00 PM – 11:30 PM",
+    "Sat, 5 Dec 2026",
+    "12:00 AM – 11:30 AM",
+    "Pay at the hotel",
+  ]);
   expect(rows.map((row) => row.textContent)).toEqual([
     "Deluxe Double2 adults, 1 child$400.00",
     "Airport transfer2 cars · MS 985$60.00",

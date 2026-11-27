@@ -20,6 +20,7 @@ import {
   answerQuote,
   bookingQuote,
   bookingServices,
+  stayTimes,
 } from "./booking-extras-fixtures";
 
 const {
@@ -72,6 +73,7 @@ const props = {
   },
   services: bookingServices,
   maxVehicles: 3,
+  times: stayTimes,
   price: { quote: bookingQuote(), paymentMethods: ["PAY_AT_HOTEL" as const] },
 };
 const sentAnswer = () => ({

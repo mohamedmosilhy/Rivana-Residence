@@ -31,6 +31,7 @@ Status: design accepted 2026-10-24 (ADR 017) and extended on 2026-11-06 (ADR 026
 | `currency` | `USD` (one currency for all branches) |
 | Contact | `phone`, `email`, `addressLine1/2`, `city`, `country`, `latitude`, `longitude` |
 | Operational times | `checkInTime`, `checkOutTime` as `HH:MM` in the branch time zone. `checkInTime` also defines the online cancellation deadline (CX-1), so it is required before online booking is enabled |
+| Stay windows | Optional `checkInUntilTime` (later than `checkInTime`) and `checkOutFromTime` (earlier than `checkOutTime`), `HH:MM`, same day only (Q-102). Shown to guests; they change no rule |
 | `mapEmbedUrl` | Optional Google Maps embed URL (`https://www.google.com/maps/embed…` only) shown as an interactive map on the branch site (Q-52) |
 | `heroMediaId` | Optional `MediaAsset` used on the chooser card and branch home (PDF "branch images") |
 | `syncReminderIntervalMinutes` | Default 30, allowed 10–240. How often receptionists must record a sync checkpoint (Q-20) |

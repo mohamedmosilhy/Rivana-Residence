@@ -154,6 +154,12 @@ export default async function BookingDetailsPage({
       timeStyle: "short",
       timeZone: setup.timeZone,
     }).format(deadline);
+  const times = {
+    checkInTime: setup.checkInTime,
+    checkInUntilTime: setup.checkInUntilTime,
+    checkOutTime: setup.checkOutTime,
+    checkOutFromTime: setup.checkOutFromTime,
+  };
   return (
     <BookingSearchFrame branch={branch} title="Your booking">
       <BookingJourney
@@ -162,6 +168,7 @@ export default async function BookingDetailsPage({
         summary={
           <SelectionSummary
             quote={quote}
+            times={times}
             changeHref={bookingResultsHref(branch.slug, stay, lines)}
           />
         }
@@ -174,6 +181,7 @@ export default async function BookingDetailsPage({
           childPrice: childPrice && money(childPrice),
         }))}
         maxVehicles={setup.maxVehicles}
+        times={times}
         price={{
           quote: displayQuote(quote),
           paymentMethods: [...paymentMethods],

@@ -15,6 +15,8 @@ export const BRANCH_FORM_FIELDS = [
   "longitude",
   "checkInTime",
   "checkOutTime",
+  "checkInUntilTime",
+  "checkOutFromTime",
   "mapEmbedUrl",
   "sortOrder",
 ] as const;

@@ -4,10 +4,11 @@ import Link from "next/link";
 import { formatMoney } from "@/presentation/format/money";
 import { bookingPanel, link } from "@/presentation/site/classes";
 
-import { displayDate, displayNight } from "./display-date";
+import { displayNight } from "./display-date";
 import { serviceName } from "./extras-answer";
 import type { Quote } from "./extras-state";
 import { count, PriceRow, vatLabel } from "./price-row";
+import { StayDates, type StayTimes } from "./stay-dates";
 
 /**
  * The server's price, line by line (PR-7): every amount is shown as it came.
@@ -15,19 +16,20 @@ import { count, PriceRow, vatLabel } from "./price-row";
  */
 export function PriceSummary({
   quote,
+  times,
   stale,
   changeHref,
   nightly = false,
   allowChange = true,
 }: Readonly<{
   quote: Quote;
+  times: StayTimes;
   /** Why the held figures are not current; null when they are. */
   stale: string | null;
   changeHref: string;
   nightly?: boolean;
   allowChange?: boolean;
 }>) {
-  const { checkIn, checkOut } = quote.stay;
   const { coupon } = quote;
   const nights = quote.lines[0]?.nights.length ?? 0;
   return (
@@ -41,11 +43,10 @@ export function PriceSummary({
       >
         Your stay
       </h2>
+      <dl className="m-0 grid gap-3">
+        <StayDates stay={quote.stay} times={times} />
+      </dl>
       <p className="m-0 text-small text-neutral-800">
-        <time dateTime={checkIn}>{displayDate({ value: checkIn })}</time>
-        {" to "}
-        <time dateTime={checkOut}>{displayDate({ value: checkOut })}</time>
-        <br />
         {count(nights, "night", "nights")}
       </p>
       <div className="relative min-w-0">

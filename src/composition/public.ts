@@ -74,7 +74,9 @@ export async function getActiveBranches() {
   await connection();
   return cached(
     () => site().activeBranches(),
-    ["public", "branches"],
+    // Raise the version when the cached branch gains a field, so an entry
+    // written before the release is not served (v2: stay windows).
+    ["public", "branches", "v2"],
     [CACHE_TAGS.branches],
   );
 }

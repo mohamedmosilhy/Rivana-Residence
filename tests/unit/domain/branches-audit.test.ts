@@ -93,6 +93,29 @@ describe("branch schema", () => {
     expect(issuesFor({ checkOutTime: "24:00" })).toEqual(["checkOutTime"]);
   });
 
+  it("accepts a stay window on each side of the main time (Q-102)", () => {
+    expect(
+      issuesFor({
+        checkInTime: "14:00",
+        checkInUntilTime: "23:30",
+        checkOutTime: "11:30",
+        checkOutFromTime: "00:00",
+      }),
+    ).toEqual([]);
+  });
+
+  it.each([
+    [{ checkInUntilTime: "23:30" }, "checkInUntilTime"],
+    [{ checkInTime: "14:00", checkInUntilTime: "14:00" }, "checkInUntilTime"],
+    [{ checkInTime: "14:00", checkInUntilTime: "02:00" }, "checkInUntilTime"],
+    [{ checkInTime: "14:00", checkInUntilTime: "24:00" }, "checkInUntilTime"],
+    [{ checkOutFromTime: "00:00" }, "checkOutFromTime"],
+    [{ checkOutTime: "11:30", checkOutFromTime: "11:30" }, "checkOutFromTime"],
+    [{ checkOutTime: "11:30", checkOutFromTime: "12:00" }, "checkOutFromTime"],
+  ])("refuses the stay window %j", (values, field) => {
+    expect(issuesFor(values)).toEqual([field]);
+  });
+
   it("keeps the sync follow-up shorter than the interval, within range", () => {
     expect(
       issuesFor({ syncReminderIntervalMinutes: 10, syncFollowUpMinutes: 10 }),

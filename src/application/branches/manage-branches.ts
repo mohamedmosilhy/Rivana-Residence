@@ -209,6 +209,10 @@ export class ManageBranches {
       ) as number,
       latitude: pick("latitude") as number | null,
       longitude: pick("longitude") as number | null,
+      checkInTime: pick("checkInTime") as string | null,
+      checkOutTime: pick("checkOutTime") as string | null,
+      checkInUntilTime: pick("checkInUntilTime") as string | null,
+      checkOutFromTime: pick("checkOutFromTime") as string | null,
     });
     if (crossField.length > 0) {
       return invalid("Some branch details need attention.", crossField);

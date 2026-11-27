@@ -64,6 +64,9 @@ const query = {
 const setup = (overrides: object = {}) => ({
   bookable: true,
   checkInTime: "14:00",
+  checkOutTime: "12:00",
+  checkInUntilTime: "23:30",
+  checkOutFromTime: null,
   timeZone: "Africa/Cairo",
   consentVersions: {
     privacyNotice: "privacy-placeholder-v1",
@@ -201,6 +204,12 @@ describe("booking details page", () => {
         { kind: "AIRPORT_TRANSFER", childPrice: null },
       ],
       maxVehicles: 3,
+      times: {
+        checkInTime: "14:00",
+        checkInUntilTime: "23:30",
+        checkOutTime: "12:00",
+        checkOutFromTime: null,
+      },
       price: {
         paymentMethods: ["PAY_AT_HOTEL", "ONLINE"],
         quote: {

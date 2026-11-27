@@ -19,6 +19,12 @@ export default async function ConfirmedPage({ params }: BranchParams) {
           phone: branch.phone,
           email: branch.email,
         }}
+        times={{
+          checkInTime: branch.checkInTime,
+          checkInUntilTime: branch.checkInUntilTime,
+          checkOutTime: branch.checkOutTime,
+          checkOutFromTime: branch.checkOutFromTime,
+        }}
       />
       <noscript>
         Enable JavaScript to check this booking, or open your booking message.

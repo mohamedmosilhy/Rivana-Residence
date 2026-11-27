@@ -116,6 +116,7 @@ M4 (2026-11-06), M5 (2026-11-07), M6-T1 through M6-T10 (latest 2026-11-10), and 
 | T-ANL-4…6 | Implemented M10-T0a. P11 validates batches, drops ineligible traffic, respects privacy signals and limits requests. Stored rows keep safe fields and distinct booking steps. Concurrent requests share one daily salt. |
 | T-ANL-7…10 | Implemented M10-T0b. Server steps through the real routes after the booking work, replay and opt out, injected database refusal, the visit id kept and cleared on every payment path, one confirmation in 20 observed callback and reconcile races, daily totals, rerun, 90 day deletion, failed day recovery, and no overlapping job. [Rules](../../tests/unit/analytics/funnel-and-totals.test.ts) · [Booking steps](../../tests/integration/reservations/analytics-funnel.test.ts) · [Rollup](../../tests/integration/analytics-rollup.test.ts) · [Browser](../../tests/e2e/analytics-api.spec.ts) |
 | T-ANL-11…12 | Planned in T10. The browser beacon across the journey and its script budget. |
+| T-STAY-1…3 | Stay windows (implemented M10-T6b): domain and merged patch rules (`tests/unit/domain/branches-audit.test.ts`, `branch-websites.test.ts`), database checks and round trip (`tests/integration/branches.test.ts`), 12 hour wording and each fallback (`tests/unit/public/stay-dates.test.tsx`), summary, confirmation and booking journey |
 | C-1…17 | Concurrency ([database/integrity-and-concurrency.md](../database/integrity-and-concurrency.md#proof-plan-integration-tests-on-real-postgresql)), 20 iterations each |
 
 ## E2E (Playwright, Chromium)

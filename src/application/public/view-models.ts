@@ -137,6 +137,8 @@ export type PublicBranch = Readonly<{
   mapEmbedUrl: string | null;
   checkInTime: string | null;
   checkOutTime: string | null;
+  checkInUntilTime: string | null;
+  checkOutFromTime: string | null;
   onlineBookingEnabled: boolean;
   hero: PublicImage | null;
   /** Published listing types, for the stay label and the switcher. */
@@ -185,6 +187,8 @@ export function publicBranch(
         : null,
     checkInTime: row.checkInTime,
     checkOutTime: row.checkOutTime,
+    checkInUntilTime: row.checkInUntilTime,
+    checkOutFromTime: row.checkOutFromTime,
     onlineBookingEnabled: row.onlineBookingEnabled,
     hero,
     stayTypes: flags?.stayTypes ?? [],

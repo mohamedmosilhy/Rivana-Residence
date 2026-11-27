@@ -159,6 +159,32 @@ describe("public branch endpoints", () => {
     }
   });
 
+  it("API-A3 saves the stay windows and API-P2 returns them (Q-102)", async () => {
+    const patch = (body: object) =>
+      updateBranchRoute(
+        send("PATCH", `/api/v1/staff/branches/${GIZA}`, body),
+        params({ id: GIZA }),
+      );
+    const alone = await patch({ checkInUntilTime: "23:30" });
+    expect(alone.status).toBe(422);
+    expect(await alone.json()).toMatchObject({
+      fieldErrors: { checkInUntilTime: [expect.any(String)] },
+    });
+
+    const times = {
+      checkInTime: "14:00",
+      checkInUntilTime: "23:30",
+      checkOutTime: "11:30",
+      checkOutFromTime: "00:00",
+    };
+    expect((await patch(times)).status).toBe(200);
+    const found = await getBranch(
+      get("/api/v1/branches/demo-giza"),
+      params({ branchSlug: "demo-giza" }),
+    );
+    expect(await found.json()).toMatchObject(times);
+  });
+
   // AC-4: a branch's listings never appear under another branch.
   it("API-P3 lists only the branch's published listings, filtered by type", async () => {
     const response = await listRoomTypes(

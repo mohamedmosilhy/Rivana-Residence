@@ -48,6 +48,20 @@ describe("branch constraints", () => {
 
   it.each([
     [{ checkInTime: "25:00" }, "Branch_times_check"],
+    [{ checkInUntilTime: "23:30" }, "Branch_check_in_window_check"],
+    [
+      { checkInTime: "14:00", checkInUntilTime: "13:00" },
+      "Branch_check_in_window_check",
+    ],
+    [
+      { checkInTime: "14:00", checkInUntilTime: "99:00" },
+      "Branch_stay_window_format_check",
+    ],
+    [{ checkOutFromTime: "00:00" }, "Branch_check_out_window_check"],
+    [
+      { checkOutTime: "11:30", checkOutFromTime: "11:30" },
+      "Branch_check_out_window_check",
+    ],
     [{ syncReminderIntervalMinutes: 5 }, "Branch_sync_check"],
     [
       { syncReminderIntervalMinutes: 20, syncFollowUpMinutes: 20 },
@@ -67,6 +81,23 @@ describe("branch constraints", () => {
         },
       }),
     ).rejects.toThrow(new RegExp(check));
+  });
+
+  it("stores and reads back both stay windows (Q-102)", async () => {
+    const branches = new PrismaBranchRepository(client);
+    await client.branch.update({
+      where: { id: OTHER },
+      data: {
+        checkInTime: "14:00",
+        checkInUntilTime: "23:30",
+        checkOutTime: "11:30",
+        checkOutFromTime: "00:00",
+      },
+    });
+    expect(await branches.findRowById(OTHER)).toMatchObject({
+      checkInUntilTime: "23:30",
+      checkOutFromTime: "00:00",
+    });
   });
 
   it("keeps page keys unique per branch, not globally", async () => {
@@ -330,6 +361,8 @@ describe("branch creation is atomic", () => {
     mapEmbedUrl: null,
     checkInTime: null,
     checkOutTime: null,
+    checkInUntilTime: null,
+    checkOutFromTime: null,
     syncReminderIntervalMinutes: 30,
     syncFollowUpMinutes: 10,
     heroMediaId: null,

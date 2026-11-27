@@ -30,6 +30,8 @@ export function branchRow(overrides: Partial<BranchRow> = {}): BranchRow {
     mapEmbedUrl: null,
     checkInTime: null,
     checkOutTime: null,
+    checkInUntilTime: null,
+    checkOutFromTime: null,
     heroMediaId: null,
     syncReminderIntervalMinutes: 30,
     syncFollowUpMinutes: 10,

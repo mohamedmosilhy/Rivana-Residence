@@ -11,6 +11,9 @@ const enabledBranch = branchRow({
   onlineBookingEnabled: true,
   onlinePaymentEnabled: true,
   checkInTime: "14:00",
+  checkInUntilTime: "23:30",
+  checkOutTime: "11:30",
+  checkOutFromTime: "00:00",
   phone: "+20212345678",
   email: "stay@example.test",
 });
@@ -67,6 +70,9 @@ describe("booking setup", () => {
       phone: enabledBranch.phone,
       email: enabledBranch.email,
       checkInTime: "14:00",
+      checkInUntilTime: "23:30",
+      checkOutTime: "11:30",
+      checkOutFromTime: "00:00",
       timeZone: "Africa/Cairo",
       consentVersions: GUEST_CONSENT_VERSIONS,
     });

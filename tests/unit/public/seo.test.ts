@@ -55,6 +55,8 @@ const branch: PublicBranch = {
   mapEmbedUrl: null,
   checkInTime: null,
   checkOutTime: null,
+  checkInUntilTime: null,
+  checkOutFromTime: null,
   onlineBookingEnabled: false,
   hero: null,
   stayTypes: ["ROOM"],

@@ -245,6 +245,12 @@ describe("the one seed (runSeed)", () => {
       where: { slug: "demo-giza" },
     });
     expect(giza.status).toBe("ACTIVE");
+    expect(giza).toMatchObject({
+      checkInTime: "14:00",
+      checkInUntilTime: "23:30",
+      checkOutTime: "11:30",
+      checkOutFromTime: "00:00",
+    });
     expect(giza.onlineBookingEnabled).toBe(false);
     expect(lines).toContainEqual(
       expect.stringMatching(

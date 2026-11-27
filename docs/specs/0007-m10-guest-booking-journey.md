@@ -440,6 +440,13 @@ Known limits of the leave warning: in app navigation (an in app link, or Back be
 
 Still open: the privacy checkbox gets its link with the approved wording; nightly prices sit inside the unit's row header for screen readers; the deadline note reads the server time directly; on phones the price panel sits above each step. Online payment returns to `/{branch}/book/payment`, which M10-T7 builds, and the manage link opens the page M10-T8 builds.
 
+### Settled during M10-T6b (2026-11-27)
+
+Added by the owner after M10-T6 (Q-102):
+
+- The "Your stay" panel (every booking step, review included) and the confirmation page show Check-in and Check-out, each with its date and the hotel's hours, through `StayDates`. M10-T8 reuses it.
+- `GetBookingSetup` returns the four branch times for the details page. The confirmation page takes them from the public branch, after it has checked the booking belongs to that branch. The guest reservation API is unchanged.
+
 ## Build plan
 
 The project builds backend before the screens that use it, one task at a time. Analytics backend first (it changes P7 and the payment paths, which the screens then exercise), then the client, then the journey in the order a guest walks it, then the after booking pages, then the launch pieces. Each UI task adds its component tests, E2E paths, axe checks, and visual baselines (390 and 1280 px) for its own steps.
