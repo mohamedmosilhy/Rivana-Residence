@@ -1,11 +1,12 @@
 import { act, renderHook } from "@testing-library/react";
+import { useMemo } from "react";
 import { afterEach, expect, it, vi } from "vitest";
 
 import type {
   QuoteInput,
   requestQuote as realRequestQuote,
 } from "@/presentation/api-client/quotes";
-import { useSelectionQuote } from "@/presentation/features/booking/selection-quote";
+import { useDebouncedQuote } from "@/presentation/features/booking/selection-quote";
 
 const { requestQuote } = vi.hoisted(() => ({
   requestQuote: vi.fn<typeof realRequestQuote>(),
@@ -40,9 +41,18 @@ it("ignores a late response from an earlier selection and clears the subtotal wh
     roomSlug: "apartment",
     occupancy: { adults: 2, children: 1 },
   };
+  const reported = vi.fn();
   const { result, rerender } = renderHook(
-    ({ lines }: { lines: QuoteInput["lines"] }) =>
-      useSelectionQuote("new-cairo", stay, lines),
+    ({ lines }: { lines: QuoteInput["lines"] }) => {
+      const input = useMemo(
+        () =>
+          lines.length === 0
+            ? null
+            : { branchSlug: "new-cairo", stay, lines, services: [] },
+        [lines],
+      );
+      return useDebouncedQuote(input, reported);
+    },
     { initialProps: { lines: [room] } },
   );
   await act(async () => vi.runOnlyPendingTimersAsync());
@@ -75,6 +85,12 @@ it("ignores a late response from an earlier selection and clears the subtotal wh
     }),
   );
   expect(result.current.result).toEqual(unavailable);
+  // The replaced request reaches nobody, with the answer or the caller.
+  expect(reported).toHaveBeenCalledTimes(1);
+  expect(reported).toHaveBeenCalledWith(
+    unavailable,
+    expect.objectContaining({ lines: [room, apartment] }),
+  );
 
   rerender({ lines: [] });
   expect(result.current.result).toBeNull();

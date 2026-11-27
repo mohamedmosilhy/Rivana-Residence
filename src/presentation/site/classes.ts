@@ -158,5 +158,9 @@ export const selectArrow =
   "pointer-events-none absolute top-1/2 right-3 size-2 -translate-y-3/4 rotate-45 border-r border-b border-current";
 export const fieldHelp = "m-0 text-small text-neutral-600";
 export const fieldError = "m-0 text-small text-danger";
+/** A radio or checkbox with its label as one large target. */
+export const choiceCard =
+  "flex min-h-13 min-w-0 cursor-pointer items-center gap-3 border border-neutral-300 px-3 py-2 has-checked:border-plum-700 has-checked:bg-plum-100";
+export const choiceInput = "size-5 flex-none accent-plum-700";
 export const alertBox =
   "border-l-2 border-danger bg-canvas px-4 py-3 text-small text-neutral-950";

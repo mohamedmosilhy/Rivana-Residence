@@ -190,9 +190,7 @@ test("AC-9, AC-13: a guest verifies by WhatsApp with the keyboard, and the token
   const { token } = (await (await confirmed).json()) as { token: string };
   expect(token).toMatch(/^[A-Za-z0-9_-]{43}$/);
   await expect(heading(page, "Phone verified")).toBeFocused();
-  await expect(
-    page.getByText("Extras and payment are coming soon."),
-  ).toBeVisible();
+  await expect(button(page, "Continue to extras")).toBeVisible();
   await verifyAccessibility(page);
   await capture(page, testInfo, "verify-phone-verified");
 
@@ -349,4 +347,274 @@ test("a blocked number gets the neutral message and loses its draft", async ({
   ).toBeNull();
   await verifyAccessibility(page);
   await capture(page, testInfo, "verify-blocked");
+});
+
+const dollars = (amount: { amountMinor: number }) =>
+  new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(
+    amount.amountMinor / 100,
+  );
+
+/** Runs `change` and returns what the server answered the price check with. */
+async function priced(page: Page, change: () => Promise<unknown>) {
+  const answer = page.waitForResponse((response) =>
+    response.url().endsWith("/api/v1/quotes"),
+  );
+  await change();
+  const response = await answer;
+  return {
+    status: response.status(),
+    sent: response.request().postData()!,
+    body: (await response.json()) as {
+      quote: {
+        total: { amountMinor: number };
+        services: { kind: string; vehicles: number | null }[];
+      };
+    },
+  };
+}
+
+const total = (page: Page) =>
+  page.getByRole("status").filter({ hasText: "Total with VAT" });
+const box = (page: Page, name: RegExp) => page.getByRole("checkbox", { name });
+const couponField = (page: Page) => page.getByLabel("Coupon code (optional)");
+
+async function verifyByWhatsApp(page: Page, who: Guest) {
+  await fillDetails(page, who);
+  await setKnownCode(await requestCode(page), code);
+  await enterCode(page, code);
+  await expect(heading(page, "Phone verified")).toBeVisible();
+}
+
+test("AC-3, AC-4: the server prices extras, cars and a coupon, by keyboard", async ({
+  page,
+}, testInfo) => {
+  const who = guest(testInfo, 5);
+  const checks: string[] = [];
+  page.on("request", (request) => {
+    if (request.url().endsWith("/api/v1/quotes"))
+      checks.push(request.postData() ?? "");
+  });
+  await page.setViewportSize({ width: 320, height: 844 });
+  await verifyByWhatsApp(page, who);
+  await button(page, "Continue to extras").press("Enter");
+
+  await expect(heading(page, "Extras and coupon")).toBeFocused();
+  await expect(box(page, /Breakfast/)).not.toBeChecked();
+  await expect(box(page, /Airport transfer/)).not.toBeChecked();
+  await expect(total(page)).toBeVisible();
+  expect(checks).toEqual([]);
+  await verifyAccessibility(page);
+  await capture(page, testInfo, "extras-nothing-selected");
+  const bare = await total(page).innerText();
+
+  await priced(page, () => box(page, /Breakfast/).press("Space"));
+  await priced(page, () => box(page, /Airport transfer/).press("Space"));
+  const two = await priced(page, () =>
+    page.getByLabel("Cars").selectOption("2"),
+  );
+  expect(two.body.quote.services).toMatchObject([
+    { kind: "BREAKFAST" },
+    { kind: "AIRPORT_TRANSFER", vehicles: 2 },
+  ]);
+  await page.getByLabel(/Flight number/).fill("MS 985, arriving 14:30");
+  await expect(total(page)).toContainText(dollars(two.body.quote.total));
+  await verifyAccessibility(page);
+  await capture(page, testInfo, "extras-selected");
+
+  await couponField(page).fill("welcome10");
+  const discounted = await priced(page, () => couponField(page).press("Enter"));
+  await expect(page.getByText("Code WELCOME10 applied")).toBeVisible();
+  expect(discounted.body.quote.total.amountMinor).toBeLessThan(
+    two.body.quote.total.amountMinor,
+  );
+  await expect(total(page)).toContainText(dollars(discounted.body.quote.total));
+  await expect(
+    page.getByRole("complementary", { name: "Your stay" }),
+  ).toContainText(`Total${dollars(discounted.body.quote.total)}`);
+  await verifyAccessibility(page);
+  await capture(page, testInfo, "coupon-applied");
+
+  await couponField(page).fill("NOPE123");
+  const refused = await priced(page, () => button(page, "Apply").click());
+  expect(refused.status).toBe(422);
+  await expect(couponField(page)).toHaveAccessibleDescription(
+    "We don’t recognise this code. Check the spelling.",
+  );
+  await expect(page.getByText("Code WELCOME10 applied")).toBeVisible();
+  await expect(total(page)).toContainText(dollars(discounted.body.quote.total));
+  await verifyAccessibility(page);
+  await capture(page, testInfo, "coupon-refused");
+
+  await button(page, "Continue to payment").press("Enter");
+  await expect(couponField(page)).toHaveAccessibleDescription(
+    "Apply the code or clear it.",
+  );
+  await couponField(page).fill("");
+
+  // AC-13: the flight text and the code stay in the page's memory.
+  const browserState = await page.evaluate(() =>
+    JSON.stringify([
+      { ...sessionStorage },
+      { ...localStorage },
+      document.cookie,
+      location.href,
+    ]),
+  );
+  expect(browserState).not.toContain("MS 985");
+  expect(browserState).not.toContain("WELCOME10");
+  expect(checks.join()).not.toContain("MS 985");
+
+  await button(page, "Continue to payment").press("Enter");
+  await expect(heading(page, "Payment and review")).toBeFocused();
+  await verifyAccessibility(page);
+  await button(page, "Back to extras").press("Enter");
+  await expect(box(page, /Breakfast/)).toBeChecked();
+  await expect(page.getByLabel(/Flight number/)).toHaveValue(
+    "MS 985, arriving 14:30",
+  );
+
+  await priced(page, () => button(page, "Remove coupon WELCOME10").click());
+  await priced(page, () => box(page, /Breakfast/).uncheck());
+  const none = await priced(page, () =>
+    box(page, /Airport transfer/).uncheck(),
+  );
+  expect(none.body.quote.services).toEqual([]);
+  await expect(total(page)).toContainText(dollars(none.body.quote.total));
+  expect(await total(page).innerText()).toBe(bare);
+});
+
+test("price checks that fail keep the choices and say what to do", async ({
+  page,
+}, testInfo) => {
+  const who = guest(testInfo, 6);
+  await page.setViewportSize({ width: 320, height: 844 });
+  await verifyByWhatsApp(page, who);
+  await button(page, "Continue to extras").click();
+  await expect(total(page)).toBeVisible();
+
+  // The failures are answered in the browser; the database stays untouched.
+  let release = () => {};
+  const held = new Promise<void>((resolve) => (release = resolve));
+  await page.route("**/api/v1/quotes", async (route) => {
+    await held;
+    await route.continue();
+  });
+  await box(page, /Breakfast/).check();
+  await expect(page.getByText("Updating price…").first()).toBeVisible();
+  await expect(button(page, "Continue to payment")).toHaveAttribute(
+    "aria-disabled",
+    "true",
+  );
+  await capture(page, testInfo, "price-updating");
+  release();
+  await expect(total(page)).toBeVisible();
+  await page.unroute("**/api/v1/quotes");
+
+  const refuse = async (
+    state: string,
+    status: number,
+    problem: object,
+    change: () => Promise<unknown>,
+    words: string,
+    headers: Record<string, string> = {},
+  ) => {
+    // Once: a check the page sends next reaches the real server.
+    await page.route(
+      "**/api/v1/quotes",
+      (route) =>
+        route.fulfill({
+          status,
+          contentType: "application/problem+json",
+          headers,
+          body: JSON.stringify({ title: "Refused", ...problem }),
+        }),
+      { times: 1 },
+    );
+    await change();
+    await expect(page.getByText(words)).toBeVisible();
+    await verifyAccessibility(page);
+    await capture(page, testInfo, state);
+  };
+
+  await refuse(
+    "price-connection-failed",
+    500,
+    { code: "INTERNAL" },
+    () => box(page, /Airport transfer/).check(),
+    "We couldn’t check the price. Please try again.",
+  );
+  await button(page, "Check again").click();
+  await expect(total(page)).toBeVisible();
+
+  await couponField(page).fill("welcome10");
+  await button(page, "Apply").click();
+  await expect(page.getByText("Code WELCOME10 applied")).toBeVisible();
+  await refuse(
+    "price-too-many-checks",
+    429,
+    { code: "RATE_LIMITED" },
+    () => page.getByLabel("Cars").selectOption("3"),
+    "Too many price checks. Try again in 10 minutes.",
+    { "Retry-After": "600" },
+  );
+  await page
+    .getByRole("button", { name: "Remove coupon", exact: true })
+    .click();
+  await expect(total(page)).toBeVisible();
+
+  await refuse(
+    "service-removed",
+    409,
+    { code: "SERVICE_UNAVAILABLE", context: { kind: "AIRPORT_TRANSFER" } },
+    () => page.getByLabel("Cars").selectOption("2"),
+    "Airport transfer is no longer available, so we removed it.",
+  );
+  await expect(total(page)).toBeVisible();
+  await expect(box(page, /Airport transfer/)).toHaveCount(0);
+
+  await page.route("**/api/v1/quotes", (route) =>
+    route.fulfill({
+      json: {
+        available: false,
+        unavailableLines: [0],
+        bookable: false,
+        paymentMethods: [],
+        quote: null,
+      },
+    }),
+  );
+  await box(page, /Breakfast/).uncheck();
+  await expect(
+    page.getByText("Your selection is no longer available."),
+  ).toBeVisible();
+  await verifyAccessibility(page);
+  await capture(page, testInfo, "selection-unavailable");
+  await expect(
+    page.getByRole("link", { name: "Back to the results" }),
+  ).toHaveAttribute("href", /notice=unavailable/);
+});
+
+test("AC-14: an email guest cannot continue with a total of zero", async ({
+  page,
+}, testInfo) => {
+  const who = guest(testInfo, 7);
+  await page.setViewportSize({ width: 320, height: 844 });
+  await fillDetails(page, who);
+  await page.getByRole("radio", { name: /Email to/ }).check();
+  await setKnownCode(await requestCode(page), code);
+  await enterCode(page, code);
+  await expect(heading(page, "Email verified")).toBeVisible();
+  await button(page, "Continue to extras").click();
+  await couponField(page).fill("wholestay");
+  await button(page, "Apply").click();
+  await expect(total(page)).toContainText("$0.00");
+  await expect(
+    page.getByText(/this total cannot be paid online/),
+  ).toBeVisible();
+  await expect(button(page, "Continue to payment")).toHaveAttribute(
+    "aria-disabled",
+    "true",
+  );
+  await verifyAccessibility(page);
+  await capture(page, testInfo, "email-total-not-payable");
 });

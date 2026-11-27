@@ -35,8 +35,9 @@ export const emptyGuestDetails: GuestDetails = Object.freeze({
 
 const EMAIL =
   /^(?!\.)(?!.*\.\.)([A-Za-z0-9_'+\-.]*)[A-Za-z0-9_+-]@([A-Za-z0-9][A-Za-z0-9-]*\.)+[A-Za-z]{2,}$/;
-const CONTROL = /[\p{Cc}\p{Cf}]/u;
-const HIDDEN = "Remove hidden or special control characters.";
+/** What the server refuses in every free text field of a booking. */
+export const CONTROL = /[\p{Cc}\p{Cf}]/u;
+export const HIDDEN = "Remove hidden or special control characters.";
 
 /**
  * Trimmed values in the form the server accepts. The server refuses line

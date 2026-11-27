@@ -146,6 +146,47 @@ export async function seedBookingJourney(client: PrismaClient) {
     where: { id: "default" },
     data: { emailEnabled: true },
   });
+  // Fictional extras and coupons for the extras step (M10-T5).
+  await client.serviceOffering.createMany({
+    data: [
+      {
+        id: "journeybreakfastoffering",
+        branchId: BRANCH_ID,
+        kind: "BREAKFAST",
+        priceUnit: "PER_PERSON_PER_NIGHT",
+        priceMinor: 1000,
+        childPriceMinor: 500,
+        active: true,
+      },
+      {
+        id: "journeytransferofferings",
+        branchId: BRANCH_ID,
+        kind: "AIRPORT_TRANSFER",
+        priceUnit: "PER_VEHICLE",
+        priceMinor: 3000,
+        maxVehicles: 3,
+        active: true,
+      },
+    ],
+  });
+  await client.coupon.createMany({
+    data: [
+      {
+        id: "journeytenpercentcoupons",
+        code: "WELCOME10",
+        kind: "PERCENT",
+        percentBasisPoints: 1000,
+        allBranches: true,
+      },
+      {
+        id: "journeywholetotalcoupons",
+        code: "WHOLESTAY",
+        kind: "PERCENT",
+        percentBasisPoints: 10_000,
+        allBranches: true,
+      },
+    ],
+  });
 }
 
 export async function seedPublicContent(

@@ -83,6 +83,17 @@ Track Web Vitals by route template (Home, listing, detail, admin) and browser/de
 
 Use Lighthouse CI as a regression signal and real-user metrics as the production truth.
 
+## Booking page scripts (M10)
+
+Measured on 2026-11-27 with Lighthouse `resource-summary` (script transfer, headers included) on a local production build with the booking search fixtures.
+
+| Page | Before M10-T5 | After M10-T5 |
+| --- | --- | --- |
+| `/{branch}/book` with results | 265,489 | 265,827 |
+| `/{branch}/book/details` | 265,096 | 266,453 |
+
+Both are above the 260,000 byte budget. [`.lighthouserc.cjs`](../../.lighthouserc.cjs) audits only Home, Rooms, a room detail, and Contact, and its script size assertion is a warning, so no gate reported this. The M10-T4 note of 259,207 bytes for the results page was not reproduced. The extras step and price panel load on demand (about 8 KB compressed). **Open:** bringing both pages under the budget and adding them to the Lighthouse run.
+
 ## Phase 10 measured baseline
 
 Lighthouse 13.0.1 ran the production build on Home, Rooms, a room detail, and Contact under desktop and mobile throttling. Accessibility, best practices, and SEO score 100 on every route. Desktop performance is 99–100; mobile is 84–94. CLS is 0 and total blocking time is 0–8 ms throughout. Script transfer is 205 KB on each measured route, below the enforced 260 KB regression gate but above the original 120 KB aspiration.

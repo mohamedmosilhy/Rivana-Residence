@@ -8,8 +8,8 @@ import { sql } from "./session";
 
 /**
  * The checks every booking step passes: no serious or critical axe finding,
- * no sideways scrolling, and 44 px touch targets. A radio button's target is
- * its label.
+ * no sideways scrolling, and 44 px touch targets. The target of a radio button
+ * or checkbox is its label.
  */
 export async function verifyAccessibility(page: Page) {
   const { violations } = await new AxeBuilder({ page }).analyze();
@@ -23,7 +23,7 @@ export async function verifyAccessibility(page: Page) {
   ).toBeLessThanOrEqual(await page.evaluate(() => window.innerWidth));
   const targets = await page
     .locator(
-      "main :is(input:not([type=hidden], [type=radio]), textarea, select, button, a, summary, label:has(input[type=radio]))",
+      "main :is(input:not([type=hidden], [type=radio], [type=checkbox]), textarea, select, button, a, summary, label:has(input[type=radio], input[type=checkbox]))",
     )
     .evaluateAll((elements) =>
       elements

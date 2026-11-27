@@ -17,6 +17,8 @@ import {
   alertBox,
   bookingHeading,
   button,
+  choiceCard,
+  choiceInput,
   eyebrowFlush,
   fieldControl,
   fieldError,
@@ -455,17 +457,14 @@ export function PhoneVerificationStep({
                     How should we send your code?
                   </legend>
                   {usable.map((option) => (
-                    <label
-                      key={option}
-                      className="flex min-h-13 min-w-0 cursor-pointer items-center gap-3 border border-neutral-300 px-3 py-2 has-checked:border-plum-700 has-checked:bg-plum-100"
-                    >
+                    <label key={option} className={choiceCard}>
                       <input
                         type="radio"
                         name="channel"
                         value={option}
                         checked={channel === option}
                         disabled={pending !== null}
-                        className="size-5 flex-none accent-plum-700"
+                        className={choiceInput}
                         onChange={() => setChosen(option)}
                       />
                       <span className="min-w-0 wrap-anywhere">

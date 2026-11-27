@@ -23,7 +23,7 @@ import {
   encodeSelection,
   type SelectionLine,
 } from "./selection-link";
-import { useSelectionQuote } from "./selection-quote";
+import { useDebouncedQuote } from "./selection-quote";
 
 type Line = QuoteInput["lines"][number];
 type Counts = Line["occupancy"];
@@ -224,7 +224,15 @@ export function BookingSelection({
       })),
     [units],
   );
-  const { result, retry } = useSelectionQuote(branchSlug, stay, lines);
+  const { checkIn, checkOut } = stay;
+  const request = useMemo(
+    () =>
+      lines.length === 0
+        ? null
+        : { branchSlug, stay: { checkIn, checkOut }, lines, services: [] },
+    [branchSlug, checkIn, checkOut, lines],
+  );
+  const { result, retry } = useDebouncedQuote(request);
   const data = result?.ok ? result.data : null;
   const problem = result?.ok === false ? result.problem : null;
   const quote = data?.available ? data.quote : null;

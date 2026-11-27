@@ -373,7 +373,7 @@ Owner decisions at planning (the four recommendations, approved with the plan):
 - **Journeys with providers** run opt in on the development server (`BOOKING_JOURNEY_E2E=1`), where fake providers are allowed. The test asks for a code through the screen, then replaces its hash with a known one in the disposable database. No production code changed. This run is not part of the standard browser run, needs no other `next dev` in the checkout, and starts with an empty `.next/dev` (after a production build, a leftover cache made every page reload without end; clearing it fixed that).
 - **Phone entry.** The server builds the country list, with Egypt first chosen. `libphonenumber-js/min` loads in the browser only when the phone is used, and checks the length only; the server decides validity.
 - **Going back.** Continue writes `u` into the results address, and the basket is rebuilt from it ("Change selection", browser Back, and a refused selection). A new search still starts empty. This amends M10-T3.
-- **Until M10-T5 and T6**, a verified guest sees that extras and payment are coming soon, with the hotel contacts.
+- **Until M10-T5 and T6**, a verified guest sees that extras and payment are coming soon, with the hotel contacts. M10-T5 replaced this with the extras step; payment stays "coming soon" until T6.
 
 As built:
 
@@ -386,6 +386,28 @@ As built:
 - A verification is dropped when the phone changes, and an email verification also when the email changes.
 
 Known limits left open at acceptance: an email refusal that is really the phone's limit lets one WhatsApp send be refused; a code the server reports expired loses its resend wait; one dimmed "Send by email instead" button can lack a written reason. First load scripts are close to the 260 KB gate (results 259,207 bytes with headers), so later steps load on demand and the owner is asked if first load still exceeds it. The load after step 1 is about 300 KB.
+
+### Settled during M10-T5 (2026-11-27)
+
+Owner decisions at planning (the seven recommendations, approved with the plan):
+
+- Risk stayed Medium.
+- The price panel (`PriceSummary`) was built here, with VAT and total from the extras step. T6 reuses it and adds the per night breakdown.
+- Flight number and arrival time are one optional field, matching the one stored text. It is not sent with price checks.
+- The coupon rate limit is unchanged. A rate limited check with a code offers "Remove coupon".
+- A typed code that was not applied stops Continue with "Apply the code or clear it."
+- Staff service descriptions are not shown to guests; the wording is fixed in the interface.
+- Visual baselines for all booking steps are one task, M10-T11, before milestone close.
+
+As built:
+
+- A price is current only when it answers exactly the chosen services, cars and code. Until then its figures are hidden and Continue waits. Away from the extras step no check runs, and the panel says the price updates on return.
+- A refused new code keeps the earlier one. An accepted code that stops working, or a service switched off, is removed with a message and the rest is priced again.
+- An email verified booking whose quote does not offer online payment cannot continue (Q-100).
+- Choices live in memory only: they survive moving between steps and verifying again, and are lost on reload or a changed selection.
+- The architecture test that guards reservation tables matches the text `.coupon`, so screen code reads the quote's coupon field by destructuring.
+
+Open at acceptance: the booking pages are above the script budget ([performance.md](../frontend/performance.md#booking-page-scripts-m10)); narrowing that test pattern; and optional review points (the panel's wording away from the step after a sold out or closed answer, a repeated refusal not announced again, and a broad focus fallback).
 
 ## Build plan
 
@@ -424,6 +446,7 @@ Changes from the brief's provisional table: T0b and T4 raised to Critical; T0a n
 | M10-T8b | Change booking: prefill from an empty G5 preview, preview and apply (G5, G6), old and new totals, "sent to the hotel for approval", deadline and contact fallback | Critical | T8, T5 | AC 12; E2E-G-9 |
 | M10-T9 | Book Now internal mode per branch (`BookingProvider` port takes the branch and listing, approved) | Low | T6 | AC 10; E2E-G-8 part |
 | M10-T10 | Page view beacon on every public page, `STEP_VIEW` in each booking step, session id kept across steps and sent with P7, within the script budget | Medium | T0a, T6, T8 | AC 11; T-ANL-11…12, Lighthouse budget |
+| M10-T11 | Visual baselines for every booking step at 390 and 1280 px (added 2026-11-27, owner approved at M10-T5 planning; runs on the development server with fake providers). Runs after T10, before milestone close | Low | T2 to T10 | Brief tests: visual baselines |
 
 ## Consequences
 

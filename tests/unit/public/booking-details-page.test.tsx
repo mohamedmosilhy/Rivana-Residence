@@ -1,8 +1,10 @@
 import { render, screen } from "@testing-library/react";
+import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { failure, rateLimited, success } from "@/application/shared/result";
 import { LocalDate } from "@/domain/shared/local-date";
+import { Money } from "@/domain/shared/money";
 import { StayRange } from "@/domain/shared/stay-range";
 
 const { getBookingSetup, quoteBookingDetails, redirect, journey } = vi.hoisted(
@@ -30,9 +32,14 @@ vi.mock("@/composition/booking-details", () => ({
   quoteBookingDetails,
 }));
 vi.mock("@/presentation/features/booking/booking-journey", () => ({
-  BookingJourney: (props: unknown) => {
+  BookingJourney: (props: { summary: ReactNode }) => {
     journey(props);
-    return <p>journey</p>;
+    return (
+      <>
+        {props.summary}
+        <p>journey</p>
+      </>
+    );
   },
 }));
 vi.mock("@/app/(marketing)/site-content", () => ({
@@ -59,6 +66,21 @@ const setup = (overrides: object = {}) => ({
   channels: { whatsapp: true, email: true },
   phone: "+20 2 1234 5678",
   email: "stay@example.test",
+  services: [
+    {
+      kind: "BREAKFAST",
+      unit: "PER_PERSON_PER_NIGHT",
+      price: Money.create({ amountMinor: 1000, currency: "USD" }),
+      childPrice: Money.create({ amountMinor: 500, currency: "USD" }),
+    },
+    {
+      kind: "AIRPORT_TRANSFER",
+      unit: "PER_VEHICLE",
+      price: Money.create({ amountMinor: 3000, currency: "USD" }),
+      childPrice: null,
+    },
+  ],
+  maxVehicles: 3,
   ...overrides,
 });
 const quoted = (overrides: object = {}) =>
@@ -73,12 +95,31 @@ const quoted = (overrides: object = {}) =>
       ),
       lines: [
         {
+          roomTypeId: "room-id",
+          roomSlug: "deluxe",
           roomName: "Deluxe Double",
+          accommodationType: "ROOM",
           occupancy: { adults: 2, children: 0 },
+          nights: [
+            {
+              night: LocalDate.parse(query.checkIn),
+              amount: Money.create({ amountMinor: 16_000, currency: "USD" }),
+              label: null,
+            },
+          ],
           accommodationMinor: 16_000,
         },
       ],
+      serviceLines: [],
+      appliedCoupon: null,
       accommodationMinor: 16_000,
+      servicesMinor: 0,
+      subtotalMinor: 16_000,
+      discountMinor: 0,
+      taxableMinor: 16_000,
+      vatRateBasisPoints: 1500,
+      vatMinor: 2400,
+      totalMinor: 18_400,
     },
     ...overrides,
   });
@@ -130,6 +171,39 @@ describe("booking details page", () => {
         lifetimes: { codeLifetimeMs: 600_000, tokenLifetimeMs: 1_800_000 },
       }),
     );
+  });
+
+  it("hands the journey plain money and the server's own quote", async () => {
+    await open();
+    const props = journey.mock.calls[0]![0] as Record<string, unknown>;
+    // Class instances cannot cross to the browser.
+    expect(JSON.parse(JSON.stringify(props.services))).toStrictEqual(
+      props.services,
+    );
+    expect(props).toMatchObject({
+      selection: {
+        branchSlug: "new-cairo",
+        stay: { checkIn: query.checkIn, checkOut: query.checkOut },
+        lines: [{ roomSlug: "deluxe", occupancy: { adults: 2, children: 0 } }],
+      },
+      services: [
+        {
+          kind: "BREAKFAST",
+          price: { amountMinor: 1000, currency: "USD" },
+          childPrice: { amountMinor: 500, currency: "USD" },
+        },
+        { kind: "AIRPORT_TRANSFER", childPrice: null },
+      ],
+      maxVehicles: 3,
+      price: {
+        paymentMethods: ["PAY_AT_HOTEL", "ONLINE"],
+        quote: {
+          stay: { checkIn: query.checkIn, checkOut: query.checkOut },
+          total: { amountMinor: 18_400, currency: "USD" },
+        },
+      },
+    });
+    expect(JSON.stringify(props.price)).not.toContain("room-id");
   });
 
   it("offers no email code when the quote cannot be paid online (AC-14)", async () => {

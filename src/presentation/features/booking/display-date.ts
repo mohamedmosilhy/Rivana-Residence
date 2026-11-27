@@ -9,6 +9,6 @@ const dateFormat = new Intl.DateTimeFormat("en-GB", {
 });
 
 /** A branch calendar date, such as "Thu, 3 Dec 2026". */
-export function displayDate(day: LocalDate) {
+export function displayDate(day: Pick<LocalDate, "value">) {
   return dateFormat.format(new Date(`${day.value}T00:00:00Z`));
 }

@@ -3,6 +3,7 @@ import Link from "next/link";
 import { headers } from "next/headers";
 import { notFound, redirect } from "next/navigation";
 
+import { displayQuote } from "@/application/quotes";
 import {
   getBookingSetup,
   quoteBookingDetails,
@@ -140,24 +141,39 @@ export default async function BookingDetailsPage({
   if (!bookable || (!channels.whatsapp && !channels.email)) return closed;
 
   const { codeLifetimeMs, tokenLifetimeMs } = VERIFICATION_POLICY;
+  const money = ({ amountMinor }: { amountMinor: number }) => ({
+    amountMinor,
+    currency: "USD" as const,
+  });
   return (
     <BookingSearchFrame branch={branch} title="Your booking">
-      <div className="grid min-w-0 items-start gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(18rem,0.48fr)]">
-        <div className="min-w-0 lg:order-2">
+      <BookingJourney
+        // A changed selection starts its own verification and extras.
+        key={bookingDetailsHref(branch.slug, stay, lines)}
+        summary={
           <SelectionSummary
             quote={quote}
             changeHref={bookingResultsHref(branch.slug, stay, lines)}
           />
-        </div>
-        <BookingJourney
-          // A changed selection starts its own verification.
-          key={bookingDetailsHref(branch.slug, stay, lines)}
-          countries={phoneCountries()}
-          channels={channels}
-          lifetimes={{ codeLifetimeMs, tokenLifetimeMs }}
-          contact={contact}
-        />
-      </div>
+        }
+        selection={{ branchSlug: branch.slug, stay, lines }}
+        // Plain objects: money values cannot cross to the browser as classes.
+        services={setup.services.map(({ kind, unit, price, childPrice }) => ({
+          kind,
+          unit,
+          price: money(price),
+          childPrice: childPrice && money(childPrice),
+        }))}
+        maxVehicles={setup.maxVehicles}
+        price={{
+          quote: displayQuote(quote),
+          paymentMethods: [...paymentMethods],
+        }}
+        countries={phoneCountries()}
+        channels={channels}
+        lifetimes={{ codeLifetimeMs, tokenLifetimeMs }}
+        contact={contact}
+      />
     </BookingSearchFrame>
   );
 }

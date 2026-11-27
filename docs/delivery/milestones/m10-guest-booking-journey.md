@@ -1,6 +1,6 @@
 # M10 — Guest booking journey
 
-Status: **In progress (6/13 tasks accepted).** [Task log](../reports/m10-guest-booking-journey.md#task-log). Opened 2026-11-26: spec [0007](../../specs/0007-m10-guest-booking-journey.md) and the task breakdown below were approved by the owner on 2026-11-26, after an independent cross check with every recommended fix applied. Scope extended by the owner on 2026-11-17 with first-party website analytics (M10-T0a, T0b, T10; ADR 029, Q-86, Q-87), the guest change UI (M10-T8b; Q-83…Q-85), and the transfer car selector (M10-T5; Q-82). Branch: `m10-guest-booking-journey`. Follow the [milestone loop](./README.md#the-loop-every-milestone-follows).
+Status: **In progress (7/14 tasks accepted).** [Task log](../reports/m10-guest-booking-journey.md#task-log). Opened 2026-11-26: spec [0007](../../specs/0007-m10-guest-booking-journey.md) and the task breakdown below were approved by the owner on 2026-11-26, after an independent cross check with every recommended fix applied. Scope extended by the owner on 2026-11-17 with first-party website analytics (M10-T0a, T0b, T10; ADR 029, Q-86, Q-87), the guest change UI (M10-T8b; Q-83…Q-85), and the transfer car selector (M10-T5; Q-82). Branch: `m10-guest-booking-journey`. Follow the [milestone loop](./README.md#the-loop-every-milestone-follows).
 
 ## Objective
 
@@ -51,13 +51,14 @@ Planned, reviewed, and accepted one task at a time ([agent-workflow.md](../../en
 | M10-T2 | Search and results page, server `SEARCH` event for unmet demand, booking off explanation in place of the form | Medium | T1 | AC 1, 9, 10 | Accepted 2026-11-26 |
 | M10-T3 | Selection basket with guests per unit and server-computed subtotal | Medium | T2 | AC 2 | Accepted 2026-11-27 |
 | M10-T4 | Details frame (`GetBookingSetup`), guest details, verification (WhatsApp, or email only with online payment, ADR 031 and Q-100), tab draft | Critical | T3 | AC 9, 13, 14; E2E-G-5; `PhoneVerificationStep` tests; no token in URLs, logs, or events | Accepted 2026-11-27 |
-| M10-T5 | Extras (with the transfer car selector and flight details, Q-82) and coupon | Medium | T4 | AC 3, 4; `ServicesPicker`, `CouponField` tests | Not started |
+| M10-T5 | Extras (with the transfer car selector and flight details, Q-82) and coupon | Medium | T4 | AC 3, 4; `ServicesPicker`, `CouponField` tests | Accepted 2026-11-27 |
 | M10-T6 | Payment choice, review, placeholder legal copy flagged by the audit, submit, confirmation page, conflict and price-change paths | Critical | T4, T5 | AC 5–7, 14; E2E-G-1, 2, 4, 7; `PriceSummary` tests | Not started |
 | M10-T7 | Payment return page | Critical | T6 | AC 6; E2E-G-3 | Not started |
 | M10-T8 | Manage reservation and My reservations with cancellation requests | Critical | T1 | AC 8, 13; E2E-G-6 | Not started |
 | M10-T8b | Change booking: prefill from an empty G5 preview and G1, preview and apply (G5, G6), old and new totals, "sent to the hotel for approval" state for paid bookings, deadline and contact fallback (Q-83…Q-85) | Critical | T8, T5 | AC 12; E2E-G-9 | Not started |
 | M10-T9 | Book Now internal mode per branch (`BookingProvider` port takes the branch and listing) | Low | T6 | AC 10; E2E-G-8 part | Not started |
 | M10-T10 | Page-view beacon on every public page (marketing and booking), `STEP_VIEW` events in each booking step, session id kept across steps and sent with P7; within the script budget | Medium | T0a, T6, T8 | AC 11; T-ANL-11…12, Lighthouse budget | Not started |
+| M10-T11 | Visual baselines for every booking step at 390 and 1280 px, on the development server run with fake providers (added 2026-11-27 at M10-T5 planning, owner approved: T2 to T4 added none and the standard browser run cannot reach step 3) | Low | T2…T10 | Brief tests: visual baselines | Not started |
 
 ## Tasks
 
@@ -111,7 +112,7 @@ Screenshots of every step (desktop and mobile), including errors, conflict, coup
 - Legal and tax wording not ready: online booking stays off until approved text replaces the placeholders.
 - Payment return-page timing: polling with a clear waiting state.
 - The Playwright server runs in production mode, which refuses fake providers, so a booking cannot be completed there (found at M10-T0b). Settled at M10-T4: provider journeys run opt in on the development server (`BOOKING_JOURNEY_E2E=1`, [spec 0007](../../specs/0007-m10-guest-booking-journey.md#settled-during-m10-t4-2026-11-27)).
-- The results and details pages load close to the 260 KB script limit (M10-T4 measurement). Later booking steps load on demand.
+- Booking pages and the script budget: at M10-T5, Lighthouse measured 266,453 script bytes on the details page and 265,827 on the results page, above the 260,000 byte budget. The same measurement of the code before M10-T5 gave 265,096 and 265,489. Booking pages are not in `.lighthouserc.cjs`, and that assertion only warns. Later booking steps load on demand. Open ([performance.md](../../frontend/performance.md#booking-page-scripts-m10)).
 
 ## Handoff
 
