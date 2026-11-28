@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { lazy, Suspense, useEffect, useRef, useState } from "react";
 
 import type { GuestAccess } from "@/presentation/api-client/guest";
 import {
@@ -9,6 +9,7 @@ import {
   bookingHeading,
   bookingPanel,
   bookingSubheading,
+  button,
   factTerm,
   factValue,
 } from "@/presentation/site/classes";
@@ -32,6 +33,10 @@ import {
   type AccessRefusal,
 } from "./use-guest-reservation";
 
+const ChangeBooking = lazy(async () => ({
+  default: (await import("./change-booking")).ChangeBooking,
+}));
+
 const noTimes: StayTimes = {
   checkInTime: null,
   checkInUntilTime: null,
@@ -46,10 +51,13 @@ const noTimes: StayTimes = {
 export function ReservationView({
   access,
   hotels,
+  emailSession = false,
   onRefused,
 }: Readonly<{
   access: GuestAccess;
   hotels: readonly GuestHotel[];
+  /** "My reservations" opened with an email code. */
+  emailSession?: boolean;
   onRefused: (refusal: AccessRefusal) => void;
 }>) {
   const { booking, loading, failedWait, reload } = useGuestReservation(
@@ -58,12 +66,28 @@ export function ReservationView({
   );
   // An object, so the same outcome twice takes focus both times.
   const [notice, setNotice] = useState<{ text: string } | null>(null);
+  const [changing, setChanging] = useState(false);
   const noticeText = useRef<HTMLParagraphElement>(null);
   const panel = useRef<HTMLElement>(null);
+  const returned = useRef(false);
 
   useEffect(() => {
     if (notice) noticeText.current?.focus();
   }, [notice]);
+
+  // The change screens remove themselves, so the booking takes the focus.
+  useEffect(() => {
+    if (changing || !returned.current) return;
+    returned.current = false;
+    if (!notice) panel.current?.focus();
+  }, [changing, notice]);
+
+  function closeChange(message: string | null) {
+    returned.current = true;
+    setChanging(false);
+    setNotice(message ? { text: message } : null);
+    reload();
+  }
 
   function checkAgain() {
     panel.current?.focus();
@@ -95,7 +119,21 @@ export function ReservationView({
           <CheckAgain waitSeconds={failedWait} onClick={checkAgain} />
         </>
       )}
-      {booking && (
+      {booking && changing && (
+        <Suspense fallback={<p role="status">Loading the change form…</p>}>
+          <ChangeBooking
+            access={access}
+            booking={booking}
+            options={hotel?.change ?? null}
+            times={hotel?.times ?? noTimes}
+            contactPage={hotel !== undefined}
+            emailSession={emailSession}
+            onClose={closeChange}
+            onRefused={onRefused}
+          />
+        </Suspense>
+      )}
+      {booking && !changing && (
         <>
           <BookingDetails
             booking={booking}
@@ -136,7 +174,11 @@ export function ReservationView({
             ) : loading ? (
               <p className="m-0">Checking your booking…</p>
             ) : (
-              <Cancellation
+              <Actions
+                onChangeBooking={() => {
+                  setNotice(null);
+                  setChanging(true);
+                }}
                 booking={booking}
                 access={access}
                 onRefused={onRefused}
@@ -176,31 +218,48 @@ function Note({ note }: Readonly<{ note: RequestNote | null }>) {
   );
 }
 
-function Cancellation({
+/** What the server still allows for this booking, and why when it does not. */
+function Actions({
   booking,
   access,
+  onChangeBooking,
   onSettled,
   onRefused,
 }: Readonly<{
   booking: BookingDetail;
   access: GuestAccess;
+  onChangeBooking: () => void;
   onSettled: (message: string) => void;
   onRefused: (refusal: AccessRefusal) => void;
 }>) {
   // Read once for each answer from the server: it only chooses wording.
   const [readAt] = useState(() => Date.now());
   const deadline = booking.cancellationDeadline;
+  const change = booking.allowedActions.includes("CHANGE_RESERVATION");
   if (booking.allowedActions.includes("REQUEST_CANCELLATION"))
     return (
       <>
         {deadline && (
           <p className="m-0">
-            You can ask to cancel online until{" "}
+            {change
+              ? "You can change this booking or ask to cancel online until"
+              : "You can ask to cancel online until"}{" "}
             <time dateTime={deadline}>
               {displayInstant(deadline, booking.branch.timeZone)}
             </time>{" "}
             (hotel time).
           </p>
+        )}
+        {change ? (
+          <button
+            type="button"
+            className={button("primary", "justify-self-start max-sm:w-full")}
+            onClick={onChangeBooking}
+          >
+            Change booking
+          </button>
+        ) : (
+          <p className="m-0">To change this booking, contact the hotel.</p>
         )}
         <CancellationRequestForm
           access={access}

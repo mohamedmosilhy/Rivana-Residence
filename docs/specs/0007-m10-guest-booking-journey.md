@@ -210,7 +210,7 @@ Reads the manage token from `sessionStorage`. Polls G1 every 2 seconds for 20 se
 
 - Manage reads `#t=`, removes it from the address bar with `history.replaceState`, and keeps it in memory and this tab's `sessionStorage` (amended at M10-T8). Shows status, payment status, details, price, cancellation request state (open, approved, rejected, refund pending, refund failed, completed, closed), change request state. "Request cancellation" (optional reason, confirm) only when `allowedActions` contains `REQUEST_CANCELLATION`; otherwise the branch contact details. An invalid link shows the neutral message and the My reservations path (US-G6 AC1).
 - My reservations: phone (and email when the guest chooses the email channel) then code (P9, P10 with `GUEST_SESSION`), then G3 list and G4 detail with the same actions.
-- Change booking appears only when `allowedActions` contains `CHANGE_RESERVATION`. It opens the same step components prefilled from an empty G5 preview (`{}`; its `current` quote gives stay, lines with `roomSlug` and occupancy, and services with cars) plus G1 (flight details from `price.services[].details`; `fullName`, `email`, `specialRequests` from `contact`, the only editable contact fields). Availability for new dates comes from P5. Preview (G5) shows what changed and old and new totals with VAT; confirm calls G6 with `If-Match` (the preview's `ETag`) and `expectedTotal = proposed.total`. `200` → "Your booking was changed"; `202` → "Sent to the hotel for approval"; `412` → reload and preview again; `409 PRICE_CHANGED` → show `context.quote.preview`; `403 CHANGE_NOT_ALLOWED` → contact details. Phone, branch, payment method, and coupon are read only.
+- Change booking appears only when `allowedActions` contains `CHANGE_RESERVATION`. A single edit form lets guests change dates and rooms and reuses the booking controls for guest counts and extras. An empty G5 preview supplies the stored stay, listing slugs, occupancy, and services with car counts. G1 or G4 supplies the editable contact fields and flight details. P3 supplies the published listings, and G5 checks availability for the proposed change. The review shows what changed and both totals with VAT. Confirm sends G6 the preview version in `If-Match` and the proposed total as `expectedTotal`. `200` shows “Your booking was changed”. `202` shows “Sent to the hotel for approval”. Phone, branch, payment method, and coupon are read only.
 
 ### Book Now internal mode (T9)
 
@@ -463,13 +463,24 @@ As built:
 - Sign out removes every booking key in the tab: the session, the manage token and the saved booking result (review finding; kept at acceptance).
 - A key is dropped only for `UNAUTHENTICATED`, `PHONE_NOT_VERIFIED`, `NOT_FOUND` or `PHONE_BLOCKED`. A proxy error page with the same status keeps it.
 - The cancellation button depends only on `allowedActions`. After a request or a lost reply the screen reads the booking again, and offers nothing until that read succeeds.
-- No change booking action yet; a change request's state is shown (M10-T8b adds the action).
+- T8 showed the change request state. T8b added the change booking action.
 - The footer link is the one address the public site test allows among links that mention reservations.
 - No server rule, API, schema or port change. The one server addition reads which code channels are ready.
 
 Owner decision after acceptance (2026-11-28): M10-T10 also brings `/reservations/manage` and `/reservations/find` under the 260,000 byte script budget and adds them to the Lighthouse run ([performance.md](../frontend/performance.md#guest-pages-m10-t8)).
 
 Known limits: the browser's own history may keep the first link address; the phone's Back button leaves "My reservations" instead of returning to the list; a page left open past the deadline shows the button until the server refuses; a lazy step that fails to download needs a reload.
+
+### Settled during M10-T8b (2026-11-28)
+
+The owner approved the empty preview, the branch catalog for choices, server supplied extras, one form followed by a review, and a separate message when only the proposed arrival is too close.
+
+- G5 prices an empty request using the booking's stored quote. Eligibility and the preview limit still apply. G6 refuses a request with no changes.
+- P3 lists room and apartment choices. G5 checks the proposed dates and units with the booking's own inventory taken out of the sold count. An existing unpublished listing can be kept or removed.
+- The guest pages read current extras through `GetBookingSetup`. Kept extras use their booked prices. If the branch has lowered the transfer limit, the original count stays available alongside the current offered counts.
+- The proposed arrival being too close keeps the guest on the form. When the booking itself is closed to changes, the page shows the hotel's contacts.
+- If the booking version changes, the form reloads from the server. A price change requires accepting a fresh G5 quote. An inventory refusal refreshes G5 to identify affected units and keeps the edits. After an uncertain confirmation the page reads the booking again.
+- The review explains approval against the captured online payment. An applied email change can end the private link or remove the booking from the old email session.
 
 ## Build plan
 

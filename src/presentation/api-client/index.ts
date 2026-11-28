@@ -13,6 +13,7 @@ export {
   type ChangeSubmitted,
   type GuestAccess,
 } from "./guest";
+export { listBranchListings } from "./listings";
 export { requestQuote, type QuoteInput } from "./quotes";
 export { REQUEST_TIMEOUT_MS } from "./request";
 export {

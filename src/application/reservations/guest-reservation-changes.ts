@@ -341,6 +341,8 @@ export class PreviewGuestChange {
           publicListings: true,
           contactChanged:
             Object.keys(guestContactPatch(record.stored, input)).length > 0,
+          // The screens fill the change form from an unchanged preview.
+          allowUnchanged: true,
         },
       );
       if (!result.ok) return result;

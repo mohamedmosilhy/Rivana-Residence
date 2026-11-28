@@ -103,7 +103,7 @@ describe("why there is no cancellation button", () => {
     );
     expect(noCancellationReason(blockedLooking, after)).toContain("closed on");
     expect(noCancellationReason(blockedLooking, deadline - 1)).toBe(
-      "To cancel this booking, contact the hotel.",
+      "To change or cancel this booking, contact the hotel.",
     );
   });
 

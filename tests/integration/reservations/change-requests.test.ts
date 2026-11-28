@@ -258,6 +258,27 @@ describe("Paid change requests (AC-12, AC-15, AC-16, T-GCHG-9 through 12)", () =
     });
   });
 
+  it("prices an unchanged paid booking without opening a request (M10-T8b)", async () => {
+    const { row, access } = await book();
+    const preview = await changes().preview.execute(access, success({}));
+    expect(preview).toMatchObject({
+      ok: true,
+      value: {
+        version: row.version,
+        preview: { outcome: "APPLIES_NOW", proposed: { total: money(paid) } },
+      },
+    });
+    expect(
+      await changes().apply.execute(
+        access,
+        row.version,
+        success({ expectedTotal: money(paid) }),
+      ),
+    ).toMatchObject({ ok: false, error: { code: "VALIDATION" } });
+    expect(await client.changeRequest.count()).toBe(0);
+    expect(await client.notificationOutbox.count()).toBe(0);
+  });
+
   it("opens a request through an email session and records the session channel (M9-T12b)", async () => {
     const f = await book();
     const token = crypto.generateToken();

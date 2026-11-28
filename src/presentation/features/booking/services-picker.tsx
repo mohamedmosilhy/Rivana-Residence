@@ -51,6 +51,7 @@ export function servicePrice({ unit, price, childPrice }: OfferedService) {
 export function ServicesPicker({
   services,
   maxVehicles,
+  bookedVehicles = null,
   breakfast,
   transfer,
   cars,
@@ -64,6 +65,8 @@ export function ServicesPicker({
   /** Only what can be chosen now. */
   services: readonly OfferedService[];
   maxVehicles: number | null;
+  /** An existing booking can keep its count if the offer changed. */
+  bookedVehicles?: number | null;
   breakfast: boolean;
   transfer: boolean;
   cars: number;
@@ -75,6 +78,13 @@ export function ServicesPicker({
   onFlightDetails: (value: string) => void;
 }>) {
   if (services.length === 0) return null;
+  const carOptions = Array.from(
+    { length: maxVehicles ?? 0 },
+    (_, index) => index + 1,
+  );
+  if (bookedVehicles !== null && bookedVehicles > carOptions.length)
+    carOptions.push(bookedVehicles);
+
   return (
     <fieldset className="m-0 grid min-w-0 gap-3 border-0 p-0">
       <legend className={`${fieldLabel} mb-1 p-0`}>Extras (optional)</legend>
@@ -103,7 +113,7 @@ export function ServicesPicker({
                 </span>
               </span>
             </label>
-            {kind === "AIRPORT_TRANSFER" && chosen && maxVehicles !== null && (
+            {kind === "AIRPORT_TRANSFER" && chosen && carOptions.length > 0 && (
               <div className="grid min-w-0 gap-4 border-l-2 border-gold-400 pl-4">
                 <p className={fieldHelp}>
                   We pick you up from the airport when you arrive.
@@ -127,9 +137,9 @@ export function ServicesPicker({
                         onCars(Number(event.currentTarget.value))
                       }
                     >
-                      {Array.from({ length: maxVehicles }, (_, index) => (
-                        <option key={index} value={index + 1}>
-                          {index + 1}
+                      {carOptions.map((choice) => (
+                        <option key={choice} value={choice}>
+                          {choice}
                         </option>
                       ))}
                     </select>

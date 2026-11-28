@@ -82,10 +82,10 @@ Acceptance criteria (AC) are written so they can become tests. Stories for the w
 - AC3: After that deadline there is no request button; the branch's contact details are shown.
 - AC4: I receive messages when my request is received and decided; if it was approved and I paid online, I am told the refund was requested and when it completes.
 
-**US-G6a Change my booking (API implemented in M9, UI planned in M10).** As a guest, I change my dates, rooms or apartments, guests, extras (including the number of cars), name, email, or special requests from my link or "My reservations" (Q-83).
+**US-G6a Change my booking (API implemented in M9, guest UI implemented in M10-T8b).** As a guest, I change my dates, rooms or apartments, guests, extras (including the number of cars), name, email, or special requests from my link or "My reservations" (Q-83).
 - AC1: Before confirming I see whether the change is available and my old and new totals with VAT; nothing changes until I confirm.
 - AC2: For a pay-at-hotel booking the change applies at once and I receive email and WhatsApp messages with the new details.
-- AC3: For a booking I paid online, a change that keeps the same total applies at once; one that changes the total is sent to the hotel as a request, and I am told the decision. Any difference is settled at the hotel (Q-85).
+- AC3: For a booking I paid online, a change whose total matches what I paid online applies at once; a different total is sent to the hotel as a request, and I am told the decision. Any difference is settled at the hotel (Q-85).
 - AC4: My phone number, branch, payment method, and coupon cannot be changed online. After 24 hours before check-in, or while a request is open, I see the branch's contact details instead (Q-84).
 
 **US-G7 My reservations.** As a guest, I enter my phone number and a WhatsApp code, or ask for an email code (ADR 031), to see my reservations.

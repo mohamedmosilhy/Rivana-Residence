@@ -4139,7 +4139,7 @@
         },
         "responses": {
           "200": {
-            "description": "The current and proposed quote. This request makes no changes.",
+            "description": "The current and proposed quote. An empty request for an eligible booking returns equal quotes so the change form can be filled. The booking stays as it is.",
             "headers": {
               "ETag": {
                 "description": "Reservation version formatted as \"v<version>\".",
@@ -4287,7 +4287,7 @@
         },
         "responses": {
           "200": {
-            "description": "The current and proposed quote. This request makes no changes.",
+            "description": "The current and proposed quote. An empty request for an eligible booking returns equal quotes so the change form can be filled. The booking stays as it is.",
             "headers": {
               "ETag": {
                 "description": "Reservation version formatted as \"v<version>\".",

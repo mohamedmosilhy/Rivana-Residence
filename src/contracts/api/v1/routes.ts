@@ -1607,7 +1607,7 @@ export const API_ROUTES: readonly ApiRoute[] = [
     responses: {
       200: {
         description:
-          "The current and proposed quote. This request makes no changes.",
+          "The current and proposed quote. An empty request for an eligible booking returns equal quotes so the change form can be filled. The booking stays as it is.",
         schema: GuestChangePreview,
         headers: { ETag: 'Reservation version formatted as "v<version>".' },
       },
@@ -1658,7 +1658,7 @@ export const API_ROUTES: readonly ApiRoute[] = [
     responses: {
       200: {
         description:
-          "The current and proposed quote. This request makes no changes.",
+          "The current and proposed quote. An empty request for an eligible booking returns equal quotes so the change form can be filled. The booking stays as it is.",
         schema: GuestChangePreview,
         headers: { ETag: 'Reservation version formatted as "v<version>".' },
       },

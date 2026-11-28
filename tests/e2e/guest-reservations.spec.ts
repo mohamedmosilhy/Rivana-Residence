@@ -154,6 +154,10 @@ async function book(
   who: Guest,
   daysAhead: number,
   roomSlug = "studio-with-balcony",
+  {
+    nights = 2,
+    online = false,
+  }: Readonly<{ nights?: number; online?: boolean }> = {},
 ) {
   const sent = await request.post("/api/v1/phone-verifications", {
     headers,
@@ -170,7 +174,7 @@ async function book(
   const from = localDateAt(new Date(), "Africa/Cairo").addDays(daysAhead);
   const selection = {
     branchSlug: "new-cairo",
-    stay: { checkIn: from.value, checkOut: from.addDays(2).value },
+    stay: { checkIn: from.value, checkOut: from.addDays(nights).value },
     lines: [{ roomSlug, occupancy: { adults: 2, children: 0 } }],
     services: [],
   };
@@ -191,7 +195,7 @@ async function book(
         specialRequests: "A quiet room",
       },
       phoneVerificationToken: token,
-      paymentMethod: "PAY_AT_HOTEL",
+      paymentMethod: online ? "ONLINE" : "PAY_AT_HOTEL",
       expectedTotal: quote.total,
       consent: {
         privacyNoticeVersion: GUEST_CONSENT_VERSIONS.privacyNotice,
@@ -199,8 +203,11 @@ async function book(
     },
   });
   expect(created.status()).toBe(201);
-  const { reference, manageUrl } = await created.json();
+  const { reference, manageUrl, checkoutUrl } = await created.json();
   return {
+    checkoutUrl: checkoutUrl as string | undefined,
+    /** The date `offset` nights after check-in. */
+    day: (offset: number) => from.addDays(offset).value,
     reference: reference as string,
     manageUrl: manageUrl as string,
     key: (manageUrl as string).split("#t=")[1]!,
@@ -259,7 +266,7 @@ test.describe("with a booking", () => {
     await expect(page.getByText(later.reference)).toBeVisible();
     await expect(page.getByText("A quiet room")).toBeVisible();
     await expect(
-      page.getByText(/You can ask to cancel online until/),
+      page.getByText(/change this booking or ask to cancel online until/),
     ).toBeVisible();
     await verifyAccessibility(page);
     await capture(page, info, "manage-confirmed");
@@ -299,13 +306,22 @@ test.describe("with a booking", () => {
     await page.goto(tonight.manageUrl);
     await expect(page.getByText(tonight.reference)).toBeVisible();
     await expect(page).toHaveURL(/\/reservations\/manage$/);
-    await expect(page.getByText(/Online cancellation closed on/)).toBeVisible();
+    await expect(
+      page.getByText(/Online changes and cancellation closed on/),
+    ).toBeVisible();
     await expect(button(page, "Request cancellation")).toHaveCount(0);
+    await expect(button(page, "Change booking")).toHaveCount(0);
     await expect(
       page.getByRole("main").getByRole("link", { name: /\+1 202 555 0198/ }),
     ).toBeVisible();
     await verifyAccessibility(page);
     await capture(page, info, "manage-deadline-passed");
+    await screenshot(
+      page,
+      info,
+      process.env.BOOKING_CHANGE_SCREENSHOTS,
+      "change-deadline-passed",
+    );
 
     const outside = await page.evaluate(() =>
       JSON.stringify([
@@ -637,5 +653,434 @@ test.describe("with a booking", () => {
     ).toBeVisible();
     await verifyAccessibility(page);
     await capture(page, info, "find-contact-hotel");
+  });
+
+  // M10-T8b. Screenshots go to their own folder, so a run for them does not
+  // rewrite the pictures of earlier tasks.
+  const changeShot = (page: Page, info: TestInfo, state: string) =>
+    screenshot(page, info, process.env.BOOKING_CHANGE_SCREENSHOTS, state);
+
+  // Next.js keeps its own empty alert outside the booking.
+  const alertIn = (page: Page) =>
+    page.getByRole("region", { name: "Your booking" }).getByRole("alert");
+
+  async function checked(page: Page, info: TestInfo, state: string) {
+    await verifyAccessibility(page);
+    await changeShot(page, info, state);
+  }
+
+  const bookingRow = async (reference: string) =>
+    (
+      await sql(
+        `SELECT version, status, "totalMinor", "paymentStatus",
+           to_char("checkIn", 'YYYY-MM-DD') AS "checkIn",
+           to_char("checkOut", 'YYYY-MM-DD') AS "checkOut",
+           "guestEmail", "specialRequests"
+         FROM "Reservation" WHERE reference = $1`,
+        [reference],
+      )
+    ).rows[0];
+
+  const dollars = (minor: number) =>
+    new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency: "USD",
+    }).format(minor / 100);
+
+  /** Presses the button and waits for the review of the new price. */
+  async function seeNewPrice(page: Page) {
+    await button(page, "See the new price").press("Enter");
+    await expect(heading(page, "Check your changes")).toBeFocused();
+  }
+
+  async function openChange(page: Page) {
+    await button(page, "Change booking").press("Enter");
+    await expect(page.getByLabel("Check-out")).toHaveValue(/^\d{4}-/);
+    await expect(heading(page, "Change booking")).toBeFocused();
+  }
+
+  test("E2E-G-9: a pay at hotel guest extends a stay with the last room and adds a room and transfer, by keyboard", async ({
+    page,
+    request,
+  }, info) => {
+    const index = projectIndex(info);
+    const who = guest(info, 40);
+    const headers = client(info, 5);
+    const daysAhead = 210 + index * 8;
+    // Deluxe Double has two units: another guest holds one for three nights.
+    await book(request, headers, guest(info, 41), daysAhead, "deluxe-double", {
+      nights: 3,
+    });
+    const made = await book(request, headers, who, daysAhead, "deluxe-double");
+    // The public search counts the guest's own room, so it shows none free.
+    const search = await request.get(
+      `/api/v1/branches/new-cairo/availability?checkIn=${made.day(0)}&checkOut=${made.day(3)}&adults=2&children=0`,
+      { headers },
+    );
+    expect(
+      (await search.json()).results.find(
+        (result: { roomType: { slug: string } }) =>
+          result.roomType.slug === "deluxe-double",
+      ).unitsAvailable,
+    ).toBe(0);
+
+    await page.setExtraHTTPHeaders(headers);
+    const addresses: string[] = [];
+    const logged: string[] = [];
+    page.on("request", (sent) => addresses.push(sent.url()));
+    page.on("console", (message) => logged.push(message.text()));
+    await page.setViewportSize({ width: 320, height: 844 });
+    await page.goto(made.manageUrl);
+    await expect(button(page, "Change booking")).toBeVisible();
+    await checked(page, info, "change-entry");
+    const before = await bookingRow(made.reference);
+
+    await openChange(page);
+    await expect(button(page, "Add a room or apartment")).toBeVisible();
+    await checked(page, info, "change-form");
+    await button(page, "See the new price").press("Enter");
+    await expect(alertIn(page)).toContainText("Nothing has changed yet.");
+    await checked(page, info, "change-nothing");
+
+    await page.getByLabel("Check-out").fill(made.day(3));
+    await button(page, "Add a room or apartment").press("Enter");
+    const added = page.getByRole("group", { name: "Unit 2" });
+    await added
+      .getByLabel("Room or apartment")
+      .selectOption("studio-with-balcony");
+    await added.getByLabel("Adults").selectOption("2");
+    await page
+      .getByRole("checkbox", { name: /Airport transfer/ })
+      .press("Space");
+    await page.getByLabel("Cars").selectOption("2");
+    await page.getByLabel(/Flight number/).fill("MS 985, arriving 14:30");
+    await checked(page, info, "change-form-edited");
+    await seeNewPrice(page);
+    // A preview writes nothing.
+    expect(await bookingRow(made.reference)).toEqual(before);
+    await expect(
+      page.getByText(dollars(before.totalMinor)).first(),
+    ).toBeVisible();
+    await expect(
+      page.getByText(/pay the new total at the hotel/),
+    ).toBeVisible();
+    await checked(page, info, "change-review");
+    await button(page, "Back to the form").press("Enter");
+    await expect(page.getByLabel("Check-out")).toHaveValue(made.day(3));
+    await seeNewPrice(page);
+
+    await button(page, "Confirm change").press("Enter");
+    await expect(heading(page, "Your booking was changed")).toBeFocused();
+    const after = await bookingRow(made.reference);
+    expect(after).toMatchObject({
+      version: before.version + 1,
+      status: "CONFIRMED",
+      checkOut: made.day(3),
+    });
+    await expect(
+      page.getByText(dollars(after.totalMinor), { exact: true }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("rowheader", {
+        name: "Studio with Balcony 2 adults, 0 children",
+      }),
+    ).toBeVisible();
+    expect(
+      (
+        await sql(
+          `SELECT room.slug, unit.adults FROM "ReservationRoom" unit
+           JOIN "Room" room ON room.id = unit."roomTypeId"
+           JOIN "Reservation" r ON r.id = unit."reservationId"
+           WHERE r.reference = $1 ORDER BY room.slug`,
+          [made.reference],
+        )
+      ).rows,
+    ).toEqual([
+      { slug: "deluxe-double", adults: 2 },
+      { slug: "studio-with-balcony", adults: 2 },
+    ]);
+    expect(
+      (
+        await sql(
+          `SELECT s.kind, s.vehicles, s.details FROM "ReservationService" s
+           JOIN "Reservation" r ON r.id = s."reservationId"
+           WHERE r.reference = $1`,
+          [made.reference],
+        )
+      ).rows,
+    ).toEqual([
+      {
+        kind: "AIRPORT_TRANSFER",
+        vehicles: 2,
+        details: "MS 985, arriving 14:30",
+      },
+    ]);
+    await checked(page, info, "change-applied");
+    await button(page, "View my booking").press("Enter");
+    await expect(heading(page, "Confirmed")).toBeVisible();
+    await expect(button(page, "Change booking")).toBeVisible();
+
+    const outside = await page.evaluate(() =>
+      JSON.stringify([
+        location.href,
+        document.cookie,
+        { ...localStorage },
+        document.documentElement.outerHTML,
+      ]),
+    );
+    for (const text of [outside, addresses.join(), logged.join()])
+      noMatch(text, [made.key]);
+    await expectNoSecretsStored(page, [made.key]);
+  });
+
+  test("E2E-G-9: sold out, too late, a new price, a newer booking and an open request", async ({
+    page,
+    request,
+  }, info) => {
+    const index = projectIndex(info);
+    const who = guest(info, 42);
+    const headers = client(info, 6);
+    const made = await book(request, headers, who, 260 + index * 8);
+    await page.setExtraHTTPHeaders(headers);
+    await page.setViewportSize({ width: 320, height: 844 });
+    await page.goto(made.manageUrl);
+    await openChange(page);
+    await expect(button(page, "Add a room or apartment")).toBeVisible();
+
+    // Superior Double has no unit in this database.
+    const unit = page.getByRole("group", { name: "Unit 1" });
+    const listing = unit.getByLabel("Room or apartment");
+    const held = await listing.inputValue();
+    await listing.selectOption("superior-double");
+    await button(page, "See the new price").press("Enter");
+    await expect(
+      page.getByText(/Unit 1, .* is not available for these dates/).first(),
+    ).toBeVisible();
+    await checked(page, info, "change-unavailable");
+    await listing.selectOption(held);
+
+    const today = localDateAt(new Date(), "Africa/Cairo").value;
+    await page.getByLabel("Check-in").fill(today);
+    await page.getByLabel("Check-out").fill(made.day(2));
+    await button(page, "See the new price").press("Enter");
+    await expect(
+      page.getByText(/These new dates are too close/).first(),
+    ).toBeVisible();
+    await expect(page.getByLabel("Check-in")).toHaveValue(today);
+    await checked(page, info, "change-dates-too-close");
+
+    await page.getByLabel("Check-in").fill(made.day(0));
+    await page.getByLabel("Check-out").fill(made.day(3));
+    await button(page, "Add a room or apartment").press("Enter");
+    const otherRoom = page
+      .getByRole("group", { name: "Unit 2" })
+      .getByLabel("Room or apartment");
+    await otherRoom.selectOption("deluxe-double");
+    await seeNewPrice(page);
+
+    // Inventory can disappear after a valid preview. Block the added night
+    // for every studio, then release it so the guest can check again.
+    const blocked = await sql(
+      `INSERT INTO "InventoryBlock" (id, "branchId", "physicalRoomId", "startDate", "endDate", reason, "createdById")
+       SELECT $1::text || right(unit.id, 12), unit."branchId", unit.id, $2, $3, 'MAINTENANCE',
+         (SELECT id FROM "User" WHERE role = 'ADMIN' ORDER BY id LIMIT 1)
+       FROM "PhysicalRoom" unit JOIN "Room" room ON room.id = unit."roomTypeId"
+       JOIN "Branch" branch ON branch.id = unit."branchId"
+       WHERE branch.slug = 'new-cairo' AND room.slug = 'studio-with-balcony' AND unit.active
+       RETURNING id`,
+      [`e2e-change-race-${index}-`, made.day(2), made.day(3)],
+    );
+    try {
+      expect(blocked.rowCount).toBeGreaterThan(0);
+      const original = await bookingRow(made.reference);
+      await button(page, "Confirm change").press("Enter");
+      await expect(alertIn(page)).toContainText(
+        "Unit 1, Studio with Balcony, is not available for these dates.",
+      );
+      await expect(page.getByLabel("Check-out")).toHaveValue(made.day(3));
+      await expect(otherRoom).toHaveValue("deluxe-double");
+      await expect(otherRoom).not.toHaveAttribute("aria-invalid", "true");
+      expect(await bookingRow(made.reference)).toEqual(original);
+      await checked(page, info, "change-inventory-race");
+    } finally {
+      await sql('DELETE FROM "InventoryBlock" WHERE id = ANY($1)', [
+        blocked.rows.map((row) => row.id),
+      ]);
+    }
+    await button(page, "Remove unit 2, Deluxe Double").press("Enter");
+    await seeNewPrice(page);
+
+    // Staff raise the price of the added night before the guest confirms.
+    await sql(
+      `INSERT INTO "RatePeriod" (id, "roomTypeId", "startDate", "endDate", "amountMinor", "updatedAt")
+       SELECT $1, room.id, $2, $3, 20000, now() FROM "Room" room
+       JOIN "Branch" b ON b.id = room."branchId"
+       WHERE b.slug = 'new-cairo' AND room.slug = 'studio-with-balcony'`,
+      [`e2e-change-rate-${index}`, made.day(2), made.day(3)],
+    );
+    const before = await bookingRow(made.reference);
+    await button(page, "Confirm change").press("Enter");
+    await expect(alertIn(page)).toContainText("The price changed.");
+    await expect(button(page, "Confirm change")).toHaveCount(0);
+    expect(await bookingRow(made.reference)).toEqual(before);
+    await checked(page, info, "change-price-changed");
+    await button(page, "Accept new total").press("Enter");
+
+    // Somebody else saves the booking first.
+    await sql(
+      'UPDATE "Reservation" SET version = version + 1 WHERE reference = $1',
+      [made.reference],
+    );
+    await button(page, "Confirm change").press("Enter");
+    await expect(
+      page.getByText(/This booking changed while you were editing/),
+    ).toBeFocused();
+    await expect(page.getByLabel("Check-out")).toHaveValue(made.day(2));
+    await checked(page, info, "change-reloaded");
+
+    // A lost reply: the change was made, and nothing is sent again.
+    await page.getByLabel("Check-out").fill(made.day(3));
+    await seeNewPrice(page);
+    let sent = 0;
+    await page.route("**/api/v1/guest/reservation/changes", async (route) => {
+      sent += 1;
+      await route.fetch();
+      await route.abort("failed");
+    });
+    await button(page, "Confirm change").press("Enter");
+    await expect(
+      page.getByText(/couldn’t confirm whether your change was made/),
+    ).toBeFocused();
+    await expect(heading(page, "Confirmed")).toBeVisible();
+    expect(sent).toBe(1);
+    expect((await bookingRow(made.reference)).checkOut).toBe(made.day(3));
+    await checked(page, info, "change-lost-reply");
+
+    // A request made in another tab closes the change.
+    await openChange(page);
+    const asked = await request.post(
+      "/api/v1/guest/reservation/cancellation-requests",
+      {
+        headers: { ...headers, Authorization: `Bearer ${made.key}` },
+        data: {},
+      },
+    );
+    expect(asked.status()).toBe(201);
+    await page.getByLabel("Check-out").fill(made.day(2));
+    await button(page, "See the new price").press("Enter");
+    await expect(
+      heading(page, "Contact the hotel about this change"),
+    ).toBeFocused();
+    await checked(page, info, "change-closed");
+    await button(page, "Back to my booking").press("Enter");
+    await expect(heading(page, "Cancellation requested")).toBeVisible();
+    await expect(button(page, "Change booking")).toHaveCount(0);
+  });
+
+  test("E2E-G-9: a paid change with a new total goes to the hotel", async ({
+    page,
+    request,
+  }, info) => {
+    const index = projectIndex(info);
+    const who = guest(info, 43);
+    const headers = client(info, 7);
+    const made = await book(
+      request,
+      headers,
+      who,
+      310 + index * 8,
+      "studio-with-balcony",
+      { online: true },
+    );
+    await page.setExtraHTTPHeaders(headers);
+    await page.goto(made.checkoutUrl!);
+    await button(page, "Pay successfully").click();
+    await expect
+      .poll(async () => (await bookingRow(made.reference)).paymentStatus)
+      .toBe("PAID");
+    const before = await bookingRow(made.reference);
+
+    await page.setViewportSize({ width: 320, height: 844 });
+    await page.goto(made.manageUrl);
+    await openChange(page);
+    await page.getByLabel("Check-out").fill(made.day(3));
+    await seeNewPrice(page);
+    await expect(page.getByText(/the hotel must approve/)).toBeVisible();
+    await checked(page, info, "change-review-approval");
+    await button(page, "Send to the hotel for approval").press("Enter");
+    await expect(heading(page, "Sent to the hotel for approval")).toBeFocused();
+    expect(await bookingRow(made.reference)).toEqual(before);
+    expect(
+      (
+        await sql(
+          `SELECT c.status FROM "ChangeRequest" c JOIN "Reservation" r
+             ON r.id = c."reservationId" WHERE r.reference = $1`,
+          [made.reference],
+        )
+      ).rows,
+    ).toEqual([{ status: "OPEN" }]);
+    await checked(page, info, "change-sent");
+    await button(page, "Back to my booking").press("Enter");
+    await expect(heading(page, "Change sent to the hotel")).toBeVisible();
+    await expect(button(page, "Change booking")).toHaveCount(0);
+    await checked(page, info, "change-request-open");
+  });
+
+  test("E2E-G-9: a new email ends the private link, and My reservations can change the booking", async ({
+    page,
+    request,
+  }, info) => {
+    const index = projectIndex(info);
+    const who = guest(info, 44);
+    const headers = client(info, 8);
+    const made = await book(request, headers, who, 360 + index * 8);
+    await page.setExtraHTTPHeaders(headers);
+    await page.setViewportSize({ width: 320, height: 844 });
+    await page.goto(made.manageUrl);
+    await openChange(page);
+    await page.getByLabel("Email", { exact: true }).fill(`new.${who.email}`);
+    await seeNewPrice(page);
+    await button(page, "Confirm change").press("Enter");
+    await expect(heading(page, "Your booking was changed")).toBeFocused();
+    await expect(
+      page.getByText(/this private link no longer works/),
+    ).toBeVisible();
+    await checked(page, info, "change-email-link-ended");
+    expect(
+      await page.evaluate(() => sessionStorage.getItem("rivana.access.manage")),
+    ).toBeNull();
+    const old = await request.get("/api/v1/guest/reservation", {
+      headers: { ...headers, Authorization: `Bearer ${made.key}` },
+    });
+    expect(old.status()).toBe(401);
+
+    await page
+      .getByRole("main")
+      .getByRole("link", { name: "My reservations" })
+      .click();
+    await page.getByLabel("Phone country").selectOption("US");
+    await page.getByLabel("Phone number", { exact: true }).fill(who.typed);
+    await button(page, "Continue").click();
+    const sent = page.waitForResponse((response) =>
+      response.url().endsWith("/api/v1/phone-verifications"),
+    );
+    await button(page, "Send code").click();
+    const { verificationId } = await (await sent).json();
+    await setKnownCode(verificationId, code);
+    await page.getByLabel("Verification code").fill(code);
+    await button(page, "Verify code").click();
+    await button(page, `View booking ${made.reference}`).click();
+    await openChange(page);
+    await page.getByLabel(/Special requests/).fill("A high floor, please");
+    await seeNewPrice(page);
+    await button(page, "Confirm change").press("Enter");
+    await expect(heading(page, "Your booking was changed")).toBeFocused();
+    await button(page, "View my booking").press("Enter");
+    await expect(page.getByText("A high floor, please")).toBeVisible();
+    await checked(page, info, "find-booking-changed");
+    expect(await bookingRow(made.reference)).toMatchObject({
+      guestEmail: `new.${who.email}`,
+      specialRequests: "A high floor, please",
+    });
   });
 });

@@ -83,6 +83,8 @@ export async function quoteReservationChange(
     override: ChangePriceOverride | null;
     publicListings?: boolean;
     contactChanged?: boolean;
+    /** A preview may price an unchanged request; a write never may. */
+    allowUnchanged?: boolean;
   }>,
 ): Promise<Result<ChangeQuote>> {
   const { branchId } = current;
@@ -105,7 +107,10 @@ export async function quoteReservationChange(
   const today = localDateAt(at, current.branchTimeZone);
   const plan = planReservationChange(current, requested, {
     today,
-    allowPriceOnly: override !== null || options.contactChanged === true,
+    allowPriceOnly:
+      override !== null ||
+      options.contactChanged === true ||
+      options.allowUnchanged === true,
   });
   const started = current.stay.checkIn.compare(today) < 0;
   if (started && override)

@@ -1,9 +1,19 @@
 import { HotelContact, type HotelContactDetails } from "./hotel-contact";
+import type { OfferedService } from "./extras-state";
 import type { StayTimes } from "./stay-dates";
+
+/** What a guest may choose when changing a booking at this branch. */
+export type ChangeOptions = Readonly<{
+  /** The branch's calendar date, the earliest new check-in. */
+  today: string;
+  /** The extras the branch offers now. */
+  services: readonly OfferedService[];
+  maxVehicles: number | null;
+}>;
 
 /** What a page that belongs to no branch knows about each active one. */
 export type GuestHotel = HotelContactDetails &
-  Readonly<{ name: string; times: StayTimes }>;
+  Readonly<{ name: string; times: StayTimes; change?: ChangeOptions }>;
 
 /** Every hotel's contacts, for a guest whose booking the page does not know. */
 export function HotelContacts({

@@ -223,6 +223,7 @@ export function MyReservations({
                   reference,
                 }}
                 hotels={hotels}
+                emailSession={session.channel === "EMAIL"}
                 onRefused={refused}
               />
             </OpenedReservation>

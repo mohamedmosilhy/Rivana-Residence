@@ -87,7 +87,7 @@ export function cancellationNote(booking: BookingDetail): RequestNote | null {
   }
 }
 
-/** The latest change request. Changing a booking online arrives in M10-T8b. */
+/** The latest change request. */
 export function changeNote(booking: BookingDetail): RequestNote | null {
   const { changeRequest: request } = booking;
   if (!request) return null;
@@ -120,8 +120,9 @@ const activeCancellation = [
 ];
 
 /**
- * Why a confirmed booking has no "Request cancellation" button. The device
- * clock only picks the sentence. A blocked number is never mentioned.
+ * Why a confirmed booking has no "Request cancellation" button, which also
+ * means no "Change booking" one. The device clock only picks the sentence. A
+ * blocked number is never mentioned.
  */
 export function noCancellationReason(
   booking: BookingDetail,
@@ -132,11 +133,11 @@ export function noCancellationReason(
   // The request's own note already says what is happening.
   if (request && activeCancellation.includes(request.status)) return null;
   if (change?.status === "OPEN")
-    return "You can ask to cancel after the hotel answers your change request. If it can’t wait, contact the hotel.";
+    return "You can change or cancel this booking after the hotel answers your change request. If it can’t wait, contact the hotel.";
   const deadline = booking.cancellationDeadline;
   if (deadline && nowMs >= Date.parse(deadline))
-    return `Online cancellation closed on ${displayInstant(deadline, booking.branch.timeZone)} (hotel time). Contact the hotel about cancelling.`;
+    return `Online changes and cancellation closed on ${displayInstant(deadline, booking.branch.timeZone)} (hotel time). Contact the hotel about this booking.`;
   if (booking.paymentStatus === "REFUND_PENDING")
     return "A refund is in progress. Contact the hotel about this booking.";
-  return "To cancel this booking, contact the hotel.";
+  return "To change or cancel this booking, contact the hotel.";
 }

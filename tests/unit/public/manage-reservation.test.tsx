@@ -188,10 +188,9 @@ describe("the booking", () => {
       screen.getByText(/Sunday,? 28 February 2027 at 14:00/),
     ).toBeVisible();
     expect(asked()).toBeVisible();
-    // Changing a booking arrives in M10-T8b.
     expect(
-      screen.queryByRole("button", { name: /Change booking/i }),
-    ).toBeNull();
+      screen.getByRole("button", { name: "Change booking" }),
+    ).toBeVisible();
   });
 
   it("waits as long as the server asks before another read", async () => {

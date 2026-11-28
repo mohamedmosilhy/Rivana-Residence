@@ -335,6 +335,53 @@ describe("Guest preview and apply (AC-11, T-GCHG-1…8)", () => {
     });
   });
 
+  it.each(["manage link", "session"] as const)(
+    "prices an unchanged preview by %s without writing, and refuses to apply it (M10-T8b)",
+    async (path) => {
+      const { row, access: link, phone } = await book(2);
+      const access =
+        path === "session" ? await guestSession(phone, row.reference) : link;
+      // Today's prices and rate must not reach a booking nobody changed.
+      await client.roomBaseRate.updateMany({ data: { amountMinor: 99_000 } });
+      await client.commercialSettings.update({
+        where: { id: "default" },
+        data: { vatRateBasisPoints: 0 },
+      });
+      const outboxCount = await client.notificationOutbox.count();
+
+      const preview = await changes().preview.execute(access, success({}));
+      if (!preview.ok || !preview.value.preview.proposed)
+        throw new Error("Expected an unchanged preview.");
+      const { current, proposed } = preview.value.preview;
+      expect(preview.value.version).toBe(row.version);
+      expect(preview.value.preview).toMatchObject({
+        available: true,
+        unavailableLines: [],
+        outcome: "APPLIES_NOW",
+      });
+      expect(proposed).toEqual(current);
+      expect(current.total).toEqual(money(row.totalMinor!));
+      expect(current.lines.map((line) => line.roomSlug)).toEqual(["garden"]);
+
+      const applied = await changes().apply.execute(
+        access,
+        row.version,
+        success({ expectedTotal: current.total }),
+      );
+      expect(applied).toMatchObject({
+        ok: false,
+        error: {
+          code: "VALIDATION",
+          fieldErrors: { stay: ["Nothing was changed."] },
+        },
+      });
+      await assertNoAppliedChange(row.id, outboxCount);
+      expect(
+        await client.reservation.findUniqueOrThrow({ where: { id: row.id } }),
+      ).toMatchObject({ version: row.version, totalMinor: row.totalMinor });
+    },
+  );
+
   it("shows a date move at the same price and accepts the preview's Money value directly", async () => {
     const { row, access } = await book();
     const stay = { checkIn: "2031-04-20", checkOut: "2031-04-23" };
@@ -602,7 +649,8 @@ describe("Guest preview and apply (AC-11, T-GCHG-1…8)", () => {
         access,
         success({ guest: { fullName: row.guestName } }),
       ),
-    ).toMatchObject({ ok: false, error: { code: "VALIDATION" } });
+      // M10-T8b: a preview may price an unchanged booking; G6 still refuses it.
+    ).toMatchObject({ ok: true, value: { preview: { available: true } } });
     await client.reservation.update({
       where: { id: row.id },
       data: { status: "CANCELLED" },

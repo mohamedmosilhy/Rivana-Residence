@@ -44,7 +44,11 @@ The owner selected Node **26.13.0 LTS** for the Mac, CI, and hosting. On macOS w
 
 The required gates passed. `npm run check` passed with 2,547 unit and contract tests in 115 files, plus format, lint, type check, and the production build. PostgreSQL passed 1,077 tests in 67 files. Chromium passed 228 with 35 intentional skips. WebKit passed 100 with 29 intentional skips. Fresh and populated migrations showed no Prisma drift. Lighthouse passed for four URLs on each profile with three mobile paint warnings. The optional Firefox suite could not start on this Mac. The live walkthrough and focused tests verified all 16 criteria. [Exact commands and counts](../delivery/reports/m9-payments-and-cancellations.md#commands-and-results) · [Acceptance evidence](../delivery/reports/m9-payments-and-cancellations.md#acceptance-criteria-and-evidence)
 
-## Latest accepted task results (2026-11-28, M10-T8)
+## Latest accepted task results (2026-11-28, M10-T8b)
+
+Format, lint with one existing warning, type checking, 3,213 unit and contract tests in 144 files, and the production build passed. PostgreSQL passed 1,143 tests in 72 files across three shards. Standard Chromium passed 246 with 101 intentional skips. The search run passed 35 with ten skips. The booking journey passed 150 with five skips in Chromium and WebKit. A focused browser run also proved that confirmation marks the one unavailable unit of two and keeps the edits. Six server markers had zero matches across 50 client chunks. GPT-6.2 Astra approved the final recheck with zero open findings. At acceptance `npm run check` passed again after the focus assertion was updated to wait for the heading to receive focus. [Task log](../delivery/reports/m10-guest-booking-journey.md#task-log) · [Independent review](../reviews/2026-11-28-m10-t8b.md)
+
+## Previous accepted task results (2026-11-28, M10-T8)
 
 `npm run check` passed formatting, lint with one existing warning, type checking, 3,130 unit and contract tests in 142 files, and the production build. PostgreSQL passed 1,140 tests in 72 files across three shards, run before the review fixes, which changed no server code. Standard Chromium passed 246 tests with 93 intentional skips. The search run passed 35 with 10 skips and the journey run 130 with 5 skips, both in Chromium and WebKit. Six server only names were absent from all 51 browser files. Claude Opus 5.5 approved the final recheck with nits. [Task log](../delivery/reports/m10-guest-booking-journey.md#task-log) · [Independent review](../reviews/2026-11-28-m10-t8.md)
 
