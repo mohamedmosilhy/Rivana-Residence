@@ -467,6 +467,8 @@ As built:
 - The footer link is the one address the public site test allows among links that mention reservations.
 - No server rule, API, schema or port change. The one server addition reads which code channels are ready.
 
+Owner decision after acceptance (2026-11-28): M10-T10 also brings `/reservations/manage` and `/reservations/find` under the 260,000 byte script budget and adds them to the Lighthouse run ([performance.md](../frontend/performance.md#guest-pages-m10-t8)).
+
 Known limits: the browser's own history may keep the first link address; the phone's Back button leaves "My reservations" instead of returning to the list; a page left open past the deadline shows the button until the server refuses; a lazy step that fails to download needs a reload.
 
 ## Build plan
@@ -505,7 +507,7 @@ Changes from the brief's provisional table: T0b and T4 raised to Critical; T0a n
 | M10-T8 | Manage reservation and My reservations with cancellation requests | Critical | T1 | AC 8, 13; E2E-G-5 part, E2E-G-6 |
 | M10-T8b | Change booking: prefill from an empty G5 preview, preview and apply (G5, G6), old and new totals, "sent to the hotel for approval", deadline and contact fallback | Critical | T8, T5 | AC 12; E2E-G-9 |
 | M10-T9 | Book Now internal mode per branch (`BookingProvider` port takes the branch and listing, approved) | Low | T6 | AC 10; E2E-G-8 part |
-| M10-T10 | Page view beacon on every public page, `STEP_VIEW` in each booking step, session id kept across steps and sent with P7, within the script budget. Added 2026-11-27 (owner agreed at M10-T5): bring the results and details pages under the 260,000 byte script budget and add them to the Lighthouse run | Medium | T0a, T6, T8 | AC 11; T-ANL-11…12, Lighthouse budget |
+| M10-T10 | Page view beacon on every public page, `STEP_VIEW` in each booking step, session id kept across steps and sent with P7, within the script budget. Added 2026-11-27 (owner agreed at M10-T5): bring the results and details pages under the 260,000 byte script budget and add them to the Lighthouse run. Added 2026-11-28 (owner agreed after M10-T8): the same for `/reservations/manage` and `/reservations/find` | Medium | T0a, T6, T8 | AC 11; T-ANL-11…12, Lighthouse budget |
 | M10-T11 | Visual baselines for every booking step at 390 and 1280 px (added 2026-11-27, owner approved at M10-T5 planning; runs on the development server with fake providers). Runs after T10, before milestone close | Low | T2 to T10 | Brief tests: visual baselines |
 
 ## Consequences

@@ -104,7 +104,7 @@ Measured on 2026-11-28 on a local production build with a browser network trace 
 | `/reservations/find` | 258,291 | 268,329 |
 | `/{branch}/contact`, for comparison | 250,169 | 260,838 |
 
-With headers all three are above the 260,000 byte budget. The two guest pages were measured just before the final wording of their loading headings. **Open:** whether M10-T10 also brings the two guest pages under the budget and adds them to the Lighthouse run (recommended at M10-T8 acceptance, not yet confirmed by the owner).
+With headers all three are above the 260,000 byte budget. The two guest pages were measured just before the final wording of their loading headings. **Planned (M10-T10, owner 2026-11-28):** bring the two guest pages under the budget and add them to the Lighthouse run.
 
 ## Phase 10 measured baseline
 
