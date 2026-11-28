@@ -14,11 +14,11 @@ if ((bookingSearch || bookingJourney) && !e2eDatabaseUrl) {
 if (bookingSearch && bookingJourney) {
   throw new Error("Run BOOKING_SEARCH_E2E and BOOKING_JOURNEY_E2E separately.");
 }
-/** The one spec file of a focused booking run. */
+/** The spec files of a focused booking run. */
 const focused = bookingSearch
   ? /booking-search\.spec/
   : bookingJourney
-    ? /booking-journey\.spec/
+    ? /(booking-journey|guest-reservations)\.spec/
     : null;
 
 // Release acceptance (`npm run test:e2e:browsers`) repeats the public,

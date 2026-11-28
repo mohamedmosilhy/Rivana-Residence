@@ -202,6 +202,9 @@ it.each([
       "href",
       `mailto:${contact.email}`,
     );
+    expect(
+      screen.getByRole("link", { name: "My reservations" }),
+    ).toHaveAttribute("href", "/reservations/find");
     expect(getGuestReservation).not.toHaveBeenCalled();
   },
 );

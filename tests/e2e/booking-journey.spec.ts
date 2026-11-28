@@ -1,6 +1,4 @@
 import { execFile } from "node:child_process";
-import { mkdir } from "node:fs/promises";
-import path from "node:path";
 import { promisify } from "node:util";
 
 import { expect, test, type Page, type TestInfo } from "@playwright/test";
@@ -8,7 +6,11 @@ import { expect, test, type Page, type TestInfo } from "@playwright/test";
 import type { AvailabilityResponseDto } from "../../src/contracts/api/v1/availability";
 import { localDateAt } from "../../src/domain/shared/zoned-time";
 
-import { setKnownCode, verifyAccessibility } from "./support/booking";
+import {
+  screenshot,
+  setKnownCode,
+  verifyAccessibility,
+} from "./support/booking";
 import { sql } from "./support/session";
 
 // M10-T4, E2E-G-5 (booking part) on the development server with fake
@@ -92,39 +94,7 @@ async function capture(page: Page, testInfo: TestInfo, state: string) {
     : state.startsWith("checkout-")
       ? process.env.BOOKING_CHECKOUT_SCREENSHOTS
       : process.env.BOOKING_JOURNEY_SCREENSHOTS;
-  if (!directory || !testInfo.project.name.endsWith("chromium")) return;
-  const desktop = testInfo.project.name === "desktop-chromium";
-  const previous = page.viewportSize()!;
-  await page.setViewportSize(
-    desktop ? { width: 1280, height: 920 } : { width: 390, height: 844 },
-  );
-  await page.evaluate(async () => {
-    if (document.activeElement instanceof HTMLElement) {
-      document.activeElement.blur();
-    }
-    window.scrollTo({ top: 0, behavior: "instant" });
-    await document.fonts.ready;
-    // A photo still decoding would leave an empty frame in the picture.
-    await Promise.all(
-      Array.from(document.images, (image) => {
-        image.loading = "eager";
-        return image.decode().catch(() => undefined);
-      }),
-    );
-  });
-  await mkdir(directory, { recursive: true });
-  await page.screenshot({
-    path: path.join(
-      directory,
-      `${state}-${desktop ? "desktop" : "mobile"}.png`,
-    ),
-    fullPage: true,
-    animations: "disabled",
-    scale: "css",
-    // The development server's badge is not part of the page.
-    style: "nextjs-portal { display: none !important; }",
-  });
-  await page.setViewportSize(previous);
+  await screenshot(page, testInfo, directory, state);
 }
 
 test("AC-9, AC-13: a guest verifies by WhatsApp with the keyboard, and the token stays in memory", async ({

@@ -11,6 +11,7 @@ import {
 import { BookingDetails, type BookingDetail } from "./booking-details";
 import { readBookingResult } from "./booking-result";
 import { HotelContact, type HotelContactDetails } from "./hotel-contact";
+import { MyReservationsLink } from "./my-reservations-link";
 import type { StayTimes } from "./stay-dates";
 
 type Answer = BookingDetail | "missing" | "retry" | null;
@@ -95,6 +96,7 @@ export function BookingConfirmation({
             Use the private link in your booking message to manage your stay. If
             you need help, contact the hotel.
           </p>
+          <MyReservationsLink />
           <HotelContact contact={contact} />
         </div>
       )}

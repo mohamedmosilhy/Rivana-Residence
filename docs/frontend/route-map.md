@@ -23,8 +23,8 @@ Since M5 every public page lives under its branch, at `/{branch}/…` (ADR 026, 
 | `/{branch}/book/details?checkIn&checkOut&u` | Selected units, guest details, phone verification, extras, coupon, payment choice, review with VAT, submit (`POST /api/v1/reservations`). The address carries no personal data. `noindex` | Details and verification implemented (M10-T4); extras and coupon implemented (M10-T5); payment, review and submit implemented (M10-T6) |
 | `/{branch}/book/confirmed` | The booking made in this tab, read with API-G1; "Confirmed" only for `CONFIRMED`. The address carries no token. `noindex` | Implemented (M10-T6) |
 | `/{branch}/book/payment` | Hosted checkout return page. Shows the server status for the booking in this tab and offers recovery if the booking cannot be checked. `noindex` | Implemented (M10-T7) |
-| `/reservations/manage` | Guest manage page; reads the token from `#t=`; shows status, payment, and the cancellation request action | Planned (M10) |
-| `/reservations/find` | "My reservations": phone number plus WhatsApp code, then that number's reservations (30 minutes) | Planned (M10) |
+| `/reservations/manage#t=…` | Guest manage page in the brand shell. Takes the token from the fragment, removes it from the address, and keeps it in this tab. Shows the booking, payment status, cancellation and change request states, and the cancellation request action (API-G1, G2). `noindex` | Implemented (M10-T8); change booking planned (M10-T8b) |
+| `/reservations/find` | "My reservations" in the brand shell: a WhatsApp or email code (API-P9, P10, purpose `GUEST_SESSION`), then that contact's reservations and their detail for 30 minutes, with sign out (API-G3, G4). Linked from every public page's footer. `noindex` | Implemented (M10-T8) |
 
 Branch slugs never collide with `admin`, `api`, `media`, `reservations`, `book`, `sitemap.xml`, `robots.txt`, or legacy paths (validated on the branch).
 

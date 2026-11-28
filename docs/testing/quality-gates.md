@@ -44,7 +44,11 @@ The owner selected Node **26.13.0 LTS** for the Mac, CI, and hosting. On macOS w
 
 The required gates passed. `npm run check` passed with 2,547 unit and contract tests in 115 files, plus format, lint, type check, and the production build. PostgreSQL passed 1,077 tests in 67 files. Chromium passed 228 with 35 intentional skips. WebKit passed 100 with 29 intentional skips. Fresh and populated migrations showed no Prisma drift. Lighthouse passed for four URLs on each profile with three mobile paint warnings. The optional Firefox suite could not start on this Mac. The live walkthrough and focused tests verified all 16 criteria. [Exact commands and counts](../delivery/reports/m9-payments-and-cancellations.md#commands-and-results) · [Acceptance evidence](../delivery/reports/m9-payments-and-cancellations.md#acceptance-criteria-and-evidence)
 
-## Latest accepted task results (2026-11-28, M10-T7)
+## Latest accepted task results (2026-11-28, M10-T8)
+
+`npm run check` passed formatting, lint with one existing warning, type checking, 3,130 unit and contract tests in 142 files, and the production build. PostgreSQL passed 1,140 tests in 72 files across three shards, run before the review fixes, which changed no server code. Standard Chromium passed 246 tests with 93 intentional skips. The search run passed 35 with 10 skips and the journey run 130 with 5 skips, both in Chromium and WebKit. Six server only names were absent from all 51 browser files. Claude Opus 5.5 approved the final recheck with nits. [Task log](../delivery/reports/m10-guest-booking-journey.md#task-log) · [Independent review](../reviews/2026-11-28-m10-t8.md)
+
+## Previous accepted task results (2026-11-28, M10-T7)
 
 `npm run check` passed formatting, lint with one existing warning, type checking, 3,056 unit and contract tests in 139 files, and the production build. PostgreSQL passed 1,140 tests in 72 files across three shards. Standard Chromium passed 238 tests with 85 intentional skips. The focused payment return run passed 25 tests in Chromium and WebKit. Six server markers were absent from all 43 browser chunks. GPT-6 Astra approved with zero findings. [Task log](../delivery/reports/m10-guest-booking-journey.md#task-log) · [Independent review](../reviews/2026-11-28-m10-t7.md)
 

@@ -479,15 +479,20 @@ test("every Book Now control is inert, goes nowhere, and explains itself", async
       "Online booking is not available yet",
     );
   }
-  // No link anywhere points at a booking engine or carries booking data.
+  // No link anywhere points at a booking engine or carries booking data. The
+  // footer's own "My reservations" page (M10-T8) is the one allowed address.
   const hrefs = await page
     .locator("a[href]")
     .evaluateAll((links) =>
       links.map((link) => link.getAttribute("href") ?? ""),
     );
   expect(
-    hrefs.filter((href) =>
-      /\b(book|booking|reserve|reservations?|check-?in|arrival)\b/i.test(href),
+    hrefs.filter(
+      (href) =>
+        href !== "/reservations/find" &&
+        /\b(book|booking|reserve|reservations?|check-?in|arrival)\b/i.test(
+          href,
+        ),
     ),
   ).toEqual([]);
 });

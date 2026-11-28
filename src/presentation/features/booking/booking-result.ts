@@ -50,12 +50,17 @@ export function readBookingResult(branchSlug: string): SavedBooking | null {
   return null;
 }
 
-/** A replay supplies no new token. Never carry another booking into checkout. */
-export function keepMatchingResult(branchSlug: string, reference: string) {
-  if (readBookingResult(branchSlug)?.reference === reference) return;
+/** Removes the saved manage credential, as when a guest signs out. */
+export function forgetBookingResult() {
   try {
     sessionStorage.removeItem(resultKey);
   } catch {
     /* Storage can be unavailable. */
   }
+}
+
+/** A replay supplies no new token. Never carry another booking into checkout. */
+export function keepMatchingResult(branchSlug: string, reference: string) {
+  if (readBookingResult(branchSlug)?.reference !== reference)
+    forgetBookingResult();
 }

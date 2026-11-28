@@ -13,7 +13,12 @@ export type HotelContactDetails = Readonly<{
 /** The branch's contact links, wherever the guest should reach the hotel. */
 export function HotelContact({
   contact,
-}: Readonly<{ contact: HotelContactDetails }>) {
+  contactPage = true,
+}: Readonly<{
+  contact: HotelContactDetails;
+  /** False for a branch that has no public pages now. */
+  contactPage?: boolean;
+}>) {
   const { slug, phone, email } = contact;
   return (
     <div className="flex min-w-0 flex-wrap items-center gap-x-7">
@@ -34,9 +39,11 @@ export function HotelContact({
           </span>
         </a>
       )}
-      <Link href={`/${slug}/contact` as Route} className={link}>
-        Contact the hotel
-      </Link>
+      {contactPage && (
+        <Link href={`/${slug}/contact` as Route} className={link}>
+          Contact the hotel
+        </Link>
+      )}
     </div>
   );
 }

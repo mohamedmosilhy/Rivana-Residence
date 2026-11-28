@@ -22,3 +22,12 @@ export function displayTime(time: string) {
   const hours = Number(time.slice(0, 2));
   return `${hours % 12 || 12}${time.slice(2)} ${hours < 12 ? "AM" : "PM"}`;
 }
+
+/** A moment on the branch's clock, such as the cancellation deadline. */
+export function displayInstant(instant: string, timeZone: string) {
+  return new Intl.DateTimeFormat("en-GB", {
+    dateStyle: "full",
+    timeStyle: "short",
+    timeZone,
+  }).format(new Date(instant));
+}

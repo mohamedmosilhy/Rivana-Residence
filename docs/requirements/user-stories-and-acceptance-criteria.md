@@ -77,10 +77,10 @@ Acceptance criteria (AC) are written so they can become tests. Stories for the w
 - AC3: When I add the airport transfer I choose how many cars I need, up to the branch's maximum, and can add my flight number and arrival time; a per-car price is multiplied by the cars (Q-82).
 
 **US-G6 View my booking or request cancellation.** As a guest, I open my link or "My reservations" to see my booking and request cancellation.
-- AC1: A valid link shows my reservation, payment status, and any cancellation request; an invalid or expired link shows a neutral message and a "send me a new link" form.
+- AC1: A valid link shows my reservation, payment status, and any cancellation request; an invalid or expired link shows a neutral message, the way to "My reservations", and the hotel contacts.
 - AC2: Until 24 hours before the branch's check-in time on my arrival date, I can request cancellation with an optional reason; the booking stays confirmed until the hotel decides.
 - AC3: After that deadline there is no request button; the branch's contact details are shown.
-- AC4: I receive messages when my request is received and decided; if it was approved and I paid online, I am told the refund was requested through Paymob and when it completes.
+- AC4: I receive messages when my request is received and decided; if it was approved and I paid online, I am told the refund was requested and when it completes.
 
 **US-G6a Change my booking (API implemented in M9, UI planned in M10).** As a guest, I change my dates, rooms or apartments, guests, extras (including the number of cars), name, email, or special requests from my link or "My reservations" (Q-83).
 - AC1: Before confirming I see whether the change is available and my old and new totals with VAT; nothing changes until I confirm.
@@ -88,8 +88,8 @@ Acceptance criteria (AC) are written so they can become tests. Stories for the w
 - AC3: For a booking I paid online, a change that keeps the same total applies at once; one that changes the total is sent to the hotel as a request, and I am told the decision. Any difference is settled at the hotel (Q-85).
 - AC4: My phone number, branch, payment method, and coupon cannot be changed online. After 24 hours before check-in, or while a request is open, I see the branch's contact details instead (Q-84).
 
-**US-G7 My reservations.** As a guest, I enter my phone number and a WhatsApp code to see my reservations.
-- AC1: After a correct code I see every reservation made with that number, for 30 minutes.
+**US-G7 My reservations.** As a guest, I enter my phone number and a WhatsApp code, or ask for an email code (ADR 031), to see my reservations.
+- AC1: After a correct WhatsApp code I see the reservations made with that number, except those verified by email; after a correct email code I see those whose contact email is that address. Access lasts 30 minutes.
 - AC2: Code requests and attempts are rate-limited.
 
 **US-G8 Offers by WhatsApp (planned M13).** As a guest, I can opt in to receive offers by WhatsApp and stop them at any time.

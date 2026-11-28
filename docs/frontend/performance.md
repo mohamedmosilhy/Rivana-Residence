@@ -94,6 +94,18 @@ Measured on 2026-11-27 with Lighthouse `resource-summary` (script transfer, head
 
 Both are above the 260,000 byte budget. [`.lighthouserc.cjs`](../../.lighthouserc.cjs) audits only Home, Rooms, a room detail, and Contact, and its script size assertion is a warning, so no gate reported this. The M10-T4 note of 259,207 bytes for the results page was not reproduced. The extras step and price panel load on demand (about 8 KB compressed). **Planned (M10-T10, owner 2026-11-27):** bring both pages under the budget and add them to the Lighthouse run.
 
+### Guest pages (M10-T8)
+
+Measured on 2026-11-28 on a local production build with a browser network trace at 390 px, not with Lighthouse. Bodies are the compressed script bytes; the second column adds response headers, as Lighthouse does.
+
+| Page | Script bodies | With headers |
+| --- | --- | --- |
+| `/reservations/manage` | 259,097 | 269,120 |
+| `/reservations/find` | 258,291 | 268,329 |
+| `/{branch}/contact`, for comparison | 250,169 | 260,838 |
+
+With headers all three are above the 260,000 byte budget. The two guest pages were measured just before the final wording of their loading headings. **Open:** whether M10-T10 also brings the two guest pages under the budget and adds them to the Lighthouse run (recommended at M10-T8 acceptance, not yet confirmed by the owner).
+
 ## Phase 10 measured baseline
 
 Lighthouse 13.0.1 ran the production build on Home, Rooms, a room detail, and Contact under desktop and mobile throttling. Accessibility, best practices, and SEO score 100 on every route. Desktop performance is 99–100; mobile is 84–94. CLS is 0 and total blocking time is 0–8 ms throughout. Script transfer is 205 KB on each measured route, below the enforced 260 KB regression gate but above the original 120 KB aspiration.

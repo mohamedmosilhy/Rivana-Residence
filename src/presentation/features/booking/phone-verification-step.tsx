@@ -40,6 +40,11 @@ import {
   type VerificationLifetimes,
 } from "./verification-state";
 
+/** How to reach the booking's hotel, or any hotel when there is no one. */
+type HotelHelp = Readonly<
+  | { contact: HotelContactDetails; help?: never }
+  | { contact?: never; help: ReactNode }
+>;
 type View = "send" | "code" | "verified";
 const NOT_CONFIGURED = ["WHATSAPP_NOT_CONFIGURED", "EMAIL_NOT_CONFIGURED"];
 const CHANNELS: readonly VerificationChannel[] = ["WHATSAPP", "EMAIL"];
@@ -58,8 +63,10 @@ function useNow() {
 }
 
 /**
- * Step 2: prove the phone by WhatsApp (API-P9, P10), or the email where an
- * online payment is possible (Q-100). The journey holds the result.
+ * Prove the phone by WhatsApp or an email address (API-P9, P10). The caller
+ * holds the result. In the booking it is step 2, and email is offered only
+ * where an online payment is possible (Q-100). On "My reservations" the code
+ * opens a guest session.
  */
 export function PhoneVerificationStep({
   phone,
@@ -68,6 +75,8 @@ export function PhoneVerificationStep({
   lifetimes,
   value,
   contact,
+  purpose = "BOOKING",
+  help,
   onChange,
   onBlocked,
   onInvalidContact,
@@ -81,7 +90,7 @@ export function PhoneVerificationStep({
   channels: Readonly<{ whatsapp: boolean; email: boolean }>;
   lifetimes: VerificationLifetimes;
   value: Verification;
-  contact: HotelContactDetails;
+  purpose?: "BOOKING" | "GUEST_SESSION";
   onChange: (value: Verification) => void;
   onBlocked: () => void;
   /** The server refused the phone or email itself. */
@@ -89,7 +98,8 @@ export function PhoneVerificationStep({
   onEdit: () => void;
   /** What follows a successful verification. */
   children?: ReactNode;
-}>) {
+}> &
+  HotelHelp) {
   const offered = CHANNELS.filter((channel) =>
     channel === "WHATSAPP" ? channels.whatsapp : channels.email,
   );
@@ -152,7 +162,7 @@ export function PhoneVerificationStep({
     const askedAt = deviceTime();
     const result = await requestVerification({
       phone,
-      purpose: "BOOKING",
+      purpose,
       channel: by,
       ...(by === "EMAIL" ? { email: address } : {}),
     });
@@ -283,8 +293,11 @@ export function PhoneVerificationStep({
   // A code that timed out outranks an earlier remark about checking it.
   const alert =
     problem && (problem.channel || !expired) ? problem.message : expired;
-  const emailNote =
-    "With a code by email you pay online, and the hotel confirms your phone number when you arrive.";
+  const session = purpose === "GUEST_SESSION";
+  const emailNote = session
+    ? null
+    : "With a code by email you pay online, and the hotel confirms your phone number when you arrive.";
+  const hotelHelp = contact ? <HotelContact contact={contact} /> : help;
   const edit = (
     <button
       type="button"
@@ -292,14 +305,16 @@ export function PhoneVerificationStep({
       disabled={pending !== null}
       onClick={onEdit}
     >
-      Edit your details
+      {session ? "Change your phone or email" : "Edit your details"}
     </button>
   );
 
   return (
     <div className="grid gap-5">
       <div className="grid gap-2">
-        <p className={eyebrowFlush}>Step 2 of 5</p>
+        <p className={eyebrowFlush}>
+          {session ? "Step 2 of 2" : "Step 2 of 5"}
+        </p>
         <h2 ref={heading} tabIndex={-1} className={bookingHeading}>
           Verify your contact
         </h2>
@@ -309,9 +324,7 @@ export function PhoneVerificationStep({
         <div id="verification-alert" role="alert" className={alertBox}>
           <p className="m-0 text-danger">{alert}</p>
           {/* A code that could not be sent: the hotel is the other way in. */}
-          {problem?.channel && channel !== undefined && (
-            <HotelContact contact={contact} />
-          )}
+          {problem?.channel && channel !== undefined && hotelHelp}
         </div>
       )}
 
@@ -428,7 +441,9 @@ export function PhoneVerificationStep({
               You can send another code in {waitText(resendWait)}.
             </p>
           )}
-          {other === "EMAIL" && <p className={fieldHelp}>{emailNote}</p>}
+          {other === "EMAIL" && emailNote && (
+            <p className={fieldHelp}>{emailNote}</p>
+          )}
           {edit}
         </form>
       )}
@@ -445,9 +460,12 @@ export function PhoneVerificationStep({
           {channel === undefined ? (
             <>
               <p className="m-0">
-                A code cannot be sent right now. Contact the hotel to book.
+                A code cannot be sent right now.{" "}
+                {session
+                  ? "Contact the hotel about your booking."
+                  : "Contact the hotel to book."}
               </p>
-              <HotelContact contact={contact} />
+              {hotelHelp}
             </>
           ) : (
             <>
@@ -480,7 +498,9 @@ export function PhoneVerificationStep({
                   {destination(channel)}.
                 </p>
               )}
-              {channel === "EMAIL" && <p className={fieldHelp}>{emailNote}</p>}
+              {channel === "EMAIL" && emailNote && (
+                <p className={fieldHelp}>{emailNote}</p>
+              )}
               <button
                 type="submit"
                 disabled={pending !== null}

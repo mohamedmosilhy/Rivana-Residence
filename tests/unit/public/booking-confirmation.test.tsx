@@ -64,6 +64,10 @@ it("keeps the one-time token scoped to the booking branch and rejects malformed 
 it("asks for the booking message on a direct visit", async () => {
   render(<BookingConfirmation contact={contact} times={stayTimes} />);
   expect(await screen.findByText("Open your booking message")).toBeVisible();
+  expect(screen.getByRole("link", { name: "My reservations" })).toHaveAttribute(
+    "href",
+    "/reservations/find",
+  );
   expect(getGuestReservation).not.toHaveBeenCalled();
 });
 it.each([

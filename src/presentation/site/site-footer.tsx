@@ -136,9 +136,16 @@ export function SiteFooter({
         ) : null}
       </div>
       <div
-        className={`${container} border-t border-inverse-line-subtle py-6 text-[0.8125rem] text-inverse-muted`}
+        className={`${container} flex flex-wrap items-center justify-between gap-x-8 gap-y-2 border-t border-inverse-line-subtle py-4 text-[0.8125rem] text-inverse-muted`}
       >
         <p className="m-0">{settings?.footerText ?? `© ${siteName}`}</p>
+        <Link
+          href={"/reservations/find" as Route}
+          prefetch={false}
+          className={`inline-flex min-h-11 items-center ${LINK}`}
+        >
+          My reservations
+        </Link>
       </div>
     </footer>
   );

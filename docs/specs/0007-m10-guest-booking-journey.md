@@ -187,6 +187,7 @@ The time zone and prefill choices keep contract changes minimal: one additive fi
 | Idempotency key | Component state, `crypto.randomUUID()` per submission content, kept across retries | One booking per submission (US-G3 AC4) |
 | P7 result (reference, status, manage token) | `sessionStorage` (`rivana.booking.result`) | Read by the confirmed and payment return pages |
 | Guest session token (My reservations) | Component state plus `sessionStorage`, dropped at its `expiresAt` | 30 minute session survives a reload in the tab |
+| Manage token opened from a link | Component state plus `sessionStorage` (`rivana.access.manage`), dropped when refused or at sign out (amended M10-T8) | A reload of the manage page keeps working |
 | Analytics session id | `sessionStorage` (`rivana.analytics.session`), 128 bit random, hex | Created by the client helper in T1; absent under GPC or DNT |
 
 ### Typed API client (T1)
@@ -207,7 +208,7 @@ Reads the manage token from `sessionStorage`. Polls G1 every 2 seconds for 20 se
 
 ### Manage, My reservations, cancellation (T8) and change (T8b)
 
-- Manage reads `#t=` once, moves it to memory, and removes it from the address bar with `history.replaceState`. Shows status, payment status, details, price, cancellation request state (open, approved, rejected, refund pending, refund failed, completed, closed), change request state. "Request cancellation" (optional reason, confirm) only when `allowedActions` contains `REQUEST_CANCELLATION`; otherwise the branch contact details. An invalid link shows the neutral message and the My reservations path (US-G6 AC1).
+- Manage reads `#t=`, removes it from the address bar with `history.replaceState`, and keeps it in memory and this tab's `sessionStorage` (amended at M10-T8). Shows status, payment status, details, price, cancellation request state (open, approved, rejected, refund pending, refund failed, completed, closed), change request state. "Request cancellation" (optional reason, confirm) only when `allowedActions` contains `REQUEST_CANCELLATION`; otherwise the branch contact details. An invalid link shows the neutral message and the My reservations path (US-G6 AC1).
 - My reservations: phone (and email when the guest chooses the email channel) then code (P9, P10 with `GUEST_SESSION`), then G3 list and G4 detail with the same actions.
 - Change booking appears only when `allowedActions` contains `CHANGE_RESERVATION`. It opens the same step components prefilled from an empty G5 preview (`{}`; its `current` quote gives stay, lines with `roomSlug` and occupancy, and services with cars) plus G1 (flight details from `price.services[].details`; `fullName`, `email`, `specialRequests` from `contact`, the only editable contact fields). Availability for new dates comes from P5. Preview (G5) shows what changed and old and new totals with VAT; confirm calls G6 with `If-Match` (the preview's `ETag`) and `expectedTotal = proposed.total`. `200` → "Your booking was changed"; `202` → "Sent to the hotel for approval"; `412` → reload and preview again; `409 PRICE_CHANGED` → show `context.quote.preview`; `403 CHANGE_NOT_ALLOWED` → contact details. Phone, branch, payment method, and coupon are read only.
 
@@ -446,6 +447,27 @@ Added by the owner after M10-T6 (Q-102):
 
 - The "Your stay" panel (every booking step, review included) and the confirmation page show Check-in and Check-out, each with its date and the hotel's hours, through `StayDates`. M10-T8 reuses it.
 - `GetBookingSetup` returns the four branch times for the details page. The confirmation page takes them from the public branch, after it has checked the booking belongs to that branch. The guest reservation API is unchanged.
+
+### Settled during M10-T8 (2026-11-28)
+
+Owner decisions at planning (the five recommendations, approved with the plan):
+
+- The manage token is also kept in the tab's storage, so a reload works.
+- "My reservations" is linked from the footer of every public page, and from the manage, confirmation and payment return screens.
+- A page that does not know the hotel shows the phone and email of every active branch.
+- Check-in and check-out hours come from the public branches. A booking at an inactive branch shows its dates without hours. No contract change.
+- "My reservations" has a sign out button. There is no server sign out; the session still ends after 30 minutes.
+
+As built:
+
+- Sign out removes every booking key in the tab: the session, the manage token and the saved booking result (review finding; kept at acceptance).
+- A key is dropped only for `UNAUTHENTICATED`, `PHONE_NOT_VERIFIED`, `NOT_FOUND` or `PHONE_BLOCKED`. A proxy error page with the same status keeps it.
+- The cancellation button depends only on `allowedActions`. After a request or a lost reply the screen reads the booking again, and offers nothing until that read succeeds.
+- No change booking action yet; a change request's state is shown (M10-T8b adds the action).
+- The footer link is the one address the public site test allows among links that mention reservations.
+- No server rule, API, schema or port change. The one server addition reads which code channels are ready.
+
+Known limits: the browser's own history may keep the first link address; the phone's Back button leaves "My reservations" instead of returning to the list; a page left open past the deadline shows the button until the server refuses; a lazy step that fails to download needs a reload.
 
 ## Build plan
 

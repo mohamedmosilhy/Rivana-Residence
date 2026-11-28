@@ -55,6 +55,14 @@ export function normalizeGuestDetails(details: GuestDetails): GuestDetails {
   };
 }
 
+/** What is wrong with a trimmed email address, if anything. */
+export function emailProblem(email: string) {
+  if (!email) return "Enter your email address.";
+  if (email.length > GUEST_INPUT_LIMITS.email || !EMAIL.test(email))
+    return "Enter a valid email address, such as name@example.com.";
+  return null;
+}
+
 /** Checks normalized details. The phone number itself is checked separately. */
 export function checkGuestDetails(details: GuestDetails): GuestDetailsErrors {
   const errors: GuestDetailsErrors = {};
@@ -66,9 +74,8 @@ export function checkGuestDetails(details: GuestDetails): GuestDetailsErrors {
   else if (fullName.length > GUEST_INPUT_LIMITS.fullName)
     errors.fullName = tooLong(GUEST_INPUT_LIMITS.fullName);
 
-  if (!email) errors.email = "Enter your email address.";
-  else if (email.length > GUEST_INPUT_LIMITS.email || !EMAIL.test(email))
-    errors.email = "Enter a valid email address, such as name@example.com.";
+  const wrongEmail = emailProblem(email);
+  if (wrongEmail) errors.email = wrongEmail;
 
   if (!phone) errors.phone = "Enter your phone number.";
 

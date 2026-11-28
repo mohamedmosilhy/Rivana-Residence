@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import type { z } from "zod";
 
 import type { GuestReservation } from "@/contracts/api/v1/guests";
@@ -16,6 +17,7 @@ import { Icon } from "@/presentation/site/icons";
 
 import { serviceName } from "./extras-answer";
 import { count, PriceRow, vatLabel } from "./price-row";
+import { reservationStatusText } from "./reservation-wording";
 import { StayDates, type StayTimes } from "./stay-dates";
 
 export type BookingDetail = z.output<typeof GuestReservation>;
@@ -24,7 +26,13 @@ export type BookingDetail = z.output<typeof GuestReservation>;
 export function BookingDetails({
   booking,
   times,
-}: Readonly<{ booking: BookingDetail; times: StayTimes }>) {
+  moreFacts,
+}: Readonly<{
+  booking: BookingDetail;
+  times: StayTimes;
+  /** Further `dt` and `dd` pairs for the fact list, each in its own `div`. */
+  moreFacts?: ReactNode;
+}>) {
   const confirmed = booking.status === "CONFIRMED";
   const { price, units } = booking;
   const payment =
@@ -48,7 +56,7 @@ export function BookingDetails({
       </div>
       {!confirmed && (
         <p className="m-0">
-          Current status: {booking.status.replaceAll("_", " ").toLowerCase()}.
+          Current status: {reservationStatusText(booking.status)}.
         </p>
       )}
       <div className="grid gap-1 border-l-2 border-gold-400 bg-canvas px-4 py-3">
@@ -67,6 +75,7 @@ export function BookingDetails({
           <dt className={factTerm}>Payment method</dt>
           <dd className={factValue}>{payment}</dd>
         </div>
+        {moreFacts}
       </dl>
       {(units.length > 0 || price) && (
         <div className={bookingBlock}>

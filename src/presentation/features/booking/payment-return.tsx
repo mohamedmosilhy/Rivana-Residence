@@ -16,6 +16,7 @@ import { Icon } from "@/presentation/site/icons";
 import { BookingDetails, type BookingDetail } from "./booking-details";
 import { readBookingResult } from "./booking-result";
 import { HotelContact, type HotelContactDetails } from "./hotel-contact";
+import { MyReservationsLink } from "./my-reservations-link";
 import type { StayTimes } from "./stay-dates";
 
 const fastPhaseMs = 20_000;
@@ -48,7 +49,7 @@ const messages = {
   },
   missing: {
     title: "Open your booking message",
-    body: "If you’ve received a booking message, use its private link to check your stay. You can also contact the hotel for help.",
+    body: "If you’ve received a booking message, use its private link to check your stay. You can also find it in My reservations or contact the hotel.",
     icon: "mail",
     tone: "border-gold-400 text-plum-700",
   },
@@ -268,6 +269,7 @@ export function PaymentReturn({
                 Check again
               </button>
             )}
+            {screen.status === "missing" && <MyReservationsLink />}
             {screen.status === "failed" && (
               <Link
                 href={`/${slug}/book` as Route}
@@ -289,6 +291,7 @@ export function PaymentReturn({
             Use the private link in your booking message to manage your stay.
           </p>
         )}
+        {confirmed && <MyReservationsLink />}
         <HotelContact contact={contact} />
       </aside>
     </div>

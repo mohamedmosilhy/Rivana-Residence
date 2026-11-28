@@ -47,6 +47,16 @@ export function verificationChannelReadiness(
   };
 }
 
+/** Which channels can send a "My reservations" code now. P9 still decides. */
+export async function guestCodeChannels() {
+  const readiness = verificationChannelReadiness();
+  const [whatsapp, email] = await Promise.all([
+    readiness.isReady("WHATSAPP"),
+    readiness.isReady("EMAIL"),
+  ]);
+  return { whatsapp, email };
+}
+
 /** API-A9 and the admin Guest verification page (Q-99). */
 export function manageVerificationSettings(
   client: ReturnType<typeof getPrisma> = getPrisma(),

@@ -32,8 +32,8 @@ import {
   type BranchParams,
 } from "../../../site-content";
 
+import { phoneCountries } from "../../../phone-countries";
 import { readDetailsQuery } from "./details-query";
-import { phoneCountries } from "./phone-countries";
 
 export async function generateMetadata({
   params,
