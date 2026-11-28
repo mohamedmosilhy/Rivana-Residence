@@ -143,6 +143,9 @@ export async function runSeed(
     log(
       "Demo checkout example: verify a fictional guest, apply DEMO_PERCENT, then review VAT and choose Pay at the hotel. An email code requires online checkout.",
     );
+    log(
+      "Demo payment return example: choose Pay online with the local fake gateway, simulate a result, then select Return to booking in the same tab.",
+    );
     const reservations = await seedDemoReservations(client, user.id);
     log(
       `Demo reservations: created ${reservations.created} fictional bookings; existing records preserved.`,

@@ -2,7 +2,7 @@
 
 ## Frontend
 - Public pages live at `/{branch}/...` (home, about, stay, stay/[slug], facilities, contact). `/` is a branch chooser (2+ active branches), redirects for one, holding page for none. Old URLs and `*.html` redirect permanently to `new-cairo`. Branch slugs cannot be `admin, api, media, reservations, book, ...`.
-- Planned M10: `/{branch}/book`, `/book/details`, `/book/confirmed`, `/book/payment`, `/reservations/manage`, `/reservations/find`.
+- M10 has delivered `/{branch}/book` and its `details`, `confirmed`, and `payment` pages. The `/reservations/manage` and `/reservations/find` pages are planned for M10-T8.
 - Staff `/admin/...`: nav shows only permitted destinations; each page re-checks the capability. Built: login, overview, pages, rooms, facilities, media, enquiries, settings, staff, account, branches. Planned: M11 reservations/availability/inventory/guests/cancellations; M12 pricing/reports/audit/services/coupons; M13 broadcasts. Sync reminder is part of the shell.
 - Components: Server Components by default, small client islands; components take view models; `ui/` primitives know no hotel concepts; `design/` uses semantic variants; admin dialogs on native `<dialog>`; Tailwind tokens, plum and gold identity.
 

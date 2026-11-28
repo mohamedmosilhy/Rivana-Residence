@@ -1,8 +1,11 @@
+import { execFile } from "node:child_process";
 import { mkdir } from "node:fs/promises";
 import path from "node:path";
+import { promisify } from "node:util";
 
 import { expect, test, type Page, type TestInfo } from "@playwright/test";
 
+import type { AvailabilityResponseDto } from "../../src/contracts/api/v1/availability";
 import { localDateAt } from "../../src/domain/shared/zoned-time";
 
 import { setKnownCode, verifyAccessibility } from "./support/booking";
@@ -84,9 +87,11 @@ async function enterCode(page: Page, value: string) {
 }
 
 async function capture(page: Page, testInfo: TestInfo, state: string) {
-  const directory = state.startsWith("checkout-")
-    ? process.env.BOOKING_CHECKOUT_SCREENSHOTS
-    : process.env.BOOKING_JOURNEY_SCREENSHOTS;
+  const directory = state.startsWith("payment-return-")
+    ? process.env.BOOKING_PAYMENT_RETURN_SCREENSHOTS
+    : state.startsWith("checkout-")
+      ? process.env.BOOKING_CHECKOUT_SCREENSHOTS
+      : process.env.BOOKING_JOURNEY_SCREENSHOTS;
   if (!directory || !testInfo.project.name.endsWith("chromium")) return;
   const desktop = testInfo.project.name === "desktop-chromium";
   const previous = page.viewportSize()!;
@@ -766,7 +771,7 @@ test("checkout: two units with extras, coupon and VAT are confirmed once", async
   await capture(page, info, "checkout-confirmed");
 });
 
-test("checkout: email verification hands a pending booking to hosted checkout", async ({
+test("E2E-G-3: email checkout stays pending until the delayed success arrives", async ({
   page,
 }, info) => {
   const days = 55 + projects.indexOf(info.project.name) * 3;
@@ -784,6 +789,259 @@ test("checkout: email verification hands a pending booking to hosted checkout", 
   await button(page, "Continue to secure checkout").click();
   await expect(page).toHaveURL(/\/dev\/fake-checkout\//);
   expect((await records(who)).rows[0].status).toBe("AWAITING_PAYMENT");
+
+  const checkoutUrl = page.url();
+  await simulateCheckout(
+    page,
+    "Record success for later delivery",
+    "Payment recorded.",
+  );
+  const back = page.getByRole("link", { name: "Return to booking" });
+  await expect(back).toHaveAttribute("href", /\/new-cairo\/book\/payment$/);
+  const guestRead = page.waitForResponse(
+    (response) => response.url().endsWith(guestReadPath) && response.ok(),
+  );
+  await back.click();
+  const pending = await guestRead;
+  const auth = (await pending.request().allHeaders()).authorization;
+  expect(/^Bearer [A-Za-z0-9_-]{43}$/.test(auth ?? "")).toBe(true);
+  expect(new URL(pending.url()).search).toBe("");
+  await expect(page).toHaveURL(/\/new-cairo\/book\/payment$/);
+  await expect(heading(page, "Checking your booking")).toBeVisible();
+  expect((await pending.json()).status).toBe("AWAITING_PAYMENT");
+
+  // Simulate what a hosted checkout could append. Rivana still sees pending.
+  await page.goto("/new-cairo/book/payment?success=true&status=CONFIRMED");
+  await page.setViewportSize({ width: 320, height: 844 });
+  await expect(heading(page, "Checking your booking")).toBeVisible();
+  await expect(heading(page, "Confirmed")).toHaveCount(0);
+  await verifyAccessibility(page);
+  await capture(page, info, "payment-return-checking");
+
+  const gateway = await page.context().newPage();
+  try {
+    await gateway.goto(checkoutUrl);
+    await simulateCheckout(
+      gateway,
+      "Deliver delayed success",
+      "accepted the simulated notification",
+    );
+  } finally {
+    await gateway.close();
+  }
+  await expect(heading(page, "Confirmed")).toBeVisible();
+  const booking = (await records(who)).rows[0];
+  expect(booking.status).toBe("CONFIRMED");
+  await expect(
+    page.getByText(booking.reference, { exact: true }),
+  ).toBeVisible();
+  await expect(page.getByText("Online payment", { exact: true })).toBeVisible();
+  await verifyAccessibility(page);
+  await capture(page, info, "payment-return-confirmed");
+});
+
+const guestReadPath = "/api/v1/guest/reservation";
+
+async function simulateCheckout(page: Page, action: string, message: string) {
+  await button(page, action).click();
+  await expect(page.getByRole("status")).toContainText(message);
+}
+
+async function availableDoubles(page: Page, details: string) {
+  const query = new URL(details, "http://localhost").searchParams;
+  query.delete("u");
+  query.set("adults", "2");
+  query.set("children", "0");
+  const response = await page.request.get(
+    `/api/v1/branches/new-cairo/availability?${query}`,
+  );
+  expect(response.ok()).toBe(true);
+  const { results } = (await response.json()) as AvailabilityResponseDto;
+  return results.find(({ roomType }) => roomType.slug === "deluxe-double")
+    ?.unitsAvailable;
+}
+
+for (const [outcome, scenario, firstDay] of [
+  ["closed", 16, 135],
+  ["expired", 17, 155],
+] as const) {
+  test(`E2E-G-3: a ${outcome} checkout ends the hold and releases the unit`, async ({
+    page,
+    baseURL,
+  }, info) => {
+    const details = detailsPage(
+      firstDay + projects.indexOf(info.project.name) * 3,
+    );
+    const before = await availableDoubles(page, details);
+    expect(before).toBeGreaterThan(0);
+    const who = await checkoutGuest(page, info, scenario, details, true);
+    await button(page, "Continue to payment").click();
+    await button(page, "Continue to review").click();
+    await box(page, /I accept the privacy/).check();
+    await button(page, "Continue to secure checkout").click();
+    await expect(page).toHaveURL(/\/dev\/fake-checkout\//);
+    expect(await availableDoubles(page, details)).toBe((before ?? 0) - 1);
+
+    const back = page.getByRole("link", { name: "Return to booking" });
+    if (outcome === "closed") {
+      await simulateCheckout(
+        page,
+        "Decline payment",
+        "accepted the simulated notification",
+      );
+      expect((await records(who)).rows[0].status).toBe("AWAITING_PAYMENT");
+      await simulateCheckout(
+        page,
+        "Close checkout",
+        "accepted the simulated notification",
+      );
+      await back.click();
+    } else {
+      await page.clock.install();
+      const guestRead = page.waitForResponse(
+        (response) => response.url().endsWith(guestReadPath) && response.ok(),
+      );
+      await back.click();
+      expect((await (await guestRead).json()).status).toBe("AWAITING_PAYMENT");
+      // Let the pending response finish before moving the browser clock.
+      await expect(heading(page, "Checking your booking")).toBeVisible();
+      await page.clock.runFor(2500);
+      await page.clock.fastForward(120_000);
+      await expect(
+        heading(page, "Still waiting for the payment result"),
+      ).toBeVisible();
+      await page.setViewportSize({ width: 320, height: 844 });
+      await verifyAccessibility(page);
+      await capture(page, info, "payment-return-waiting");
+
+      const database = process.env.E2E_DATABASE_URL;
+      expect(new URL(database ?? "").pathname).toMatch(/_test$/);
+      await sql(
+        'UPDATE "Reservation" SET "holdExpiresAt" = now() WHERE "guestPhone" = $1 AND status = $2',
+        [who.phone, "AWAITING_PAYMENT"],
+      );
+      await expect
+        .poll(
+          async () => {
+            await promisify(execFile)(
+              "npm",
+              ["run", "reservations", "--", "expire-holds"],
+              {
+                env: {
+                  ...process.env,
+                  APP_URL: baseURL,
+                  DATABASE_URL: database,
+                  DIRECT_DATABASE_URL: database,
+                },
+              },
+            );
+            return (await records(who)).rows[0].status;
+          },
+          { timeout: 20_000 },
+        )
+        .toBe("PAYMENT_FAILED");
+      await button(page, "Check again").press("Enter");
+    }
+
+    await expect(heading(page, "Payment not completed")).toBeVisible();
+    expect((await records(who)).rows[0].status).toBe("PAYMENT_FAILED");
+    expect(await availableDoubles(page, details)).toBe(before);
+    await page.setViewportSize({ width: 320, height: 844 });
+    await verifyAccessibility(page);
+    if (outcome === "closed")
+      await capture(page, info, "payment-return-failed");
+    await page.getByRole("link", { name: "Search again" }).press("Enter");
+    await expect(page).toHaveURL(/\/new-cairo\/book$/);
+  });
+}
+
+test("payment return: offers recovery for a missing booking or a failed status check", async ({
+  page,
+}, info) => {
+  await page.setViewportSize({ width: 320, height: 844 });
+  await page.goto("/new-cairo/book/payment?success=true");
+  await expect(heading(page, "Open your booking message")).toBeVisible();
+  await verifyAccessibility(page);
+  await capture(page, info, "payment-return-no-access");
+
+  await page.evaluate(() =>
+    sessionStorage.setItem(
+      "rivana.booking.result",
+      JSON.stringify({
+        reference: "DEMO",
+        branchSlug: "new-cairo",
+        status: "AWAITING_PAYMENT",
+        token: "x".repeat(43),
+      }),
+    ),
+  );
+  let reply: "offline" | "busy" | "cancelled" = "offline";
+  await page.route(`**${guestReadPath}`, (route) => {
+    switch (reply) {
+      case "offline":
+        return route.abort();
+      case "busy":
+        return route.fulfill({
+          status: 429,
+          headers: { "Retry-After": "30" },
+          json: { code: "RATE_LIMITED", title: "Too many requests" },
+        });
+      case "cancelled":
+        return route.fulfill({
+          status: 200,
+          json: {
+            status: "CANCELLED",
+            reference: "DEMO",
+            branch: { slug: "new-cairo" },
+            paymentMethod: "ONLINE",
+          },
+        });
+    }
+  });
+  await page.clock.install();
+  await page.reload();
+  await expect(heading(page, "We couldn’t check your booking")).toBeVisible();
+  await verifyAccessibility(page);
+  await capture(page, info, "payment-return-check-error");
+
+  reply = "busy";
+  const retry = button(page, "Check again");
+  await retry.press("Enter");
+  await expect(retry).toBeDisabled();
+  await verifyAccessibility(page);
+  await capture(page, info, "payment-return-rate-limited");
+  await page.clock.fastForward(30_000);
+  await expect(retry).toBeEnabled();
+
+  reply = "cancelled";
+  await retry.press("Enter");
+  await expect(
+    heading(page, "Check your current booking status"),
+  ).toBeVisible();
+  await verifyAccessibility(page);
+  await capture(page, info, "payment-return-other-status");
+
+  await page.unroute(`**${guestReadPath}`);
+  await page.reload();
+  await expect(heading(page, "Open your booking message")).toBeVisible();
+  await expect(heading(page, "Confirmed")).toHaveCount(0);
+});
+
+test.describe("payment return without JavaScript", () => {
+  test.use({ javaScriptEnabled: false });
+
+  test("gives the guest a recovery path", async ({ page }, info) => {
+    await page.setViewportSize({ width: 320, height: 844 });
+    await page.goto("/new-cairo/book/payment");
+    await expect(
+      page.getByText(/Enable JavaScript to check here/),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("link", { name: "Contact the hotel" }),
+    ).toBeVisible();
+    await expect(heading(page, "Confirmed")).toHaveCount(0);
+    await capture(page, info, "payment-return-no-javascript");
+  });
 });
 
 test("checkout: a lost response retries exactly the same saved booking", async ({

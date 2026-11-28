@@ -1,6 +1,6 @@
 # M10 — Guest booking journey
 
-Status: **In progress (10/16 tasks accepted).** [Task log](../reports/m10-guest-booking-journey.md#task-log). Opened 2026-11-26: spec [0007](../../specs/0007-m10-guest-booking-journey.md) and the task breakdown below were approved by the owner on 2026-11-26, after an independent cross check with every recommended fix applied. Scope extended by the owner on 2026-11-17 with first-party website analytics (M10-T0a, T0b, T10; ADR 029, Q-86, Q-87), the guest change UI (M10-T8b; Q-83…Q-85), and the transfer car selector (M10-T5; Q-82). Branch: `m10-guest-booking-journey`. Follow the [milestone loop](./README.md#the-loop-every-milestone-follows).
+Status: **In progress (11/16 tasks accepted).** [Task log](../reports/m10-guest-booking-journey.md#task-log). Opened 2026-11-26: spec [0007](../../specs/0007-m10-guest-booking-journey.md) and the task breakdown below were approved by the owner on 2026-11-26, after an independent cross check with every recommended fix applied. Scope extended by the owner on 2026-11-17 with first-party website analytics (M10-T0a, T0b, T10; ADR 029, Q-86, Q-87), the guest change UI (M10-T8b; Q-83…Q-85), and the transfer car selector (M10-T5; Q-82). Branch: `m10-guest-booking-journey`. Follow the [milestone loop](./README.md#the-loop-every-milestone-follows).
 
 ## Objective
 
@@ -55,7 +55,7 @@ Planned, reviewed, and accepted one task at a time ([agent-workflow.md](../../en
 | M10-T5b | Hint under the transfer car selector: how many people the chosen cars take, 2 per car, information only (Q-101; added 2026-11-27, owner approved) | Low | T5 | `ServicesPicker` tests; E2E journey | Accepted 2026-11-27 |
 | M10-T6 | Payment choice, review, placeholder legal copy flagged by the audit, submit, confirmation page, conflict and price-change paths. From the M10-T5 review (owner agreed 2026-11-27): away from the extras step, the price panel must not say the price updates on return when the answer was sold out or booking closed | Critical | T4, T5 | AC 5–7, 14; E2E-G-1, 2, 4, 7; `PriceSummary` tests | Accepted 2026-11-27 |
 | M10-T6b | Check-in and check-out times on the stay: optional latest check-in and earliest check-out per branch (migration, rules, API, admin), shown on the booking and confirmation pages (Q-102; added 2026-11-27, owner approved) | Medium | T6 | T-STAY-1…3; E2E journey | Accepted 2026-11-27 |
-| M10-T7 | Payment return page | Critical | T6 | AC 6; E2E-G-3 | Not started |
+| M10-T7 | Payment return page | Critical | T6 | AC 6; E2E-G-3 | Accepted 2026-11-28 |
 | M10-T8 | Manage reservation and My reservations with cancellation requests | Critical | T1 | AC 8, 13; E2E-G-6 | Not started |
 | M10-T8b | Change booking: prefill from an empty G5 preview and G1, preview and apply (G5, G6), old and new totals, "sent to the hotel for approval" state for paid bookings, deadline and contact fallback (Q-83…Q-85) | Critical | T8, T5 | AC 12; E2E-G-9 | Not started |
 | M10-T9 | Book Now internal mode per branch (`BookingProvider` port takes the branch and listing) | Low | T6 | AC 10; E2E-G-8 part | Not started |

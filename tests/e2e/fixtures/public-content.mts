@@ -142,6 +142,9 @@ export async function seedBookingJourney(client: PrismaClient) {
     where: { id: BRANCH_ID },
     data: {
       onlinePaymentEnabled: true,
+      // The captured payment screens show only fictional contact details.
+      phone: "+1 202 555 0198",
+      email: "new-cairo@example.test",
       // The stay panel shows both windows (Q-102).
       checkInUntilTime: "23:30",
       checkOutTime: "11:30",
